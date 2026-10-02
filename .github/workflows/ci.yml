@@ -40,12 +40,17 @@ jobs:
           test -f landing/index.html
           test ! -f landing/reg.html
           test -f plugin-swpu-regcode/reg.html
-          test -f theme/00-native-dark-brand.css
+          test -f theme/00-brand.css
+          test ! -f theme/00-native-dark-brand.css
           test -f theme/05-full-dark.css
           test -f deploy/service-worker-killswitch.js
+          test -f deploy/set-theme-light.js
           grep -q "og:image" landing/index.html
           grep -q "twitter:card" landing/index.html
-          grep -q "native-dark brand overlay" theme/00-native-dark-brand.css
+          grep -q "SWPU ACM brand overlay" theme/00-brand.css
+          grep -q "theme--light" theme/00-brand.css
+          grep -q "theme--dark" theme/00-brand.css
+          grep -q "swpu-theme-toggle" deploy/set-theme-light.js
           grep -q "05-full-dark.css" theme/README.md
           grep -q "unregister" deploy/service-worker-killswitch.js
           grep -q "service-worker-killswitch" deploy/install-theme.sh
