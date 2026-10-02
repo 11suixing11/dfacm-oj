@@ -1,5 +1,5 @@
 # For more information, refer to caddy v2 documentation.
-swpuacm.bot.cd, www.swpuacm.bot.cd, swpuacm.xyz, www.swpuacm.xyz {
+swpuacm.xyz, www.swpuacm.xyz {
   encode zstd gzip
 
   # SWPU ACM landing page as site front door (revert: delete this line)

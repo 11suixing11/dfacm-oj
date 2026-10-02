@@ -2,7 +2,7 @@
 
 > 基于 [Hydro OJ](https://hydro.ac) v5.0.7 的院校级定制层：获奖级门面首页、数字验证码注册插件、品牌主题系统与一套完整的部署方案。
 
-**线上实例**：[swpuacm.xyz](https://swpuacm.xyz) · [swpuacm.bot.cd](https://swpuacm.bot.cd)（别名）
+**线上实例**：[swpuacm.xyz](https://swpuacm.xyz)
 
 ![门面首页](docs/img/01-hero.png)
 
