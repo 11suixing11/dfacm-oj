@@ -14,9 +14,10 @@ OJ 内核使用开源的 Hydro，本仓库收录的是我们围绕它做的**全
 |---|---|
 | [`landing/`](landing/) | 门面首页：单文件 HTML/CSS/JS，零框架。「向山顶，提交你的答案」——登山/海拔隐喻贯穿全站：滚动海拔标尺、训练路线海拔剖面图、判题终端动画（复现真实首次评测 8.1ms/776KB）、品牌图标与 OG 图 |
 | [`plugin-swpu-regcode/`](plugin-swpu-regcode/) | 数字验证码注册插件：填邮箱 → 收 6 位验证码 → 建号自动登录直达训练路线。5 分钟 TTL、单邮箱 60s/IP 每小时限速、QQ 号自动头像 |
+| [`plugin-swpu-ops/`](plugin-swpu-ops/) | 管理员训练周报与判题健康摘要：按域/小组导出 CSV、Markdown、JSON，复用 Hydro 脚本权限，无需新增页面 |
 | [`theme/`](theme/) | 三段 Hydro 主题 overlay：导航/表格深色条带、全站排版精修、登录注册等沉浸式页面品牌深色化。纯 CSS 追加，升级安全 |
 | [`deploy/`](deploy/) | Caddy 配置范例 + 脱敏部署清单：UI 重建免疫的自定义资源目录、全站缓存策略、BBR/HTTP-3 |
-| [`scripts/`](scripts/) | 品牌资产生成：字体子集化（展示字体 440 字 107KB）、Pillow 图标全套渲染 |
+| [`scripts/`](scripts/) | 字体子集化、备份包装器、只读部署检查与本地测试入口 |
 
 <p float="left">
   <img src="docs/img/02-routes.png" width="49%" alt="训练路线海拔剖面图">
@@ -40,14 +41,51 @@ OJ 内核使用开源的 Hydro，本仓库收录的是我们围绕它做的**全
 3. **主题**：把 `theme/` 下四个 CSS 按序追加到 Hydro 主题文件尾部（静态副本 + 源包两处，方法见 [theme/README.md](theme/README.md)）
 4. **邮件**：在系统设置配置 `smtp.host/user/pass/from/secure`，找回密码与验证码邮件即刻可用
 
+## 后端与运维更新
+
+注册插件 1.1.0 只修改后端：登录码发往账号已绑定邮箱并绑定 UID；注册码绑定实际收件地址；校验用途和到期时间，原子消费及限制尝试次数，发送失败仅清理本次版本。保留 Hydro 原生认证事件、禁用账号、注册权限和比赛 IP 检查；已有两步验证/通行密钥账号使用原生登录。
+
+校园网默认 IP 发码上限调整为每小时 200，并增加全站每小时 500 上限；限流和跳转路径可在系统设置调整。更新时上传插件全部运行文件，旧验证码需要重新获取，详见[更新说明](plugin-swpu-regcode/README.md)。额外的服务器邮箱白名单规则仍需管理员核对。
+
+新增后台 addon 安装和运行方式见 [swpu-ops](plugin-swpu-ops/README.md)。管理员可执行：
+
+```bash
+hydrooj cli script swpuWeeklyReport '{}'
+hydrooj cli script swpuHealthSummary '{"domainId":"system","staleMinutes":10}'
+```
+
+周报按最近七个完整自然日统计，默认北京时间，导出 UID、首次新增 AC、活跃天数及错误分布；可按小组筛选。健康摘要区分未领取任务与未结束提交。完整文件保存在管理员账户的 `~/.hydro/reports/swpu-ops/`，不通过公开页面提供下载。
+
+Caddy 缓存仅在真实静态文件的成功响应生效，动态 `/resource/*` 保留 Hydro 的缓存决定；首页两个入口均显式重新验证缓存。部署清单增加版本记录、异机备份、恢复演练和真实 AC/WA/TLE 验收。脚本由管理员手动运行，不自动安装、重启或注册定时任务：
+
+```bash
+bash scripts/check-deployment.sh --role all --url https://swpuacm.xyz
+bash scripts/backup-hydro.sh --output-dir /data/backups/swpu-oj
+```
+
+备份目录应异机保存并验证恢复；包装器不删除历史备份，失败保留诊断资料。详细参数和操作步骤见[部署文档](deploy/deployment.md)。
+
+## 本地验证
+
+使用 Node >=22.18，在仓库根目录执行：
+
+```bash
+pnpm install --ignore-scripts
+pnpm test
+pnpm check
+```
+
+本地测试使用内存数据库模型、Hydro API 替身和临时脚本夹具，不连接线上数据库、邮件或判题机。部署脚本测试需要 Bash、tar、unzip、sha256sum 等；Windows 可通过 `TEST_BASH` 指定 Git Bash。`pnpm check` 检查两个插件的编译，不能替代真实 Hydro/MongoDB 集成验收。
+
 ## 文件结构
 
 ```
 ├── landing/               门面首页 + 注册页（单文件）+ 字体/图标资源
 ├── plugin-swpu-regcode/   数字验证码注册插件（Hydro addon）
+├── plugin-swpu-ops/       管理员训练周报与判题健康摘要
 ├── theme/                 主题 overlay（深色条带 / 排版精修 / 沉浸式页面）
 ├── deploy/                Caddyfile 范例 + 部署清单
-├── scripts/               字体子集化 / 品牌图标生成
+├── scripts/               字体子集化 / 备份 / 部署检查 / 本地验证
 └── docs/img/              截图
 ```
 

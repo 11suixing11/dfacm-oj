@@ -1,0 +1,14 @@
+{
+  "name": "swpu-oj-customizations",
+  "private": true,
+  "scripts": {
+    "test": "node scripts/run-tests.cjs",
+    "check": "node scripts/check-addons.cjs"
+  },
+  "engines": {
+    "node": ">=22.18.0"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.12"
+  }
+}
