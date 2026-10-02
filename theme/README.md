@@ -24,7 +24,7 @@ Hydro 的 `ui-default` 自带完整、持续维护的 Dark 主题（编译进 `t
    pm2 restart hydrooj
    ```
 
-4. 只追加品牌薄层 `00-native-dark-brand.css`，不要再追加旧的 01-05 全量深色覆盖。
+4. 用 `deploy/install-theme.sh` 追加品牌薄层 `00-native-dark-brand.css`。脚本会先剥掉旧 overlay，并安装 Service Worker kill-switch；不要再手动追加旧的 01-05 全量深色覆盖。
 
 主题 CSS 存在于两处，必须同时维护：
 
@@ -59,6 +59,8 @@ bash deploy/install-theme.sh
 ```
 
 - 默认只追加 `00-native-dark-brand.css`，通过 `native-dark brand overlay` 标记做幂等。
+- 每次执行会先删掉 CSS 中第一处 `==== SWPU ACM` 之后的内容，再追加当前品牌层，保证重复执行和旧主题残留不会叠加。
+- 同时把 static 和源包的 `service-worker.js` 换成 kill-switch：清空旧 CacheStorage 后注销自身，避免 webpack 注入的旧主题 CSS 覆盖品牌层。
 - 主题版本不是 4.58.5 时，先设 `THEME_VERSION=<版本>`。
 - 旧浅色 Hydro 需要完整回退时，显式运行 `SWPU_THEME_LEGACY=1 bash deploy/install-theme.sh`，才会追加 01-05。
 - 脚本不会替你修改系统主题偏好；仍需按本文开头的 `preference.theme` / `user.theme` 步骤切到 dark。

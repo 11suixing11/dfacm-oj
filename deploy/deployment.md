@@ -36,10 +36,20 @@ Hydro `ui-default` 自带持续维护的 Dark 主题。推荐只追加 `theme/00
 bash /root/swpu-oj/deploy/install-theme.sh
 ```
 
-脚本会同时处理两处主题 CSS：
+脚本会先剥掉两处 CSS 里所有 `==== SWPU ACM` 旧 overlay，再追加 `00-native-dark-brand.css`，并把两处 `service-worker.js` 换成自注销清缓存版本。这样 UI 重建、重复执行和旧主题残留都不会覆盖最新品牌层。
+
+它同时处理两处主题 CSS：
 
 1. `/root/.hydro/static/theme-<版本>.css`：Caddy 实际直出的文件。
 2. `.../ui-default/public/theme-<版本>.css`：UI 重建时的来源。
+
+Hydro 的 webpack 运行时会再注入一份 `theme-<版本>.css?<hash>`。旧 Service Worker 可能把这个 URL 的旧响应放在品牌层之后，导致主题回退。kill-switch 在首次激活时清空 CacheStorage 并注销自身，之后浏览器只使用正常的 HTTP 缓存。
+
+验证 kill-switch 已生效：
+
+```bash
+curl -s https://<域名>/service-worker.js | grep -q unregister && echo "sw kill-switch ok"
+```
 
 如果 Hydro 版本不同，先指定版本：
 
@@ -131,8 +141,9 @@ curl -sSI https://<域名>/ | grep -Ei 'strict-transport|x-content-type|referrer
 
 ## 9. UI 重建后的重放清单
 
-- [ ] `bash deploy/install-theme.sh` 重新追加 00 品牌薄层（版本变化时先设置 `THEME_VERSION`）。
+- [ ] `bash deploy/install-theme.sh` 重新追加 00 品牌薄层（脚本会先剥掉旧 overlay；版本变化时先设置 `THEME_VERSION`）。
 - [ ] 确认 static 与源包两处都能 `grep -c "native-dark brand overlay"`。
+- [ ] 确认 `/service-worker.js` 是 kill-switch（`grep -q unregister`）。
 - [ ] 门面、字体、图标在 `custom/`，**无需重放**。
 - [ ] 如果 Hydro 头部引用 static 下的默认 favicon，确认 `@custom` 路径列表覆盖同名文件。
 
