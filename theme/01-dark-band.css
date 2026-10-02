@@ -1,0 +1,47 @@
+/* ==== SWPU ACM dark-band theme overlay (appended, safe on upgrades) ==== */
+.nav {
+  background: #2b2b2b !important;
+  border-bottom: 3px solid #c9a227 !important;
+}
+.nav .nav__item, .nav .nav__list-item a, .nav .menu__link {
+  color: #e8e8e8 !important;
+}
+.nav .nav__item:hover, .nav .nav__list-item a:hover {
+  color: #ffffff !important;
+  background: #3a3a3a !important;
+}
+.nav .nav__list-item--active .nav__item, .nav .active .nav__item {
+  color: #fff !important;
+  border-bottom: 3px solid #c9a227 !important;
+}
+.section__heading, .section__header {
+  background: #333333 !important;
+  color: #ffffff !important;
+  border-left: 4px solid #c9a227 !important;
+}
+.section__heading .section__title, .section__heading h2, .section__header .section__title {
+  color: #ffffff !important;
+}
+.section__heading .icon, .section__heading .section-header-icon {
+  color: #c9a227 !important;
+}
+table th, .table th, thead th {
+  background: #333333 !important;
+  color: #ffffff !important;
+}
+table th a, .table th a {
+  color: #ffffff !important;
+}
+.section {
+  border: 1px solid #d8d8d8 !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06) !important;
+}
+.button.primary, .btn-primary, button.primary {
+  background: #2a5caa !important;
+  border-color: #2a5caa !important;
+  color: #fff !important;
+}
+.button.primary:hover, .btn-primary:hover {
+  background: #1e4488 !important;
+}
+/* ==== end SWPU ACM dark-band theme overlay ==== */

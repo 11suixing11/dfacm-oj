@@ -1,0 +1,14 @@
+/* ==== SWPU ACM immersive overlay v3.1 (submit buttons brand pill) ==== */
+body:has(.immersive--content) .immersive--content input[type="submit"],
+body:has(.immersive--content) .immersive--content .button.inverse,
+body:has(.immersive--content) .immersive--content a.button.primary {
+  background: linear-gradient(160deg, #3568b3, #2a5caa) !important;
+  color: #fff !important;
+  border: none !important;
+  border-radius: 999px !important;
+  padding: 11px 28px !important;
+  box-shadow: 0 8px 26px rgba(42,92,170,.35) !important;
+  cursor: pointer;
+  font-size: 15px !important;
+}
+/* ==== end SWPU ACM immersive overlay v3.1 ==== */

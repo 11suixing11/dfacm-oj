@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>注册 · SWPU ACM 训练场</title>
+<meta name="description" content="注册 SWPU ACM 在线训练场账号，从题号 1000 开始你的海拔。">
+<meta name="theme-color" content="#070d18">
+<link rel="icon" type="image/png" href="/favicon.png">
+<link rel="preload" href="/swpu-display.woff2" as="font" type="font/woff2" crossorigin>
+<style>
+@font-face{font-family:'SWPU Display';src:url('/swpu-display.woff2') format('woff2');font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:'SWPU Mono';src:url('/swpu-mono.woff2') format('woff2');font-weight:100 800;font-style:normal;font-display:swap}
+:root{--ink:#070d18;--panel:rgba(16,27,46,.58);--line:rgba(198,216,240,.10);--line-strong:rgba(198,216,240,.18);--txt:#e8edf5;--txt-2:#a7b4c7;--txt-3:#66748c;--blue:#2a5caa;--gold:#c9a227;--gold-hi:#e9c455;--ac:#3fb950;--font-d:'SWPU Display','PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif;--font-b:-apple-system,'PingFang SC','Microsoft YaHei','Segoe UI','Noto Sans CJK SC',sans-serif;--font-m:'SWPU Mono','JetBrains Mono',Consolas,'PingFang SC',monospace}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:radial-gradient(1100px 600px at 50% -200px,rgba(42,92,170,.16),transparent 60%),var(--ink);color:var(--txt);font-family:var(--font-b);font-size:15px;line-height:1.7;min-height:100svh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 16px;-webkit-font-smoothing:antialiased}
+::selection{background:rgba(201,162,39,.32);color:#fff}
+:focus-visible{outline:2px solid var(--gold-hi);outline-offset:2px;border-radius:6px}
+.wrap{width:min(430px,100%)}
+.brand{display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:26px;text-decoration:none}
+.brand svg{width:38px;height:38px}
+.brand .bt b{display:block;font-family:var(--font-d);font-weight:400;font-size:18px;letter-spacing:.08em;color:var(--txt);line-height:1.2}
+.brand .bt span{display:block;font-family:var(--font-m);font-size:8.5px;letter-spacing:.4em;color:var(--txt-3)}
+.card{background:linear-gradient(165deg,rgba(19,31,53,.92),rgba(10,19,34,.94));border:1px solid var(--line-strong);border-radius:20px;padding:34px 32px 30px;box-shadow:0 30px 90px rgba(2,6,14,.55),inset 0 1px 0 rgba(198,216,240,.08)}
+h1{font-family:var(--font-d);font-weight:400;font-size:26px;letter-spacing:.02em;margin-bottom:6px}
+h1 i{font-style:normal;color:var(--gold-hi)}
+.sub{color:var(--txt-3);font-size:13px;margin-bottom:26px}
+.field{margin-bottom:16px}
+.field label{display:block;font-size:12.5px;color:var(--txt-2);margin-bottom:7px;letter-spacing:.04em}
+.row{display:flex;gap:10px}
+.row input{flex:1;min-width:0}
+input{width:100%;background:rgba(7,13,24,.55);border:1px solid var(--line-strong);border-radius:12px;padding:12px 14px;color:var(--txt);font-size:14.5px;font-family:var(--font-b);transition:border-color .25s,box-shadow .25s}
+input::placeholder{color:#4a586e}
+input:focus{outline:none;border-color:rgba(233,196,85,.55);box-shadow:0 0 0 3px rgba(201,162,39,.12)}
+input.codein{font-family:var(--font-m);letter-spacing:.5em;font-size:17px;text-align:center;padding-left:14px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:12px;padding:12px 18px;font-size:14px;letter-spacing:.04em;cursor:pointer;transition:transform .3s cubic-bezier(.22,1,.36,1),box-shadow .3s,background .3s,color .3s,border-color .3s;border:1px solid transparent}
+.btn-code{background:none;border:1px solid rgba(233,196,85,.45);color:var(--gold-hi);white-space:nowrap;min-width:118px}
+.btn-code:hover:not(:disabled){background:rgba(201,162,39,.12)}
+.btn-code:disabled{opacity:.45;cursor:not-allowed}
+.btn-go{width:100%;background:linear-gradient(160deg,#3568b3,#2a5caa);color:#fff;font-size:15px;padding:13px;box-shadow:0 10px 30px rgba(42,92,170,.35),inset 0 1px 0 rgba(255,255,255,.18);margin-top:8px}
+.btn-go:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 14px 40px rgba(42,92,170,.45)}
+.btn-go:disabled{opacity:.6;cursor:wait}
+.msg{min-height:22px;margin-top:14px;font-size:12.5px;display:flex;align-items:center;gap:7px;opacity:0;transform:translateY(4px);transition:opacity .3s,transform .3s}
+.msg.show{opacity:1;transform:none}
+.msg.err{color:#f85149}.msg.ok{color:var(--ac)}
+.ft{margin-top:22px;display:flex;justify-content:space-between;align-items:center;font-size:12.5px}
+.ft a{color:var(--txt-3);text-decoration:none;transition:color .25s}
+.ft a:hover{color:var(--gold-hi)}
+.ft .mono{font-family:var(--font-m);font-size:10px;letter-spacing:.2em;color:var(--txt-3)}
+@media(max-width:420px){.card{padding:26px 22px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="brand" href="/" aria-label="返回首页">
+    <svg viewBox="0 0 64 64" aria-hidden="true">
+      <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1c3e78"/><stop offset="1" stop-color="#0c1a36"/></linearGradient></defs>
+      <rect x="1.5" y="1.5" width="61" height="61" rx="15" fill="url(#g)" stroke="#c9a227" stroke-opacity=".8" stroke-width="1.6"/>
+      <path d="M20 21 L11.5 32 L20 43" fill="none" stroke="#e8edf5" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M44 21 L52.5 32 L44 43" fill="none" stroke="#e8edf5" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M24.5 43 L32.5 26.5 L36.8 32.8 L39.6 28.6 L46 43 Z" fill="#e8edf5"/>
+      <path d="M32.5 26.5 L36.8 32.8 L39.6 28.6 L41.2 32 L37 32.5 Z" fill="#e9c455"/>
+      <circle cx="33.6" cy="20.5" r="1.5" fill="#e9c455"/>
+    </svg>
+    <span class="bt"><b>SWPU ACM</b><span>TRAINING GROUND</span></span>
+  </a>
+  <div class="card">
+    <h1>创建你的账号</h1>
+    <p class="sub">验证码将发送到你的邮箱，5 分钟内有效。</p>
+    <form id="f" novalidate>
+      <div class="field">
+        <label for="mail">邮箱</label>
+        <input id="mail" name="mail" type="email" placeholder="you@example.com" autocomplete="email" required>
+      </div>
+      <div class="field">
+        <label for="code">验证码</label>
+        <div class="row">
+          <input id="code" name="code" class="codein" inputmode="numeric" maxlength="6" placeholder="······" autocomplete="one-time-code">
+          <button type="button" id="send" class="btn btn-code">获取验证码</button>
+        </div>
+      </div>
+      <div class="field">
+        <label for="uname">用户名</label>
+        <input id="uname" name="uname" type="text" placeholder="2–16 位：中文、字母、数字、下划线" autocomplete="username" required>
+      </div>
+      <div class="field">
+        <label for="pw">设置密码</label>
+        <input id="pw" name="password" type="password" placeholder="至少 6 位" autocomplete="new-password" required minlength="6">
+      </div>
+      <div class="field">
+        <label for="pw2">确认密码</label>
+        <input id="pw2" type="password" placeholder="再输一次" autocomplete="new-password" required>
+      </div>
+      <button type="submit" id="go" class="btn btn-go">创建账号，开始登顶</button>
+      <div class="msg" id="msg" role="status" aria-live="polite"></div>
+    </form>
+    <div class="ft">
+      <a href="/login">已有账号？去登录</a>
+      <a class="mono" href="/">SWPUACM.BOT.CD</a>
+    </div>
+  </div>
+</div>
+<script>
+'use strict';
+(function(){
+  var $=function(id){return document.getElementById(id)};
+  var msg=$('msg'),send=$('send'),go=$('go'),timer=null;
+  function show(t,cls){msg.textContent=t;msg.className='msg show '+cls}
+  function hide(){msg.className='msg'}
+  async function api(url,data){
+    var r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams(data)});
+    var t=await r.text();var d;
+    try{d=JSON.parse(t)}catch(e){d={ok:false,message:r.status>=400?'请求失败（'+r.status+'），请稍后再试':'服务异常，请稍后再试'}}
+    if(r.status>=400&&d.ok!==false)d={ok:false,message:'请求失败，请稍后再试'};
+    return d;
+  }
+  function cooldown(){
+    var s=60;send.disabled=true;
+    clearInterval(timer);
+    timer=setInterval(function(){
+      s--;send.textContent=s+'s 后重发';
+      if(s<=0){clearInterval(timer);send.disabled=false;send.textContent='重新获取'}
+    },1000);
+  }
+  send.addEventListener('click',async function(){
+    var mail=$('mail').value.trim();
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail)){show('请先填写正确的邮箱地址','err');return}
+    send.disabled=true;send.textContent='发送中…';hide();
+    var d=await api('/reg/code',{mail:mail});
+    if(d.ok){show(d.message||'验证码已发送','ok');cooldown()}
+    else{show(d.message||'发送失败，请稍后再试','err');send.disabled=false;send.textContent='获取验证码'}
+  });
+  $('f').addEventListener('submit',async function(e){
+    e.preventDefault();
+    var mail=$('mail').value.trim(),code=$('code').value.trim(),uname=$('uname').value.trim(),pw=$('pw').value,pw2=$('pw2').value;
+    if(!mail){show('请填写邮箱','err');return}
+    if(!/^\d{6}$/.test(code)){show('请输入 6 位数字验证码','err');return}
+    if(!uname){show('请填写用户名','err');return}
+    if(pw.length<6){show('密码至少 6 位','err');return}
+    if(pw!==pw2){show('两次输入的密码不一致','err');return}
+    go.disabled=true;go.textContent='创建中…';hide();
+    var d=await api('/reg/complete',{mail:mail,code:code,uname:uname,password:pw});
+    if(d.ok){go.textContent='欢迎加入！正在带你上山…';location.href=d.redirect||'/'}
+    else{show(d.message||'注册失败，请稍后再试','err');go.disabled=false;go.textContent='创建账号，开始登顶'}
+  });
+})();
+</script>
+</body>
+</html>

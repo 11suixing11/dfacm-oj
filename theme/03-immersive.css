@@ -1,0 +1,44 @@
+/* ==== SWPU ACM immersive auth overlay v3 (login/register/lostpass dark brand; safe to re-append) ==== */
+body:has(.immersive--content) .slideout-panel {
+  background: radial-gradient(1100px 600px at 50% -120px, rgba(42,92,170,.25), transparent 60%), #070d18 !important;
+}
+body:has(.immersive--content) .immersive--content h1 {
+  color: #e8edf5 !important;
+  letter-spacing: .02em;
+}
+body:has(.immersive--content) .immersive--content label {
+  color: #a7b4c7 !important;
+}
+body:has(.immersive--content) .immersive--content input {
+  background: rgba(16,27,46,.55) !important;
+  border: 1px solid rgba(198,216,240,.22) !important;
+  border-radius: 10px !important;
+  color: #e8edf5 !important;
+  padding: 11px 14px !important;
+  transition: border-color .25s, box-shadow .25s;
+}
+body:has(.immersive--content) .immersive--content input:focus {
+  border-color: rgba(233,196,85,.55) !important;
+  box-shadow: 0 0 0 3px rgba(201,162,39,.14) !important;
+  outline: none !important;
+}
+body:has(.immersive--content) .immersive--content button {
+  background: linear-gradient(160deg, #3568b3, #2a5caa) !important;
+  color: #fff !important;
+  border: none !important;
+  border-radius: 999px !important;
+  padding: 11px 28px !important;
+  box-shadow: 0 8px 26px rgba(42,92,170,.35) !important;
+  cursor: pointer;
+}
+body:has(.immersive--content) .immersive--content a {
+  color: #e9c455 !important;
+}
+body:has(.immersive--content) .header--mobile {
+  background: #2b2b2b !important;
+  border-bottom: 2px solid #c9a227 !important;
+}
+body:has(.immersive--content) .page-loader {
+  background: #070d18 !important;
+}
+/* ==== end SWPU ACM immersive auth overlay v3 ==== */

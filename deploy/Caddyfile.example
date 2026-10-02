@@ -1,0 +1,54 @@
+# For more information, refer to caddy v2 documentation.
+swpuacm.bot.cd, www.swpuacm.bot.cd, swpuacm.xyz, www.swpuacm.xyz {
+  encode zstd gzip
+
+  # SWPU ACM landing page as site front door (revert: delete this line)
+  rewrite / /home.html
+
+  # SWPU ACM custom static files (UI-rebuild-proof dir; revert: remove this handle)
+  @custom {
+    path /home.html /favicon.png /logo.png /favicon-16x16.png /favicon-32x32.png /apple-touch-icon-180x180.png /android-chrome-192x192.png /swpu-display.woff2 /swpu-mono.woff2 /og-cover.png
+  }
+  handle @custom {
+    root * /root/.hydro/custom
+    file_server
+  }
+
+  @cacheable {
+    path *.woff2 *.png *.chunk.js *.worker.js *.css *.svg *.ico
+    not path /theme-*
+  }
+  header @cacheable Cache-Control "public, max-age=604800"
+  @cacheable2 {
+    path /hydro-*.js /resource/*
+  }
+  header @cacheable2 Cache-Control "public, max-age=604800"
+  header /home.html Cache-Control "no-cache"
+  header /theme-*.css Cache-Control "max-age=600"
+  log {
+    output file /data/access.log {
+      roll_size 1gb
+      roll_keep_for 72h
+    }
+    format json
+  }
+  # Handle static files directly, for better performance.
+  root * /root/.hydro/static
+  @static {
+    file {
+      try_files {path}
+    }
+  }
+  handle @static {
+    file_server
+  }
+  handle {
+    reverse_proxy http://127.0.0.1:8888
+  }
+}
+
+#    reverse_proxy http://127.0.0.1:1234
+# }
+#    root * /www/xxx.com
+#    file_server
+# }
