@@ -35,7 +35,7 @@ body:has(.immersive--content) .immersive--content a {
   color: #e9c455 !important;
 }
 body:has(.immersive--content) .header--mobile {
-  background: #2b2b2b !important;
+  background: #101d32 !important;
   border-bottom: 2px solid #c9a227 !important;
 }
 body:has(.immersive--content) .page-loader {

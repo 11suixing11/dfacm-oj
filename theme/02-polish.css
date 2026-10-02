@@ -6,7 +6,8 @@
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:#c3ccd9;border-radius:8px;border:2px solid #ffffff}
 ::-webkit-scrollbar-thumb:hover{background:#a8b4c4}
-:focus-visible{outline:2px solid #c9a227;outline-offset:2px}
+:focus-visible{outline:2px solid #2a5caa;outline-offset:3px}
+.nav :focus-visible{outline-color:#e9c455}
 pre,code,kbd,samp,.monospace,pre code{font-family:'SWPU Mono','Cascadia Code',Consolas,'Microsoft YaHei',monospace;font-variant-ligatures:none}
 pre{line-height:1.7}
 .theme-switcher,.footer-lang-select{font-family:inherit}
@@ -15,7 +16,28 @@ table th{letter-spacing:.03em}
 .table>tbody>tr:hover,table tbody tr:hover{background-color:rgba(42,92,170,.045)}
 .section{border-radius:12px}
 .section__header,.section__header-dark{border-radius:11px 11px 0 0}
-.markdown-body pre,.prose pre{background:#f6f8fb;border:1px solid #e3e8ef;border-radius:10px}
+.markdown-body pre,.prose pre{background:rgba(127,147,174,.08);border:1px solid rgba(129,148,177,.28);border-radius:10px;overflow-x:auto}
 a{transition:color .2s ease}
 .nav .nav__nav{max-width:100vw}
+/* Preserve Hydro's light/dark surfaces and status colors; improve reading density. */
+.data-table{font-variant-numeric:tabular-nums}
+.data-table td{font-size:14px;line-height:1.65;padding-top:10px;padding-bottom:10px}
+.data-table .col--problem-name{white-space:normal;overflow-wrap:anywhere}
+.data-table tbody tr:focus-within{outline:2px solid #2a5caa;outline-offset:-2px}
+.markdown-body,.prose{line-height:1.85;overflow-wrap:break-word}
+.markdown-body img,.prose img{max-width:100%;height:auto}
+.markdown-body pre,.prose pre{overflow-wrap:normal;tab-size:4}
+.section__header{padding-top:16px;padding-bottom:16px}
+.section__header a:focus-visible{outline-color:#e9c455}
+@media(max-width:600px){
+  .data-table td{padding-top:12px;padding-bottom:12px}
+  .textbox input:not([type="checkbox"]):not([type="radio"]),.textbox textarea{font-size:16px}
+}
+@media(prefers-color-scheme:dark){
+  :focus-visible{outline-color:#e9c455}
+  .data-table tbody tr:focus-within{outline-color:#e9c455}
+}
+@media(prefers-reduced-motion:reduce){
+  .table>tbody>tr,table tbody tr,a{transition:none}
+}
 /* ==== end SWPU ACM polish overlay v2 ==== */

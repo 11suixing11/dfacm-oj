@@ -11,7 +11,7 @@
 <style>
 @font-face{font-family:'SWPU Display';src:url('/swpu-display.woff2') format('woff2');font-weight:400;font-style:normal;font-display:swap}
 @font-face{font-family:'SWPU Mono';src:url('/swpu-mono.woff2') format('woff2');font-weight:100 800;font-style:normal;font-display:swap}
-:root{--ink:#070d18;--panel:rgba(16,27,46,.58);--line:rgba(198,216,240,.10);--line-strong:rgba(198,216,240,.18);--txt:#e8edf5;--txt-2:#a7b4c7;--txt-3:#8391a8;--blue:#2a5caa;--gold:#c9a227;--gold-hi:#e9c455;--ac:#3fb950;--font-d:'SWPU Display','PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif;--font-b:-apple-system,'PingFang SC','Microsoft YaHei','Segoe UI','Noto Sans CJK SC',sans-serif;--font-m:'SWPU Mono','JetBrains Mono',Consolas,'PingFang SC',monospace}
+:root{--ink:#070d18;--panel:rgba(16,27,46,.58);--line:rgba(198,216,240,.10);--line-strong:rgba(198,216,240,.18);--txt:#e8edf5;--txt-2:#a7b4c7;--txt-3:#94a4bb;--blue:#2a5caa;--gold:#c9a227;--gold-hi:#e9c455;--ac:#3fb950;--font-d:'SWPU Display','PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif;--font-b:-apple-system,'PingFang SC','Microsoft YaHei','Segoe UI','Noto Sans CJK SC',sans-serif;--font-m:'SWPU Mono','JetBrains Mono',Consolas,'PingFang SC',monospace}
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:radial-gradient(1100px 600px at 50% -200px,rgba(42,92,170,.16),transparent 60%),var(--ink);color:var(--txt);font-family:var(--font-b);font-size:15px;line-height:1.7;min-height:100svh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 16px;-webkit-font-smoothing:antialiased}
 ::selection{background:rgba(201,162,39,.32);color:#fff}
@@ -20,7 +20,7 @@ body{background:radial-gradient(1100px 600px at 50% -200px,rgba(42,92,170,.16),t
 .brand{display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:26px;text-decoration:none}
 .brand svg{width:38px;height:38px}
 .brand .bt b{display:block;font-family:var(--font-d);font-weight:400;font-size:18px;letter-spacing:.08em;color:var(--txt);line-height:1.2}
-.brand .bt span{display:block;font-family:var(--font-m);font-size:8.5px;letter-spacing:.4em;color:var(--txt-3)}
+.brand .bt span{display:block;font-family:var(--font-m);font-size:11px;letter-spacing:.14em;color:var(--txt-3)}
 .card{background:linear-gradient(165deg,rgba(19,31,53,.92),rgba(10,19,34,.94));border:1px solid var(--line-strong);border-radius:20px;padding:30px 32px 28px;box-shadow:0 30px 90px rgba(2,6,14,.55),inset 0 1px 0 rgba(198,216,240,.08)}
 .tabs{display:flex;gap:6px;background:rgba(7,13,24,.5);border:1px solid var(--line);border-radius:12px;padding:4px;margin-bottom:22px}
 .tabs button{flex:1;border:none;background:none;color:var(--txt-3);font-size:14.5px;padding:9px 0;border-radius:9px;cursor:pointer;font-family:var(--font-b);transition:background .25s,color .25s}
@@ -52,8 +52,57 @@ input.codein{font-family:var(--font-m);letter-spacing:.5em;font-size:17px;text-a
 .ft{margin-top:22px;display:flex;justify-content:space-between;align-items:center;font-size:12.5px}
 .ft a{color:var(--txt-3);text-decoration:none;transition:color .25s}
 .ft a:hover{color:var(--gold-hi)}
-.ft .mono{font-family:var(--font-m);font-size:10px;letter-spacing:.2em;color:var(--txt-3)}
+.ft .mono{font-family:var(--font-m);font-size:11px;letter-spacing:.08em;color:var(--txt-3)}
 @media(max-width:420px){.card{padding:26px 22px}}
+
+/* 与首页保持同一套色彩；表单优先使用易读正文，不依赖展示字体子集。 */
+:root{color-scheme:dark}
+body{padding:40px 24px}
+.wrap{width:min(1000px,100%);display:grid;grid-template-columns:minmax(0,1fr) minmax(0,460px);gap:28px 80px;align-items:center}
+.brand{grid-column:1/-1;justify-content:flex-start;margin:0}
+.brand .bt span{color:var(--txt-2)}
+.intro{align-self:center;padding-bottom:24px}
+.intro h2{font-size:34px;line-height:1.6;letter-spacing:.02em;font-weight:600}
+.intro>p{color:var(--txt-2);margin-top:20px;line-height:1.9;max-width:28em}
+.journey{list-style:none;display:grid;gap:26px;margin:36px 0}
+.journey li{display:flex;align-items:baseline;gap:18px}
+.journey li>span{font-family:var(--font-m);color:var(--gold-hi);font-size:13px}
+.journey strong{font-size:15px;font-weight:600}
+.journey p{font-size:13px;color:var(--txt-3);margin-top:4px}
+.preview-link{display:inline-flex;align-items:center;min-height:44px;color:var(--txt-2);font-size:14px;text-underline-offset:6px}
+.preview-link:hover{color:var(--gold-hi)}
+.card{background:#0d182a;border-radius:16px;padding:28px 32px;box-shadow:none;min-width:0}
+.tabs{margin-bottom:24px}.tabs button{min-height:44px;color:var(--txt-2);font-size:14px;font-weight:500}
+.tabs button.on{background:#23477a;color:#fff}
+h1{font-family:var(--font-b);font-size:25px;font-weight:600;letter-spacing:0}
+.sub{font-size:14px;color:var(--txt-2);margin-bottom:24px}
+.field label{font-size:14px;letter-spacing:0}.field{margin-bottom:18px}
+input{font-size:16px;min-height:48px;border-radius:10px;caret-color:var(--gold-hi)}
+input::placeholder{color:#94a4bb;font-size:13px}
+input.codein{letter-spacing:.18em;text-align:left;font-variant-numeric:tabular-nums}
+input.codein::placeholder{font-family:var(--font-b);letter-spacing:0}
+input[aria-invalid="true"]{border-color:#ff8d87}
+.field-hint{font-size:12px;line-height:1.7;color:var(--txt-3);margin-top:8px}
+.password-field{position:relative}.password-field:has(.password-toggle:not([hidden])) input{padding-right:64px}
+.password-toggle{position:absolute;right:4px;top:3px;min-height:44px;min-width:52px;border:0;border-radius:8px;background:none;color:var(--txt-2);font:inherit;font-size:13px;cursor:pointer}
+.password-toggle:hover{color:var(--gold-hi);background:rgba(198,216,240,.06)}
+.password-toggle[hidden]{display:none}
+.btn{font-family:var(--font-b);min-height:48px;border-radius:10px}
+.btn-go{background:var(--blue);box-shadow:none;letter-spacing:0;font-weight:600}
+.btn-go:hover:not(:disabled){background:#3568b3;box-shadow:none;transform:none}
+.btn-code{min-width:118px;padding-inline:12px}.btn-code:disabled{opacity:1;color:var(--txt-3);border-color:var(--line-strong)}
+.btn-go:disabled{opacity:1;background:#244576;color:#b8c8de}
+.msg{font-size:13px;line-height:1.7;overflow-wrap:anywhere;min-height:0;margin-top:0;display:block;opacity:1;transform:none}
+.msg.show{display:block;margin-top:14px;padding:10px 12px;border-radius:8px;background:rgba(198,216,240,.05)}
+.msg.err{color:#ff9a94}.msg.ok{color:#76d98b}
+.ft{gap:8px;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:16px;margin-top:24px}
+.ft a{display:inline-flex;align-items:center;min-height:44px;color:var(--txt-2);font-size:13px}
+.noscript-hint{color:var(--gold-hi);margin-top:16px;font-size:13px}
+[hidden]{display:none!important}
+@media(max-width:860px){.wrap{gap:28px 36px;grid-template-columns:minmax(0,1fr) minmax(0,430px)}.intro h2{font-size:28px}}
+@media(max-width:720px){body{padding:24px 16px;justify-content:flex-start}.wrap{max-width:460px;display:block}.brand{justify-content:center;margin:0 0 24px}.intro{display:none}.card{padding:26px 24px}}
+@media(max-width:360px){body{padding-inline:12px}.card{padding-inline:18px}.row{gap:8px}.btn-code{min-width:108px;padding-inline:8px}input{padding-inline:10px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;animation:none!important}}
 </style>
 </head>
 <body>
@@ -70,150 +119,191 @@ input.codein{font-family:var(--font-m);letter-spacing:.5em;font-size:17px;text-a
     </svg>
     <span class="bt"><b>SWPU ACM</b><span>TRAINING GROUND</span></span>
   </a>
-  <div class="card">
-    <div class="tabs" role="tablist">
-      <button type="button" id="tab-reg" class="on" role="tab" aria-selected="true">注 册</button>
-      <button type="button" id="tab-login" role="tab" aria-selected="false">验证码登录</button>
+  <aside class="intro" aria-labelledby="welcome-title">
+    <h2 id="welcome-title">从第一道题开始，<br>走向更高的地方。</h2>
+    <p>欢迎来到西南石油大学 ACM 在线训练场。把每一次练习，变成看得见的进步。</p>
+    <ol class="journey">
+      <li><span aria-hidden="true">1</span><div><strong>创建你的账号</strong><p>邮箱收码，设置用户名与密码。</p></div></li>
+      <li><span aria-hidden="true">2</span><div><strong>找到适合的起点</strong><p>从入门路线的语言基础开始练习。</p></div></li>
+      <li><span aria-hidden="true">3</span><div><strong>收获第一次 Accepted</strong><p>提交代码，查看反馈，继续向上。</p></div></li>
+    </ol>
+    <a class="preview-link" href="/training">先看看训练路线</a>
+  </aside>
+  <main class="card">
+    <div class="tabs" role="tablist" aria-label="账号操作">
+      <button type="button" id="tab-reg" class="on" role="tab" aria-selected="true" aria-controls="pane-reg" tabindex="0">注册账号</button>
+      <button type="button" id="tab-login" role="tab" aria-selected="false" aria-controls="pane-login" tabindex="-1">验证码登录</button>
     </div>
 
-    <div class="pane on" id="pane-reg">
+    <div class="pane on" id="pane-reg" role="tabpanel" aria-labelledby="tab-reg">
       <h1>创建你的账号</h1>
-      <p class="sub">验证码将发送到你的邮箱，5 分钟内有效。</p>
+      <p class="sub">用邮箱注册，开启你的训练记录。</p>
       <form id="f-reg" novalidate>
         <div class="field">
           <label for="r-mail">邮箱</label>
-          <input id="r-mail" type="email" placeholder="you@example.com" autocomplete="email" required>
+          <input id="r-mail" type="email" autocapitalize="none" spellcheck="false" placeholder="you@example.com" autocomplete="email" required aria-describedby="r-msg">
         </div>
         <div class="field">
           <label for="r-code">验证码</label>
           <div class="row">
-            <input id="r-code" class="codein" inputmode="numeric" maxlength="6" placeholder="······" autocomplete="one-time-code">
+            <input id="r-code" class="codein" inputmode="numeric" maxlength="6" placeholder="6 位数字" pattern="[0-9]{6}" required autocomplete="one-time-code" aria-describedby="r-msg r-code-hint">
             <button type="button" id="r-send" class="btn btn-code">获取验证码</button>
           </div>
+          <p class="field-hint" id="r-code-hint">验证码 5 分钟内有效；未收到时请检查垃圾邮件。</p>
         </div>
         <div class="field">
           <label for="r-uname">用户名</label>
-          <input id="r-uname" type="text" placeholder="2–16 位：中文、字母、数字、下划线" autocomplete="username" required>
+          <input id="r-uname" type="text" autocapitalize="none" spellcheck="false" placeholder="2–16 位：中文、字母、数字、下划线" autocomplete="username" required aria-describedby="r-msg">
         </div>
         <div class="field">
           <label for="r-pw">设置密码</label>
-          <input id="r-pw" type="password" placeholder="至少 6 位" autocomplete="new-password" required minlength="6">
+          <div class="password-field"><input id="r-pw" type="password" placeholder="至少 6 位" autocomplete="new-password" required minlength="6" aria-describedby="r-msg"><button type="button" class="password-toggle" aria-controls="r-pw" aria-label="显示密码" aria-pressed="false" hidden>显示</button></div>
         </div>
         <div class="field">
           <label for="r-pw2">确认密码</label>
-          <input id="r-pw2" type="password" placeholder="再输一次" autocomplete="new-password" required>
+          <div class="password-field"><input id="r-pw2" type="password" placeholder="再输一次" autocomplete="new-password" required aria-describedby="r-msg"><button type="button" class="password-toggle" aria-controls="r-pw2" aria-label="显示确认密码" aria-pressed="false" hidden>显示</button></div>
         </div>
         <button type="submit" id="r-go" class="btn btn-go">创建账号，开始登顶</button>
         <div class="msg" id="r-msg" role="status" aria-live="polite"></div>
       </form>
     </div>
 
-    <div class="pane" id="pane-login">
+    <div class="pane" id="pane-login" role="tabpanel" aria-labelledby="tab-login" hidden>
       <h1>验证码登录</h1>
-      <p class="sub">无需密码，邮箱收码即登录。</p>
+      <p class="sub">使用账号绑定的邮箱接收验证码。</p>
       <form id="f-login" novalidate>
         <div class="field">
           <label for="l-mail">邮箱</label>
-          <input id="l-mail" type="email" placeholder="you@example.com" autocomplete="email" required>
+          <input id="l-mail" type="email" autocapitalize="none" spellcheck="false" placeholder="you@example.com" autocomplete="email" required aria-describedby="l-msg">
         </div>
         <div class="field">
           <label for="l-code">验证码</label>
           <div class="row">
-            <input id="l-code" class="codein" inputmode="numeric" maxlength="6" placeholder="······" autocomplete="one-time-code">
+            <input id="l-code" class="codein" inputmode="numeric" maxlength="6" placeholder="6 位数字" pattern="[0-9]{6}" required autocomplete="one-time-code" aria-describedby="l-msg l-code-hint">
             <button type="button" id="l-send" class="btn btn-code">获取验证码</button>
           </div>
+          <p class="field-hint" id="l-code-hint">验证码 5 分钟内有效；未收到时请检查垃圾邮件。</p>
         </div>
         <button type="submit" id="l-go" class="btn btn-go">登录</button>
         <div class="msg" id="l-msg" role="status" aria-live="polite"></div>
       </form>
     </div>
 
+    <noscript><p class="noscript-hint">邮箱验证码需要 JavaScript。请启用后重试，或使用下方的密码登录。</p></noscript>
     <div class="ft">
       <a href="/login">密码登录 / 找回密码</a>
       <a class="mono" href="/">SWPUACM.XYZ</a>
     </div>
-  </div>
+  </main>
 </div>
 <script>
 'use strict';
 (function(){
   var $=function(id){return document.getElementById(id)};
-  var tabReg=$('tab-reg'),tabLogin=$('tab-login'),paneReg=$('pane-reg'),paneLogin=$('pane-login');
-  function showTab(which){
-    var isReg=which!=='login';
-    tabReg.classList.toggle('on',isReg);tabLogin.classList.toggle('on',!isReg);
-    tabReg.setAttribute('aria-selected',isReg);tabLogin.setAttribute('aria-selected',!isReg);
-    paneReg.classList.toggle('on',isReg);paneLogin.classList.toggle('on',!isReg);
-    history.replaceState(null,'',isReg?'/reg':'/reg?tab=login');
+  var tabs=[$('tab-reg'),$('tab-login')],panes=[$('pane-reg'),$('pane-login')];
+  function showTab(which,focus){
+    var index=which==='login'?1:0;
+    tabs.forEach(function(tab,i){
+      var active=i===index;
+      tab.classList.toggle('on',active);tab.setAttribute('aria-selected',String(active));tab.tabIndex=active?0:-1;
+      panes[i].classList.toggle('on',active);panes[i].hidden=!active;
+    });
+    var url=new URL(location.href);
+    if(index)url.searchParams.set('tab','login');else url.searchParams.delete('tab');
+    if(url.hash==='#login')url.hash='';
+    history.replaceState(null,'',url.pathname+url.search+url.hash);
+    if(focus)tabs[index].focus();
   }
-  tabReg.addEventListener('click',function(){showTab('reg')});
-  tabLogin.addEventListener('click',function(){showTab('login')});
-  if(location.search.indexOf('tab=login')>=0||location.hash==='#login')showTab('login');
-
+  tabs.forEach(function(tab,i){
+    tab.addEventListener('click',function(){showTab(i?'login':'reg',false)});
+    tab.addEventListener('keydown',function(e){
+      if(!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;
+      e.preventDefault();var next=e.key==='Home'?0:e.key==='End'?1:1-i;
+      showTab(next?'login':'reg',true);
+    });
+  });
+  showTab(new URLSearchParams(location.search).get('tab')==='login'||location.hash==='#login'?'login':'reg',false);
+  document.querySelectorAll('.password-toggle').forEach(function(btn){
+    btn.hidden=false;
+    btn.addEventListener('click',function(){
+      var input=$(btn.getAttribute('aria-controls')),show=input.type==='password';
+      input.type=show?'text':'password';btn.textContent=show?'隐藏':'显示';
+      btn.setAttribute('aria-pressed',String(show));btn.setAttribute('aria-label',(show?'隐藏':'显示')+(input.id==='r-pw2'?'确认密码':'密码'));
+    });
+  });
   function msg(el,text,cls){el.textContent=text;el.className='msg show '+cls}
-  function hide(el){el.className='msg'}
+  function hide(el){el.textContent='';el.className='msg'}
+  function invalid(prefix,id,text){var input=$(id);input.setAttribute('aria-invalid','true');msg($(prefix+'-msg'),text,'err');input.focus()}
+  function clearErrors(form){form.querySelectorAll('[aria-invalid]').forEach(function(input){input.removeAttribute('aria-invalid')})}
+  document.querySelectorAll('input').forEach(function(input){input.addEventListener('input',function(){input.removeAttribute('aria-invalid')})});
+  document.querySelectorAll('.codein').forEach(function(input){input.addEventListener('input',function(){input.value=input.value.replace(/[^0-9]/g,'').slice(0,6)})});
+  function validMail(mail){return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail)}
   async function api(url,data){
+    var controller=new AbortController(),timeout=setTimeout(function(){controller.abort()},15000);
     try{
-      var r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams(data)});
-      var t=await r.text();var d;
-      try{d=JSON.parse(t)}catch(e){d={ok:false,message:r.status>=400?'请求失败（'+r.status+'），请稍后再试':'服务异常，请稍后再试'}}
-      if(r.status>=400&&d.ok!==false)d={ok:false,message:'请求失败，请稍后再试'};
+      var response=await fetch(url,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams(data),signal:controller.signal});
+      var d;
+      try{d=await response.json()}catch(e){
+        if(e.name==='AbortError')throw e;
+        return {ok:false,message:'服务暂时不可用，请稍后重试。'};
+      }
+      if(!d||typeof d!=='object'||typeof d.ok!=='boolean')return {ok:false,message:'服务返回异常，请稍后重试。'};
+      if(!response.ok)return {ok:false,message:typeof d.message==='string'?d.message:'请求失败（'+response.status+'），请稍后重试。'};
       return d;
     }catch(e){
-      return {ok:false,message:'网络异常，请检查网络后重试。'};
-    }
+      return {ok:false,message:e.name==='AbortError'?'请求超时，请稍后重试；若已收到验证码，可直接填写。':'网络连接失败，请检查网络后重试。'};
+    }finally{clearTimeout(timeout)}
   }
-  function bindSender(btn,msgEl,getMail,purpose){
-    var timer=null;
+  function bindSender(prefix,purpose){
+    var btn=$(prefix+'-send'),msgEl=$(prefix+'-msg'),timer=null;
     btn.addEventListener('click',async function(){
-      var mail=getMail().trim();
-      if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail)){msg(msgEl,'请先填写正确的邮箱地址','err');return}
-      btn.disabled=true;btn.textContent='发送中…';hide(msgEl);
-      var ok=false;
-      try{
-        var d=await api('/reg/code',{mail:mail,purpose:purpose});
-        if(d.ok){ok=true;msg(msgEl,d.message||'验证码已发送','ok');
-          var s=60;clearInterval(timer);timer=setInterval(function(){s--;btn.textContent=s+'s 后重发';if(s<=0){clearInterval(timer);btn.disabled=false;btn.textContent='重新获取'}},1000);
-        }else{msg(msgEl,d.message||'发送失败，请稍后再试','err')}
-      }catch(e){msg(msgEl,'网络异常，请稍后重试','err')}
-      finally{if(!ok){btn.disabled=false;btn.textContent='获取验证码'}}
+      if(btn.disabled)return;
+      var mail=$(prefix+'-mail').value.trim();
+      if(!validMail(mail)){invalid(prefix,prefix+'-mail','请填写完整的邮箱地址，例如 you@example.com。');return}
+      $(prefix+'-mail').removeAttribute('aria-invalid');
+      btn.disabled=true;btn.textContent='发送中…';btn.setAttribute('aria-busy','true');hide(msgEl);
+      var d=await api('/reg/code',{mail:mail,purpose:purpose});
+      btn.removeAttribute('aria-busy');
+      if(d.ok){
+        msg(msgEl,d.message||'验证码已发送，请查收邮箱。','ok');
+        var until=Date.now()+60000;
+        function tick(){
+          var seconds=Math.max(0,Math.ceil((until-Date.now())/1000));
+          btn.textContent=seconds?seconds+' 秒后重发':'重新获取';
+          if(!seconds){clearInterval(timer);btn.disabled=false}
+        }
+        clearInterval(timer);tick();timer=setInterval(tick,1000);
+        // Do not steal focus if the user has moved on to another field or tab.
+        if(document.activeElement===btn)$(prefix+'-code').focus();
+      }else{msg(msgEl,d.message||'发送失败，请稍后重试。','err');btn.disabled=false;btn.textContent='获取验证码'}
     });
   }
-  bindSender($('r-send'),$('r-msg'),function(){return $('r-mail').value},'reg');
-  bindSender($('l-send'),$('l-msg'),function(){return $('l-mail').value},'login');
-
-  $('f-reg').addEventListener('submit',async function(e){
-    e.preventDefault();
-    var mail=$('r-mail').value.trim(),code=$('r-code').value.trim(),uname=$('r-uname').value.trim(),pw=$('r-pw').value,pw2=$('r-pw2').value;
-    if(!mail){msg($('r-msg'),'请填写邮箱','err');return}
-    if(!/^\d{6}$/.test(code)){msg($('r-msg'),'请输入 6 位数字验证码','err');return}
-    if(!uname){msg($('r-msg'),'请填写用户名','err');return}
-    if(pw.length<6){msg($('r-msg'),'密码至少 6 位','err');return}
-    if(pw!==pw2){msg($('r-msg'),'两次输入的密码不一致','err');return}
-    var go=$('r-go');go.disabled=true;go.textContent='创建中…';hide($('r-msg'));
-    var done=false;
-    try{
-      var d=await api('/reg/complete',{mail:mail,code:code,uname:uname,password:pw});
-      if(d.ok){done=true;go.textContent='欢迎加入！正在带你上山…';location.href=d.redirect||'/'}
-      else{msg($('r-msg'),d.message||'注册失败，请稍后再试','err')}
-    }catch(e){msg($('r-msg'),'网络异常，请稍后重试','err')}
-    finally{if(!done){go.disabled=false;go.textContent='创建账号，开始登顶'}}
-  });
-
-  $('f-login').addEventListener('submit',async function(e){
-    e.preventDefault();
-    var mail=$('l-mail').value.trim(),code=$('l-code').value.trim();
-    if(!mail){msg($('l-msg'),'请填写邮箱','err');return}
-    if(!/^\d{6}$/.test(code)){msg($('l-msg'),'请输入 6 位数字验证码','err');return}
-    var go=$('l-go');go.disabled=true;go.textContent='登录中…';hide($('l-msg'));
-    var done=false;
-    try{
-      var d=await api('/reg/login',{mail:mail,code:code});
-      if(d.ok){done=true;go.textContent='欢迎回来！';location.href=d.redirect||'/'}
-      else{msg($('l-msg'),d.message||'登录失败，请稍后再试','err')}
-    }catch(e){msg($('l-msg'),'网络异常，请稍后重试','err')}
-    finally{if(!done){go.disabled=false;go.textContent='登录'}}
-  });
+  bindSender('r','reg');bindSender('l','login');
+  function bindForm(prefix,url){
+    var form=$(prefix==='r'?'f-reg':'f-login'),go=$(prefix+'-go'),label=go.textContent;
+    form.addEventListener('submit',async function(e){
+      e.preventDefault();if(go.disabled)return;
+      clearErrors(form);hide($(prefix+'-msg'));
+      var mail=$(prefix+'-mail').value.trim(),code=$(prefix+'-code').value.trim();
+      if(!validMail(mail)){invalid(prefix,prefix+'-mail','请填写完整的邮箱地址，例如 you@example.com。');return}
+      if(!/^\d{6}$/.test(code)){invalid(prefix,prefix+'-code','请输入邮箱中收到的 6 位数字验证码。');return}
+      var data={mail:mail,code:code};
+      if(prefix==='r'){
+        var uname=$('r-uname').value.trim(),pw=$('r-pw').value;
+        if(!uname){invalid(prefix,'r-uname','请设置一个用户名。');return}
+        if(pw.length<6){invalid(prefix,'r-pw','密码至少需要 6 位。');return}
+        if(pw!==$('r-pw2').value){invalid(prefix,'r-pw2','两次密码不一致，请重新确认。');return}
+        data.uname=uname;data.password=pw;
+      }
+      go.disabled=true;go.textContent=prefix==='r'?'创建中…':'登录中…';form.setAttribute('aria-busy','true');
+      var d=await api(url,data);form.removeAttribute('aria-busy');
+      if(d.ok){
+        go.textContent=prefix==='r'?'账号已创建，正在进入…':'登录成功，正在进入…';
+        msg($(prefix+'-msg'),go.textContent,'ok');location.href=d.redirect||'/';
+      }else{msg($(prefix+'-msg'),d.message||'操作失败，请稍后重试。','err');go.disabled=false;go.textContent=label}
+    });
+  }
+  bindForm('r','/reg/complete');bindForm('l','/reg/login');
 })();
 </script>
 </body>
