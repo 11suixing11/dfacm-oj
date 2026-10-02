@@ -1,6 +1,9 @@
 {
   "name": "swpu-regcode",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "main": "index.ts",
-  "private": true
+  "private": true,
+  "scripts": {
+    "test": "npx --yes tsx@4.19.2 --test logic.test.ts"
+  }
 }
