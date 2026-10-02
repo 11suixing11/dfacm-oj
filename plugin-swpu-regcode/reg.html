@@ -11,7 +11,7 @@
 <style>
 @font-face{font-family:'SWPU Display';src:url('/swpu-display.woff2') format('woff2');font-weight:400;font-style:normal;font-display:swap}
 @font-face{font-family:'SWPU Mono';src:url('/swpu-mono.woff2') format('woff2');font-weight:100 800;font-style:normal;font-display:swap}
-:root{--ink:#070d18;--panel:rgba(16,27,46,.58);--line:rgba(198,216,240,.10);--line-strong:rgba(198,216,240,.18);--txt:#e8edf5;--txt-2:#a7b4c7;--txt-3:#66748c;--blue:#2a5caa;--gold:#c9a227;--gold-hi:#e9c455;--ac:#3fb950;--font-d:'SWPU Display','PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif;--font-b:-apple-system,'PingFang SC','Microsoft YaHei','Segoe UI','Noto Sans CJK SC',sans-serif;--font-m:'SWPU Mono','JetBrains Mono',Consolas,'PingFang SC',monospace}
+:root{--ink:#070d18;--panel:rgba(16,27,46,.58);--line:rgba(198,216,240,.10);--line-strong:rgba(198,216,240,.18);--txt:#e8edf5;--txt-2:#a7b4c7;--txt-3:#8391a8;--blue:#2a5caa;--gold:#c9a227;--gold-hi:#e9c455;--ac:#3fb950;--font-d:'SWPU Display','PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif;--font-b:-apple-system,'PingFang SC','Microsoft YaHei','Segoe UI','Noto Sans CJK SC',sans-serif;--font-m:'SWPU Mono','JetBrains Mono',Consolas,'PingFang SC',monospace}
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:radial-gradient(1100px 600px at 50% -200px,rgba(42,92,170,.16),transparent 60%),var(--ink);color:var(--txt);font-family:var(--font-b);font-size:15px;line-height:1.7;min-height:100svh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 16px;-webkit-font-smoothing:antialiased}
 ::selection{background:rgba(201,162,39,.32);color:#fff}
@@ -153,11 +153,15 @@ input.codein{font-family:var(--font-m);letter-spacing:.5em;font-size:17px;text-a
   function msg(el,text,cls){el.textContent=text;el.className='msg show '+cls}
   function hide(el){el.className='msg'}
   async function api(url,data){
-    var r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams(data)});
-    var t=await r.text();var d;
-    try{d=JSON.parse(t)}catch(e){d={ok:false,message:r.status>=400?'请求失败（'+r.status+'），请稍后再试':'服务异常，请稍后再试'}}
-    if(r.status>=400&&d.ok!==false)d={ok:false,message:'请求失败，请稍后再试'};
-    return d;
+    try{
+      var r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams(data)});
+      var t=await r.text();var d;
+      try{d=JSON.parse(t)}catch(e){d={ok:false,message:r.status>=400?'请求失败（'+r.status+'），请稍后再试':'服务异常，请稍后再试'}}
+      if(r.status>=400&&d.ok!==false)d={ok:false,message:'请求失败，请稍后再试'};
+      return d;
+    }catch(e){
+      return {ok:false,message:'网络异常，请检查网络后重试。'};
+    }
   }
   function bindSender(btn,msgEl,getMail,purpose){
     var timer=null;
@@ -165,10 +169,14 @@ input.codein{font-family:var(--font-m);letter-spacing:.5em;font-size:17px;text-a
       var mail=getMail().trim();
       if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail)){msg(msgEl,'请先填写正确的邮箱地址','err');return}
       btn.disabled=true;btn.textContent='发送中…';hide(msgEl);
-      var d=await api('/reg/code',{mail:mail,purpose:purpose});
-      if(d.ok){msg(msgEl,d.message||'验证码已发送','ok');
-        var s=60;clearInterval(timer);timer=setInterval(function(){s--;btn.textContent=s+'s 后重发';if(s<=0){clearInterval(timer);btn.disabled=false;btn.textContent='重新获取'}},1000);
-      }else{msg(msgEl,d.message||'发送失败，请稍后再试','err');btn.disabled=false;btn.textContent='获取验证码'}
+      var ok=false;
+      try{
+        var d=await api('/reg/code',{mail:mail,purpose:purpose});
+        if(d.ok){ok=true;msg(msgEl,d.message||'验证码已发送','ok');
+          var s=60;clearInterval(timer);timer=setInterval(function(){s--;btn.textContent=s+'s 后重发';if(s<=0){clearInterval(timer);btn.disabled=false;btn.textContent='重新获取'}},1000);
+        }else{msg(msgEl,d.message||'发送失败，请稍后再试','err')}
+      }catch(e){msg(msgEl,'网络异常，请稍后重试','err')}
+      finally{if(!ok){btn.disabled=false;btn.textContent='获取验证码'}}
     });
   }
   bindSender($('r-send'),$('r-msg'),function(){return $('r-mail').value},'reg');
@@ -183,9 +191,13 @@ input.codein{font-family:var(--font-m);letter-spacing:.5em;font-size:17px;text-a
     if(pw.length<6){msg($('r-msg'),'密码至少 6 位','err');return}
     if(pw!==pw2){msg($('r-msg'),'两次输入的密码不一致','err');return}
     var go=$('r-go');go.disabled=true;go.textContent='创建中…';hide($('r-msg'));
-    var d=await api('/reg/complete',{mail:mail,code:code,uname:uname,password:pw});
-    if(d.ok){go.textContent='欢迎加入！正在带你上山…';location.href=d.redirect||'/'}
-    else{msg($('r-msg'),d.message||'注册失败，请稍后再试','err');go.disabled=false;go.textContent='创建账号，开始登顶'}
+    var done=false;
+    try{
+      var d=await api('/reg/complete',{mail:mail,code:code,uname:uname,password:pw});
+      if(d.ok){done=true;go.textContent='欢迎加入！正在带你上山…';location.href=d.redirect||'/'}
+      else{msg($('r-msg'),d.message||'注册失败，请稍后再试','err')}
+    }catch(e){msg($('r-msg'),'网络异常，请稍后重试','err')}
+    finally{if(!done){go.disabled=false;go.textContent='创建账号，开始登顶'}}
   });
 
   $('f-login').addEventListener('submit',async function(e){
@@ -194,9 +206,13 @@ input.codein{font-family:var(--font-m);letter-spacing:.5em;font-size:17px;text-a
     if(!mail){msg($('l-msg'),'请填写邮箱','err');return}
     if(!/^\d{6}$/.test(code)){msg($('l-msg'),'请输入 6 位数字验证码','err');return}
     var go=$('l-go');go.disabled=true;go.textContent='登录中…';hide($('l-msg'));
-    var d=await api('/reg/login',{mail:mail,code:code});
-    if(d.ok){go.textContent='欢迎回来！';location.href=d.redirect||'/'}
-    else{msg($('l-msg'),d.message||'登录失败，请稍后再试','err');go.disabled=false;go.textContent='登录'}
+    var done=false;
+    try{
+      var d=await api('/reg/login',{mail:mail,code:code});
+      if(d.ok){done=true;go.textContent='欢迎回来！';location.href=d.redirect||'/'}
+      else{msg($('l-msg'),d.message||'登录失败，请稍后再试','err')}
+    }catch(e){msg($('l-msg'),'网络异常，请稍后重试','err')}
+    finally{if(!done){go.disabled=false;go.textContent='登录'}}
   });
 })();
 </script>
