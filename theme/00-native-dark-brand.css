@@ -92,12 +92,17 @@
   color: #bdbdbd;
 }
 .theme--dark .main p,
-.theme--dark .main dt {
+.theme--dark .main dt,
+.theme--dark .main li {
   color: #bdbdbd;
 }
 /* 语义色与活动菜单 */
-.theme--dark .menu__link.active {
-  background: #2a5caa;
+.theme--dark a.menu__link.active,
+.theme--dark button.menu__link.active,
+.theme--dark a.menu__link.active:hover,
+.theme--dark button.menu__link.active:hover {
+  background: #2a5caa !important;
+  border-color: #2a5caa !important;
   color: #fff !important;
 }
 .theme--dark .record-status--text.pass {
