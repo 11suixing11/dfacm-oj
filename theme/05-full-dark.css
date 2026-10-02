@@ -1,0 +1,102 @@
+
+/* ==== SWPU ACM full-dark overlay v4 (content pages dark brand; append after v1-v3) ==== */
+html, body, .slideout-panel { background: #0a1322 !important; }
+.slideout-panel { color: #e8edf5 !important; }
+.main .row, .main .columns, .nav--placeholder { background: transparent !important; }
+/* 内容卡片 */
+.section {
+  background: linear-gradient(170deg, rgba(19,31,53,.78), rgba(13,22,39,.88)) !important;
+  border: 1px solid rgba(198,216,240,.10) !important;
+  border-radius: 14px !important;
+  box-shadow: 0 10px 30px rgba(2,6,14,.35) !important;
+}
+.section__header, .section__heading {
+  background: rgba(7,13,24,.5) !important;
+  border-bottom: 1px solid rgba(198,216,240,.08) !important;
+  border-left: 4px solid #c9a227 !important;
+  border-radius: 13px 13px 0 0 !important;
+}
+.section__title, .section__header, .section__heading, .section__title a { color: #e8edf5 !important; }
+.section__body { color: #dbe4f0 !important; }
+/* 链接与正文 */
+.main a { color: #6fa3e0 !important; }
+.main a:hover { color: #e9c455 !important; }
+.typo, .typo p, .typo li { color: #dbe4f0 !important; }
+.typo h1, .typo h2, .typo h3, .typo h4, .typo h5 { color: #e8edf5 !important; }
+.typo code { background: rgba(42,92,170,.18) !important; color: #e9c455 !important; border-radius: 4px !important; }
+.typo pre, .main pre {
+  background: #0b1424 !important;
+  border: 1px solid rgba(198,216,240,.12) !important;
+  color: #c6d3e6 !important;
+  border-radius: 10px !important;
+}
+.typo blockquote {
+  border-left: 3px solid #c9a227 !important;
+  color: #a7b4c7 !important;
+  background: rgba(42,92,170,.08) !important;
+}
+.typo hr { border-color: rgba(198,216,240,.12) !important; }
+.typo img { border-radius: 8px; }
+/* 表格 */
+.main table { background: transparent !important; color: #dbe4f0 !important; }
+.main table td, .main table th { border-color: rgba(198,216,240,.10) !important; }
+.main table tbody tr { transition: background-color .18s ease; }
+.main table tbody tr:hover { background: rgba(42,92,170,.10) !important; }
+/* 题目标签 */
+.problem__tag-item {
+  color: #c6d3e6 !important;
+  border-color: rgba(198,216,240,.2) !important;
+  background: rgba(42,92,170,.12) !important;
+}
+.uname--lv0 { color: #c6d3e6 !important; }
+/* 表单 */
+.main input, .main select, .main textarea {
+  background: rgba(7,13,24,.55) !important;
+  color: #e8edf5 !important;
+  border: 1px solid rgba(198,216,240,.18) !important;
+  border-radius: 8px !important;
+}
+.main input:focus, .main select:focus, .main textarea:focus {
+  border-color: rgba(233,196,85,.55) !important;
+  outline: none !important;
+}
+/* 下拉菜单 */
+.menu, .dropdown-target.menu {
+  background: #101b2e !important;
+  border: 1px solid rgba(198,216,240,.12) !important;
+  box-shadow: 0 14px 40px rgba(2,6,14,.5) !important;
+}
+.menu__item, .menu__link { color: #c6d3e6 !important; }
+.menu__item:hover { background: rgba(42,92,170,.18) !important; }
+/* 分页 */
+.pager { color: #a7b4c7 !important; }
+.pager a, .pager button {
+  background: rgba(16,27,46,.6) !important;
+  color: #c6d3e6 !important;
+  border: 1px solid rgba(198,216,240,.14) !important;
+}
+/* 按钮 */
+.main .button {
+  background: rgba(16,27,46,.6) !important;
+  color: #c6d3e6 !important;
+  border: 1px solid rgba(198,216,240,.18) !important;
+  border-radius: 10px !important;
+}
+.main .button.primary, .main input[type="submit"] {
+  background: linear-gradient(160deg, #3568b3, #2a5caa) !important;
+  color: #fff !important;
+  border: none !important;
+}
+/* 移动端顶栏（全局品牌化） */
+.header--mobile {
+  background: #2b2b2b !important;
+  border-bottom: 2px solid #c9a227 !important;
+}
+/* 页脚 */
+.footer {
+  background: #070d18 !important;
+  color: #66748c !important;
+  border-top: 1px solid rgba(198,216,240,.08) !important;
+}
+/* ==== end SWPU ACM full-dark overlay v4 ==== */
+
