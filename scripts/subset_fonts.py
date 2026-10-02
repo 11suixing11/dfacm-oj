@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """Subset the display (ZCOOL QingKe HuangYou) and mono (JetBrains Mono) fonts
-to only the glyphs actually used by landing/index.html + landing/reg.html.
+to only the glyphs actually used by landing/index.html + plugin-swpu-regcode/reg.html.
 
 Usage: python scripts/subset_fonts.py <zcool.ttf> <jbmono.ttf> <landing_dir>
 Requires: pip install fonttools brotli
@@ -8,17 +8,25 @@ Requires: pip install fonttools brotli
 import subprocess, sys, os
 
 def main():
+    if len(sys.argv) != 4:
+        print('Usage: python scripts/subset_fonts.py <zcool.ttf> <jbmono.ttf> <landing_dir>')
+        raise SystemExit(1)
     zcool, jbmono, landing = sys.argv[1], sys.argv[2], sys.argv[3]
+    repo_root = os.path.dirname(os.path.abspath(landing))
+    sources = (
+        os.path.join(landing, 'index.html'),
+        os.path.join(repo_root, 'plugin-swpu-regcode', 'reg.html'),
+    )
     html = ''
-    for name in ('index.html', 'reg.html'):
-        p = os.path.join(landing, name)
+    for p in sources:
         if os.path.exists(p):
-            html += open(p, encoding='utf-8').read()
+            with open(p, encoding='utf-8') as f:
+                html += f.read()
     chars = set(html)
     cjk = ''.join(sorted(c for c in chars if ord(c) > 0x7F))
     ascii_buf = ''.join(chr(c) for c in range(0x20, 0x7F))
     extra = '·—…「」『』、。，！？：；（）✓✗◆×≈'
-    glyphs = os.path.join(os.path.dirname(landing), 'glyphs.txt')
+    glyphs = os.path.join(repo_root, 'glyphs.txt')
     open(glyphs, 'w', encoding='utf-8').write(cjk + ascii_buf + extra)
     print(f'display glyphs: {len(cjk)} CJK + ascii')
     subprocess.run([sys.executable, '-m', 'fontTools.subset', zcool,

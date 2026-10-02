@@ -6,11 +6,24 @@
 <title>SWPU ACM · 向山顶，提交你的答案</title>
 <meta name="description" content="西南石油大学 ACM 集训队在线训练场：4,300+ 道精选题目、全天候自动评测、逐章解锁的成长路线。从第一行 C++ 开始，走到赛场去。">
 <meta name="theme-color" content="#070d18">
+<link rel="canonical" href="https://swpuacm.xyz/">
+<meta property="og:site_name" content="SWPU ACM">
+<meta property="og:locale" content="zh_CN">
 <meta property="og:title" content="SWPU ACM · 向山顶，提交你的答案">
 <meta property="og:description" content="西南石油大学 ACM 集训队在线训练场 — 4,325 道精选题目 · 全天候评测 · 逐章解锁训练路线。">
 <meta property="og:url" content="https://swpuacm.xyz/">
 <meta property="og:type" content="website">
+<meta property="og:image" content="https://swpuacm.xyz/og-cover.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="SWPU ACM · 向山顶，提交你的答案">
+<meta name="twitter:description" content="西南石油大学 ACM 集训队在线训练场 · 4,325 道精选题目 · 全天候评测 · 逐章解锁训练路线。">
+<meta name="twitter:image" content="https://swpuacm.xyz/og-cover.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
 <link rel="icon" type="image/png" href="/favicon.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon-180x180.png">
 <link rel="preload" href="/swpu-display.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="/swpu-mono.woff2" as="font" type="font/woff2" crossorigin>
 <style>
@@ -36,7 +49,7 @@
   --line-strong:rgba(198,216,240,.18);
   --txt:#e8edf5;
   --txt-2:#a7b4c7;
-  --txt-3:#66748c;
+  --txt-3:#8391a8;
   --blue:#2a5caa;           /* 品牌蓝 */
   --blue-hi:#6fa3e0;        /* 暗底上的可读蓝 */
   --gold:#c9a227;           /* 队徽金 */
@@ -607,7 +620,7 @@ footer{border-top:1px solid var(--line);background:#050a13;padding:64px 0 40px}
           <span class="bt"><b>SWPU ACM</b><span>TRAINING GROUND</span></span>
         </a>
         <p>西南石油大学 ACM 集训队在线训练站。为每一个热爱算法的人亮着灯——不管你是大一新生，还是备赛老将。</p>
-        <button class="copy-chip" id="copy-domain" type="button">swpuacm.bot.cd <svg aria-hidden="true"><use href="#i-copy"/></svg></button>
+        <button class="copy-chip" id="copy-domain" type="button">swpuacm.xyz <svg aria-hidden="true"><use href="#i-copy"/></svg></button>
       </div>
       <nav class="ft-col" aria-label="训练">
         <h4>训练</h4>
@@ -846,7 +859,7 @@ footer{border-top:1px solid var(--line);background:#050a13;padding:64px 0 40px}
   var toastEl=doc.getElementById('toast'),tt;
   function toast(msg){toastEl.textContent=msg;toastEl.classList.add('show');clearTimeout(tt);tt=setTimeout(function(){toastEl.classList.remove('show')},2200)}
   doc.getElementById('copy-domain').addEventListener('click',function(){
-    var txt='swpuacm.bot.cd';
+    var txt='swpuacm.xyz';
     (navigator.clipboard?navigator.clipboard.writeText(txt):Promise.reject()).then(function(){toast('域名已复制，去分享吧')})
       .catch(function(){var i=doc.createElement('input');i.value=txt;doc.body.appendChild(i);i.select();
         try{doc.execCommand('copy');toast('域名已复制，去分享吧')}catch(e){toast('复制失败，手打一下吧')}
