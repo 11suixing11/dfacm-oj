@@ -2,6 +2,15 @@
 swpuacm.xyz, www.swpuacm.xyz {
   encode zstd gzip
 
+  header {
+    Strict-Transport-Security "max-age=31536000; includeSubDomains"
+    X-Content-Type-Options "nosniff"
+    Referrer-Policy "strict-origin-when-cross-origin"
+    Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()"
+    X-Frame-Options "DENY"
+    Content-Security-Policy "frame-ancestors 'none'; base-uri 'self'; object-src 'none'"
+  }
+
   # SWPU ACM landing page as site front door (revert: delete this line)
   rewrite / /home.html
 
@@ -43,7 +52,10 @@ swpuacm.xyz, www.swpuacm.xyz {
     file_server
   }
   handle {
-    reverse_proxy http://127.0.0.1:8888
+    reverse_proxy http://127.0.0.1:8888 {
+      # Caddy is the only trusted proxy; overwrite client-supplied XFF.
+      header_up X-Forwarded-For {remote_host}
+    }
   }
 }
 

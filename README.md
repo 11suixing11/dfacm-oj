@@ -1,5 +1,7 @@
 # SWPU OJ — 西南石油大学 ACM 在线训练站
 
+[![CI](https://github.com/11suixing11/swpu-oj/actions/workflows/ci.yml/badge.svg)](https://github.com/11suixing11/swpu-oj/actions/workflows/ci.yml)
+
 > 基于 [Hydro OJ](https://hydro.ac) v5.0.7 的院校级定制层：获奖级门面首页、数字验证码注册插件、品牌主题系统与一套完整的部署方案。
 
 **线上实例**：[swpuacm.xyz](https://swpuacm.xyz)
@@ -13,9 +15,9 @@ OJ 内核使用开源的 Hydro，本仓库收录的是我们围绕它做的**全
 | 模块 | 说明 |
 |---|---|
 | [`landing/`](landing/) | 门面首页：单文件 HTML/CSS/JS，零框架。「向山顶，提交你的答案」——登山/海拔隐喻贯穿全站：滚动海拔标尺、训练路线海拔剖面图、判题终端动画（复现真实首次评测 8.1ms/776KB）、品牌图标与 OG 图 |
-| [`plugin-swpu-regcode/`](plugin-swpu-regcode/) | 数字验证码注册插件：填邮箱 → 收 6 位验证码 → 建号自动登录直达训练路线。5 分钟 TTL、单邮箱 60s/IP 每小时限速、QQ 号自动头像 |
-| [`theme/`](theme/) | 三段 Hydro 主题 overlay：导航/表格深色条带、全站排版精修、登录注册等沉浸式页面品牌深色化。纯 CSS 追加，升级安全 |
-| [`deploy/`](deploy/) | Caddy 配置范例 + 脱敏部署清单：UI 重建免疫的自定义资源目录、全站缓存策略、BBR/HTTP-3 |
+| [`plugin-swpu-regcode/`](plugin-swpu-regcode/) | 数字验证码注册 + 免密登录插件：`crypto.randomInt` 随机码、purpose 绑定、原子失败计数、真实 IP 限速、5 分钟 TTL、QQ 号自动头像 |
+| [`theme/`](theme/) | Hydro 原生 Dark 主题 + `00-native-dark-brand.css` 品牌薄层；01-05 为旧版回退，不再默认启用 |
+| [`deploy/`](deploy/) | Caddy 配置范例 + 一键安装脚本 + 脱敏部署清单：`home.html` 安装、assets 展平、UI 重建免疫、真实 IP、安全响应头 |
 | [`scripts/`](scripts/) | 品牌资产生成：字体子集化（展示字体 440 字 107KB）、Pillow 图标全套渲染 |
 
 <p float="left">
@@ -26,30 +28,39 @@ OJ 内核使用开源的 Hydro，本仓库收录的是我们围绕它做的**全
 
 ## 为什么这么做
 
-- **门面单文件零依赖**：中文展示字体按实际用字子集化后自托管（99KB），不依赖任何第三方 CDN，首屏无第三方阻塞
+- **门面单文件零依赖**：中文展示字体按实际用字子集化后自托管（99KB），不依赖任何第三方 CDN；唯一可选外部请求是赛后一言（3.5s 超时、静默降级），首屏不依赖它
 - **数字验证码注册**：Hydro 原生只有「邮件点链接」确认，对国内用户不友好；本插件实现输码即注册，验证码走与找回密码相同的 SMTP 通道
-- **UI 重建免疫**：Hydro 重装/升级会重建静态资源目录，所有自定义文件放独立目录由 Caddy 优先服务，升级零损失
+- **UI 重建免疫**：Hydro 重装/升级会重建静态资源目录，门面放独立 `custom/` 目录由 Caddy 优先服务；主题用脚本可重复追加，升级后按清单重放
 - **为国内访问调优**：BBR 拥塞控制、HTTP/3（QUIC）全链路、静态资源 7 天强缓存、DNS 层 HTTPS 记录（`alpn="h3,h2"`）让新访客首次连接即尝试 QUIC
 
 ## 快速开始
 
 前置：一台已按[官方文档](https://docs.hydro.ac)装好 Hydro v5 的服务器（内置 Caddy）。
 
-1. **门面**：把 `landing/` 下所有文件上传到服务器 `/root/.hydro/custom/`，在 Caddy 站点块加一行 `rewrite / /home.html` 后 `caddy reload`（完整说明见 [deploy/deployment.md](deploy/deployment.md)）
-2. **注册插件**：把 `plugin-swpu-regcode/` 上传到 `/root/.hydro/addons/swpu-regcode`，建立 `node_modules/hydrooj` 软链指向 Hydro 安装目录，加入 `addon.json` 后 `pm2 restart hydrooj`（详见 [插件说明](plugin-swpu-regcode/README.md)）
-3. **主题**：把 `theme/` 下四个 CSS 按序追加到 Hydro 主题文件尾部（静态副本 + 源包两处，方法见 [theme/README.md](theme/README.md)）
-4. **邮件**：在系统设置配置 `smtp.host/user/pass/from/secure`，找回密码与验证码邮件即刻可用
+1. **门面**：在服务器运行 `bash deploy/install-landing.sh /root/.hydro/custom`。脚本会把 `index.html` 装成 `home.html`，并把 `landing/assets/*` 展平到根目录。
+2. **注册插件**：把 `plugin-swpu-regcode/` 上传到 `/root/.hydro/addons/swpu-regcode`，建立 `node_modules/hydrooj` 软链，参考 `addon.json.example` 注册后 `pm2 restart hydrooj`。不要在插件目录执行 `npm install`。
+3. **主题**：运行 `bash deploy/install-theme.sh`，默认只追加原生 Dark 的品牌薄层 `00-native-dark-brand.css`；旧版浅色 Hydro 用 `SWPU_THEME_LEGACY=1` 回退到 01-05。
+4. **邮件**：在系统设置配置 `smtp.host/user/pass/from/secure`，找回密码与验证码邮件即刻可用。
+5. **反向代理**：设置 `server.xproxy: true`，并让 Caddy 覆盖客户端 XFF，详见 [deploy/deployment.md](deploy/deployment.md)。
 
 ## 文件结构
 
 ```
-├── landing/               门面首页 + 注册页（单文件）+ 字体/图标资源
-├── plugin-swpu-regcode/   数字验证码注册插件（Hydro addon）
-├── theme/                 主题 overlay（深色条带 / 排版精修 / 沉浸式页面）
-├── deploy/                Caddyfile 范例 + 部署清单
+├── landing/               门面首页（单文件）+ 字体/图标资源
+├── plugin-swpu-regcode/   数字验证码注册/免密登录插件（Hydro addon）
+├── theme/                 原生 Dark 品牌薄层 + 旧版回退 overlay
+├── deploy/                Caddyfile / 安装脚本 / 部署清单
 ├── scripts/               字体子集化 / 品牌图标生成
+├── .github/workflows/     CI：secret scan / 插件单测 / 仓库检查
 └── docs/img/              截图
 ```
+
+## 安全与验证
+
+- 验证码使用 `crypto.randomInt` 生成，带 purpose 绑定，失败次数通过 MongoDB 原子自增，显式检查 TTL。
+- 只有直接对端是回环地址时才信任 `X-Forwarded-For` 首段；Caddy 配置会覆盖客户端传入的 XFF。
+- CI 包含 gitleaks secret scan、插件单元测试、弃用域名扫描、Shell 语法和 Python 编译检查。
+- 仓库不包含 SMTP、数据库或服务器凭据；部署脚本修改主题前会自动备份。
 
 ## 致谢与许可
 
