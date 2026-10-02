@@ -69,7 +69,7 @@ SWPU_THEME_LEGACY=1 bash /root/swpu-oj/deploy/install-theme.sh
 
 ```bash
 mkdir -p /root/.hydro/addons/swpu-regcode
-cp /root/swpu-oj/plugin-swpu-regcode/{index.ts,logic.ts,reg.html,package.json} \
+cp /root/swpu-oj/plugin-swpu-regcode/{index.ts,auth.ts,codes.ts,config.ts,logic.ts,reg.html,package.json} \
    /root/.hydro/addons/swpu-regcode/
 mkdir -p /root/.hydro/addons/swpu-regcode/node_modules
 ln -sfn /usr/local/share/.config/yarn/global/node_modules/hydrooj \
@@ -77,6 +77,23 @@ ln -sfn /usr/local/share/.config/yarn/global/node_modules/hydrooj \
 # 参考 plugin-swpu-regcode/addon.json.example，把插件路径加入 /root/.hydro/addon.json
 pm2 restart hydrooj
 ```
+
+验证码限流、跳转路径和邮箱冷却都在系统设置里调整，见 [plugin-swpu-regcode/README.md](../plugin-swpu-regcode/README.md)。升级到本版本后旧验证码需要重新获取。
+
+管理员周报与判题健康摘要可选安装：
+
+```bash
+mkdir -p /root/.hydro/addons/swpu-ops
+cp /root/swpu-oj/plugin-swpu-ops/{index.ts,operations.cjs,report.cjs,package.json} \
+   /root/.hydro/addons/swpu-ops/
+mkdir -p /root/.hydro/addons/swpu-ops/node_modules
+ln -sfn /usr/local/share/.config/yarn/global/node_modules/hydrooj \
+        /root/.hydro/addons/swpu-ops/node_modules/hydrooj
+# 参考 plugin-swpu-ops/addon.json.example，把插件路径加入 /root/.hydro/addon.json
+pm2 restart hydrooj
+```
+
+安装后在“控制面板 → 脚本管理”用 `hydrooj cli script swpuWeeklyReport '{}'` 或后台表单运行，详见 [plugin-swpu-ops/README.md](../plugin-swpu-ops/README.md)。
 
 **不要**在 `/root/.hydro/addons/swpu-regcode/` 里运行 `npm install`：它会重建 `node_modules`，覆盖指向 Hydro 的软链。插件测试用 `npm test`，`tsx` 由 `npx` 临时下载，不写入 addon 目录。
 
@@ -156,3 +173,62 @@ curl -sSI https://<域名>/ | grep -Ei 'strict-transport|x-content-type|referrer
 - [ ] 注册流程走通（验证码邮件到达）。
 - [ ] 找回密码邮件里的链接是绝对地址（`server.url` 必须是完整 `https://域名`）。
 - [ ] `request.ip` 不再是 127.0.0.1。
+
+## 11. 缓存策略
+
+使用 [Caddyfile.example](Caddyfile.example) 的完整处理分支，不要把缓存头放在全站范围：
+
+- `handle @custom` 内给 `/home.html` 设置 `no-cache`。这个分支在首页 rewrite 之后执行，因此 `/` 和 `/home.html` 都生效；Caddy 默认把 `header` 排在 `rewrite` 之前，顶层 `header /home.html` 匹配不到原始 `/` 请求。
+- 固定名字的自定义字体和图标缓存 1 小时；主题 CSS 缓存 10 分钟；Hydro 静态目录中匹配的资源缓存 7 天。
+- 缓存头只对成功的 `2xx` 静态响应设置；动态请求保留 Hydro 自己的缓存决定，不覆盖 `/resource/*`、题目文件或用户下载。
+
+**最低版本：Caddy 2.9.1。** `header ... { match status 2xx }` 这个响应匹配子指令在 2.9.0 及更早版本的解析器里不存在，旧版 Caddy 会解析失败、整份配置加载不了（不只是缓存不生效）。升级 Caddy 或改造写法之前，先在目标机执行 `caddy adapt --config <实际配置> --adapter caddyfile`（可能预配置模块，属于变更操作，由管理员执行）。
+
+验证：
+
+```bash
+curl -sSI https://<域名>/ | grep -i cache-control
+curl -sSI https://<域名>/home.html | grep -i cache-control
+```
+
+两个入口都应是 `no-cache`。
+
+## 12. 备份、异机副本与恢复演练
+
+`scripts/backup-hydro.sh` 是显式执行的 Linux 包装器，不安装定时任务、不停止服务、不自动删除任何文件。需要 `hydrooj`、MongoDB Database Tools 的 `mongodump`、`zip`、`unzip`、`tar`、`flock`、`sha256sum`、`realpath`。以运行 Hydro 的同一用户执行；如使用 `HYDRO_PROFILE`，应使用与该实例相同的值。
+
+```bash
+bash /opt/swpu-oj/scripts/backup-hydro.sh \
+  --output-dir /data/backups/swpu-oj \
+  --caddy-config /root/.hydro/Caddyfile
+```
+
+- 输出目录必须在 `~/.hydro`、`~/.config/hydro` 和文件存储（`--file-store`，默认 `/data/file`）之外；脚本按输出目录加锁，重复运行返回 `75`。
+- 每次成功生成一个独立目录：官方 `hydrooj backup --withAddons` 产出的 `backup-*.zip`（数据库、`/data/file` 文件存储、addons）、`hydro-state.tar.gz`（`~/.hydro` 配置与判题配置，排除可重建的 `static/`）、可选 `runtime-config.tar.gz`、`Caddyfile`、`manifest.txt`、`SHA256SUMS` 和私有诊断日志。
+- 输出使用 `umask 077`。Hydro 5.0.7 的备份日志可能含 MongoDB 连接凭据，完整输出只写进私有 `hydro-backup.log`；不要把日志或备份包提交到公开仓库。
+- 备份失败、ZIP 缺失/损坏、配置打包失败都会返回非零并保留 `.pending-*` 目录供排查，不会标成完整备份。
+- 建议策略：每天 1 次完整备份，保留最近 7 个每日、4 个每周、3 个每月副本；**脚本只记录政策，不自动删除**。清理前人工核对异机副本与恢复演练结果。
+
+备份完成后把**整个成功目录**复制到另一台机器或学校存储，再在备份机执行 `sha256sum -c SHA256SUMS`。首次上线前和重要升级后，在隔离的备用实例做一次恢复演练：核对组件版本和校验和 → 按官方文档恢复 ZIP（会覆盖目标数据库和文件，只能指向备用实例）→ 从 sidecar 归档核对 `addon.json`、自定义资源、判题配置和 Caddy 配置 → 登录测试账号并执行第 14 节判题验收。Caddyfile 引用的外部 `import`、目录外 addon、软链目标和对象存储需要另行备份。
+
+这是在线备份，数据库与文件不是跨存储的原子快照；重要比赛前选择上传/改题较少的时段，必要时人工安排维护窗口。不要直接复制正在使用的 MongoDB `/data/db`。
+
+## 13. 默认只读的部署检查
+
+```bash
+bash /opt/swpu-oj/scripts/check-deployment.sh \
+  --role all --data-dir /data \
+  --caddy-config /root/.hydro/Caddyfile
+```
+
+脚本读取 Hydro / hydrojudge 包版本，显示 Node / Caddy 版本，检查 Web、MongoDB、Caddy、判题机与沙箱进程，检查数据盘与 Hydro 所在盘使用率，并用 `caddy adapt` 做语法/适配检查（丢弃可能含配置秘密的 JSON 输出）。磁盘使用率达到 90%、组件缺失、进程未发现、配置适配错误返回 `1`；参数错误返回 `64`。
+
+- 组件分开部署时，Web 机使用 `--role web`，判题机使用 `--role judge`。judge 模式不要求 `hydrooj` 包、`config.json`、本地 MongoDB 或 Caddy，只核对 hydrojudge 与 `judge.yaml`，并且默认不检查 `/data`。
+- 只有显式添加 `--url` 才执行 HTTP GET，检查 `/` 与 `/home.html` 为 `200` 且带 `no-cache`；不会发验证码或提交代码。
+- `caddy adapt` 只做适配检查，不预配置模块；正式上线前的 `caddy validate` 由管理员在确认配置路径后执行。进程存在不代表判题正确，也不代表没有排队。
+
+## 14. 人工判题验收与升级回退
+
+在独立测试域准备一题明确的 A+B，用支持的 C++ 和 Python 各提交一份正确程序确认 AC；提交固定错误输出确认 WA、死循环确认 TLE、非法语法确认 CE。对照题目限时检查结果，确认有判题机执行、测试数据可读、沙箱限制生效。不要在正式比赛排名里运行这些测试。
+
+升级流程：记录当前组件与自研插件版本 → 保存并核验完整备份和异机副本 → 备用实例升级 → 注册/登录与人工判题验收 → 在人工确认的维护窗口应用到正式机。升级失败时，优先切换到验证过的备用实例，或按相匹配的程序版本和数据备份恢复；数据库迁移后不要直接降级 npm 包当作回退。本仓库没有自动发布、重启或回滚脚本。

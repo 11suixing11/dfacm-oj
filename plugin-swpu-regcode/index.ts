@@ -7,32 +7,79 @@
 import fs from 'fs';
 import { join } from 'path';
 import {
-    BlackListModel, Context, db, Handler, Logger, PERM, post, sendMail, Types, UserModel,
+    BlackListModel, Context, db, Handler, Logger, OplogModel, PERM, post, PRIV,
+    sendMail, SettingModel, SystemModel, Types, UserAlreadyExistError, UserModel,
 } from 'hydrooj';
-import {
-    buildVerifyFilter, CODE_TTL_MS, generateCode, isCodeExpired, isPurposeMatch,
-    isValidCodeFormat, MAX_CODE_ATTEMPTS, normalizeClientIp, normalizeMail, type CodePurpose,
-} from './logic';
+import { loginPolicyFailure } from './auth';
+import { createCodeStore } from './codes';
+import type { CodeCollection, CodeFailureReason, CodePurpose } from './codes';
+import { DEFAULTS, localRedirect, positiveLimit } from './config';
+import { CODE_TTL_MS, MAX_CODE_ATTEMPTS, normalizeMail, resolveClientIp } from './logic';
 
 const logger = new Logger('swpu-regcode');
-const coll = db.collection('regcode');
+const codes = createCodeStore(
+    db.collection('regcode') as unknown as CodeCollection,
+    { ttlMs: CODE_TTL_MS, maxAttempts: MAX_CODE_ATTEMPTS },
+);
 const PAGE = fs.readFileSync(join(__dirname, 'reg.html'), 'utf-8');
 
-function isLoopback(ip: string): boolean {
-    const value = ip.trim().toLowerCase();
-    return value === '::1'
-        || value === 'localhost'
-        || value.startsWith('127.')
-        || value.startsWith('::ffff:127.');
+// Caddy is the only trusted proxy; resolve the real client IP for rate limits,
+// login records and contest IP binding.
+function getClientIp(handler: Handler): string {
+    return resolveClientIp(handler.request.ip, handler.request.headers['x-forwarded-for']);
 }
 
-function getClientIp(handler: Handler): string {
-    const direct = handler.request.ip || '';
-    if (direct && !isLoopback(direct)) return direct;
-    const forwarded = handler.request.headers['x-forwarded-for'];
-    const raw = Array.isArray(forwarded) ? forwarded[0] : forwarded;
-    const first = normalizeClientIp(raw);
-    return first || direct;
+function fail(handler: Handler, message: string) {
+    handler.response.body = { ok: false, message };
+}
+
+const codeMessages: Record<CodeFailureReason, string> = {
+    missing: '验证码不存在或已使用，请重新获取。',
+    expired: '验证码已过期，请重新获取。',
+    invalid: '验证码错误，请重试。',
+    attempts: '尝试次数过多，请重新获取验证码。',
+    pending: '验证码邮件正在发送，请稍后再试。',
+    binding: '验证码与当前账号或用途不匹配，请重新获取。',
+};
+
+function loginPolicy(handler: Handler, udoc: Awaited<ReturnType<typeof UserModel.getById>>) {
+    return loginPolicyFailure(udoc, {
+        enabled: !!SystemModel.get('server.login'),
+        contestMode: SystemModel.get('system.contestmode'),
+        ip: getClientIp(handler),
+        profilePrivilege: PRIV.PRIV_USER_PROFILE,
+        editSystemPrivilege: PRIV.PRIV_EDIT_SYSTEM,
+        hasOtherUserAtIp: async (uid, ip) => !!await UserModel.getMulti({ loginip: ip, _id: { $ne: uid } })
+            .project({ _id: 1 }).limit(1).next(),
+    });
+}
+
+function checkRegistration(handler: Handler) {
+    if (!SystemModel.get('server.login')) {
+        fail(handler, '当前已关闭站内注册和登录。');
+        return false;
+    }
+    handler.checkPriv(PRIV.PRIV_REGISTER_USER);
+    return true;
+}
+
+async function limitVerification(handler: Handler, mailKey: string) {
+    await handler.limitRate('regcode_verify_ip', 60,
+        positiveLimit(SystemModel.get('limit.regcode_verify_ip'), DEFAULTS.verifyIpMinute), getClientIp(handler));
+    await handler.limitRate('regcode_verify_account', 60,
+        positiveLimit(SystemModel.get('limit.regcode_verify_account'), DEFAULTS.verifyAccountMinute), mailKey);
+}
+
+// OplogModel.log copies handler.args. Remove the one-time secret before logging.
+async function authAudit(handler: Handler, type: string, uid: number) {
+    const originalArgs = handler.args;
+    const { code, password, verifyPassword, ...safeArgs } = originalArgs;
+    handler.args = safeArgs;
+    try {
+        await OplogModel.log(handler, type, { uid, method: 'swpu-mail-code' });
+    } finally {
+        handler.args = originalArgs;
+    }
 }
 
 function mailHtml(title: string, code: string, note: string) {
@@ -45,21 +92,12 @@ function mailHtml(title: string, code: string, note: string) {
 </div>`;
 }
 
-async function issueCode(mail: string, purpose: CodePurpose) {
-    const code = generateCode();
-    await coll.updateOne(
-        { _id: normalizeMail(mail) },
-        { $set: { code, purpose, expireAt: new Date(Date.now() + CODE_TTL_MS), attempts: 0 } },
-        { upsert: true },
-    );
-    return code;
-}
-
 class RegPageHandler extends Handler {
     noCheckPermView = true;
     async get() {
         this.response.body = PAGE;
         this.response.type = 'text/html; charset=utf-8';
+        this.response.addHeader('Cache-Control', 'no-store');
     }
 }
 
@@ -68,11 +106,13 @@ class RegCodeHandler extends Handler {
     @post('mail', Types.Email)
     @post('purpose', Types.String, true)
     async post(domainId: string, mail: string, purpose: string) {
+        if (purpose && purpose !== 'reg' && purpose !== 'login') {
+            fail(this, '验证码用途不合法。');
+            return;
+        }
         const mode: CodePurpose = purpose === 'login' ? 'login' : 'reg';
-        const mailKey = normalizeMail(mail);
-        const clientIp = getClientIp(this);
-        logger.info('regcode send requested from %s', clientIp);
-        const registered = await UserModel.getByEmail('system', mailKey);
+        if (mode === 'reg' && !checkRegistration(this)) return;
+        const registered = await UserModel.getByEmail('system', mail);
         if (mode === 'reg' && registered) {
             this.response.body = { ok: false, message: '该邮箱已注册过账号，请直接登录或找回密码。' };
             return;
@@ -81,76 +121,70 @@ class RegCodeHandler extends Handler {
             this.response.body = { ok: false, message: '该邮箱未注册，请先注册账号。' };
             return;
         }
-        const mailDomain = mailKey.split('@')[1];
+        if (mode === 'login') {
+            const blocked = await loginPolicy(this, registered);
+            if (blocked) { fail(this, blocked); return; }
+        }
+        // The delivery address must be the existing account's bound email, not
+        // an input alias that happens to match Hydro's normalized lookup key.
+        const recipient = mode === 'login' ? registered.mail : normalizeMail(mail);
+        const mailKey = UserModel._handleMailLower(recipient);
+        const mailDomain = recipient.split('@')[1].toLowerCase();
         if (await BlackListModel.get(`mail::${mailDomain}`)) {
             this.response.body = { ok: false, message: '该邮箱域名暂不支持。' };
             return;
         }
         await this.limitRate('regcode_send', 60, 1, mailKey);
-        await this.limitRate('regcode_send_ip', 3600, 20, clientIp);
-        const code = await issueCode(mailKey, mode);
+        await this.limitRate('regcode_send_ip', 3600,
+            positiveLimit(SystemModel.get('limit.regcode_send_ip'), DEFAULTS.sendIpHourly), getClientIp(this));
+        await this.limitRate('regcode_send_global', 3600,
+            positiveLimit(SystemModel.get('limit.regcode_send_global'), DEFAULTS.sendGlobalHourly), 'site');
+        // New accounts must finish with the exact address that received the
+        // registration email. Hydro's lookup normalization is only a rate key.
+        const issued = await codes.prepare(mode === 'reg' ? recipient : mailKey, mode,
+            mode === 'login' ? registered._id : undefined);
+        const { code } = issued;
         try {
             if (mode === 'reg') {
-                await sendMail(mail, '【SWPU OJ】注册验证码',
+                await sendMail(recipient, '【SWPU OJ】注册验证码',
                     `您的验证码是 ${code}，5 分钟内有效。如非本人操作请忽略本邮件。`,
                     mailHtml('你的注册验证码', code, '验证码 5 分钟内有效。如非本人操作，请忽略本邮件。'));
             } else {
-                await sendMail(mail, '【SWPU OJ】登录验证码',
+                await sendMail(recipient, '【SWPU OJ】登录验证码',
                     `您的登录验证码是 ${code}，5 分钟内有效。如非本人操作请忽略本邮件并建议修改密码。`,
                     mailHtml('你的登录验证码', code, '验证码 5 分钟内有效。如非本人操作，请忽略本邮件并建议尽快修改密码。'));
             }
         } catch (e) {
-            await coll.deleteOne({ _id: mailKey });
-            logger.error('send code failed:', e.message);
+            await codes.discard(issued);
+            logger.error('send code failed:', e instanceof Error ? e.message : String(e));
             this.response.body = { ok: false, message: '验证码邮件发送失败，请稍后再试。' };
+            return;
+        }
+        if (!await codes.activate(issued)) {
+            fail(this, '本次验证码已失效，请使用最新邮件中的验证码或重新获取。');
             return;
         }
         this.response.body = { ok: true, message: '验证码已发送，请查收邮箱（5 分钟内有效）。' };
     }
 }
 
-async function checkCode(mail: string, code: string, purpose: CodePurpose) {
-    const key = normalizeMail(mail);
-    if (!isValidCodeFormat(code)) return { fail: '请输入 6 位数字验证码。' };
-    const doc = await coll.findOne({ _id: key });
-    if (!doc) return { fail: '请先获取验证码。' };
-    if (isCodeExpired(doc.expireAt)) {
-        await coll.deleteOne({ _id: key });
-        return { fail: '验证码已过期，请重新获取。' };
-    }
-    if (doc.attempts >= MAX_CODE_ATTEMPTS) {
-        await coll.deleteOne({ _id: key });
-        return { fail: '尝试次数过多，请重新获取验证码。' };
-    }
-    if (!isPurposeMatch(doc.purpose, purpose)) {
-        await coll.updateOne(
-            { _id: key, attempts: { $lt: MAX_CODE_ATTEMPTS } },
-            { $inc: { attempts: 1 } },
-        );
-        return { fail: '验证码错误，请重试。' };
-    }
-    const matched = await coll.updateOne(
-        buildVerifyFilter(key, code, purpose),
-        { $inc: { attempts: 1 } },
-    );
-    if (matched.modifiedCount === 1) return {};
-    await coll.updateOne(
-        { _id: key, attempts: { $lt: MAX_CODE_ATTEMPTS } },
-        { $inc: { attempts: 1 } },
-    );
-    return { fail: '验证码错误，请重试。' };
-}
-
 async function loginAs(handler: Handler, domainId: string, uid: number) {
     const udoc = await UserModel.getById(domainId, uid);
+    const blocked = await loginPolicy(handler, udoc);
+    if (blocked) { fail(handler, blocked); return false; }
+    await handler.ctx.serial('auth/before-login', handler, udoc);
     await UserModel.setById(uid, { loginat: new Date(), loginip: getClientIp(handler) });
     handler.context.HydroContext.user = udoc;
+    handler.session.viewLang = '';
     handler.session.uid = udoc._id;
     handler.session.sudo = null;
     handler.session.sudoUid = null;
     handler.session.scope = PERM.PERM_ALL.toString();
     handler.session.oauthBind = null;
     handler.session.recreate = true;
+    await authAudit(handler, 'user.loginSuccess', uid);
+    await handler.ctx.serial('auth/login', handler, udoc);
+    return true;
 }
 
 class RegCompleteHandler extends Handler {
@@ -160,40 +194,51 @@ class RegCompleteHandler extends Handler {
     @post('uname', Types.String)
     @post('password', Types.Password)
     async post(domainId: string, mail: string, code: string, uname: string, password: string) {
-        const mailKey = normalizeMail(mail);
-        if (await UserModel.getByEmail('system', mailKey)) {
+        if (!checkRegistration(this)) return;
+        const recipient = normalizeMail(mail);
+        const mailKey = UserModel._handleMailLower(recipient);
+        await limitVerification(this, mailKey);
+        if (await UserModel.getByEmail('system', mail)) {
             this.response.body = { ok: false, message: '该邮箱已注册过账号，请直接登录。' };
             return;
         }
         if (!Types.Username[1](uname)) {
-            this.response.body = { ok: false, message: '用户名不合法：2–16 位，支持中文、字母、数字、下划线。' };
+            this.response.body = { ok: false, message: '用户名不符合站点规则，请修改后重试。' };
             return;
         }
-        const chk = await checkCode(mail, code, 'reg');
-        if (chk.fail) {
-            this.response.body = { ok: false, message: chk.fail };
+        uname = Types.Username[0](uname);
+        if (await UserModel.getByUname('system', uname)) {
+            fail(this, '用户名已被占用，换一个试试。');
             return;
         }
+        const checked = await codes.consume(recipient, 'reg', code);
+        if (!checked.ok) { fail(this, codeMessages[checked.reason]); return; }
         let uid: number;
         try {
-            uid = await UserModel.create(mail, uname, password, undefined, getClientIp(this));
+            uid = await UserModel.create(recipient, uname, password, undefined, getClientIp(this));
         } catch (e) {
-            if (e.code === 11000) {
-                this.response.body = { ok: false, message: '用户名已被占用，换一个试试。' };
+            if (e instanceof UserAlreadyExistError || (e as { code?: number }).code === 11000) {
+                fail(this, '用户名或邮箱已被占用，请修改后重新获取验证码。');
                 return;
             }
             throw e;
         }
-        const [id, mailDomain] = mailKey.split('@');
+        const [id, mailDomain] = recipient.split('@');
         const $set: any = {};
         if (mailDomain === 'qq.com' && !Number.isNaN(+id)) {
             $set.avatar = `qq:${id}`;
             $set.qq = `${id}`;
         }
         if (Object.keys($set).length) await UserModel.setById(uid, $set);
-        await coll.deleteOne({ _id: mailKey });
-        await loginAs(this, domainId, uid);
-        this.response.body = { ok: true, redirect: '/training/6abf5251aaa235606eedfb84' };
+        await authAudit(this, 'user.register', uid);
+        if (!await loginAs(this, domainId, uid)) {
+            const response = this.response.body as { ok: boolean; message: string };
+            response.message = `账号已创建，但未能自动登录：${response.message}`;
+            return;
+        }
+        this.response.body = { ok: true, redirect: localRedirect(
+            SystemModel.get('swpu.regcode.register_redirect'), DEFAULTS.registerRedirect,
+        ) };
     }
 }
 
@@ -202,28 +247,48 @@ class CodeLoginHandler extends Handler {
     @post('mail', Types.Email)
     @post('code', Types.String)
     async post(domainId: string, mail: string, code: string) {
-        const mailKey = normalizeMail(mail);
-        const udoc = await UserModel.getByEmail('system', mailKey);
+        const udoc = await UserModel.getByEmail('system', mail);
         if (!udoc) {
             this.response.body = { ok: false, message: '该邮箱未注册，请先注册账号。' };
             return;
         }
-        const chk = await checkCode(mail, code, 'login');
-        if (chk.fail) {
-            this.response.body = { ok: false, message: chk.fail };
-            return;
-        }
-        await coll.deleteOne({ _id: mailKey });
-        await loginAs(this, domainId, udoc._id);
-        this.response.body = { ok: true, redirect: '/' };
+        const blocked = await loginPolicy(this, udoc);
+        if (blocked) { fail(this, blocked); return; }
+        const mailKey = UserModel._handleMailLower(udoc.mail);
+        await limitVerification(this, mailKey);
+        const checked = await codes.consume(mailKey, 'login', code, udoc._id);
+        if (!checked.ok) { fail(this, codeMessages[checked.reason]); return; }
+        if (!await loginAs(this, domainId, udoc._id)) return;
+        this.response.body = { ok: true, redirect: localRedirect(
+            SystemModel.get('swpu.regcode.login_redirect'), DEFAULTS.loginRedirect,
+        ) };
     }
 }
 
+export const inject = ['db'];
+
 export async function apply(ctx: Context) {
-    await coll.createIndex({ expireAt: 1 }, { expireAfterSeconds: 0 });
+    const { Setting, SystemSetting } = SettingModel;
+    const isPositive = (value: unknown) => Number.isSafeInteger(Number(value)) && Number(value) > 0 && Number(value) <= 100000;
+    ctx.effect(() => SystemSetting(
+        Setting('setting_swpu_regcode', 'limit.regcode_send_ip', DEFAULTS.sendIpHourly, 'number',
+            '验证码发送：每 IP 每小时上限', '校园网共用出口默认 200；邮箱仍每 60 秒最多一次。', 0, isPositive),
+        Setting('setting_swpu_regcode', 'limit.regcode_send_global', DEFAULTS.sendGlobalHourly, 'number',
+            '验证码发送：全站每小时上限', '请按发件邮箱额度调整，默认 500。', 0, isPositive),
+        Setting('setting_swpu_regcode', 'limit.regcode_verify_ip', DEFAULTS.verifyIpMinute, 'number',
+            '验证码校验：每 IP 每分钟上限', '', 0, isPositive),
+        Setting('setting_swpu_regcode', 'limit.regcode_verify_account', DEFAULTS.verifyAccountMinute, 'number',
+            '验证码校验：每邮箱每分钟上限', '', 0, isPositive),
+        Setting('setting_swpu_regcode', 'swpu.regcode.register_redirect', DEFAULTS.registerRedirect, 'text',
+            '注册成功跳转路径', '站内路径，如 /training；可填写已有训练路线地址。', 0,
+            (value) => localRedirect(value, '') !== ''),
+        Setting('setting_swpu_regcode', 'swpu.regcode.login_redirect', DEFAULTS.loginRedirect, 'text',
+            '验证码登录成功跳转路径', '仅允许站内路径。', 0, (value) => localRedirect(value, '') !== ''),
+    ));
+    await codes.ensureIndexes();
     ctx.Route('reg_page', '/reg', RegPageHandler);
     ctx.Route('reg_code', '/reg/code', RegCodeHandler);
-    ctx.Route('reg_complete', '/reg/complete', RegCompleteHandler);
+    ctx.Route('reg_complete', '/reg/complete', RegCompleteHandler, PRIV.PRIV_REGISTER_USER);
     ctx.Route('code_login', '/reg/login', CodeLoginHandler);
     logger.info('swpu-regcode routes ready: /reg, /reg/code, /reg/complete, /reg/login');
 }

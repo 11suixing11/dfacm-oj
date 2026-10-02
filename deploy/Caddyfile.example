@@ -20,20 +20,18 @@ swpuacm.xyz, www.swpuacm.xyz {
   }
   handle @custom {
     root * /root/.hydro/custom
+    # This handle runs after the rewrite, so both / and /home.html are covered.
+    header /home.html Cache-Control "no-cache" {
+      match status 2xx
+    }
+    @customAssets not path /home.html
+    # Fixed filenames can change between deployments; avoid a week of stale assets.
+    header @customAssets Cache-Control "public, max-age=3600" {
+      match status 2xx
+    }
     file_server
   }
 
-  @cacheable {
-    path *.woff2 *.png *.chunk.js *.worker.js *.css *.svg *.ico
-    not path /theme-*
-  }
-  header @cacheable Cache-Control "public, max-age=604800"
-  @cacheable2 {
-    path /hydro-*.js /resource/*
-  }
-  header @cacheable2 Cache-Control "public, max-age=604800"
-  header /home.html Cache-Control "no-cache"
-  header /theme-*.css Cache-Control "max-age=600"
   log {
     output file /data/access.log {
       roll_size 1gb
@@ -49,9 +47,21 @@ swpuacm.xyz, www.swpuacm.xyz {
     }
   }
   handle @static {
+    # Cache policy applies only to existing public static files and successful responses.
+    @cacheable {
+      path *.woff2 *.png *.chunk.js *.worker.js *.css *.svg *.ico /hydro-*.js
+      not path /theme-*
+    }
+    header @cacheable Cache-Control "public, max-age=604800" {
+      match status 2xx
+    }
+    header /theme-*.css Cache-Control "max-age=600" {
+      match status 2xx
+    }
     file_server
   }
   handle {
+    # Dynamic downloads (including /resource/*) retain Hydro's own cache policy.
     reverse_proxy http://127.0.0.1:8888 {
       # Caddy is the only trusted proxy; overwrite client-supplied XFF.
       header_up X-Forwarded-For {remote_host}

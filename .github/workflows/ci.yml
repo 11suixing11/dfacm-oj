@@ -62,6 +62,13 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - name: Install regcode test dependencies
+        working-directory: plugin-swpu-regcode
+        run: npm install --no-audit --no-fund
       - name: Run regcode tests
         working-directory: plugin-swpu-regcode
         run: npm test
+      - name: Run ops plugin tests
+        run: node --test plugin-swpu-ops/tests/*.test.cjs
+      - name: Run deployment script tests
+        run: node --test scripts/deployment.test.mjs
