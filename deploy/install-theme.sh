@@ -7,7 +7,7 @@ STATIC_THEME="${STATIC_THEME:-/root/.hydro/static/theme-${THEME_VERSION}.css}"
 SOURCE_THEME="${SOURCE_THEME:-/usr/local/share/.config/yarn/global/node_modules/@hydrooj/ui-default/public/theme-${THEME_VERSION}.css}"
 STATIC_SW="${STATIC_SW:-/root/.hydro/static/service-worker.js}"
 SOURCE_SW="${SOURCE_SW:-/usr/local/share/.config/yarn/global/node_modules/@hydrooj/ui-default/public/service-worker.js}"
-BRAND_MARKER="SWPU ACM native-dark brand overlay"
+BRAND_MARKER="SWPU ACM brand overlay"
 LEGACY_MARKER="SWPU ACM legacy overlay set"
 
 backup_file() {
@@ -33,7 +33,7 @@ apply_brand() {
         return
     fi
     strip_overlays "$target"
-    cat "$ROOT/theme/00-native-dark-brand.css" >> "$target"
+    cat "$ROOT/theme/00-brand.css" >> "$target"
     printf 'brand overlay applied: %s\n' "$target"
 }
 
@@ -71,4 +71,4 @@ for target in "$STATIC_SW" "$SOURCE_SW"; do
     install_service_worker_killswitch "$target"
 done
 
-printf 'theme targets rebuilt; set preference.theme=dark and user.theme=dark as described in theme/README.md\n'
+printf 'theme targets rebuilt; default theme is light (users can switch via preferences or /set_theme)\n'

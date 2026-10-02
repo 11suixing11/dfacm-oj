@@ -1,0 +1,255 @@
+/* ==== SWPU ACM brand overlay (light & dark) ==== */
+/* Requires Hydro ui-default theme classes: .theme--light / .theme--dark on <html>.
+   Sections: shared base -> dark specifics -> light specifics. */
+
+@font-face {
+  font-family: 'SWPU Display';
+  src: url('/swpu-display.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'SWPU Mono';
+  src: url('/swpu-mono.woff2') format('woff2');
+  font-weight: 100 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ---------- shared base: color-scheme & fonts ---------- */
+.theme--dark { color-scheme: dark; }
+.theme--light { color-scheme: light; }
+.theme--dark pre,
+.theme--light pre,
+.theme--dark code,
+.theme--light code,
+.theme--dark kbd,
+.theme--light kbd,
+.theme--dark samp,
+.theme--light samp,
+.theme--dark .monospace,
+.theme--light .monospace {
+  font-family: 'SWPU Mono', 'Cascadia Code', Consolas, 'Microsoft YaHei', monospace;
+  font-variant-ligatures: none;
+}
+.theme--dark ::selection,
+.theme--light ::selection {
+  background: rgba(201, 162, 39, .30);
+}
+
+/* ---------- shared: brand buttons & active menu ---------- */
+.theme--dark .button.primary,
+.theme--light .button.primary,
+.theme--dark .btn-primary,
+.theme--light .btn-primary,
+.theme--dark button.primary,
+.theme--light button.primary,
+.theme--dark input[type="submit"],
+.theme--light input[type="submit"] {
+  background: linear-gradient(160deg, #3568b3, #2a5caa);
+  border-color: #2a5caa;
+  color: #fff;
+}
+.theme--dark .button.primary:hover,
+.theme--light .button.primary:hover,
+.theme--dark .btn-primary:hover,
+.theme--light .btn-primary:hover,
+.theme--dark button.primary:hover,
+.theme--light button.primary:hover {
+  background: #1e4488;
+}
+.theme--dark a.menu__link.active,
+.theme--light a.menu__link.active,
+.theme--dark button.menu__link.active,
+.theme--light button.menu__link.active,
+.theme--dark a.menu__link.active:hover,
+.theme--light a.menu__link.active:hover,
+.theme--dark button.menu__link.active:hover,
+.theme--light button.menu__link.active:hover {
+  background: #2a5caa !important;
+  border-color: #2a5caa !important;
+  color: #fff !important;
+}
+
+/* ---------- shared: table readability & markdown ---------- */
+.theme--dark .data-table,
+.theme--light .data-table { font-variant-numeric: tabular-nums; }
+.theme--dark .data-table td,
+.theme--light .data-table td { font-size: 14px; line-height: 1.65; padding-top: 10px; padding-bottom: 10px; }
+.theme--dark .data-table .col--problem-name,
+.theme--light .data-table .col--problem-name { white-space: normal; overflow-wrap: anywhere; }
+.theme--dark .markdown-body,
+.theme--light .markdown-body,
+.theme--dark .prose,
+.theme--light .prose { line-height: 1.85; overflow-wrap: break-word; }
+.theme--dark .markdown-body img,
+.theme--light .markdown-body img,
+.theme--dark .prose img,
+.theme--light .prose img { max-width: 100%; height: auto; }
+.theme--dark .markdown-body pre,
+.theme--light .markdown-body pre,
+.theme--dark .prose pre,
+.theme--light .prose pre { overflow-x: auto; overflow-wrap: normal; tab-size: 4; }
+
+/* ---------- dark specifics ---------- */
+.theme--dark ::-webkit-scrollbar-thumb {
+  background: #263650;
+  border: 2px solid #121212;
+}
+.theme--dark ::-webkit-scrollbar-thumb:hover {
+  background: #31435f;
+}
+.theme--dark :focus-visible {
+  outline: 2px solid #e9c455;
+  outline-offset: 3px;
+}
+.theme--dark .data-table tbody tr:focus-within { outline: 2px solid #e9c455; outline-offset: -2px; }
+/* 顶栏品牌化 */
+.theme--dark .nav {
+  background: #101d32;
+  border-bottom: 1px solid #c9a227;
+}
+.theme--dark .nav .nav__item,
+.theme--dark .nav .nav__list-item a,
+.theme--dark .nav .menu__link {
+  color: #e8e8e8;
+}
+.theme--dark .nav .nav__item:hover,
+.theme--dark .nav .nav__list-item a:hover {
+  color: #fff;
+  background: #233651;
+}
+.theme--dark .nav .nav__item--active,
+.theme--dark .nav .active .nav__item {
+  border-bottom-color: #c9a227;
+}
+.theme--dark .nav__item--round {
+  color: #8fc2ff;
+}
+.theme--dark .pager__item.current {
+  color: #e9c455 !important;
+  background: rgba(201, 162, 39, .14);
+  border-color: rgba(201, 162, 39, .40);
+}
+/* 正文与训练简介保持 AA 对比度 */
+.theme--dark .section__body {
+  color: #bdbdbd;
+}
+.theme--dark .section__body p,
+.theme--dark .section__body li {
+  color: #bdbdbd;
+}
+.theme--dark .training__intro,
+.theme--dark .training__intro p {
+  color: #bdbdbd;
+}
+.theme--dark .main p,
+.theme--dark .main dt,
+.theme--dark .main li {
+  color: #bdbdbd;
+}
+/* 语义色 */
+.theme--dark .record-status--text.pass {
+  color: #4ade80 !important;
+}
+.theme--dark .record-status--text.fail {
+  color: #ff7b72 !important;
+}
+.theme--dark .record-status--text.warn,
+.theme--dark .record-status--text.progress {
+  color: #e9c455 !important;
+}
+/* 移动端顶栏 */
+.theme--dark .header--mobile {
+  background: #101d32;
+  border-bottom: 2px solid #c9a227;
+}
+/* 表头 */
+.theme--dark .section__header,
+.theme--dark .data-table th { background: #17253b; color: #e8edf5; }
+/* 沉浸式登录/注册页 */
+.theme--dark:has(.immersive--content) .slideout-panel {
+  background: radial-gradient(1100px 600px at 50% -120px, rgba(42, 92, 170, .25), transparent 60%), #121212;
+}
+.theme--dark:has(.immersive--content) .immersive--content button,
+.theme--dark:has(.immersive--content) .immersive--content input[type="submit"] {
+  background: linear-gradient(160deg, #3568b3, #2a5caa);
+  border-color: #2a5caa;
+  color: #fff;
+  border-radius: 999px;
+}
+
+/* ---------- light specifics ---------- */
+.theme--light ::-webkit-scrollbar-thumb {
+  background: #b9c4d2;
+  border: 2px solid #f2f5f9;
+}
+.theme--light ::-webkit-scrollbar-thumb:hover {
+  background: #9aa8ba;
+}
+.theme--light :focus-visible {
+  outline: 2px solid #8a6d1f;
+  outline-offset: 3px;
+}
+.theme--light .data-table tbody tr:focus-within { outline: 2px solid #8a6d1f; outline-offset: -2px; }
+/* 顶栏：白底金边，品牌蓝点缀 */
+.theme--light .nav {
+  background: #fff;
+  border-bottom: 1px solid #c9a227;
+}
+.theme--light .nav .nav__item:hover,
+.theme--light .nav .nav__list-item a:hover {
+  color: #1e4488;
+  background: #eef3fb;
+}
+.theme--light .nav .nav__item--active,
+.theme--light .nav .active .nav__item {
+  border-bottom-color: #c9a227;
+  color: #2a5caa;
+}
+.theme--light .nav__item--round {
+  color: #2a5caa;
+}
+/* 金色当前页（深金保证白底对比度） */
+.theme--light .pager__item.current {
+  color: #8a6d1f !important;
+  background: rgba(201, 162, 39, .16);
+  border-color: rgba(138, 109, 31, .45);
+}
+/* 移动端顶栏 */
+.theme--light .header--mobile {
+  background: #fff;
+  border-bottom: 2px solid #c9a227;
+}
+/* 表头：浅品牌蓝底 + 金色下边框 */
+.theme--light .section__header { background: #e9eff8; color: #22354f; }
+.theme--light .data-table th { background: #e9eff8; color: #22354f; border-bottom: 2px solid #c9a227; }
+/* 沉浸式登录/注册页：浅色品牌渐变，替代原生蓝色照片背景 */
+.theme--light:has(.immersive--content) .slideout-panel {
+  background: radial-gradient(1100px 600px at 50% -120px, rgba(42, 92, 170, .12), transparent 60%), linear-gradient(180deg, #ffffff, #eef3fa);
+}
+.theme--light:has(.immersive--content) .immersive--content button,
+.theme--light:has(.immersive--content) .immersive--content input[type="submit"] {
+  background: linear-gradient(160deg, #3568b3, #2a5caa);
+  border-color: #2a5caa;
+  color: #fff;
+  border-radius: 999px;
+}
+
+/* ---------- shared: mobile & reduced motion ---------- */
+@media (max-width: 600px) {
+  .theme--dark .data-table td,
+  .theme--light .data-table td { padding-top: 12px; padding-bottom: 12px; }
+  .theme--dark .textbox input:not([type="checkbox"]):not([type="radio"]),
+  .theme--light .textbox input:not([type="checkbox"]):not([type="radio"]),
+  .theme--dark .textbox textarea,
+  .theme--light .textbox textarea { font-size: 16px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .theme--dark .data-table tbody tr,
+  .theme--light .data-table tbody tr,
+  .theme--dark a,
+  .theme--light a { transition: none; }
+}
+/* ==== end SWPU ACM brand overlay ==== */

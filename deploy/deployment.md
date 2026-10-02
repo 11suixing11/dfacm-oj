@@ -28,15 +28,15 @@ bash /root/swpu-oj/deploy/install-landing.sh /root/.hydro/custom
 
 Caddy 站点块中的 `@custom` 和 `handle @custom` 见 [Caddyfile.example](Caddyfile.example)。
 
-## 3. 主题：原生 Dark + 品牌薄层
+## 3. 主题：原生双主题（默认 light）+ 品牌薄层
 
-Hydro `ui-default` 自带持续维护的 Dark 主题。推荐只追加 `theme/00-native-dark-brand.css`，不要重新启用 01-05 的旧全量覆盖；旧文件仅保留作回退参考。
+Hydro `ui-default` 自带持续维护的 Light / Dark 双主题，站点默认 light，用户可在偏好设置或页脚切换。推荐只追加 `theme/00-brand.css`（同时覆盖两种模式），不要重新启用 01-05 的旧全量覆盖；旧文件仅保留作回退参考。
 
 ```bash
 bash /root/swpu-oj/deploy/install-theme.sh
 ```
 
-脚本会先剥掉两处 CSS 里所有 `==== SWPU ACM` 旧 overlay，再追加 `00-native-dark-brand.css`，并把两处 `service-worker.js` 换成自注销清缓存版本。这样 UI 重建、重复执行和旧主题残留都不会覆盖最新品牌层。
+脚本会先剥掉两处 CSS 里所有 `==== SWPU ACM` 旧 overlay，再追加 `00-brand.css`，并把两处 `service-worker.js` 换成自注销清缓存版本。这样 UI 重建、重复执行和旧主题残留都不会覆盖最新品牌层。
 
 它同时处理两处主题 CSS：
 
@@ -63,7 +63,7 @@ THEME_VERSION=5.0.0 bash /root/swpu-oj/deploy/install-theme.sh
 SWPU_THEME_LEGACY=1 bash /root/swpu-oj/deploy/install-theme.sh
 ```
 
-还需要把系统和已有用户的主题设为 dark，见 [theme/README.md](../theme/README.md)。
+系统和用户的主题默认已恢复 light，切换与恢复默认的步骤见 [theme/README.md](../theme/README.md)。
 
 ## 4. 注册插件
 
@@ -159,7 +159,7 @@ curl -sSI https://<域名>/ | grep -Ei 'strict-transport|x-content-type|referrer
 ## 9. UI 重建后的重放清单
 
 - [ ] `bash deploy/install-theme.sh` 重新追加 00 品牌薄层（脚本会先剥掉旧 overlay；版本变化时先设置 `THEME_VERSION`）。
-- [ ] 确认 static 与源包两处都能 `grep -c "native-dark brand overlay"`。
+- [ ] 确认 static 与源包两处都能 `grep -c "SWPU ACM brand overlay"`。
 - [ ] 确认 `/service-worker.js` 是 kill-switch（`grep -q unregister`）。
 - [ ] 门面、字体、图标在 `custom/`，**无需重放**。
 - [ ] 如果 Hydro 头部引用 static 下的默认 favicon，确认 `@custom` 路径列表覆盖同名文件。
