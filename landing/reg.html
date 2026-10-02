@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>注册 · SWPU ACM 训练场</title>
-<meta name="description" content="注册 SWPU ACM 在线训练场账号，从题号 1000 开始你的海拔。">
+<title>注册 / 登录 · SWPU ACM 训练场</title>
+<meta name="description" content="注册或登录 SWPU ACM 在线训练场：邮箱验证码注册，验证码免密登录。">
 <meta name="theme-color" content="#070d18">
 <link rel="icon" type="image/png" href="/favicon.png">
 <link rel="preload" href="/swpu-display.woff2" as="font" type="font/woff2" crossorigin>
@@ -21,10 +21,16 @@ body{background:radial-gradient(1100px 600px at 50% -200px,rgba(42,92,170,.16),t
 .brand svg{width:38px;height:38px}
 .brand .bt b{display:block;font-family:var(--font-d);font-weight:400;font-size:18px;letter-spacing:.08em;color:var(--txt);line-height:1.2}
 .brand .bt span{display:block;font-family:var(--font-m);font-size:8.5px;letter-spacing:.4em;color:var(--txt-3)}
-.card{background:linear-gradient(165deg,rgba(19,31,53,.92),rgba(10,19,34,.94));border:1px solid var(--line-strong);border-radius:20px;padding:34px 32px 30px;box-shadow:0 30px 90px rgba(2,6,14,.55),inset 0 1px 0 rgba(198,216,240,.08)}
-h1{font-family:var(--font-d);font-weight:400;font-size:26px;letter-spacing:.02em;margin-bottom:6px}
+.card{background:linear-gradient(165deg,rgba(19,31,53,.92),rgba(10,19,34,.94));border:1px solid var(--line-strong);border-radius:20px;padding:30px 32px 28px;box-shadow:0 30px 90px rgba(2,6,14,.55),inset 0 1px 0 rgba(198,216,240,.08)}
+.tabs{display:flex;gap:6px;background:rgba(7,13,24,.5);border:1px solid var(--line);border-radius:12px;padding:4px;margin-bottom:22px}
+.tabs button{flex:1;border:none;background:none;color:var(--txt-3);font-size:14.5px;padding:9px 0;border-radius:9px;cursor:pointer;font-family:var(--font-b);transition:background .25s,color .25s}
+.tabs button.on{background:rgba(42,92,170,.35);color:var(--txt)}
+.tabs button:hover:not(.on){color:var(--txt-2)}
+.pane{display:none}
+.pane.on{display:block}
+h1{font-family:var(--font-d);font-weight:400;font-size:24px;letter-spacing:.02em;margin-bottom:6px}
 h1 i{font-style:normal;color:var(--gold-hi)}
-.sub{color:var(--txt-3);font-size:13px;margin-bottom:26px}
+.sub{color:var(--txt-3);font-size:13px;margin-bottom:22px}
 .field{margin-bottom:16px}
 .field label{display:block;font-size:12.5px;color:var(--txt-2);margin-bottom:7px;letter-spacing:.04em}
 .row{display:flex;gap:10px}
@@ -65,38 +71,66 @@ input.codein{font-family:var(--font-m);letter-spacing:.5em;font-size:17px;text-a
     <span class="bt"><b>SWPU ACM</b><span>TRAINING GROUND</span></span>
   </a>
   <div class="card">
-    <h1>创建你的账号</h1>
-    <p class="sub">验证码将发送到你的邮箱，5 分钟内有效。</p>
-    <form id="f" novalidate>
-      <div class="field">
-        <label for="mail">邮箱</label>
-        <input id="mail" name="mail" type="email" placeholder="you@example.com" autocomplete="email" required>
-      </div>
-      <div class="field">
-        <label for="code">验证码</label>
-        <div class="row">
-          <input id="code" name="code" class="codein" inputmode="numeric" maxlength="6" placeholder="······" autocomplete="one-time-code">
-          <button type="button" id="send" class="btn btn-code">获取验证码</button>
+    <div class="tabs" role="tablist">
+      <button type="button" id="tab-reg" class="on" role="tab" aria-selected="true">注 册</button>
+      <button type="button" id="tab-login" role="tab" aria-selected="false">验证码登录</button>
+    </div>
+
+    <div class="pane on" id="pane-reg">
+      <h1>创建你的账号</h1>
+      <p class="sub">验证码将发送到你的邮箱，5 分钟内有效。</p>
+      <form id="f-reg" novalidate>
+        <div class="field">
+          <label for="r-mail">邮箱</label>
+          <input id="r-mail" type="email" placeholder="you@example.com" autocomplete="email" required>
         </div>
-      </div>
-      <div class="field">
-        <label for="uname">用户名</label>
-        <input id="uname" name="uname" type="text" placeholder="2–16 位：中文、字母、数字、下划线" autocomplete="username" required>
-      </div>
-      <div class="field">
-        <label for="pw">设置密码</label>
-        <input id="pw" name="password" type="password" placeholder="至少 6 位" autocomplete="new-password" required minlength="6">
-      </div>
-      <div class="field">
-        <label for="pw2">确认密码</label>
-        <input id="pw2" type="password" placeholder="再输一次" autocomplete="new-password" required>
-      </div>
-      <button type="submit" id="go" class="btn btn-go">创建账号，开始登顶</button>
-      <div class="msg" id="msg" role="status" aria-live="polite"></div>
-    </form>
+        <div class="field">
+          <label for="r-code">验证码</label>
+          <div class="row">
+            <input id="r-code" class="codein" inputmode="numeric" maxlength="6" placeholder="······" autocomplete="one-time-code">
+            <button type="button" id="r-send" class="btn btn-code">获取验证码</button>
+          </div>
+        </div>
+        <div class="field">
+          <label for="r-uname">用户名</label>
+          <input id="r-uname" type="text" placeholder="2–16 位：中文、字母、数字、下划线" autocomplete="username" required>
+        </div>
+        <div class="field">
+          <label for="r-pw">设置密码</label>
+          <input id="r-pw" type="password" placeholder="至少 6 位" autocomplete="new-password" required minlength="6">
+        </div>
+        <div class="field">
+          <label for="r-pw2">确认密码</label>
+          <input id="r-pw2" type="password" placeholder="再输一次" autocomplete="new-password" required>
+        </div>
+        <button type="submit" id="r-go" class="btn btn-go">创建账号，开始登顶</button>
+        <div class="msg" id="r-msg" role="status" aria-live="polite"></div>
+      </form>
+    </div>
+
+    <div class="pane" id="pane-login">
+      <h1>验证码登录</h1>
+      <p class="sub">无需密码，邮箱收码即登录。</p>
+      <form id="f-login" novalidate>
+        <div class="field">
+          <label for="l-mail">邮箱</label>
+          <input id="l-mail" type="email" placeholder="you@example.com" autocomplete="email" required>
+        </div>
+        <div class="field">
+          <label for="l-code">验证码</label>
+          <div class="row">
+            <input id="l-code" class="codein" inputmode="numeric" maxlength="6" placeholder="······" autocomplete="one-time-code">
+            <button type="button" id="l-send" class="btn btn-code">获取验证码</button>
+          </div>
+        </div>
+        <button type="submit" id="l-go" class="btn btn-go">登录</button>
+        <div class="msg" id="l-msg" role="status" aria-live="polite"></div>
+      </form>
+    </div>
+
     <div class="ft">
-      <a href="/login">已有账号？去登录</a>
-      <a class="mono" href="/">SWPUACM.BOT.CD</a>
+      <a href="/login">密码登录 / 找回密码</a>
+      <a class="mono" href="/">SWPUACM.XYZ</a>
     </div>
   </div>
 </div>
@@ -104,9 +138,20 @@ input.codein{font-family:var(--font-m);letter-spacing:.5em;font-size:17px;text-a
 'use strict';
 (function(){
   var $=function(id){return document.getElementById(id)};
-  var msg=$('msg'),send=$('send'),go=$('go'),timer=null;
-  function show(t,cls){msg.textContent=t;msg.className='msg show '+cls}
-  function hide(){msg.className='msg'}
+  var tabReg=$('tab-reg'),tabLogin=$('tab-login'),paneReg=$('pane-reg'),paneLogin=$('pane-login');
+  function showTab(which){
+    var isReg=which!=='login';
+    tabReg.classList.toggle('on',isReg);tabLogin.classList.toggle('on',!isReg);
+    tabReg.setAttribute('aria-selected',isReg);tabLogin.setAttribute('aria-selected',!isReg);
+    paneReg.classList.toggle('on',isReg);paneLogin.classList.toggle('on',!isReg);
+    history.replaceState(null,'',isReg?'/reg':'/reg?tab=login');
+  }
+  tabReg.addEventListener('click',function(){showTab('reg')});
+  tabLogin.addEventListener('click',function(){showTab('login')});
+  if(location.search.indexOf('tab=login')>=0||location.hash==='#login')showTab('login');
+
+  function msg(el,text,cls){el.textContent=text;el.className='msg show '+cls}
+  function hide(el){el.className='msg'}
   async function api(url,data){
     var r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams(data)});
     var t=await r.text();var d;
@@ -114,34 +159,44 @@ input.codein{font-family:var(--font-m);letter-spacing:.5em;font-size:17px;text-a
     if(r.status>=400&&d.ok!==false)d={ok:false,message:'请求失败，请稍后再试'};
     return d;
   }
-  function cooldown(){
-    var s=60;send.disabled=true;
-    clearInterval(timer);
-    timer=setInterval(function(){
-      s--;send.textContent=s+'s 后重发';
-      if(s<=0){clearInterval(timer);send.disabled=false;send.textContent='重新获取'}
-    },1000);
+  function bindSender(btn,msgEl,getMail,purpose){
+    var timer=null;
+    btn.addEventListener('click',async function(){
+      var mail=getMail().trim();
+      if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail)){msg(msgEl,'请先填写正确的邮箱地址','err');return}
+      btn.disabled=true;btn.textContent='发送中…';hide(msgEl);
+      var d=await api('/reg/code',{mail:mail,purpose:purpose});
+      if(d.ok){msg(msgEl,d.message||'验证码已发送','ok');
+        var s=60;clearInterval(timer);timer=setInterval(function(){s--;btn.textContent=s+'s 后重发';if(s<=0){clearInterval(timer);btn.disabled=false;btn.textContent='重新获取'}},1000);
+      }else{msg(msgEl,d.message||'发送失败，请稍后再试','err');btn.disabled=false;btn.textContent='获取验证码'}
+    });
   }
-  send.addEventListener('click',async function(){
-    var mail=$('mail').value.trim();
-    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail)){show('请先填写正确的邮箱地址','err');return}
-    send.disabled=true;send.textContent='发送中…';hide();
-    var d=await api('/reg/code',{mail:mail});
-    if(d.ok){show(d.message||'验证码已发送','ok');cooldown()}
-    else{show(d.message||'发送失败，请稍后再试','err');send.disabled=false;send.textContent='获取验证码'}
-  });
-  $('f').addEventListener('submit',async function(e){
+  bindSender($('r-send'),$('r-msg'),function(){return $('r-mail').value},'reg');
+  bindSender($('l-send'),$('l-msg'),function(){return $('l-mail').value},'login');
+
+  $('f-reg').addEventListener('submit',async function(e){
     e.preventDefault();
-    var mail=$('mail').value.trim(),code=$('code').value.trim(),uname=$('uname').value.trim(),pw=$('pw').value,pw2=$('pw2').value;
-    if(!mail){show('请填写邮箱','err');return}
-    if(!/^\d{6}$/.test(code)){show('请输入 6 位数字验证码','err');return}
-    if(!uname){show('请填写用户名','err');return}
-    if(pw.length<6){show('密码至少 6 位','err');return}
-    if(pw!==pw2){show('两次输入的密码不一致','err');return}
-    go.disabled=true;go.textContent='创建中…';hide();
+    var mail=$('r-mail').value.trim(),code=$('r-code').value.trim(),uname=$('r-uname').value.trim(),pw=$('r-pw').value,pw2=$('r-pw2').value;
+    if(!mail){msg($('r-msg'),'请填写邮箱','err');return}
+    if(!/^\d{6}$/.test(code)){msg($('r-msg'),'请输入 6 位数字验证码','err');return}
+    if(!uname){msg($('r-msg'),'请填写用户名','err');return}
+    if(pw.length<6){msg($('r-msg'),'密码至少 6 位','err');return}
+    if(pw!==pw2){msg($('r-msg'),'两次输入的密码不一致','err');return}
+    var go=$('r-go');go.disabled=true;go.textContent='创建中…';hide($('r-msg'));
     var d=await api('/reg/complete',{mail:mail,code:code,uname:uname,password:pw});
     if(d.ok){go.textContent='欢迎加入！正在带你上山…';location.href=d.redirect||'/'}
-    else{show(d.message||'注册失败，请稍后再试','err');go.disabled=false;go.textContent='创建账号，开始登顶'}
+    else{msg($('r-msg'),d.message||'注册失败，请稍后再试','err');go.disabled=false;go.textContent='创建账号，开始登顶'}
+  });
+
+  $('f-login').addEventListener('submit',async function(e){
+    e.preventDefault();
+    var mail=$('l-mail').value.trim(),code=$('l-code').value.trim();
+    if(!mail){msg($('l-msg'),'请填写邮箱','err');return}
+    if(!/^\d{6}$/.test(code)){msg($('l-msg'),'请输入 6 位数字验证码','err');return}
+    var go=$('l-go');go.disabled=true;go.textContent='登录中…';hide($('l-msg'));
+    var d=await api('/reg/login',{mail:mail,code:code});
+    if(d.ok){go.textContent='欢迎回来！';location.href=d.redirect||'/'}
+    else{msg($('l-msg'),d.message||'登录失败，请稍后再试','err');go.disabled=false;go.textContent='登录'}
   });
 })();
 </script>

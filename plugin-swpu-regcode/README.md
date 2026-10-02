@@ -1,13 +1,14 @@
 # swpu-regcode — 数字验证码注册插件
 
-Hydro v5 的原生注册流程是「邮箱 → 点邮件里的链接 → 设账密」。国内用户更习惯**输数字验证码**。本插件在 Hydro 旁边实现了一套验证码注册流程，注册完成后自动登录并跳转到指定训练路线。
+Hydro v5 的原生注册流程是「邮箱 → 点邮件里的链接 → 设账密」。国内用户更习惯**输数字验证码**。本插件在 Hydro 旁边实现了验证码注册 + 验证码免密登录（双标签页），登录后按来源跳转（新号直达训练路线）。
 
 ## 工作方式
 
 ```
-GET  /reg            注册页（读取插件目录下的 reg.html，品牌一致的单页）
-POST /reg/code       {mail}       发送 6 位数字验证码
-POST /reg/complete   {mail, code, uname, password}   校验建号并登录
+GET  /reg            注册 + 验证码登录双标签页（读取插件目录下的 reg.html）
+POST /reg/code       {mail, purpose}   发送 6 位验证码（purpose: reg=注册 / login=免密登录）
+POST /reg/complete   {mail, code, uname, password}   注册并自动登录
+POST /reg/login      {mail, code}      验证码免密登录
 ```
 
 - 验证码存独立集合 `regcode`，MongoDB TTL 索引 **5 分钟自动过期**
