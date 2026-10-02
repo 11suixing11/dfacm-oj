@@ -1,0 +1,64 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  secret-scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  repo-checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Reject retired domain
+        run: |
+          if grep -R "swpuacm.bot.cd" --exclude-dir=.git --exclude-dir=node_modules .; then
+            echo "Found retired domain: swpuacm.bot.cd"
+            exit 1
+          fi
+      - name: Check landing and theme wiring
+        run: |
+          test -f landing/index.html
+          test ! -f landing/reg.html
+          test -f plugin-swpu-regcode/reg.html
+          test -f theme/00-native-dark-brand.css
+          test -f theme/05-full-dark.css
+          grep -q "og:image" landing/index.html
+          grep -q "twitter:card" landing/index.html
+          grep -q "native-dark brand overlay" theme/00-native-dark-brand.css
+          grep -q "05-full-dark.css" theme/README.md
+      - name: Check shell scripts
+        run: bash -n deploy/install-landing.sh deploy/install-theme.sh
+      - name: Check Python syntax
+        run: python -m py_compile scripts/subset_fonts.py
+
+  plugin-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Run regcode tests
+        working-directory: plugin-swpu-regcode
+        run: npm test

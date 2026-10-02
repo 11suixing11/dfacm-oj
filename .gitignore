@@ -3,3 +3,9 @@
 node_modules/
 glyphs.txt
 __pycache__/
+.env
+.env.*
+*.local
+*.secret
+deploy/secrets/
+qa/
