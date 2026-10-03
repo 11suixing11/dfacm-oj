@@ -63,3 +63,13 @@ test('non-zero pm2 instances stay idle', async () => {
     assert.equal(live.runs.length, 0);
     live.stop();
 });
+
+test('history arrays stay bounded over long uptime', async () => {
+    const live = createLiveRp({ debounceMs: 0, script, historyLimit: 2 });
+    for (let i = 0; i < 5; i++) {
+        live.hook({ domainId: 'system', status: 1 });
+        await sleep(5);
+    }
+    assert.equal(live.runs.length, 2);
+    live.stop();
+});

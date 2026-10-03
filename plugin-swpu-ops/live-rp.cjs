@@ -4,9 +4,11 @@
 // freshly solved problem would not show on the ranking page until the next
 // night. This hook watches judged submissions and reruns the domain RP script
 // shortly after, debounced so a contest burst triggers at most one run per
-// window. Registered on pm2 instance 0 only; the compute is idempotent.
+// window. Registered on pm2 instance 0 only; the compute is idempotent, and if
+// that instance is down the ranking simply falls back to the nightly 03:00 run.
 
 const RP_DEBOUNCE_MS = 30000;
+const RP_HISTORY_LIMIT = 50;
 
 // Plain console shim: this module is also loaded by node:test without hydrooj.
 const logger = {
@@ -20,11 +22,19 @@ function createLiveRp(options = {}) {
         // Injectable for tests; defaults to Hydro's global script registry.
         script = null,
         instance = process.env.NODE_APP_INSTANCE,
+        historyLimit = RP_HISTORY_LIMIT,
     } = options;
     const runs = [];
     const failures = [];
     const pending = new Set();
     let timer = null;
+
+    // Histories exist for tests/debugging; keep them bounded so months of
+    // uptime cannot accumulate an ever-growing array.
+    function remember(list, entry) {
+        list.push(entry);
+        if (list.length > historyLimit) list.splice(0, list.length - historyLimit);
+    }
 
     function resolveScript() {
         if (script) return script;
@@ -44,10 +54,10 @@ function createLiveRp(options = {}) {
         for (const domainId of domains) {
             try {
                 await rp.run({ domainId }, () => {});
-                runs.push({ domainId, at: new Date().toISOString() });
+                remember(runs, { domainId, at: new Date().toISOString() });
                 logger.info('rp recalculated:', domainId);
             } catch (e) {
-                failures.push({ domainId, message: e && e.message });
+                remember(failures, { domainId, message: e && e.message });
                 logger.error('rp recalculation failed:', e);
             }
         }
