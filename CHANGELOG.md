@@ -1,5 +1,17 @@
 # Changelog
 
+## v1.10.0 - 2026-10-04
+
+### Added
+
+- **One-command deployment orchestrator (`deploy/deploy.sh`)**, run from the local checkout: ships every file (plugins, landing, theme assets, smoke script) before the single `pm2 restart hydrooj`, verifies sha256 on both ends and refuses to restart on mismatch, waits until the new process serves the branded page, then runs the smoke battery. `--sync-only` skips the restart for static-only changes. Exit codes: 64 usage, 65 hash mismatch (never restarts), 66 missing source/unreachable server, 67 not ready within 75s, 68 smoke failed. Plugin file lists are parsed from `deployment.md`'s documented `cp` blocks so the docs and what ships can never drift.
+- **Anonymous smoke battery (`deploy/smoke.sh`)**, executed on the server after every deploy via loopback `--resolve`: server-side boot injection markers (tab/embed/oauth), bare `/login` and `/register` convergence, guest gates, regcode bad-purpose rejection, framing/HSTS/cache headers, the 404-without-cache regression, HTTP→308 and the Service Worker killswitch. Count-agnostic — no hardcoded problem totals.
+
+### Fixed
+
+- Root cause of the 2026-10-04 audit finding: the live process had been serving pre-merge plugin code because files landed after the previous restart. The orchestrator's sync→verify→restart order makes that structurally impossible, and the smoke battery would have caught the missing OAuth injection within seconds.
+- Server ops (not in-repo): daily backup cron restored (root crontab was empty since Oct 2), pm2 log rotation installed, orphan `custom/reg.html` removed, stale `swpu-regcode/package.json` synced.
+
 ## v1.9.0 - 2026-10-04
 
 ### Added

@@ -378,3 +378,53 @@ test('light default initialization supports a new site and preserves user choice
   assert.equal(docs.get('ui-default.footer_extra_html').value, footer);
   assert.deepEqual(users, originalUsers);
 });
+
+test('deploy orchestrator locks the sync-verify-restart-wait-smoke order', () => {
+  const source = fs.readFileSync(path.join(repo, 'deploy', 'deploy.sh'), 'utf8');
+  // main() must invoke the stages in the incident-proof order: the
+  // 2026-10-04 stale-process deploy shipped files AFTER the only restart.
+  const body = source.slice(source.indexOf('main() {'));
+  const calls = [...body.matchAll(/^ {4}(preflight|sync_files|verify_hashes|restart_hydrooj|wait_ready|run_smoke)$/gm)]
+    .map((match) => match[1]);
+  assert.deepEqual(calls, ['preflight', 'sync_files', 'verify_hashes', 'restart_hydrooj', 'wait_ready', 'run_smoke']);
+  // Every failure mode has its own documented exit code.
+  for (const code of ['64', '65', '66', '67', '68']) assert.match(source, new RegExp(`exit ${code}`));
+  // The readiness budget must cover the real boot window (>=75s).
+  assert.match(source, /WAIT_SECONDS:-75/);
+  assert.match(source, /pm2 restart hydrooj/);
+  // Plugin file lists come from deployment.md's documented cp blocks, so
+  // docs and shipping can never drift.
+  assert.match(source, /cp \/root\/swpu-oj\/\$1\/\{\\\(\[\^}\]\*\\\)}/);
+  // The stage order above already locks restart-after-verify and
+  // smoke-after-restart; do not add indexOf checks here — the header comment
+  // mentions stage names before they are defined.
+  // Smoke is executed from the synced copy, not from a stale leftover.
+  assert.match(source, /bash \$REMOTE_DEPLOY\/deploy\/smoke\.sh/);
+});
+
+test('smoke battery locks the boot injection, auth gates and security headers', () => {
+  const source = fs.readFileSync(path.join(repo, 'deploy', 'smoke.sh'), 'utf8');
+  const patterns = [
+    [/--resolve/, 'loopback discipline (SNI-less curl -k -H Host dies)'],
+    [/tab-reg/, 'branded auth card wiring'],
+    [/__SWPU_BOOT\.oauth=\[\{/, 'oauth providers injected (2026-10-04 regression)'],
+    [/__SWPU_BOOT\.tab="pwd"/, 'tab boot injection'],
+    [/__SWPU_BOOT\.embed=true/, 'embed boot injection'],
+    [/reg\/code/, 'regcode POST path exercised'],
+    [/验证码用途不合法/, 'bad purpose rejected without side effects'],
+    [/sameorigin/i, '/reg framing policy'],
+    [/deny/i, 'site framing policy'],
+    [/strict-transport-security/, 'HSTS'],
+    [/no-cache/, 'landing must not be cached'],
+    [/max-age=600/, 'theme css short cache'],
+    [/max-age=604800/, 'hashed app shell long cache'],
+    [/cache-control/i, '404 must not carry a cache header'],
+    [/308/, 'http to https redirect'],
+    [/unregister/, 'service-worker killswitch alive'],
+    [/exit 1/, 'any failure fails the battery'],
+  ];
+  for (const [pattern, why] of patterns) assert.match(source, pattern, why);
+  // The overlay gate needs the brand marker twice (start + end comment) in
+  // the served css; anything else means the brand layer was lost.
+  assert.match(source, /SWPU ACM brand overlay/);
+});

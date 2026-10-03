@@ -61,6 +61,10 @@ jobs:
           grep -q "05-full-dark.css" theme/README.md
           grep -q "unregister" deploy/service-worker-killswitch.js
           grep -q "service-worker-killswitch" deploy/install-theme.sh
+          test -f deploy/deploy.sh
+          test -f deploy/smoke.sh
+          grep -q "pm2 restart hydrooj" deploy/deploy.sh
+          grep -q "deployment.md" deploy/deploy.sh
       - name: Check shell scripts
         run: bash -n deploy/*.sh scripts/*.sh
       - name: Check Python syntax

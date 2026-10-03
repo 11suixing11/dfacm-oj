@@ -2,6 +2,21 @@
 
 从一台全新 Debian 12 服务器到完整上线的步骤。**本文件不含任何密钥**，密码和授权码请存放在私有渠道。
 
+## 0. 一键部署（推荐入口）
+
+`deploy/deploy.sh` 在**本地仓库**运行（Git Bash 可用）：同步插件、门面、主题与冒烟脚本 → 双端 sha256 对账 → 才执行**唯一一次** `pm2 restart hydrooj` → 等新进程就绪（≥75s）→ 在服务器上跑 `deploy/smoke.sh` 匿名冒烟电池。
+
+```bash
+bash deploy/deploy.sh             # 完整部署：同步 → 对账 → 重启 → 等就绪 → 冒烟
+bash deploy/deploy.sh --sync-only # 只同步+对账，不重启（适合只改静态资源）
+```
+
+- 插件文件清单直接解析第 4 节的 `cp /root/swpu-oj/<插件>/{...}` 块，文档与实际发货不会漂移；**新增插件文件必须先改本文档**。
+- 退出码：64 用法；65 双端哈希不一致（**绝不重启**）；66 本地缺文件或服务器不可达；67 新进程 75 秒内未就绪；68 冒烟有失败项。
+- 环境变量：`SSH_TARGET`（默认 `root@100.69.19.62` 走 Tailscale，断连时用 `root@107.151.246.137`）、`SSH_KEY`、`WAIT_SECONDS`、`SMOKE_HOST`。
+- Caddyfile 与 footer 的 mongosh 迁移仍按第 7/4 节手动执行（改动频率远低于插件代码）。
+- 冒烟电池覆盖：boot 三维度服务端注入（tab/embed/oauth）、裸 /login /register 收敛、访客门禁 302、regcode 恶意 purpose 拒绝、安全头、缓存头、404 无缓存、308、Service Worker killswitch。**教训**：2026-10-04 曾因文件在重启之后才落盘，线上进程跑旧代码而磁盘哈希全对——顺序即正确性。
+
 ## 1. Hydro 安装
 
 ```bash
