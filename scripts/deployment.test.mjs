@@ -61,7 +61,7 @@ script(commands, 'pgrep', '[[ ${TEST_PROCESS_MISSING:-0} != 1 ]]');
 script(commands, 'tar', 'if [[ ${TEST_TAR_FAIL:-0} != 0 ]]; then exit "$TEST_TAR_FAIL"; fi\nexec /usr/bin/tar "$@"');
 script(commands, 'caddy', `printf 'caddy %s\\n' "$*" >> "$TEST_COMMAND_LOG"
 case "$1" in
-  version) printf 'v2.fixture\\n' ;;
+  version) printf '%s\\n' "\${TEST_CADDY_VERSION:-v2.11.4 h1:fixture-hash}" ;;
   adapt) printf '{"fixture":"config-secret-value"}\\n'; exit "\${TEST_CADDY_EXIT:-0}" ;;
   *) exit 98 ;;
 esac`);
@@ -190,6 +190,18 @@ test('default checks read package metadata without starting CLIs or making GETs'
 test('missing processes and failed Caddy adaptation fail the deployment check', () => {
   assert.equal(run('check-deployment.sh', checkArgs, { TEST_PROCESS_MISSING: '1' }).status, 1);
   assert.equal(run('check-deployment.sh', checkArgs, { TEST_CADDY_EXIT: '17' }).status, 1);
+});
+
+test('Caddy below the documented minimum version fails the deployment check', () => {
+  const result = run('check-deployment.sh', checkArgs, { TEST_CADDY_VERSION: 'v2.8.4 h1:old-build' });
+  assert.equal(result.status, 1, result.stdout + result.stderr);
+  assert.match(result.stdout + result.stderr, /below the required minimum 2\.9\.1/);
+});
+
+test('an unparsable Caddy version does not fail the deployment check', () => {
+  const result = run('check-deployment.sh', checkArgs, { TEST_CADDY_VERSION: 'custom build' });
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /unparsed/);
 });
 
 test('HTTP is opt-in, uses GET, and does not print session headers', () => {

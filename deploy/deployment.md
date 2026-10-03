@@ -172,11 +172,11 @@ curl -sSI https://<域名>/ | grep -Ei 'strict-transport|x-content-type|referrer
 - [ ] `/p` `/login` `/reg` `/training` 全部 200。
 - [ ] 裸 `GET /login` 直接 200 返回品牌页（Caddy `rewrite`，非 302），`curl -s https://<域名>/login | grep -c '__SWPU_BOOT.tab="pwd"'` 为 1；带 query 的 `GET /login?x=1` 返回原生页。
 - [ ] `/reg` 响应头为 `X-Frame-Options: SAMEORIGIN` 且 CSP 含 `frame-ancestors 'self'`（登录内嵌层依赖）；其余路由仍是 `DENY` / `'none'`。
-- [ ] 未登录在任意页触发登录（顶栏「登录」或「登录后递交」）弹出的是品牌页内嵌层（`#swpu-auth-overlay`），原生 `dialog--signin` 不再显示；`footer_extra_html` 中所有脚本必须保持单行（Hydro 会把多行脚本按行拆碎成不执行的文本）。
+- [ ] 未登录在任意页触发登录（顶栏「登录」或「登录后递交」）弹出的是品牌页内嵌层（`#swpu-auth-overlay`），原生 `dialog--signin` 不再显示；iframe 加载期间显示 loading，超时提供直接打开登录页的备用入口；内嵌页的站内链接必须跳到顶层页面；`footer_extra_html` 中所有脚本必须保持单行（Hydro 会把多行脚本按行拆碎成不执行的文本）。
 - [ ] `/reg/complete` 在无验证码时返回 `{ ok: false }`，不会 500。
 - [ ] `curl -I` 检查字体和图标有 `Cache-Control`。
 - [ ] 注册流程走通（验证码邮件到达）。
-- [ ] 找回密码邮件里的链接是绝对地址（`server.url` 必须是完整 `https://域名`，当前为 `https://swpuacm.xyz`）。
+- [ ] 找回密码邮件里的链接是绝对地址（`server.url` 必须是完整的 `https://域名/`，当前为 `https://swpuacm.xyz/`，**保留结尾 `/`**）。
 
 ## 15. 第三方登录（GitHub）
 
@@ -185,6 +185,7 @@ curl -sSI https://<域名>/ | grep -Ei 'strict-transport|x-content-type|referrer
 1. 用 GitHub 账号在 https://github.com/settings/developers 新建 OAuth App（New OAuth App）：
    - Homepage URL 填 `https://swpuacm.xyz`
    - Authorization callback URL 填 `https://swpuacm.xyz/oauth/github/callback`
+   - 这里的 GitHub callback **末尾不要加 `/`**；它与 Hydro 配置里的 `server.url` 不同，后者必须保留结尾 `/`。GitHub 会严格匹配 callback，保存后点击绿色的 `Update application`。
 2. 把得到的 Client ID 和 Client Secret 写入系统设置（`/manage/config`）：
    ```yaml
    login-with-github:
@@ -247,7 +248,7 @@ bash /opt/swpu-oj/scripts/check-deployment.sh \
   --caddy-config /root/.hydro/Caddyfile
 ```
 
-脚本读取 Hydro / hydrojudge 包版本，显示 Node / Caddy 版本，检查 Web、MongoDB、Caddy、判题机与沙箱进程，检查数据盘与 Hydro 所在盘使用率，并用 `caddy adapt` 做语法/适配检查（丢弃可能含配置秘密的 JSON 输出）。磁盘使用率达到 90%、组件缺失、进程未发现、配置适配错误返回 `1`；参数错误返回 `64`。
+脚本读取 Hydro / hydrojudge 包版本，核对 Caddy 是否满足最低版本 2.9.1（低于该版本 `caddy adapt` 与运行时都会拒绝整份 Caddyfile，见第 11 节），显示 Node / Caddy 版本，检查 Web、MongoDB、Caddy、判题机与沙箱进程，检查数据盘与 Hydro 所在盘使用率，并用 `caddy adapt` 做语法/适配检查（丢弃可能含配置秘密的 JSON 输出）。磁盘使用率达到 90%、组件缺失、进程未发现、Caddy 版本过低、配置适配错误返回 `1`；参数错误返回 `64`。
 
 - 组件分开部署时，Web 机使用 `--role web`，判题机使用 `--role judge`。judge 模式不要求 `hydrooj` 包、`config.json`、本地 MongoDB 或 Caddy，只核对 hydrojudge 与 `judge.yaml`，并且默认不检查 `/data`。
 - 只有显式添加 `--url` 才执行 HTTP GET，检查 `/` 与 `/home.html` 为 `200` 且带 `no-cache`；不会发验证码或提交代码。

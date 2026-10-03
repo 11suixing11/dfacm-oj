@@ -70,6 +70,6 @@ bash deploy/install-theme.sh
 - 默认只追加 `00-brand.css`，通过 `==== SWPU ACM` 标记做幂等。
 - 每次执行会先删掉 CSS 中第一处 `==== SWPU ACM` 之后的内容，再追加当前品牌层，保证重复执行和旧主题残留不会叠加。
 - 同时把 static 和源包的 `service-worker.js` 换成 kill-switch：清空旧 CacheStorage 后注销自身，避免 webpack 注入的旧主题 CSS 覆盖品牌层。
-- 主题版本不是 4.58.5 时，先设 `THEME_VERSION=<版本>`。
+- 主题版本号自动探测：脚本取 `~/.hydro/static/theme-*.css` 中版本最高的一个，UI 升级换文件名也不会把品牌层打到不存在的旧路径；需要手动指定时设 `THEME_VERSION=<版本>`，或分别覆盖 `STATIC_THEME` / `SOURCE_THEME`。
 - 旧浅色 Hydro 需要完整回退时，显式运行 `SWPU_THEME_LEGACY=1 bash deploy/install-theme.sh`，才会追加 01-05。
 - 脚本不会替你修改系统主题偏好；仍需按本文开头的 `preference.theme` / `user.theme` 步骤恢复 light 默认。

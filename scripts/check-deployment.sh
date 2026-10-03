@@ -9,7 +9,8 @@ Usage: check-deployment.sh [--role all|web|judge] [--data-dir ABSOLUTE_DIR]
 
 Defaults: role=all; data-dir=/data; Hydro state=current user's ~/.hydro.
 Checks installed package versions without running the hydrooj/hydrojudge CLI,
-process presence, disk space, and (on web hosts) Caddy syntax/config adaptation.
+process presence, disk space, and (on web hosts) the Caddy minimum version
+(required 2.9.1+) and config adaptation.
 role=web checks hydrooj + ~/.hydro/config.json; role=judge checks hydrojudge +
 judge.yaml and skips the default /data check; role=all covers both.
 Only --url enables HTTP GET checks of / and /home.html. No submissions are made.
@@ -120,7 +121,27 @@ else
 fi
 if [[ $role != judge ]]; then
   if required_command caddy; then
-    if caddy version; then ok 'Caddy version'; else fail 'Caddy version command failed'; fi
+    caddy_ver="$(caddy version 2>/dev/null || true)"
+    if [ -z "$caddy_ver" ]; then
+      fail 'Caddy version command failed'
+    else
+      printf '%s\n' "$caddy_ver"
+      caddy_semver="$(printf '%s\n' "$caddy_ver" | grep -o -m 1 -E '[0-9]+\.[0-9]+\.[0-9]+' || true)"
+      if [ -z "$caddy_semver" ]; then
+        ok 'Caddy version present but unparsed; required minimum 2.9.1 not verified'
+      else
+        ver_major="$(printf '%s' "$caddy_semver" | cut -d. -f1)"
+        ver_minor="$(printf '%s' "$caddy_semver" | cut -d. -f2)"
+        ver_patch="$(printf '%s' "$caddy_semver" | cut -d. -f3)"
+        # deployment.md requires Caddy 2.9.1+ for `header ... { match status 2xx }`;
+        # older Caddy rejects the whole Caddyfile, not just the cache rules.
+        if ((10#$ver_major > 2)) || { ((10#$ver_major == 2)) && ((10#$ver_minor > 9 || (10#$ver_minor == 9 && 10#$ver_patch >= 1))); }; then
+          ok "Caddy version ${caddy_semver} meets the required minimum 2.9.1"
+        else
+          fail "Caddy version ${caddy_semver} is below the required minimum 2.9.1"
+        fi
+      fi
+    fi
     if [[ -f "$caddy_config" && -r "$caddy_config" ]]; then
       # Adapt only; validate provisions modules and may create/open files.
       # Suppress the JSON because it may contain secrets from the configuration.

@@ -2,10 +2,43 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-THEME_VERSION="${THEME_VERSION:-4.58.5}"
-STATIC_THEME="${STATIC_THEME:-/root/.hydro/static/theme-${THEME_VERSION}.css}"
+# Theme css is versioned per ui-default release. Autodetect the newest
+# installed theme-<version>.css so a UI upgrade cannot silently orphan the
+# brand overlay; set THEME_VERSION to override the autodetection.
+STATIC_DIR="${STATIC_DIR:-/root/.hydro/static}"
+
+is_older() {
+    # true when $1 sorts before $2 in version order
+    local sorted
+    sorted="$(printf '%s\n%s\n' "$1" "$2" | sort -V)"
+    [ "$1" = "${sorted%%$'\n'*}" ] && [ "$1" != "$2" ]
+}
+
+detect_theme_version() {
+    local best='' candidate version
+    for candidate in "$1"/theme-*.css; do
+        [ -f "$candidate" ] || continue
+        version="${candidate##*/theme-}"
+        version="${version%.css}"
+        if [ -z "$best" ] || is_older "$best" "$version"; then best="$version"; fi
+    done
+    printf '%s' "$best"
+}
+
+if [ -n "${THEME_VERSION:-}" ]; then
+    printf 'theme version: %s (from THEME_VERSION)\n' "$THEME_VERSION"
+else
+    THEME_VERSION="$(detect_theme_version "$STATIC_DIR")"
+    if [ -n "$THEME_VERSION" ]; then
+        printf 'theme version: %s (autodetected in %s)\n' "$THEME_VERSION" "$STATIC_DIR"
+    else
+        THEME_VERSION="4.58.5"
+        printf 'warning: no theme-*.css found in %s, using fallback %s\n' "$STATIC_DIR" "$THEME_VERSION" >&2
+    fi
+fi
+STATIC_THEME="${STATIC_THEME:-${STATIC_DIR}/theme-${THEME_VERSION}.css}"
 SOURCE_THEME="${SOURCE_THEME:-/usr/local/share/.config/yarn/global/node_modules/@hydrooj/ui-default/public/theme-${THEME_VERSION}.css}"
-STATIC_SW="${STATIC_SW:-/root/.hydro/static/service-worker.js}"
+STATIC_SW="${STATIC_SW:-${STATIC_DIR}/service-worker.js}"
 SOURCE_SW="${SOURCE_SW:-/usr/local/share/.config/yarn/global/node_modules/@hydrooj/ui-default/public/service-worker.js}"
 BRAND_MARKER="SWPU ACM brand overlay"
 LEGACY_MARKER="SWPU ACM legacy overlay set"
