@@ -1,5 +1,15 @@
 # Changelog
 
+## v1.6.0 - 2026-10-03
+
+### Added
+
+- **Live RP ranking** (`plugin-swpu-ops/live-rp.cjs`): Hydro only recalculates RP in `task.daily` (03:00), so a freshly solved problem took until the next night to show on the ranking page. The ops plugin now listens on `record/change` and reruns the domain `rp` script ~30s after a judged submission (debounced — a contest burst yields at most one run per window; registered on pm2 instance 0 only; idempotent with the daily task). The `swpu-ops` addon is now actually deployed to the server (it previously existed only in the repo) and keeps a replay copy in `/root/swpu-theme-deploy/plugin-swpu-ops/`.
+
+### Fixed
+
+- `hydrooj-rating-system` disabled and removed from `addon.json` (data and directory retained for re-enable); the stale `unify-login-entries.js` hijack installer was removed from the server replay dir so it cannot resurrect the old modal-redirect; merged branches `pr-1`/`pr-3` and the stale `oj-frontend-preview` worktree deleted; dead `dialog--signin` theme rules removed.
+
 ## v1.5.0 - 2026-10-03
 
 ### Changed
