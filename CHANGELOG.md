@@ -6,7 +6,7 @@
 
 - **GitHub third-party login** (official `@hydrooj/login-with-github` addon installed; awaits the OAuth App id/secret in system config `login-with-github.id`/`secret`). The branded `/reg` page renders third-party login buttons from the same server-side source Hydro's own login page uses (`handler.loginMethods` → injected `window.__SWPU_BOOT.oauth`): while the OAuth app is unconfigured the whole row stays hidden, and once configured the button appears on `/reg`, the in-place auth modal, and everywhere the branded page is embedded. OAuth sign-in honors the `return` parameter like the other login methods.
 - **Roles `acmer` and `teamleader`** on the system domain (permission equals builtin `default`, value `1370624076369558733505`); new users keep the builtin default role. Previous roles state backed up at `system.roles.backup-20261003`.
-- System config `server.url` fixed from the retired `swpuacm.bot.cd` to `https://swpuacm.xyz` (it feeds lost-password mail links, OAuth redirect URIs and share links; old value backed up at `config.backup-20261003`).
+- System config `server.url` fixed from the retired `.bot.cd` domain to `https://swpuacm.xyz` (it feeds lost-password mail links, OAuth redirect URIs and share links; the old value is backed up at `config.backup-20261003`).
 
 ## v1.6.0 - 2026-10-03
 
