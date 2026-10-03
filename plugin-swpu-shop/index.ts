@@ -50,7 +50,9 @@ class ShopPageHandler extends Handler {
         if (models.badge) {
             // badge-for-hydrooj 的模型函数内部访问 ctx.db：必须传 Handler 的路由
             // 上下文（this.ctx），Handler 实例本身没有 db 服务。
-            const bdocs = await models.badge.badgeGetMulti(this.ctx).toArray();
+            // 其模型是 async 函数返回 Promise<cursor>，需要双层 await（与其自身
+            // handler 的 await (await BadgeModel.badgeGetMulti(this.ctx)) 一致）。
+            const bdocs = await (await models.badge.badgeGetMulti(this.ctx)).toArray();
             const priceDocs = await price.find({}).toArray();
             const priceMap = new Map(priceDocs.map((doc: any) => [doc._id, doc]));
             for (const bdoc of bdocs) {
@@ -73,7 +75,7 @@ class ShopPageHandler extends Handler {
         if (signedIn) {
             balance = await getBalance(collections(), this.user._id);
             if (models.userBadge) {
-                const owned = await models.userBadge.userBadgeGetMulti(this.ctx, this.user._id).toArray();
+                const owned = await (await models.userBadge.userBadgeGetMulti(this.ctx, this.user._id)).toArray();
                 ownedIds = new Set(owned.map((doc: any) => doc.badgeId));
             }
         }
@@ -138,7 +140,7 @@ class ShopManageHandler extends Handler {
         const models = badgeModels();
         const rows: any[] = [];
         if (models.badge) {
-            const bdocs = await models.badge.badgeGetMulti(this.ctx).toArray();
+            const bdocs = await (await models.badge.badgeGetMulti(this.ctx)).toArray();
             const priceDocs = await price.find({}).toArray();
             const priceMap = new Map(priceDocs.map((doc: any) => [doc._id, doc]));
             for (const bdoc of bdocs) {
