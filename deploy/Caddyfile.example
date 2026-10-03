@@ -14,6 +14,15 @@ swpuacm.xyz, www.swpuacm.xyz {
   # SWPU ACM landing page as site front door (revert: delete this line)
   rewrite / /home.html
 
+  # Unify every login entry onto the branded /reg page (revert: remove these lines).
+  # Bare GET /login only: POST /login (form submit) and /login?... (two-step flows) pass through.
+  @barelogin {
+    method GET
+    path /login
+    expression {http.request.uri.query} == ''
+  }
+  redir @barelogin /reg?tab=pwd 302
+
   # SWPU ACM custom static files (UI-rebuild-proof dir; revert: remove this handle)
   @custom {
     path /home.html /favicon.png /logo.png /favicon-16x16.png /favicon-32x32.png /apple-touch-icon-180x180.png /android-chrome-192x192.png /swpu-display.woff2 /swpu-mono.woff2 /og-cover.png

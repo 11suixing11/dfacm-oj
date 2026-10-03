@@ -225,6 +225,7 @@ input[aria-invalid="true"]{border-color:#ff8d87}
 'use strict';
 (function(){
   var $=function(id){return document.getElementById(id)};
+  var RETURN=(function(){try{var r=new URLSearchParams(location.search).get('return');return r&&r.charAt(0)==='/'?r:''}catch(e){return''}})();
   var names=['reg','login','pwd'];
   var tabs=[$('tab-reg'),$('tab-login'),$('tab-pwd')],panes=[$('pane-reg'),$('pane-login'),$('pane-pwd')];
   function showTab(which,focus){
@@ -327,7 +328,7 @@ input[aria-invalid="true"]{border-color:#ff8d87}
       var d=await api(url,data);form.removeAttribute('aria-busy');
       if(d.ok){
         go.textContent=prefix==='r'?'账号已创建，正在进入…':'登录成功，正在进入…';
-        msg($(prefix+'-msg'),go.textContent,'ok');location.href=d.redirect||'/';
+        msg($(prefix+'-msg'),go.textContent,'ok');location.href=RETURN||d.redirect||'/';
       }else{msg($(prefix+'-msg'),d.message||'操作失败，请稍后重试。','err');go.disabled=false;go.textContent=label}
     });
   }
@@ -355,7 +356,7 @@ input[aria-invalid="true"]{border-color:#ff8d87}
       }else{
         pwdGo.textContent='登录成功，正在进入…';
         msg($('p-msg'),'登录成功，正在进入…','ok');
-        location.href=final.pathname+(final.search||'')||'/';
+        location.href=RETURN||((final.pathname+(final.search||''))||'/');
       }
     }catch(err){
       msg($('p-msg'),'网络连接失败，请检查网络后重试。','err');

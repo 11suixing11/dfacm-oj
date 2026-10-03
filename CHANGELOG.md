@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.4.0 - 2026-10-03
+
+### Changed
+
+- The site now has exactly one login interface. Bare `GET /login` is redirected (302) to `/reg?tab=pwd` by Caddy — `POST /login` and `GET /login?...` (two-step verification flows) pass through untouched. Hydro's in-page login modal (`dialog--signin`, shown on restricted pages when signed out) is intercepted by a footer script (`deploy/unify-login-entries.js`) and replaced with a redirect to `/reg?tab=pwd&return=<current path>`; `/reg` honors the `return` parameter (site-relative paths only) on both the code-login and password-login success paths, so users land back where they started.
+
 ## v1.3.0 - 2026-10-03
 
 ### Added
