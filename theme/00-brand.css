@@ -168,8 +168,9 @@
 /* 表头 */
 .theme--dark .section__header,
 .theme--dark .data-table th { background: #17253b; color: #e8edf5; }
-/* 沉浸式登录/注册页 */
-.theme--dark:has(.immersive--content) .slideout-panel {
+/* 沉浸式登录/注册页：原生把整页壁纸背景挂在 #panel（ID 选择器压过 class 组合），
+   必须同样用 #panel 才能覆盖；浅色面板下原生 inverse 白字全部翻深。 */
+.theme--dark:has(.immersive--content) #panel {
   background: radial-gradient(1100px 600px at 50% -120px, rgba(42, 92, 170, .25), transparent 60%), #121212;
 }
 .theme--dark:has(.immersive--content) .immersive--content button,
@@ -225,9 +226,44 @@
 /* 表头：浅品牌蓝底 + 金色下边框 */
 .theme--light .section__header { background: #e9eff8; color: #22354f; }
 .theme--light .data-table th { background: #e9eff8; color: #22354f; border-bottom: 2px solid #c9a227; }
-/* 沉浸式登录/注册页：浅色品牌渐变，替代原生蓝色照片背景 */
-.theme--light:has(.immersive--content) .slideout-panel {
+/* 沉浸式登录/注册页（light）：清壁纸换浅色渐变，原生白字全部翻深 */
+.theme--light:has(.immersive--content) #panel {
   background: radial-gradient(1100px 600px at 50% -120px, rgba(42, 92, 170, .12), transparent 60%), linear-gradient(180deg, #ffffff, #eef3fa);
+  color: #1a2940;
+}
+.theme--light:has(.immersive--content) .dialog--signin__bg {
+  background: none;
+}
+.theme--light:has(.immersive--content) .dialog--signin__title {
+  color: #2a5caa;
+}
+.theme--light:has(.immersive--content) label.textbox.material.inverse,
+.theme--light:has(.immersive--content) label.textbox.material.inverse input {
+  color: #1a2940;
+  border-color: rgba(15, 34, 64, .35);
+}
+.theme--light:has(.immersive--content) label.textbox.material.inverse input:focus,
+.theme--light:has(.immersive--content) label.textbox.material.inverse.focus {
+  border-color: #8a6d1f;
+  color: #8a6d1f;
+}
+.theme--light:has(.immersive--content) label.checkbox.inverse {
+  color: #44577a !important;
+}
+.theme--light:has(.immersive--content) .supplementary.inverse,
+.theme--light:has(.immersive--content) .supplementary.inverse a {
+  color: #5f7396 !important;
+}
+.theme--light:has(.immersive--content) .immersive--content a {
+  color: #2a5caa;
+}
+.theme--light:has(.immersive--content) .button.inverse {
+  border-color: #2a5caa;
+  color: #2a5caa;
+}
+.theme--light:has(.immersive--content) .footer,
+.theme--light:has(.immersive--content) .footer a {
+  color: #5f7396;
 }
 .theme--light:has(.immersive--content) .immersive--content button,
 .theme--light:has(.immersive--content) .immersive--content input[type="submit"] {

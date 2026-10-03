@@ -53,6 +53,7 @@ jobs:
           grep -q "SWPU ACM brand overlay" theme/00-brand.css
           grep -q "theme--light" theme/00-brand.css
           grep -q "theme--dark" theme/00-brand.css
+          grep -q "#panel" theme/00-brand.css
           grep -q "swpu-theme-toggle" deploy/set-theme-light.js
           grep -q "05-full-dark.css" theme/README.md
           grep -q "unregister" deploy/service-worker-killswitch.js
