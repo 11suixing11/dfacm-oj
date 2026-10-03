@@ -35,7 +35,7 @@
 }
 .theme--dark ::selection,
 .theme--light ::selection {
-  background: rgba(201, 162, 39, .30);
+  background: rgba(42, 92, 170, .22);
 }
 
 /* ---------- shared: brand buttons & active menu ---------- */
@@ -190,10 +190,10 @@
   background: #9aa8ba;
 }
 .theme--light :focus-visible {
-  outline: 2px solid #8a6d1f;
+  outline: 2px solid #2a5caa;
   outline-offset: 3px;
 }
-.theme--light .data-table tbody tr:focus-within { outline: 2px solid #8a6d1f; outline-offset: -2px; }
+.theme--light .data-table tbody tr:focus-within { outline: 2px solid #2a5caa; outline-offset: -2px; }
 /* 顶栏：白底金边，品牌蓝点缀 */
 .theme--light .nav {
   background: #fff;
@@ -212,11 +212,11 @@
 .theme--light .nav__item--round {
   color: #2a5caa;
 }
-/* 金色当前页（深金保证白底对比度） */
+/* 品牌蓝当前页（浅底用深蓝保证对比度） */
 .theme--light .pager__item.current {
-  color: #8a6d1f !important;
-  background: rgba(201, 162, 39, .16);
-  border-color: rgba(138, 109, 31, .45);
+  color: #2a5caa !important;
+  background: rgba(42, 92, 170, .10);
+  border-color: rgba(42, 92, 170, .40);
 }
 /* 移动端顶栏 */
 .theme--light .header--mobile {
@@ -226,26 +226,53 @@
 /* 表头：浅品牌蓝底 + 金色下边框 */
 .theme--light .section__header { background: #e9eff8; color: #22354f; }
 .theme--light .data-table th { background: #e9eff8; color: #22354f; border-bottom: 2px solid #c9a227; }
-/* 沉浸式登录/注册页（light）：清壁纸换浅色渐变，原生白字全部翻深 */
+/* 沉浸式登录/注册页（light）：浅色页面底 + 白色登录卡。
+   原生把整页壁纸与白字分别挂在 .layout--immersive #panel 和
+   .immersive--content h1..h6 上，两条都必须按同域高特异性覆盖。 */
 .theme--light:has(.immersive--content) #panel {
-  background: radial-gradient(1100px 600px at 50% -120px, rgba(42, 92, 170, .12), transparent 60%), linear-gradient(180deg, #ffffff, #eef3fa);
+  background: radial-gradient(1100px 600px at 50% -160px, rgba(42, 92, 170, .14), transparent 60%), linear-gradient(180deg, #f7fafd, #e8eff8);
   color: #1a2940;
 }
-.theme--light:has(.immersive--content) .dialog--signin__bg {
-  background: none;
+/* 登录卡本体 */
+.theme--light:has(.immersive--content) .immersive--content {
+  background: #ffffff;
+  border: 1px solid rgba(15, 34, 64, .10);
+  border-radius: 20px;
+  box-shadow: 0 24px 70px rgba(15, 34, 64, .14);
+  padding: 40px 44px 34px;
+  max-width: 440px;
+  width: 100%;
+  box-sizing: border-box;
 }
-.theme--light:has(.immersive--content) .dialog--signin__title {
-  color: #2a5caa;
+@media (max-width: 520px) {
+  .theme--light:has(.immersive--content) .immersive--content {
+    padding: 28px 22px 24px;
+    border-radius: 16px;
+  }
 }
+/* 卡内标题：原生 .immersive--content h1..h6 全是白色，必须整体翻深 */
+.theme--light:has(.immersive--content) .immersive--content h1,
+.theme--light:has(.immersive--content) .immersive--content h2,
+.theme--light:has(.immersive--content) .immersive--content h3,
+.theme--light:has(.immersive--content) .immersive--content h4,
+.theme--light:has(.immersive--content) .immersive--content h5,
+.theme--light:has(.immersive--content) .immersive--content h6 {
+  color: #1a2940;
+}
+.theme--light:has(.immersive--content) .immersive--content h1 {
+  margin: 0 0 .7em;
+  letter-spacing: .02em;
+}
+/* 表单文字与输入线：统一深色，焦点品牌蓝 */
 .theme--light:has(.immersive--content) label.textbox.material.inverse,
 .theme--light:has(.immersive--content) label.textbox.material.inverse input {
   color: #1a2940;
-  border-color: rgba(15, 34, 64, .35);
+  border-color: rgba(15, 34, 64, .28);
 }
 .theme--light:has(.immersive--content) label.textbox.material.inverse input:focus,
 .theme--light:has(.immersive--content) label.textbox.material.inverse.focus {
-  border-color: #8a6d1f;
-  color: #8a6d1f;
+  border-color: #2a5caa;
+  color: #2a5caa;
 }
 .theme--light:has(.immersive--content) label.checkbox.inverse {
   color: #44577a !important;
@@ -257,14 +284,32 @@
 .theme--light:has(.immersive--content) .immersive--content a {
   color: #2a5caa;
 }
+/* 注册描边按钮 */
 .theme--light:has(.immersive--content) .button.inverse {
   border-color: #2a5caa;
   color: #2a5caa;
 }
+/* 原生隐藏的 dialog--signin 弹层（JS 触发时可见）：同样翻深，避免浅底白字 */
+.theme--light:has(.immersive--content) .dialog--signin__bg {
+  background: none;
+}
+.theme--light:has(.immersive--content) .dialog--signin__side h1,
+.theme--light:has(.immersive--content) .dialog--signin__title {
+  color: #1a2940;
+}
+.theme--light:has(.immersive--content) .dialog--signin__note {
+  color: #44577a;
+}
+.theme--light:has(.immersive--content) .dialog--signin__main {
+  background: #ffffff;
+  border-radius: 16px;
+}
+/* 页脚落在浅色页面底上 */
 .theme--light:has(.immersive--content) .footer,
 .theme--light:has(.immersive--content) .footer a {
   color: #5f7396;
 }
+/* 登录主按钮：品牌蓝 */
 .theme--light:has(.immersive--content) .immersive--content button,
 .theme--light:has(.immersive--content) .immersive--content input[type="submit"] {
   background: linear-gradient(160deg, #3568b3, #2a5caa);
