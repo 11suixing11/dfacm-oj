@@ -121,7 +121,8 @@
   background: #233651;
 }
 .theme--dark .nav .nav__item--active,
-.theme--dark .nav .active .nav__item {
+.theme--dark .nav .active .nav__item,
+.theme--dark .nav__item.nav--active {
   border-bottom-color: #c9a227;
 }
 .theme--dark .nav__item--round {
@@ -205,7 +206,8 @@
   background: #eef3fb;
 }
 .theme--light .nav .nav__item--active,
-.theme--light .nav .active .nav__item {
+.theme--light .nav .active .nav__item,
+.theme--light .nav__item.nav--active {
   border-bottom-color: #c9a227;
   color: #2a5caa;
 }
