@@ -170,12 +170,15 @@
 .theme--dark .section__header,
 .theme--dark .data-table th { background: #17253b; color: #e8edf5; }
 /* 沉浸式登录/注册页：原生把整页壁纸背景挂在 #panel（ID 选择器压过 class 组合），
-   必须同样用 #panel 才能覆盖；浅色面板下原生 inverse 白字全部翻深。 */
-.theme--dark:has(.immersive--content) #panel {
+   必须同样用 #panel 才能覆盖。作用域必须用 <html> 上的 .layout--immersive 精确
+   锁定认证页：比赛列表页的「马上开始」卡片也带 .immersive--content 类（原生
+   蓝底白字金图标自成一体），用 :has() 圈 .immersive--content 会把它误刷成白底
+   登录卡，白字白底全部隐形。 */
+.theme--dark.layout--immersive #panel {
   background: radial-gradient(1100px 600px at 50% -120px, rgba(42, 92, 170, .25), transparent 60%), #121212;
 }
-.theme--dark:has(.immersive--content) .immersive--content button,
-.theme--dark:has(.immersive--content) .immersive--content input[type="submit"] {
+.theme--dark.layout--immersive .immersive--content button,
+.theme--dark.layout--immersive .immersive--content input[type="submit"] {
   background: linear-gradient(160deg, #3568b3, #2a5caa);
   border-color: #2a5caa;
   color: #fff;
@@ -230,13 +233,14 @@
 .theme--light .data-table th { background: #e9eff8; color: #22354f; border-bottom: 2px solid #c9a227; }
 /* 沉浸式登录/注册页（light）：浅色页面底 + 白色登录卡。
    原生把整页壁纸与白字分别挂在 .layout--immersive #panel 和
-   .immersive--content h1..h6 上，两条都必须按同域高特异性覆盖。 */
-.theme--light:has(.immersive--content) #panel {
+   .immersive--content h1..h6 上，两条都必须按同域高特异性覆盖；
+   作用域同上必须 .layout--immersive，勿改回 :has() 圈 .immersive--content。 */
+.theme--light.layout--immersive #panel {
   background: radial-gradient(1100px 600px at 50% -160px, rgba(42, 92, 170, .14), transparent 60%), linear-gradient(180deg, #f7fafd, #e8eff8);
   color: #1a2940;
 }
 /* 登录卡本体 */
-.theme--light:has(.immersive--content) .immersive--content {
+.theme--light.layout--immersive .immersive--content {
   background: #ffffff;
   border: 1px solid rgba(15, 34, 64, .10);
   border-radius: 20px;
@@ -247,47 +251,47 @@
   box-sizing: border-box;
 }
 @media (max-width: 520px) {
-  .theme--light:has(.immersive--content) .immersive--content {
+  .theme--light.layout--immersive .immersive--content {
     padding: 28px 22px 24px;
     border-radius: 16px;
   }
 }
 /* 卡内标题：原生 .immersive--content h1..h6 全是白色，必须整体翻深 */
-.theme--light:has(.immersive--content) .immersive--content h1,
-.theme--light:has(.immersive--content) .immersive--content h2,
-.theme--light:has(.immersive--content) .immersive--content h3,
-.theme--light:has(.immersive--content) .immersive--content h4,
-.theme--light:has(.immersive--content) .immersive--content h5,
-.theme--light:has(.immersive--content) .immersive--content h6 {
+.theme--light.layout--immersive .immersive--content h1,
+.theme--light.layout--immersive .immersive--content h2,
+.theme--light.layout--immersive .immersive--content h3,
+.theme--light.layout--immersive .immersive--content h4,
+.theme--light.layout--immersive .immersive--content h5,
+.theme--light.layout--immersive .immersive--content h6 {
   color: #1a2940;
 }
-.theme--light:has(.immersive--content) .immersive--content h1 {
+.theme--light.layout--immersive .immersive--content h1 {
   margin: 0 0 .7em;
   letter-spacing: .02em;
 }
 /* 表单文字与输入线：统一深色，焦点品牌蓝 */
-.theme--light:has(.immersive--content) label.textbox.material.inverse,
-.theme--light:has(.immersive--content) label.textbox.material.inverse input {
+.theme--light.layout--immersive label.textbox.material.inverse,
+.theme--light.layout--immersive label.textbox.material.inverse input {
   color: #1a2940;
   border-color: rgba(15, 34, 64, .28);
 }
-.theme--light:has(.immersive--content) label.textbox.material.inverse input:focus,
-.theme--light:has(.immersive--content) label.textbox.material.inverse.focus {
+.theme--light.layout--immersive label.textbox.material.inverse input:focus,
+.theme--light.layout--immersive label.textbox.material.inverse.focus {
   border-color: #2a5caa;
   color: #2a5caa;
 }
-.theme--light:has(.immersive--content) label.checkbox.inverse {
+.theme--light.layout--immersive label.checkbox.inverse {
   color: #44577a !important;
 }
-.theme--light:has(.immersive--content) .supplementary.inverse,
-.theme--light:has(.immersive--content) .supplementary.inverse a {
+.theme--light.layout--immersive .supplementary.inverse,
+.theme--light.layout--immersive .supplementary.inverse a {
   color: #5f7396 !important;
 }
-.theme--light:has(.immersive--content) .immersive--content a {
+.theme--light.layout--immersive .immersive--content a {
   color: #2a5caa;
 }
 /* 注册描边按钮 */
-.theme--light:has(.immersive--content) .button.inverse {
+.theme--light.layout--immersive .button.inverse {
   border-color: #2a5caa;
   color: #2a5caa;
 }
@@ -299,13 +303,13 @@
 .theme--dark #swpu-codelogin { color: #e9c455; }
 .theme--dark #swpu-codelogin:hover { color: #f4d47c; text-decoration: underline; }
 /* 页脚落在浅色页面底上 */
-.theme--light:has(.immersive--content) .footer,
-.theme--light:has(.immersive--content) .footer a {
+.theme--light.layout--immersive .footer,
+.theme--light.layout--immersive .footer a {
   color: #5f7396;
 }
 /* 登录主按钮：品牌蓝 */
-.theme--light:has(.immersive--content) .immersive--content button,
-.theme--light:has(.immersive--content) .immersive--content input[type="submit"] {
+.theme--light.layout--immersive .immersive--content button,
+.theme--light.layout--immersive .immersive--content input[type="submit"] {
   background: linear-gradient(160deg, #3568b3, #2a5caa);
   border-color: #2a5caa;
   color: #fff;

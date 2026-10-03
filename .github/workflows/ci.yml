@@ -61,6 +61,11 @@ jobs:
           grep -q "theme--light" theme/00-brand.css
           grep -q "theme--dark" theme/00-brand.css
           grep -q "#panel" theme/00-brand.css
+          grep -q "layout--immersive" theme/00-brand.css
+          if grep -q ":has(.immersive--content)" theme/00-brand.css; then
+            echo "auth styles must be scoped to .layout--immersive, not :has(.immersive--content) — the /contest hero card shares the class and would get white-on-white text"
+            exit 1
+          fi
           grep -q "swpu-theme-toggle" deploy/set-theme-light.js
           grep -q "05-full-dark.css" theme/README.md
           grep -q "unregister" deploy/service-worker-killswitch.js
