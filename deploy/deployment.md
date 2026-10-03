@@ -278,6 +278,15 @@ bash /opt/swpu-oj/scripts/backup-hydro.sh \
 
 这是在线备份，数据库与文件不是跨存储的原子快照；重要比赛前选择上传/改题较少的时段，必要时人工安排维护窗口。不要直接复制正在使用的 MongoDB `/data/db`。
 
+### 异机副本：自动拉取到维护人电脑
+
+服务器 cron（`17 3 * * *`）生成日备后，管理机每天 **09:07** 由 Windows 计划任务 `OJ backup pull` 运行 `C:\Users\yuki\Desktop\oj备份\pull_oj_backup.ps1`：
+
+- 依次尝试 Tailscale（`100.69.19.62`）与公网（`107.151.246.137`），先通者为准；只拉本地缺失的文件（`.part` 中转，断网/中断不留半截文件）。
+- 拉取范围：`/root/backups` 下全部平铺文件（含 `dead-19` / `ybt-remote-609` 等题库归档 JSON），本地 `backup-*.zip` 只保留最近 14 份，一次性归档永不删。
+- 日志在 `pull.log`；任务设 `StartWhenAvailable`，电脑 09:07 没开机会在下次开机补跑。
+- **恢复演练（轻量版）**：每次拉取后可直接用 `Expand-Archive` / 压缩软件打开 zip 核对 `dump/`（BSON）与 `file/`（测试数据）在位；完整恢复演练仍按本节上文流程在备用实例做。
+
 ## 13. 默认只读的部署检查
 
 ```bash

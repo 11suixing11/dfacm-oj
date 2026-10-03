@@ -28,6 +28,7 @@ req "https://$HOST/register" | grep -aF 'tab-reg' >/dev/null; check $? "bare /re
 [ "$(code "https://$HOST/p")" = "200" ]; check $? "GET /p = 200"
 [ "$(code "https://$HOST/training")" = "200" ]; check $? "GET /training = 200"
 [ "$(code "https://$HOST/lostpass")" = "200" ]; check $? "GET /lostpass = 200"
+[ "$(code "https://$HOST/user/2")" = "200" ]; check $? "user profile renders (regat type regression)"
 
 # --- guest gates ---
 [ "$(code "https://$HOST/workbench")" = "302" ]; check $? "GET /workbench gated (302)"

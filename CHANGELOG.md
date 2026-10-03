@@ -11,6 +11,12 @@
 
 - Root cause of the 2026-10-04 audit finding: the live process had been serving pre-merge plugin code because files landed after the previous restart. The orchestrator's sync→verify→restart order makes that structurally impossible, and the smoke battery would have caught the missing OAuth injection within seconds.
 - Server ops (not in-repo): daily backup cron restored (root crontab was empty since Oct 2), pm2 log rotation installed, orphan `custom/reg.html` removed, stale `swpu-regcode/package.json` synced.
+- **Judge account profile page returned 500 for every visitor since account creation**: the 2026-10-01 Mongo-clone that created the judge user stored `regat` as a plain `{$date: ...}` object instead of a BSON Date, crashing the `user_detail.html` template's `dt.getTime()`. Fixed in the database; the smoke battery now locks a user profile page render so this class cannot regress silently again.
+- **`hydrooj-rating-system` had silently dropped out of `addon.json`** (lost when the list was rewritten to register `swpu-train`), making `/rating` 404. Re-registered and verified. Note for contest organizers: the plugin's `contest/finish` auto-hook is an upstream stub — ratings are managed via its `/manage/rating*` CSV workflow.
+
+### Added (ops runbook)
+
+- `docs/upstream-issue-regcode-content-type.md`: ready-to-file upstream draft for the framework `@post` decorator crashing with a 500 TypeError on unparseable request bodies instead of a 400.
 
 ## v1.9.0 - 2026-10-04
 
