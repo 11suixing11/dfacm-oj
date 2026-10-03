@@ -161,6 +161,11 @@ test('registration page boots the initial tab from merged query args', async () 
     // Anything outside the tab whitelist is never injected.
     const evil = f.handler('/reg', { tab: 'javascript:alert(1)' }); await evil.get();
     assert.equal(String(evil.response.body).includes('__SWPU_BOOT.tab='), false);
+    // The in-place auth modal requests the embedded variant.
+    const embed = f.handler('/reg', { tab: 'pwd', embed: '1' }); await embed.get();
+    assert.match(String(embed.response.body), /__SWPU_BOOT\.embed=true/);
+    const plain = f.handler('/reg', { tab: 'pwd' }); await plain.get();
+    assert.equal(String(plain.response.body).includes('__SWPU_BOOT.embed='), false);
 });
 
 test('2FA, passkey, disabled accounts and disabled built-in login cannot issue login codes', async () => {

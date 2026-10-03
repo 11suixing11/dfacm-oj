@@ -8,7 +8,7 @@
 <meta name="theme-color" content="#070d18">
 <link rel="icon" type="image/png" href="/favicon.png">
 <link rel="preload" href="/swpu-display.woff2" as="font" type="font/woff2" crossorigin>
-<script>/* 服务端注入初始标签页（Caddy rewrite 后浏览器 URL 不带 query，见 RegPageHandler） */window.__SWPU_BOOT={tab:null};/*__SWPU_BOOT__*/</script>
+<script>/* 服务端注入初始标签页/内嵌模式（Caddy rewrite 后浏览器 URL 不带 query，见 RegPageHandler） */window.__SWPU_BOOT={tab:null,embed:false};/*__SWPU_BOOT__*/</script>
 <style>
 @font-face{font-family:'SWPU Display';src:url('/swpu-display.woff2') format('woff2');font-weight:400;font-style:normal;font-display:swap}
 @font-face{font-family:'SWPU Mono';src:url('/swpu-mono.woff2') format('woff2');font-weight:100 800;font-style:normal;font-display:swap}
@@ -100,6 +100,14 @@ input[aria-invalid="true"]{border-color:#ff8d87}
 .ft a{display:inline-flex;align-items:center;min-height:44px;color:var(--txt-2);font-size:13px}
 .noscript-hint{color:var(--gold-hi);margin-top:16px;font-size:13px}
 .noscript-hint a{color:var(--gold-hi);text-underline-offset:4px}
+/* 内嵌模式：作为登录弹层承载页时只保留卡片本体 */
+body.embed{padding:18px 14px}
+body.embed .wrap{display:block;max-width:470px;margin:0 auto}
+body.embed .intro{display:none}
+body.embed .brand{justify-content:center;margin:0 0 18px}
+.embed-close{display:none;position:fixed;top:10px;right:10px;width:34px;height:34px;align-items:center;justify-content:center;border:1px solid var(--line-strong);border-radius:10px;background:rgba(7,13,24,.55);color:var(--txt-2);font-size:15px;line-height:1;cursor:pointer}
+.embed-close:hover{color:var(--txt);border-color:rgba(233,196,85,.45)}
+body.embed .embed-close{display:flex}
 .remember{display:flex;align-items:center;gap:9px;min-height:24px;font-size:13.5px;color:var(--txt-2);cursor:pointer;-webkit-user-select:none;user-select:none}
 .remember input[type="checkbox"]{width:16px;height:16px;min-height:16px;padding:0;accent-color:var(--blue);cursor:pointer;flex-shrink:0}
 [hidden]{display:none!important}
@@ -227,6 +235,20 @@ input[aria-invalid="true"]{border-color:#ff8d87}
 (function(){
   var $=function(id){return document.getElementById(id)};
   var RETURN=(function(){try{var r=new URLSearchParams(location.search).get('return');return r&&r.charAt(0)==='/'?r:''}catch(e){return''}})();
+  /* 内嵌模式（登录弹层的同源 iframe）：成功/关闭通过 postMessage 交给宿主页处理 */
+  var EMBED=(function(){try{return (window.__SWPU_BOOT&&window.__SWPU_BOOT.embed)||window.self!==window.top}catch(e){return false}})();
+  function finish(returnTo){
+    if(EMBED){try{parent.postMessage({type:'swpu-auth-success',return:returnTo},location.origin)}catch(e){}return}
+    location.href=returnTo;
+  }
+  if(EMBED){
+    document.body.className+=' embed';
+    var eclose=document.createElement('button');
+    eclose.type='button';eclose.className='embed-close';eclose.textContent='✕';
+    eclose.setAttribute('aria-label','关闭登录窗口');eclose.title='关闭 (Esc)';
+    eclose.addEventListener('click',function(){try{parent.postMessage({type:'swpu-auth-close'},location.origin)}catch(e){}});
+    document.body.appendChild(eclose);
+  }
   var names=['reg','login','pwd'];
   var tabs=[$('tab-reg'),$('tab-login'),$('tab-pwd')],panes=[$('pane-reg'),$('pane-login'),$('pane-pwd')];
   function showTab(which,focus){
@@ -330,14 +352,15 @@ input[aria-invalid="true"]{border-color:#ff8d87}
       var d=await api(url,data);form.removeAttribute('aria-busy');
       if(d.ok){
         go.textContent=prefix==='r'?'账号已创建，正在进入…':'登录成功，正在进入…';
-        msg($(prefix+'-msg'),go.textContent,'ok');location.href=RETURN||d.redirect||'/';
+        msg($(prefix+'-msg'),go.textContent,'ok');
+        finish(RETURN||d.redirect||'/');
       }else{msg($(prefix+'-msg'),d.message||'操作失败，请稍后重试。','err');go.disabled=false;go.textContent=label}
     });
   }
   bindForm('r','/reg/complete');bindForm('l','/reg/login');
 
-  /* 密码登录：直接提交 Hydro 原生 /login。成功时服务端 302 跳走（含两步验证页），
-     失败时重新渲染 /login——以最终 URL 判定成败；无 JS 时表单原生提交兜底。 */
+  /* 密码登录：直接提交 Hydro 原生 /login。失败（403）原地提示；成功或进入
+     两步验证页时按最终 URL 判定后跳走；内嵌模式下交给宿主页导航。 */
   var pwdForm=$('f-pwd'),pwdGo=$('p-go'),pwdLabel=pwdGo.textContent;
   pwdForm.addEventListener('submit',async function(e){
     e.preventDefault();
@@ -352,13 +375,17 @@ input[aria-invalid="true"]{border-color:#ff8d87}
     try{
       var resp=await fetch('/login',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:body.toString()});
       var final=new URL(resp.url,location.origin);
-      if(final.pathname==='/login'){
+      if(resp.ok){
+        /* 成功，或进入两步验证等后续步骤：按最终 URL 跳转 */
+        pwdGo.textContent='登录成功，正在进入…';
+        msg($('p-msg'),'登录成功，正在进入…','ok');
+        finish(RETURN||((final.pathname+(final.search||''))||'/'));
+      }else if(resp.status===403||resp.status===401||(final.pathname==='/login'&&!final.search)){
         msg($('p-msg'),'用户名或密码不正确，请重试。','err');
         pwdGo.disabled=false;pwdGo.textContent=pwdLabel;
       }else{
-        pwdGo.textContent='登录成功，正在进入…';
-        msg($('p-msg'),'登录成功，正在进入…','ok');
-        location.href=RETURN||((final.pathname+(final.search||''))||'/');
+        msg($('p-msg'),'登录请求失败（'+resp.status+'），请稍后重试。','err');
+        pwdGo.disabled=false;pwdGo.textContent=pwdLabel;
       }
     }catch(err){
       msg($('p-msg'),'网络连接失败，请检查网络后重试。','err');

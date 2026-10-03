@@ -2,7 +2,22 @@
 swpuacm.xyz, www.swpuacm.xyz {
   encode zstd gzip
 
-  header {
+  # Security headers, split by framing policy: the in-place auth modal embeds
+  # the branded /reg page in a same-origin iframe, so /reg alone uses
+  # SAMEORIGIN / frame-ancestors 'self' while everything else stays DENY.
+  # (Two disjoint matchers instead of an override: header blocks adapt in a
+  # fixed order and a later override line cannot beat the catch-all block.)
+  @regpage path /reg
+  header @regpage {
+    Strict-Transport-Security "max-age=31536000; includeSubDomains"
+    X-Content-Type-Options "nosniff"
+    Referrer-Policy "strict-origin-when-cross-origin"
+    Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()"
+    X-Frame-Options "SAMEORIGIN"
+    Content-Security-Policy "frame-ancestors 'self'; base-uri 'self'; object-src 'none'"
+  }
+  @notreg not path /reg
+  header @notreg {
     Strict-Transport-Security "max-age=31536000; includeSubDomains"
     X-Content-Type-Options "nosniff"
     Referrer-Policy "strict-origin-when-cross-origin"

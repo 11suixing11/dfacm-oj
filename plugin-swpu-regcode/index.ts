@@ -101,10 +101,12 @@ function mailHtml(title: string, code: string, note: string) {
 class RegPageHandler extends Handler {
     noCheckPermView = true;
     async get() {
+        const boot: string[] = [];
         const tab = String(this.args.tab ?? '');
-        this.response.body = TABS.includes(tab)
-            ? PAGE.replace(BOOT_MARK, `window.__SWPU_BOOT.tab=${JSON.stringify(tab)};`)
-            : PAGE;
+        if (TABS.includes(tab)) boot.push(`window.__SWPU_BOOT.tab=${JSON.stringify(tab)};`);
+        // The in-place auth modal embeds this page in a same-origin iframe.
+        if (String(this.args.embed ?? '') === '1') boot.push('window.__SWPU_BOOT.embed=true;');
+        this.response.body = boot.length ? PAGE.replace(BOOT_MARK, boot.join('')) : PAGE;
         this.response.type = 'text/html; charset=utf-8';
         this.response.addHeader('Cache-Control', 'no-store');
     }
