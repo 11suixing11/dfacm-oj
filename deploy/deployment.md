@@ -40,6 +40,8 @@ bash /root/swpu-oj/deploy/install-theme.sh
 
 脚本会先剥掉两处 CSS 里所有 `==== SWPU ACM` 旧 overlay，再追加 `00-brand.css`，并把两处 `service-worker.js` 换成自注销清缓存版本。这样 UI 重建、重复执行和旧主题残留都不会覆盖最新品牌层。
 
+运行前会检查四个目标是否存在且可读写；路径或版本不对时以非零状态退出，不会跳过后报告成功。首次和重复部署都会备份，完成后校验资源。默认主题用 `deploy/set-theme-light.js` 设置，它支持空页脚配置并保留用户主题选择。
+
 它同时处理两处主题 CSS：
 
 1. `/root/.hydro/static/theme-<版本>.css`：Caddy 实际直出的文件。
@@ -86,7 +88,7 @@ pm2 restart hydrooj
 
 ```bash
 mkdir -p /root/.hydro/addons/swpu-ops
-cp /root/swpu-oj/plugin-swpu-ops/{index.ts,operations.cjs,report.cjs,package.json} \
+cp /root/swpu-oj/plugin-swpu-ops/{index.ts,operations.cjs,report.cjs,live-rp.cjs,package.json} \
    /root/.hydro/addons/swpu-ops/
 mkdir -p /root/.hydro/addons/swpu-ops/node_modules
 ln -sfn /usr/local/share/.config/yarn/global/node_modules/hydrooj \
@@ -97,7 +99,9 @@ pm2 restart hydrooj
 
 安装后在“控制面板 → 脚本管理”用 `hydrooj cli script swpuWeeklyReport '{}'` 或后台表单运行，详见 [plugin-swpu-ops/README.md](../plugin-swpu-ops/README.md)。
 
-**不要**在 `/root/.hydro/addons/swpu-regcode/` 里运行 `npm install`：它会重建 `node_modules`，覆盖指向 Hydro 的软链。插件测试用 `npm test`，`tsx` 由 `npx` 临时下载，不写入 addon 目录。
+两个报表脚本只读；同一 addon 默认启用的 RP 钩子会更新排名。它过滤评测过程并串行合并重算，设置 `SWPU_LIVE_RP=0` 后重启可以关闭。
+
+**不要**在 `/root/.hydro/addons/swpu-regcode/` 运行 `npm install` 或 `npm ci`，避免重建运行目录的 `node_modules` 和 Hydro 软链。开发测试在独立仓库检出目录的 `plugin-swpu-regcode/` 中运行 `npm ci && npm test`，依赖按锁文件安装。
 
 ## 5. 邮件系统
 
@@ -176,6 +180,8 @@ curl -sSI https://<域名>/ | grep -Ei 'strict-transport|x-content-type|referrer
 - [ ] `/reg/complete` 在无验证码时返回 `{ ok: false }`，不会 500。
 - [ ] `curl -I` 检查字体和图标有 `Cache-Control`。
 - [ ] 注册流程走通（验证码邮件到达）。
+- [ ] `/reg?tab=pwd` 密码登录后回首页；合法 `return` 回原页面，`//外站`、反斜杠及控制字符输入均不能导致站外导航。
+- [ ] 两步验证 / 通行密钥账号能通过常显原生入口完成登录；iframe 内的原生入口、OAuth、找回密码都在顶层打开。
 - [ ] 找回密码邮件里的链接是绝对地址（`server.url` 必须是完整 `https://域名`，当前为 `https://swpuacm.xyz`）。
 
 ## 15. 第三方登录（GitHub）

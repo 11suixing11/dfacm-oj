@@ -16,8 +16,8 @@ OJ 内核使用开源的 Hydro，本仓库收录的是我们围绕它做的**全
 |---|---|
 | [`landing/`](landing/) | 门面首页：单文件 HTML/CSS/JS，零框架。「向山顶，提交你的答案」——新生入门指引、滚动海拔标尺、训练路线海拔剖面图、主动点击的评测流程演示、品牌图标与 OG 图 |
 | [`plugin-swpu-regcode/`](plugin-swpu-regcode/) | 数字验证码注册 + 免密登录插件：`crypto.randomInt` 随机码、盐化摘要存储、一次性原子消费、绑定收件邮箱/UID/用途、登录策略与真实 IP 限速、5 分钟 TTL、QQ 号自动头像 |
-| [`plugin-swpu-ops/`](plugin-swpu-ops/) | 管理员训练周报与判题健康摘要：按域/小组导出 CSV、Markdown、JSON，复用 Hydro 脚本权限，无 HTTP 路由 |
-| [`theme/`](theme/) | Hydro 原生 Dark 主题 + `00-native-dark-brand.css` 品牌薄层；01-05 为旧版回退，不再默认启用 |
+| [`plugin-swpu-ops/`](plugin-swpu-ops/) | 管理员训练周报、判题健康摘要与可关闭的 RP 重算：报表只读，RP 会更新排名；无 HTTP 路由 |
+| [`theme/`](theme/) | Hydro 原生 Light / Dark 双主题 + `00-brand.css` 品牌薄层；默认 light，保留用户偏好；01-05 为旧版回退 |
 | [`deploy/`](deploy/) | Caddy 配置范例 + 一键安装脚本 + 脱敏部署清单：`home.html` 安装、assets 展平、UI 重建免疫、真实 IP、安全响应头 |
 | [`scripts/`](scripts/) | 字体子集化（展示字体 440 字 107KB）、Pillow 图标渲染、备份包装器、只读部署检查 |
 
@@ -40,7 +40,7 @@ OJ 内核使用开源的 Hydro，本仓库收录的是我们围绕它做的**全
 
 1. **门面**：在服务器运行 `bash deploy/install-landing.sh /root/.hydro/custom`。脚本会把 `index.html` 装成 `home.html`，并把 `landing/assets/*` 展平到根目录。
 2. **注册插件**：把 `plugin-swpu-regcode/` 上传到 `/root/.hydro/addons/swpu-regcode`，建立 `node_modules/hydrooj` 软链，参考 `addon.json.example` 注册后 `pm2 restart hydrooj`。不要在插件目录执行 `npm install`。
-3. **主题**：运行 `bash deploy/install-theme.sh`，默认只追加原生 Dark 的品牌薄层 `00-native-dark-brand.css`；旧版浅色 Hydro 用 `SWPU_THEME_LEGACY=1` 回退到 01-05。
+3. **主题**：核对 `THEME_VERSION` 后运行 `bash deploy/install-theme.sh`，追加双主题品牌薄层 `00-brand.css`；必需文件缺失会直接失败，修改前备份。设置默认 light 见 [主题说明](theme/README.md)，不会清空用户偏好。
 4. **邮件**：在系统设置配置 `smtp.host/user/pass/from/secure`，找回密码与验证码邮件即刻可用。
 5. **反向代理**：设置 `server.xproxy: true`，并让 Caddy 覆盖客户端 XFF，详见 [deploy/deployment.md](deploy/deployment.md)。
 
@@ -50,7 +50,7 @@ OJ 内核使用开源的 Hydro，本仓库收录的是我们围绕它做的**全
 ├── landing/               门面首页（单文件）+ 字体/图标资源
 ├── plugin-swpu-regcode/   数字验证码注册/免密登录插件（Hydro addon）
 ├── plugin-swpu-ops/       管理员训练周报与判题健康摘要（Hydro addon）
-├── theme/                 原生 Dark 品牌薄层 + 旧版回退 overlay
+├── theme/                 原生 Light / Dark 品牌薄层 + 旧版回退 overlay
 ├── deploy/                Caddyfile / 安装脚本 / 部署清单
 ├── scripts/               字体子集化 / 品牌图标生成 / 备份 / 部署检查
 ├── .github/workflows/     CI：secret scan / 插件单测 / 仓库检查
@@ -64,7 +64,7 @@ OJ 内核使用开源的 Hydro，本仓库收录的是我们围绕它做的**全
 - 验证码使用 `crypto.randomInt` 生成，带 purpose 绑定，失败次数通过 MongoDB 原子自增，显式检查 TTL。
 - 只有直接对端是回环地址时才信任 `X-Forwarded-For` 首段；Caddy 配置会覆盖客户端传入的 XFF。
 - CI 包含 gitleaks secret scan、插件单元测试、弃用域名扫描、Shell 语法和 Python 编译检查。
-- `plugin-swpu-ops` 只注册 Hydro 管理员脚本（`PRIV_EDIT_SYSTEM` + sudo），不注册任何 HTTP 路由，只读数据库并写本地报表文件。
+- `plugin-swpu-ops` 的管理员报表（`PRIV_EDIT_SYSTEM` + sudo）只读数据库并写本地文件；默认启用的 RP 重算会更新排名，可用 `SWPU_LIVE_RP=0` 关闭。没有公共 HTTP 路由。
 - 仓库不包含 SMTP、数据库或服务器凭据；部署脚本修改主题前会自动备份。
 
 ## 致谢与许可

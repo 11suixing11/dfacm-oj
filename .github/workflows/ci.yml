@@ -62,7 +62,7 @@ jobs:
           grep -q "unregister" deploy/service-worker-killswitch.js
           grep -q "service-worker-killswitch" deploy/install-theme.sh
       - name: Check shell scripts
-        run: bash -n deploy/install-landing.sh deploy/install-theme.sh
+        run: bash -n deploy/*.sh scripts/*.sh
       - name: Check Python syntax
         run: python -m py_compile scripts/subset_fonts.py
 
@@ -76,7 +76,7 @@ jobs:
           node-version: 22
       - name: Install regcode test dependencies
         working-directory: plugin-swpu-regcode
-        run: npm install --no-audit --no-fund
+        run: npm ci --no-audit --no-fund
       - name: Run regcode tests
         working-directory: plugin-swpu-regcode
         run: npm test

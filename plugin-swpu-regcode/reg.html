@@ -100,6 +100,8 @@ input[aria-invalid="true"]{border-color:#ff8d87}
 .ft a{display:inline-flex;align-items:center;min-height:44px;color:var(--txt-2);font-size:13px}
 .noscript-hint{color:var(--gold-hi);margin-top:16px;font-size:13px}
 .noscript-hint a{color:var(--gold-hi);text-underline-offset:4px}
+.native-login{display:block;margin-top:18px;color:var(--txt-2);font-size:14px;line-height:1.8}
+.native-login a{display:inline-flex;align-items:center;min-height:44px;color:var(--gold-hi);text-underline-offset:4px}
 /* 内嵌模式：作为登录弹层承载页时只保留卡片本体 */
 body.embed{padding:18px 14px}
 body.embed .wrap{display:block;max-width:470px;margin:0 auto}
@@ -228,12 +230,13 @@ body.embed .embed-close{display:flex}
       </form>
     </div>
 
-    <noscript><p class="noscript-hint">本页需要 JavaScript；如不便启用，可前往 <a href="/login?fallback=1">原生登录页</a> 或 <a href="/register?fallback=1">原生注册页</a>。</p></noscript>
+    <p class="native-login"><a id="native-login" href="/login?fallback=1" target="_top">使用两步验证 / 通行密钥登录</a><br>进入原生登录页，完成账号验证。</p>
+    <noscript><p class="noscript-hint">本页需要 JavaScript；如不便启用，可前往 <a href="/login?fallback=1" target="_top">原生登录页</a> 或 <a href="/register?fallback=1" target="_top">原生注册页</a>。</p></noscript>
     <div class="oauth-row" aria-hidden="true">或使用以下方式登录</div>
     <div class="oauth-list" id="oauth-list"></div>
     <div class="ft">
       <a href="/reg?tab=pwd">密码登录</a>
-      <a href="/lostpass">找回密码</a>
+      <a href="/lostpass" target="_top">找回密码</a>
       <a class="mono" href="/">SWPUACM.XYZ</a>
     </div>
   </main>
@@ -242,10 +245,19 @@ body.embed .embed-close{display:flex}
 'use strict';
 (function(){
   var $=function(id){return document.getElementById(id)};
-  var RETURN=(function(){try{var r=new URLSearchParams(location.search).get('return');return r&&r.charAt(0)==='/'?r:''}catch(e){return''}})();
+  // Match the server's localRedirect policy for query strings and API responses.
+  function localPath(value,fallback){
+    if(typeof value!=='string'||value.charAt(0)!=='/'||value.slice(0,2)==='//'||/[\\\s\u0000-\u001f\u007f]/.test(value))return fallback;
+    try{if(new URL(value,location.origin).origin!==location.origin)return fallback}catch(e){return fallback}
+    return value;
+  }
+  var RETURN=localPath(new URLSearchParams(location.search).get('return'),'');
+  if(RETURN&&/^\/(?:login|reg|register|logout)\/?$/.test(new URL(RETURN,location.origin).pathname))RETURN='';
+  $('native-login').href='/login?fallback=1&redirect='+encodeURIComponent(RETURN||'/');
   /* 内嵌模式（登录弹层的同源 iframe）：成功/关闭通过 postMessage 交给宿主页处理 */
   var EMBED=(function(){try{return (window.__SWPU_BOOT&&window.__SWPU_BOOT.embed)||window.self!==window.top}catch(e){return false}})();
   function finish(returnTo){
+    returnTo=localPath(returnTo,'/');
     if(EMBED){try{parent.postMessage({type:'swpu-auth-success',return:returnTo},location.origin)}catch(e){}return}
     location.href=returnTo;
   }
@@ -376,6 +388,7 @@ body.embed .embed-close{display:flex}
       if(!p||typeof p.id!=='string'||typeof p.icon!=='string')return;
       var a=document.createElement('a');
       a.href='/oauth/'+encodeURIComponent(p.id)+'/login?redirect='+encodeURIComponent(RETURN||'/');
+      a.target='_top';
       a.className='btn btn-oauth';
       a.innerHTML=p.icon+'<span>'+(p.text||('使用 '+p.id+' 登录'))+'</span>';
       list.appendChild(a);
@@ -383,8 +396,8 @@ body.embed .embed-close{display:flex}
     if(!list.children.length){list.previousElementSibling?list.previousElementSibling.remove():0;list.remove()}
   })();
 
-  /* 密码登录：直接提交 Hydro 原生 /login。失败（403）原地提示；成功或进入
-     两步验证页时按最终 URL 判定后跳走；内嵌模式下交给宿主页导航。 */
+  /* Hydro 5.0.7 的密码 POST 在成功时重定向；第二因素通过常显的原生入口完成。
+     显式发送安全 redirect，避免 Hydro 把当前登录页 Referer 当成成功落点。 */
   var pwdForm=$('f-pwd'),pwdGo=$('p-go'),pwdLabel=pwdGo.textContent;
   pwdForm.addEventListener('submit',async function(e){
     e.preventDefault();
@@ -393,29 +406,28 @@ body.embed .embed-close{display:flex}
     var uname=$('p-uname').value.trim(),pw=$('p-pw').value;
     if(!uname){invalid('p','p-uname','请输入用户名。');return}
     if(!pw){invalid('p','p-pw','请输入密码。');return}
-    var body=new URLSearchParams({uname:uname,password:pw,tfa:'',authnChallenge:''});
+    var body=new URLSearchParams({uname:uname,password:pw,tfa:'',authnChallenge:'',redirect:RETURN||'/'});
     if($('p-remember').checked)body.set('rememberme','1');
     pwdGo.disabled=true;pwdGo.textContent='登录中…';pwdForm.setAttribute('aria-busy','true');
+    var controller=new AbortController(),timeout=setTimeout(function(){controller.abort()},15000);
     try{
-      var resp=await fetch('/login',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:body.toString()});
-      var final=new URL(resp.url,location.origin);
-      if(resp.ok){
-        /* 成功，或进入两步验证等后续步骤：按最终 URL 跳转 */
+      var resp=await fetch('/login',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded','Accept':'text/html'},body:body.toString(),signal:controller.signal});
+      if(resp.ok&&resp.redirected){
         pwdGo.textContent='登录成功，正在进入…';
         msg($('p-msg'),'登录成功，正在进入…','ok');
-        finish(RETURN||((final.pathname+(final.search||''))||'/'));
-      }else if(resp.status===403||resp.status===401||(final.pathname==='/login'&&!final.search)){
-        msg($('p-msg'),'用户名或密码不正确，请重试。','err');
-        pwdGo.disabled=false;pwdGo.textContent=pwdLabel;
+        finish(RETURN||'/');
       }else{
-        msg($('p-msg'),'登录请求失败（'+resp.status+'），请稍后重试。','err');
+        var error=resp.status===429?'登录尝试过于频繁，请稍后重试。':
+          (resp.status===403||resp.status===401||resp.status===400||resp.status===404)?'登录未完成，请检查账号密码或账号限制；两步验证 / 通行密钥请使用下方原生登录入口。':
+          resp.ok?'未能确认登录成功，请使用下方原生登录入口重试。':'登录服务暂时不可用，请稍后重试。';
+        msg($('p-msg'),error,'err');
         pwdGo.disabled=false;pwdGo.textContent=pwdLabel;
       }
     }catch(err){
-      msg($('p-msg'),'网络连接失败，请检查网络后重试。','err');
+      msg($('p-msg'),err.name==='AbortError'?'登录请求超时，请稍后重试。':'网络连接失败，请检查网络后重试。','err');
       pwdGo.disabled=false;pwdGo.textContent=pwdLabel;
     }
-    pwdForm.removeAttribute('aria-busy');
+    clearTimeout(timeout);pwdForm.removeAttribute('aria-busy');
   });
 })();
 </script>

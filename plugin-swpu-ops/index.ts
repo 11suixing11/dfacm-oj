@@ -25,7 +25,9 @@ export function apply(ctx: Context) {
     }), ops.healthSummary);
     // RP normally only recalculates in task.daily (03:00); rerun it shortly
     // after each judged submission so the ranking page stays current.
-    if (!process.env.NODE_APP_INSTANCE || process.env.NODE_APP_INSTANCE === '0') {
-        ctx.on('record/change', createLiveRp().hook);
+    if (process.env.SWPU_LIVE_RP !== '0' && (!process.env.NODE_APP_INSTANCE || process.env.NODE_APP_INSTANCE === '0')) {
+        const live = createLiveRp();
+        ctx.on('record/change', live.hook);
+        ctx.on('dispose', live.stop);
     }
 }
