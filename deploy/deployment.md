@@ -28,6 +28,8 @@ bash /root/swpu-oj/deploy/install-landing.sh /root/.hydro/custom
 
 Caddy 站点块中的 `@custom` 和 `handle @custom` 见 [Caddyfile.example](Caddyfile.example)。
 
+落地页自带白天/夜间双主题：默认白天，导航与移动端菜单有切换按钮，选择存 `localStorage 'swpu-theme'`（同源下 OJ 页脚的切换也会写这个键，首页自动跟随 OJ 的选择）。更新 `footer_extra_html` 后按 `deploy/update-footer-toggle-sync.js` 重跑 mongosh 并 `pm2 restart hydrooj`。
+
 ## 3. 主题：原生双主题（默认 light）+ 品牌薄层
 
 Hydro `ui-default` 自带持续维护的 Light / Dark 双主题，站点默认 light，用户可在偏好设置或页脚切换。推荐只追加 `theme/00-brand.css`（同时覆盖两种模式），不要重新启用 01-05 的旧全量覆盖；旧文件仅保留作回退参考。

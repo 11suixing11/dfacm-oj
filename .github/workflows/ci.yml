@@ -47,6 +47,9 @@ jobs:
           test -f deploy/set-theme-light.js
           grep -q "og:image" landing/index.html
           grep -q "twitter:card" landing/index.html
+          grep -q "theme-btn" landing/index.html
+          grep -q "html.dark" landing/index.html
+          grep -q "swpu-theme" deploy/update-footer-toggle-sync.js
           grep -q "SWPU ACM brand overlay" theme/00-brand.css
           grep -q "theme--light" theme/00-brand.css
           grep -q "theme--dark" theme/00-brand.css
