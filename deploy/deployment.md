@@ -286,6 +286,7 @@ bash /opt/swpu-oj/scripts/backup-hydro.sh \
 - 拉取范围：`/root/backups` 下全部平铺文件（含 `dead-19` / `ybt-remote-609` 等题库归档 JSON），本地 `backup-*.zip` 只保留最近 14 份，一次性归档永不删。
 - 日志在 `pull.log`；任务设 `StartWhenAvailable`，电脑 09:07 没开机会在下次开机补跑。
 - **恢复演练（轻量版）**：每次拉取后可直接用 `Expand-Archive` / 压缩软件打开 zip 核对 `dump/`（BSON）与 `file/`（测试数据）在位；完整恢复演练仍按本节上文流程在备用实例做。
+- **应急大文件传输（深夜 SSH 批量被掐时）**：跨境链路深夜可能对 SSH 数据流整体限速（交互命令正常、scp/scp 并行全部 0 速率），而 443+代理路线实测 ~1MB/s。应急法：把文件以**不可猜测的随机名**放进 `/root/.hydro/static/`（Caddy 直出），本地 `curl --proxy <代理> -C -` 断点续传拉取，sha256 对账后**立即删除**并验证 URL 已 404。此法暴露完整数据库内容，仅限应急窗口使用。
 
 ## 13. 默认只读的部署检查
 
