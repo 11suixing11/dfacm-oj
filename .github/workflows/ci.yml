@@ -52,7 +52,7 @@ jobs:
           grep -q "twitter:card" landing/index.html
           grep -q "theme-btn" landing/index.html
           grep -q "html.dark" landing/index.html
-          grep -q "nav_logout" landing/index.html
+          grep -q "nav__item" landing/index.html
           grep -q "swpu-me" landing/index.html
           grep -q "pageshow" landing/index.html
           grep -q "no-store" landing/index.html

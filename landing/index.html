@@ -919,9 +919,11 @@ int main() {
 'use strict';
 (function(){
   /* ---------- 登录态感知 ----------
-     落地页是静态文件，读不到 HttpOnly 的 sid；同源 fetch 一个 SSR 页即可从
-     导航标记判断：游客 HTML 含 name="nav_login"，登录态含 name="nav_logout"
-     与 <a href="/user/<uid>" class="nav__item">用户名（Hydro nav.html 实测）。
+     落地页是静态文件，读不到 HttpOnly 的 sid；同源 fetch 一个 SSR 页，从导航
+     里的 <a href="/user/<uid>" class="nav__item">用户名 链接判断登录态——该
+     组合只在登录态导航渲染，游客页为 0（Hydro nav.html 与线上实测）。
+     切勿改回 name="nav_logout" 当标记：页脚主题脚本含 a[name="nav_logout"]
+     字面量，游客页也有，会把游客误判成已登录。
      缓存只做乐观先行绘制，探测结果永远最终裁决；浏览器后退缓存（bfcache）
      恢复时脚本不会重跑，须监听 pageshow 先回落游客基线再重新探测。 */
   var doc=document;
@@ -960,22 +962,21 @@ int main() {
   }
   function probe(){
     fetch('/p',{credentials:'same-origin',cache:'no-store'}).then(function(r){return r.text()}).then(function(h){
-      var cut=h.indexOf('name="nav_logout"');
-      if(cut<0){if(asUser)paintGuest();cacheDrop();return}
-      var head=h.substring(0,cut),tok='class="nav__item">',k=head.indexOf(tok),uid=0,name='';
+      /* 唯一可信锚点：nav__item 里带 href="/user/<uid>" 的用户名链接，全页扫描取首个 */
+      var tok='class="nav__item">',k=h.indexOf(tok),uid=0,name='';
       while(k>=0&&!uid){
-        var back=head.substring(k-48,k),u=back.lastIndexOf('href="/user/');
+        var back=h.substring(k-48,k),u=back.lastIndexOf('href="/user/');
         if(u>=0){
           var n=parseInt(back.substring(u+12),10);
           if(n>0){
             uid=n;
-            var nm=head.substring(k+tok.length);
+            var nm=h.substring(k+tok.length);
             name=nm.substring(0,nm.indexOf('<')).trim();
           }
         }
-        k=head.indexOf(tok,k+tok.length);
+        k=h.indexOf(tok,k+tok.length);
       }
-      if(!uid)return;
+      if(!uid){if(asUser)paintGuest();cacheDrop();return}
       paintUser(uid,name);
       cacheSave({uid:uid,name:name,at:Date.now()});
     }).catch(function(){

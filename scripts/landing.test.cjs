@@ -2,10 +2,13 @@
 //
 // landing/index.html is a static file served straight from Caddy; it cannot
 // read the HttpOnly session cookie, so its script probes an SSR route instead
-// (/p) for the nav markers Hydro renders: `nav_login` for guests, `nav_logout`
-// plus the /user/<uid> link for signed-in users. These tests run the shipped
-// script in a vm sandbox with stubbed DOM, storage and fetch and assert the
-// guest -> member swap plus every rollback / fail-safe path.
+// (/p) for the one marker Hydro renders only for signed-in users: the
+// <a href="/user/<uid>" class="nav__item"> username link (guest pages carry
+// zero of them — beware: the injected footer theme script contains the literal
+// `name="nav_logout"`, which fooled the old marker on every guest page). These
+// tests run the shipped script in a vm sandbox with stubbed DOM, storage and
+// fetch and assert the guest -> member swap plus every rollback / fail-safe
+// path.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -33,7 +36,8 @@ test('landing wiring: swap targets, detection marker and stats exist in shipped 
     assert.ok(html.includes('<a class="cta" href="/reg">注册账号</a>'));
     assert.ok(html.includes('<nav id="mmenu"'));
     assert.ok(html.includes('class="hero-help"'));
-    assert.ok(html.includes('name="nav_logout"'), 'detection marker missing');
+    assert.ok(html.includes('nav__item'), 'username anchor marker missing');
+    assert.ok(!html.includes("indexOf('name=\"nav_logout\"')"), 'must not detect login via the footer-script-contaminated nav_logout string');
     assert.ok(html.includes("credentials:'same-origin'"));
     assert.ok(html.includes("cache:'no-store'"), 'probe must bypass the HTTP cache');
     assert.ok(html.includes("addEventListener('pageshow'"), 'bfcache restore must re-probe login state');
@@ -107,11 +111,23 @@ async function runPage({ page, pages, cached } = {}) {
     };
 }
 
+// Captured from the live /p render (2026-10-04): ui-default.footer_extra_html
+// injects a theme-toggle script whose querySelector literal contains
+// `name="nav_logout"`. The old probe anchor matched this string on guest
+// pages too, so every logged-out probe kept the stale cache paint forever.
+const FOOTER_THEME_SCRIPT = [
+    '<script>(function(){',
+    'var u=document.querySelector(\'a[name="nav_logout"]\');',
+    "if(u){u.href=d?'/set_theme/light':'/set_theme/dark';u.textContent='切换到夜间模式'}",
+    '})();</' + 'script>',
+].join('');
+
 // Captured from the live SSR render (2026-10-04 e2e, temp account since removed).
 const AUTH_PAGE = [
     '<li class="nav__list-item"><a href="/p" class="nav__item">题库</a></li>',
     '<li class="nav__list-item"><a href="/user/5" class="nav__item">e2etest <span class="icon icon-expand_more nojs--hide"></span></a></li>',
     '<a href="/logout" class="menu__link" name="nav_logout">退出</a>',
+    FOOTER_THEME_SCRIPT,
 ].join('');
 const GUEST_PAGE = '<li class="nav__list-item"><a href="/login" class="nav__item" name="nav_login">登录</a></li>';
 
@@ -157,6 +173,22 @@ test('stale cache paints instantly, guest probe rolls it back', async () => {
     assert.equal(els['#nav a.cta'].textContent, '注册账号');
     assert.equal(els['.hero-help'].innerHTML, GUEST_HELP);
     assert.ok(!store.has('swpu-me'));
+});
+
+test('real guest page (footer script contains the nav_logout string) still probes as guest', async () => {
+    // The regression that shipped on 2026-10-04: the footer theme script's
+    // querySelector literal made indexOf('name="nav_logout"') hit on guest
+    // pages, the uid parse then failed, and the stale paint survived forever.
+    const { els, store, fetches } = await runPage({
+        page: GUEST_PAGE + FOOTER_THEME_SCRIPT,
+        cached: { uid: 4, name: 'core', at: Date.now() },
+    });
+    assert.equal(fetches.length, 1);
+    assert.equal(els['#nav a.login'].textContent, '登录');
+    assert.equal(els['#nav a.login'].getAttribute('href'), '/reg?tab=pwd');
+    assert.equal(els['#nav a.cta'].textContent, '注册账号');
+    assert.equal(els['.hero-help'].innerHTML, GUEST_HELP);
+    assert.ok(!store.has('swpu-me'), 'the stale cache must not survive a real guest page');
 });
 
 test('displayName variant "Name (uname)" is kept as Hydro renders it', async () => {
