@@ -23,6 +23,12 @@ const codes = createCodeStore(
 );
 const PAGE = fs.readFileSync(join(__dirname, 'reg.html'), 'utf-8');
 
+// Caddy rewrites bare GET /login to /reg?tab=pwd without changing the browser
+// URL, so the initial tab cannot come from location.search — Hydro merges the
+// rewritten query into handler args and the page boots from this marker.
+const TABS = ['reg', 'login', 'pwd'];
+const BOOT_MARK = '/*__SWPU_BOOT__*/';
+
 // Caddy is the only trusted proxy; resolve the real client IP for rate limits,
 // login records and contest IP binding.
 function getClientIp(handler: Handler): string {
@@ -95,7 +101,10 @@ function mailHtml(title: string, code: string, note: string) {
 class RegPageHandler extends Handler {
     noCheckPermView = true;
     async get() {
-        this.response.body = PAGE;
+        const tab = String(this.args.tab ?? '');
+        this.response.body = TABS.includes(tab)
+            ? PAGE.replace(BOOT_MARK, `window.__SWPU_BOOT.tab=${JSON.stringify(tab)};`)
+            : PAGE;
         this.response.type = 'text/html; charset=utf-8';
         this.response.addHeader('Cache-Control', 'no-store');
     }

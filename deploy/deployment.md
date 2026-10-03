@@ -170,6 +170,7 @@ curl -sSI https://<域名>/ | grep -Ei 'strict-transport|x-content-type|referrer
 
 - [ ] `https://<域名>/` 返回门面并包含 `og:image`。
 - [ ] `/p` `/login` `/reg` `/training` 全部 200。
+- [ ] 裸 `GET /login` 直接 200 返回品牌页（Caddy `rewrite`，非 302），`curl -s https://<域名>/login | grep -c '__SWPU_BOOT.tab="pwd"'` 为 1；带 query 的 `GET /login?x=1` 返回原生页。
 - [ ] `/reg/complete` 在无验证码时返回 `{ ok: false }`，不会 500。
 - [ ] `curl -I` 检查字体和图标有 `Cache-Control`。
 - [ ] 注册流程走通（验证码邮件到达）。

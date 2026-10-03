@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.5.0 - 2026-10-03
+
+### Changed
+
+- **Login is now clean — no forced redirects anywhere.** Caddy serves the branded `/reg` page *in place* at the native auth URLs (`rewrite` instead of `302`): bare `GET /login` renders the branded page with the password tab active at the same URL, bare `GET /register` renders it with the register tab. `POST /login`, `GET /login?...` (two-step flows) and `POST /register` / `/register/<token>` still pass through untouched. The rewritten `?tab=pwd` reaches the regcode plugin through Hydro's merged handler args, which boots the right tab via an injected `window.__SWPU_BOOT` script (the browser URL keeps no query after a rewrite).
+- The login-modal hijack is gone: `deploy/unify-login-entries.js` (footer script that force-navigated to `/reg` the moment `dialog--signin` appeared) is replaced by `deploy/clean-auth-entries.js`. The native modal now opens *in place* on restricted pages, themed by the brand overlay in both modes, with a `使用邮箱验证码登录 →` link that carries a `return` path to `/reg?tab=login` — password login completes on the current page, code login goes to the branded page and comes back. Footer/header links to `/login` and `/register` are corrected to `/reg?tab=pwd` / `/reg` at the HTML level (a normal link click, no interception).
+- `/reg` noscript fallback links now point at `/login?fallback=1` / `/register?fallback=1` so they still reach the native pages after the rewrite.
+
 ## v1.4.0 - 2026-10-03
 
 ### Changed

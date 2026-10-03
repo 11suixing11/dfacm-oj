@@ -8,6 +8,7 @@
 <meta name="theme-color" content="#070d18">
 <link rel="icon" type="image/png" href="/favicon.png">
 <link rel="preload" href="/swpu-display.woff2" as="font" type="font/woff2" crossorigin>
+<script>/* 服务端注入初始标签页（Caddy rewrite 后浏览器 URL 不带 query，见 RegPageHandler） */window.__SWPU_BOOT={tab:null};/*__SWPU_BOOT__*/</script>
 <style>
 @font-face{font-family:'SWPU Display';src:url('/swpu-display.woff2') format('woff2');font-weight:400;font-style:normal;font-display:swap}
 @font-face{font-family:'SWPU Mono';src:url('/swpu-mono.woff2') format('woff2');font-weight:100 800;font-style:normal;font-display:swap}
@@ -213,7 +214,7 @@ input[aria-invalid="true"]{border-color:#ff8d87}
       </form>
     </div>
 
-    <noscript><p class="noscript-hint">本页需要 JavaScript；如不便启用，可前往 <a href="/login">原生登录页</a> 或 <a href="/register">原生注册页</a>。</p></noscript>
+    <noscript><p class="noscript-hint">本页需要 JavaScript；如不便启用，可前往 <a href="/login?fallback=1">原生登录页</a> 或 <a href="/register?fallback=1">原生注册页</a>。</p></noscript>
     <div class="ft">
       <a href="/reg?tab=pwd">密码登录</a>
       <a href="/lostpass">找回密码</a>
@@ -251,7 +252,8 @@ input[aria-invalid="true"]{border-color:#ff8d87}
     });
   });
   var initial=new URLSearchParams(location.search).get('tab');
-  showTab(names.indexOf(initial)>=0?initial:(location.hash==='#login'||location.hash==='#pwd'?location.hash.slice(1):'reg'),false);
+  var bootTab=window.__SWPU_BOOT&&window.__SWPU_BOOT.tab;
+  showTab(names.indexOf(bootTab)>=0?bootTab:(names.indexOf(initial)>=0?initial:(location.hash==='#login'||location.hash==='#pwd'?location.hash.slice(1):'reg')),false);
   document.querySelectorAll('.password-toggle').forEach(function(btn){
     btn.hidden=false;
     btn.addEventListener('click',function(){

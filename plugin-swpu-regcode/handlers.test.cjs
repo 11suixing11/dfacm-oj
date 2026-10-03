@@ -151,6 +151,18 @@ test('registration page uses Hydro addHeader to disable caching', async () => {
     assert.match(h.response.type, /text\/html/);
 });
 
+test('registration page boots the initial tab from merged query args', async () => {
+    const f = await fixture();
+    const pwd = f.handler('/reg', { tab: 'pwd' }); await pwd.get();
+    assert.match(String(pwd.response.body), /__SWPU_BOOT\.tab="pwd"/);
+    // Bare /register rewrite arrives without a tab: page must stay unmodified.
+    const bare = f.handler('/reg'); await bare.get();
+    assert.equal(String(bare.response.body).includes('__SWPU_BOOT.tab='), false);
+    // Anything outside the tab whitelist is never injected.
+    const evil = f.handler('/reg', { tab: 'javascript:alert(1)' }); await evil.get();
+    assert.equal(String(evil.response.body).includes('__SWPU_BOOT.tab='), false);
+});
+
 test('2FA, passkey, disabled accounts and disabled built-in login cannot issue login codes', async () => {
     for (const override of [{ tfa: true }, { authn: true }, { priv: 0 }]) {
         const f = await fixture(); f.user(42, override);

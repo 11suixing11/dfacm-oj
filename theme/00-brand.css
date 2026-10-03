@@ -320,6 +320,41 @@
   border-radius: 999px;
 }
 
+/* ---------- shared: signin dialog (in place, all pages) ----------
+   弹窗不再被劫持跳转，原地登录；这里把它品牌化成站点自己的卡片。 */
+.theme--light .dialog--signin__bg,
+.theme--dark .dialog--signin__bg {
+  background: linear-gradient(160deg, #1c3e78, #0c1a36);
+}
+.theme--light .dialog--signin__side h1,
+.theme--dark .dialog--signin__side h1 {
+  font-family: 'SWPU Display', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  letter-spacing: .04em;
+}
+.theme--light .dialog--signin__main {
+  background: #ffffff;
+  border-radius: 16px;
+}
+.theme--light .dialog--signin__title { color: #1a2940; }
+.theme--light .dialog--signin__note { color: #44577a; }
+.theme--dark .dialog--signin__main {
+  background: #0d182a;
+  border: 1px solid rgba(198, 216, 240, .14);
+  border-radius: 16px;
+}
+.theme--dark .dialog--signin__title { color: #e8edf5; }
+.theme--dark .dialog--signin__note { color: #a7b4c7; }
+/* 弹窗内「邮箱验证码登录」入口（deploy/clean-auth-entries.js 注入） */
+.theme--light #swpu-dialog-code { color: #2a5caa; }
+.theme--light #swpu-dialog-code:hover { color: #1e4488; text-decoration: underline; }
+.theme--dark #swpu-dialog-code { color: #e9c455; }
+.theme--dark #swpu-dialog-code:hover { color: #f4d47c; text-decoration: underline; }
+/* 原生 /login 兜底页的同款入口 */
+.theme--light #swpu-codelogin { color: #2a5caa; }
+.theme--light #swpu-codelogin:hover { color: #1e4488; text-decoration: underline; }
+.theme--dark #swpu-codelogin { color: #e9c455; }
+.theme--dark #swpu-codelogin:hover { color: #f4d47c; text-decoration: underline; }
+
 /* ---------- shared: mobile & reduced motion ---------- */
 @media (max-width: 600px) {
   .theme--dark .data-table td,

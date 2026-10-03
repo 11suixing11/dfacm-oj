@@ -14,23 +14,27 @@ swpuacm.xyz, www.swpuacm.xyz {
   # SWPU ACM landing page as site front door (revert: delete this line)
   rewrite / /home.html
 
-  # Unify every login entry onto the branded /reg page (revert: remove these lines).
-  # Bare GET /login only: POST /login (form submit) and /login?... (two-step flows) pass through.
+  # Serve the branded /reg page in place at the native auth URLs — rewrite, no
+  # 302 bounce (revert: remove these lines). Bare GET only: POST /login (form
+  # submit) and /login?... (two-step flows) pass through untouched. The rewrite
+  # target's ?tab=pwd reaches the regcode plugin as handler args, which boots
+  # the password tab even though the browser URL keeps no query.
   @barelogin {
     method GET
     path /login
     expression {http.request.uri.query} == ''
   }
-  redir @barelogin /reg?tab=pwd 302
+  rewrite @barelogin /reg?tab=pwd
 
-  # Same for registration: bare GET /register goes to the branded /reg page;
-  # POST /register (native flow step 1) and /register/<token> pages pass through.
+  # Same for registration: bare GET /register serves the branded page at
+  # /register itself; POST /register (native flow step 1) and
+  # /register/<token> pages pass through.
   @bareregister {
     method GET
     path /register
     expression {http.request.uri.query} == ''
   }
-  redir @bareregister /reg 302
+  rewrite @bareregister /reg
 
   # SWPU ACM custom static files (UI-rebuild-proof dir; revert: remove this handle)
   @custom {
