@@ -283,6 +283,10 @@ test('clean-auth-entries.js installs a one-line script with embed-free escape ro
   // Caddy/Hydro error document.
   assert.match(script, /getElementById\('tab-reg'\)/);
   assert.doesNotMatch(script, /d\.body\}/);
+  // The gate depends on that marker existing in reg.html — lock the cross-file
+  // wiring so a rename cannot silently break the overlay.
+  const page = fs.readFileSync(path.join(repo, 'plugin-swpu-regcode', 'reg.html'), 'utf8');
+  assert.match(page, /id="tab-reg"/);
   // The payload must be syntactically valid browser JavaScript.
   new Function(script.replace(/^<script>/, '').replace(/<\/script>$/, ''));
 });
