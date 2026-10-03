@@ -8,7 +8,7 @@
 <meta name="theme-color" content="#070d18">
 <link rel="icon" type="image/png" href="/favicon.png">
 <link rel="preload" href="/swpu-display.woff2" as="font" type="font/woff2" crossorigin>
-<script>/* 服务端注入初始标签页/内嵌模式（Caddy rewrite 后浏览器 URL 不带 query，见 RegPageHandler） */window.__SWPU_BOOT={tab:null,embed:false};/*__SWPU_BOOT__*/</script>
+<script>/* 服务端注入初始标签页/内嵌模式/第三方登录方式（Caddy rewrite 后浏览器 URL 不带 query，见 RegPageHandler） */window.__SWPU_BOOT={tab:null,embed:false,oauth:[]};/*__SWPU_BOOT__*/</script>
 <style>
 @font-face{font-family:'SWPU Display';src:url('/swpu-display.woff2') format('woff2');font-weight:400;font-style:normal;font-display:swap}
 @font-face{font-family:'SWPU Mono';src:url('/swpu-mono.woff2') format('woff2');font-weight:100 800;font-style:normal;font-display:swap}
@@ -110,6 +110,12 @@ body.embed .brand{justify-content:center;margin:0 0 18px}
 body.embed .embed-close{display:flex}
 .remember{display:flex;align-items:center;gap:9px;min-height:24px;font-size:13.5px;color:var(--txt-2);cursor:pointer;-webkit-user-select:none;user-select:none}
 .remember input[type="checkbox"]{width:16px;height:16px;min-height:16px;padding:0;accent-color:var(--blue);cursor:pointer;flex-shrink:0}
+.oauth-row{display:flex;align-items:center;gap:12px;margin-top:20px;color:var(--txt-3);font-size:12px}
+.oauth-row::before,.oauth-row::after{content:"";flex:1;height:1px;background:var(--line-strong)}
+.oauth-list{display:flex;flex-direction:column;gap:10px;margin-top:14px}
+.btn-oauth{width:100%;background:rgba(7,13,24,.55);color:var(--txt);font-size:14px;letter-spacing:0;padding:12px;gap:10px}
+.btn-oauth:hover:not(:disabled){background:rgba(42,92,170,.25);border-color:rgba(42,92,170,.5)}
+.btn-oauth svg{width:18px;height:18px;flex-shrink:0;fill:currentColor}
 [hidden]{display:none!important}
 @media(max-width:860px){.wrap{gap:28px 36px;grid-template-columns:minmax(0,1fr) minmax(0,430px)}.intro h2{font-size:28px}}
 @media(max-width:720px){body{padding:24px 16px;justify-content:flex-start}.wrap{max-width:460px;display:block}.brand{justify-content:center;margin:0 0 24px}.intro{display:none}.card{padding:26px 24px}}
@@ -223,6 +229,8 @@ body.embed .embed-close{display:flex}
     </div>
 
     <noscript><p class="noscript-hint">本页需要 JavaScript；如不便启用，可前往 <a href="/login?fallback=1">原生登录页</a> 或 <a href="/register?fallback=1">原生注册页</a>。</p></noscript>
+    <div class="oauth-row" aria-hidden="true">或使用以下方式登录</div>
+    <div class="oauth-list" id="oauth-list"></div>
     <div class="ft">
       <a href="/reg?tab=pwd">密码登录</a>
       <a href="/lostpass">找回密码</a>
@@ -358,6 +366,22 @@ body.embed .embed-close{display:flex}
     });
   }
   bindForm('r','/reg/complete');bindForm('l','/reg/login');
+
+  /* 第三方登录：服务端从 handler.loginMethods（Hydro oauth 注册表）注入
+     __SWPU_BOOT.oauth；未配置/未安装时为空数组，整行自动隐藏。 */
+  (function(){
+    var list=$('oauth-list');if(!list)return;
+    var providers=(window.__SWPU_BOOT&&window.__SWPU_BOOT.oauth)||[];
+    providers.forEach(function(p){
+      if(!p||typeof p.id!=='string'||typeof p.icon!=='string')return;
+      var a=document.createElement('a');
+      a.href='/oauth/'+encodeURIComponent(p.id)+'/login?redirect='+encodeURIComponent(RETURN||'/');
+      a.className='btn btn-oauth';
+      a.innerHTML=p.icon+'<span>'+(p.text||('使用 '+p.id+' 登录'))+'</span>';
+      list.appendChild(a);
+    });
+    if(!list.children.length){list.previousElementSibling?list.previousElementSibling.remove():0;list.remove()}
+  })();
 
   /* 密码登录：直接提交 Hydro 原生 /login。失败（403）原地提示；成功或进入
      两步验证页时按最终 URL 判定后跳走；内嵌模式下交给宿主页导航。 */

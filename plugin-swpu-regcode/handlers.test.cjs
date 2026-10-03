@@ -86,7 +86,7 @@ async function fixture() {
         async limitRate(...args) { limits.push(args); }
     }
     class UserAlreadyExistError extends Error {}
-    const state = { sendMailError: null, createError: null, missingAtFinalLogin: false };
+    const state = { sendMailError: null, createError: null, missingAtFinalLogin: false, loginMethods: null };
     const stub = {
         BlackListModel: { async get() { return null; } },
         db: { collection() { return collection; } }, Handler,
@@ -122,7 +122,7 @@ async function fixture() {
     loaded.require = (id) => id === 'hydrooj' ? stub : require(id);
     loaded._compile(compiled, pluginPath);
     await loaded.exports.apply({ effect(fn) { fn(); }, Route(name, url, HandlerClass, priv) { routes.set(url, { HandlerClass, priv }); } });
-    function handler(url, args = {}) { const h = new (routes.get(url).HandlerClass)(); h.args = args; return h; }
+    function handler(url, args = {}) { const h = new (routes.get(url).HandlerClass)(); h.args = args; h.loginMethods = state.loginMethods; return h; }
     async function issue(mail, purpose) {
         const h = handler('/reg/code', { mail, purpose });
         await h.post('system', mail, purpose);
@@ -166,6 +166,21 @@ test('registration page boots the initial tab from merged query args', async () 
     assert.match(String(embed.response.body), /__SWPU_BOOT\.embed=true/);
     const plain = f.handler('/reg', { tab: 'pwd' }); await plain.get();
     assert.equal(String(plain.response.body).includes('__SWPU_BOOT.embed='), false);
+});
+
+test('registration page renders third-party login methods from handler.loginMethods', async () => {
+    const f = await fixture();
+    f.state.loginMethods = [{ id: 'github', text: 'Login with GitHub', icon: '<svg/>' }];
+    const h = f.handler('/reg'); await h.get();
+    assert.match(String(h.response.body), /__SWPU_BOOT\.oauth=\[\{"id":"github"/);
+    // Malformed entries are dropped, not injected.
+    f.state.loginMethods = [{ id: 'github', text: 'x', icon: 123 }, null, { id: 'weibo' }];
+    const h2 = f.handler('/reg'); await h2.get();
+    assert.equal(String(h2.response.body).includes('__SWPU_BOOT.oauth='), false);
+    // Unknown icon strings are fine but a missing text is not.
+    f.state.loginMethods = [{ id: 'weibo', text: '微博登录', icon: '<svg/>' }];
+    const h3 = f.handler('/reg'); await h3.get();
+    assert.match(String(h3.response.body), /__SWPU_BOOT\.oauth=\[\{"id":"weibo","text":"微博登录"/);
 });
 
 test('2FA, passkey, disabled accounts and disabled built-in login cannot issue login codes', async () => {

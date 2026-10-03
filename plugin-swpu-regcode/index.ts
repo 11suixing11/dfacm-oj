@@ -29,6 +29,16 @@ const PAGE = fs.readFileSync(join(__dirname, 'reg.html'), 'utf-8');
 const TABS = ['reg', 'login', 'pwd'];
 const BOOT_MARK = '/*__SWPU_BOOT__*/';
 
+// Third-party login buttons come from the same source Hydro's own login page
+// uses (handler.loginMethods = registered oauth providers), so an unconfigured
+// provider never renders a dead button on the branded page.
+function oauthEntries(handler: Handler) {
+    const methods = (handler as unknown as { loginMethods?: Array<{ id: string; text: string; icon: string }> }).loginMethods;
+    if (!Array.isArray(methods)) return [];
+    return methods.filter((m) => m && typeof m.id === 'string' && typeof m.text === 'string' && typeof m.icon === 'string')
+        .map((m) => ({ id: m.id, text: m.text, icon: m.icon }));
+}
+
 // Caddy is the only trusted proxy; resolve the real client IP for rate limits,
 // login records and contest IP binding.
 function getClientIp(handler: Handler): string {
@@ -106,6 +116,8 @@ class RegPageHandler extends Handler {
         if (TABS.includes(tab)) boot.push(`window.__SWPU_BOOT.tab=${JSON.stringify(tab)};`);
         // The in-place auth modal embeds this page in a same-origin iframe.
         if (String(this.args.embed ?? '') === '1') boot.push('window.__SWPU_BOOT.embed=true;');
+        const oauth = oauthEntries(this);
+        if (oauth.length) boot.push(`window.__SWPU_BOOT.oauth=${JSON.stringify(oauth)};`);
         this.response.body = boot.length ? PAGE.replace(BOOT_MARK, boot.join('')) : PAGE;
         this.response.type = 'text/html; charset=utf-8';
         this.response.addHeader('Cache-Control', 'no-store');

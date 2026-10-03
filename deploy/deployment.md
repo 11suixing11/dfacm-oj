@@ -176,7 +176,27 @@ curl -sSI https://<域名>/ | grep -Ei 'strict-transport|x-content-type|referrer
 - [ ] `/reg/complete` 在无验证码时返回 `{ ok: false }`，不会 500。
 - [ ] `curl -I` 检查字体和图标有 `Cache-Control`。
 - [ ] 注册流程走通（验证码邮件到达）。
-- [ ] 找回密码邮件里的链接是绝对地址（`server.url` 必须是完整 `https://域名`）。
+- [ ] 找回密码邮件里的链接是绝对地址（`server.url` 必须是完整 `https://域名`，当前为 `https://swpuacm.xyz`）。
+
+## 15. 第三方登录（GitHub）
+
+官方 `@hydrooj/login-with-github` 已安装。启用步骤：
+
+1. 用 GitHub 账号在 https://github.com/settings/developers 新建 OAuth App（New OAuth App）：
+   - Homepage URL 填 `https://swpuacm.xyz`
+   - Authorization callback URL 填 `https://swpuacm.xyz/oauth/github/callback`
+2. 把得到的 Client ID 和 Client Secret 写入系统设置（`/manage/config`）：
+   ```yaml
+   login-with-github:
+     id: <Client ID>
+     secret: <Client Secret>
+   ```
+   （或 `db.system` 的 `config` 文档追加同名键后 `pm2 restart hydrooj`。）
+3. 重启后品牌 `/reg` 页与原地登录弹层会自动出现「使用 GitHub 登录」按钮（按钮由服务端 `loginMethods` 注入，未配置时自动隐藏）。
+
+## 16. 角色分组
+
+`system` 域内已创建 `acmer`、`teamleader` 两个角色，权限与内置 `default` 相同；新用户注册后自动使用内置 default 角色，在「域管理 → 加域管理/管理用户」里把人分到对应角色即可。角色定义存 `db.domain` 的 `system.roles` 字段。
 - [ ] `request.ip` 不再是 127.0.0.1。
 
 ## 11. 缓存策略
