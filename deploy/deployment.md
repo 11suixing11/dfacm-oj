@@ -11,7 +11,7 @@ LANG=zh . <(curl https://hydro.ac/setup.sh)
 - 默认装 hydrooj + ui-default + hydrojudge + mongodb，Web 端口 127.0.0.1:8888，Caddy 对外 80/443。
 - 4G 内存机器记得调小 MongoDB WiredTiger cache（安装器会自动处理）。
 - 判题机配置 `~/.hydro/judge.yaml`，`pm2 start hydrojudge`。
-- 建议把本仓库克隆到 `/root/swpu-oj`，后续脚本都从这里运行。
+- 建议把本仓库克隆到 `/root/swpu-oj`，后续脚本都从这里运行。当前这台机器以 `/root/swpu-theme-deploy/` 存放可重放资产（`deploy/`、`theme/`），文档里的 `/root/swpu-oj` 路径在此机器上对应它。
 
 ## 2. 门面资源（UI 重建免疫）
 
