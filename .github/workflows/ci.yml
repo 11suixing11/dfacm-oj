@@ -80,6 +80,12 @@ jobs:
       - name: Run regcode tests
         working-directory: plugin-swpu-regcode
         run: npm test
+      - name: Install train test dependencies
+        working-directory: plugin-swpu-train
+        run: npm ci --no-audit --no-fund
+      - name: Run train plugin tests
+        working-directory: plugin-swpu-train
+        run: npm test
       - name: Run ops plugin tests
         run: node --test plugin-swpu-ops/tests/*.test.cjs
       - name: Run deployment script tests

@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>错题本 · SWPU ACM 训练场</title>
+<meta name="description" content="错题复习：自动收集未通过的题目，记录错误原因、复盘笔记与补题状态。">
+<meta name="theme-color" content="#070d18">
+<link rel="icon" type="image/png" href="/favicon.png">
+<style>
+@font-face{font-family:'SWPU Display';src:url('/swpu-display.woff2') format('woff2');font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:'SWPU Mono';src:url('/swpu-mono.woff2') format('woff2');font-weight:100 800;font-style:normal;font-display:swap}
+:root{--ink:#070d18;--panel:#0d182a;--line:rgba(198,216,240,.10);--line-strong:rgba(198,216,240,.18);--txt:#e8edf5;--txt-2:#a7b4c7;--txt-3:#94a4bb;--blue:#2a5caa;--gold:#c9a227;--gold-hi:#e9c455;--ac:#3fb950;--font-d:'SWPU Display','PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif;--font-b:-apple-system,'PingFang SC','Microsoft YaHei','Segoe UI','Noto Sans CJK SC',sans-serif;--font-m:'SWPU Mono','JetBrains Mono',Consolas,'PingFang SC',monospace;color-scheme:dark}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:radial-gradient(1100px 600px at 50% -200px,rgba(42,92,170,.16),transparent 60%),var(--ink);color:var(--txt);font-family:var(--font-b);font-size:15px;line-height:1.7;min-height:100svh;-webkit-font-smoothing:antialiased}
+:focus-visible{outline:2px solid var(--gold-hi);outline-offset:2px;border-radius:6px}
+a{color:var(--txt-2);text-decoration:none}
+a:hover{color:var(--gold-hi)}
+.top{display:flex;align-items:center;justify-content:space-between;gap:16px;max-width:960px;margin:0 auto;padding:18px 20px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none}
+.brand svg{width:30px;height:30px}
+.brand b{font-family:var(--font-d);font-weight:400;font-size:15px;letter-spacing:.08em;color:var(--txt)}
+.brand span{display:block;font-family:var(--font-m);font-size:9.5px;letter-spacing:.14em;color:var(--txt-3)}
+.nav{display:flex;gap:4px;flex-wrap:wrap}
+.nav a{padding:8px 12px;border-radius:9px;font-size:13.5px;min-height:40px;display:inline-flex;align-items:center}
+.nav a:hover{background:rgba(198,216,240,.06)}
+.nav a.on{color:var(--gold-hi);background:rgba(201,162,39,.10)}
+main{max-width:960px;margin:0 auto;padding:10px 20px 60px}
+h1{font-size:22px;font-weight:600;margin:14px 0 4px}
+h1 i{font-style:normal;color:var(--gold-hi)}
+.sub{color:var(--txt-3);font-size:13px;margin-bottom:18px}
+.toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.tabs{display:inline-flex;gap:6px;background:rgba(7,13,24,.5);border:1px solid var(--line);border-radius:12px;padding:4px}
+.tabs button{border:none;background:none;color:var(--txt-2);font-size:13.5px;padding:8px 16px;border-radius:9px;cursor:pointer;font-family:var(--font-b);min-height:40px}
+.tabs button.on{background:#23477a;color:#fff}
+.tabs button .n{font-family:var(--font-m);font-size:11px;opacity:.75;margin-left:4px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:10px;padding:9px 16px;font-size:13.5px;font-weight:600;cursor:pointer;border:1px solid transparent;min-height:40px;background:var(--blue);color:#fff;font-family:var(--font-b);transition:background .25s,border-color .25s,color .25s}
+.btn:hover:not(:disabled){background:#3568b3}
+.btn:disabled{opacity:.55;cursor:not-allowed}
+.btn.ghost{background:none;border-color:var(--line-strong);color:var(--txt-2)}
+.btn.ghost:hover:not(:disabled){border-color:rgba(233,196,85,.45);color:var(--gold-hi);background:none}
+.btn.small{padding:6px 12px;min-height:36px;font-size:12.5px}
+.item{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px 20px;margin-bottom:14px}
+.item.done{opacity:.82}
+.item .hd{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.item .hd .tt{flex:1;min-width:180px;font-size:15.5px;font-weight:600}
+.item .hd .tt a{color:var(--txt)}
+.item .hd .tt a:hover{color:var(--gold-hi)}
+.item .hd .tt .off{color:var(--txt-3);font-weight:400}
+.badge{font-family:var(--font-m);font-size:11px;padding:2px 8px;border-radius:6px;background:rgba(248,81,73,.12);color:#ff9a94;flex-shrink:0}
+.badge.ok{background:rgba(63,185,80,.14);color:#76d98b}
+.meta{font-size:12.5px;color:var(--txt-3);margin-top:6px;display:flex;gap:14px;flex-wrap:wrap}
+.meta a{font-size:12.5px}
+.editor{display:grid;gap:10px;margin-top:14px;border-top:1px solid var(--line);padding-top:14px}
+.editor .rowline{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.editor label{font-size:12.5px;color:var(--txt-3);flex-shrink:0}
+select{background:rgba(7,13,24,.55);border:1px solid var(--line-strong);border-radius:9px;padding:8px 10px;color:var(--txt);font-size:13px;font-family:var(--font-b);min-height:38px}
+textarea{width:100%;background:rgba(7,13,24,.55);border:1px solid var(--line-strong);border-radius:10px;padding:10px 12px;color:var(--txt);font-size:13.5px;font-family:var(--font-b);line-height:1.7;resize:vertical;min-height:64px}
+textarea:focus,select:focus{outline:none;border-color:rgba(233,196,85,.55)}
+.itemmsg{font-size:12.5px;min-height:18px}
+.itemmsg.err{color:#ff9a94}.itemmsg.ok{color:#76d98b}
+.pager{display:flex;align-items:center;justify-content:center;gap:14px;margin-top:18px;font-size:13px;color:var(--txt-3)}
+.state{padding:40px 0;text-align:center;color:var(--txt-3);font-size:14px}
+.state.err{color:#ff9a94}
+.state button{margin-top:12px}
+.empty{background:var(--panel);border:1px dashed var(--line-strong);border-radius:16px;padding:34px 22px;text-align:center;color:var(--txt-3);font-size:13.5px}
+.empty a{color:var(--gold-hi);text-underline-offset:4px}
+.foot{max-width:960px;margin:0 auto;padding:0 20px 30px;color:var(--txt-3);font-size:12px;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.foot .mono{font-family:var(--font-m);letter-spacing:.08em}
+[hidden]{display:none!important}
+@media(max-width:560px){.item .hd .tt{min-width:120px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="/" aria-label="返回首页">
+    <svg viewBox="0 0 64 64" aria-hidden="true">
+      <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1c3e78"/><stop offset="1" stop-color="#0c1a36"/></linearGradient></defs>
+      <rect x="1.5" y="1.5" width="61" height="61" rx="15" fill="url(#g)" stroke="#c9a227" stroke-opacity=".8" stroke-width="1.6"/>
+      <path d="M20 21 L11.5 32 L20 43" fill="none" stroke="#e8edf5" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M44 21 L52.5 32 L44 43" fill="none" stroke="#e8edf5" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M24.5 43 L32.5 26.5 L36.8 32.8 L39.6 28.6 L46 43 Z" fill="#e8edf5"/>
+      <path d="M32.5 26.5 L36.8 32.8 L39.6 28.6 L41.2 32 L37 32.5 Z" fill="#e9c455"/>
+      <circle cx="33.6" cy="20.5" r="1.5" fill="#e9c455"/>
+    </svg>
+    <span><b>SWPU ACM</b><span>TRAINING GROUND</span></span>
+  </a>
+  <nav class="nav" aria-label="站点导航">
+    <a href="/">首页</a>
+    <a href="/training">训练</a>
+    <a href="/p">题目</a>
+    <a href="/workbench">工作台</a>
+    <a href="/mistakes" class="on" aria-current="page">错题本</a>
+  </nav>
+</header>
+<main>
+  <h1>错题本</h1>
+  <p class="sub">未通过的题目自动收入这里；写下错误原因和复盘笔记，补题通过后自动标记完成。</p>
+  <div class="toolbar">
+    <div class="tabs" role="tablist" aria-label="错题筛选">
+      <button type="button" id="tab-open" class="on" role="tab" aria-selected="true">待补题<span class="n" id="n-open"></span></button>
+      <button type="button" id="tab-done" role="tab" aria-selected="false">已补题</button>
+      <button type="button" id="tab-all" role="tab" aria-selected="false">全部</button>
+    </div>
+    <button type="button" class="btn ghost" id="sync" title="从近期日常训练提交中补充收集">同步近期记录</button>
+  </div>
+  <div id="loading" class="state" role="status">正在读取错题本…</div>
+  <div id="error" class="state err" hidden>加载失败，请稍后重试。<br><button type="button" class="btn ghost" id="retry">重新加载</button></div>
+  <div id="list"></div>
+  <p class="empty" id="empty" hidden></p>
+  <div class="pager" id="pager" hidden>
+    <button type="button" class="btn ghost small" id="prev">上一页</button>
+    <span id="page-info"></span>
+    <button type="button" class="btn ghost small" id="next">下一页</button>
+  </div>
+</main>
+<footer class="foot">
+  <span>向山顶，提交你的答案</span>
+  <span class="mono">SWPUACM.XYZ</span>
+</footer>
+<script>
+'use strict';
+(function(){
+  var $=function(id){return document.getElementById(id)};
+  var REASON_TEXT={idea:'思路不会',boundary:'边界情况没考虑到',complexity:'复杂度不够（超时）',implement:'实现细节出错',misread:'题意理解偏差',other:'其他'};
+  var EMPTY_TEXT={open:'太棒了，当前没有待补的错题。',done:'还没有已补题的记录。',all:'错题本还是空的。日常训练或比赛中未通过的题目会自动收入这里。'};
+  var state={filter:'open',page:1,pages:1,noteMaxLength:2000};
+  function esc(s){var d=document.createElement('div');d.textContent=s==null?'':String(s);return d.innerHTML}
+  function rel(iso){
+    if(!iso)return'';
+    var t=Date.parse(iso);if(!isFinite(t))return'';
+    var s=Math.max(0,(Date.now()-t)/1000);
+    if(s<60)return'刚刚';
+    if(s<3600)return Math.floor(s/60)+' 分钟前';
+    if(s<86400)return Math.floor(s/3600)+' 小时前';
+    if(s<30*86400)return Math.floor(s/86400)+' 天前';
+    var d=new Date(t);return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();
+  }
+  async function api(url,data){
+    var controller=new AbortController(),timeout=setTimeout(function(){controller.abort()},15000);
+    try{
+      var resp=await fetch(url,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams(data),signal:controller.signal});
+      var d;try{d=await resp.json()}catch(e){return {ok:false,message:'服务暂时不可用，请稍后重试。'}}
+      if(!d||typeof d!=='object')return {ok:false,message:'服务返回异常，请稍后重试。'};
+      return d;
+    }catch(e){
+      return {ok:false,message:e.name==='AbortError'?'请求超时，请稍后重试。':'网络连接失败，请检查网络后重试。'};
+    }finally{clearTimeout(timeout)}
+  }
+  function setTab(filter){
+    state.filter=filter;state.page=1;
+    ['open','done','all'].forEach(function(f){
+      var b=$('tab-'+f),on=f===filter;
+      b.classList.toggle('on',on);b.setAttribute('aria-selected',String(on));
+    });
+    load();
+  }
+  function itemHtml(item){
+    var title=item.url?'<a href="'+esc(item.url)+'">'+esc(item.title)+'</a>':'<span class="off">'+esc(item.title)+'</span>';
+    var opts='<option value="">未分类</option>';
+    Object.keys(REASON_TEXT).forEach(function(k){
+      opts+='<option value="'+k+'"'+(item.reason===k?' selected':'')+'>'+esc(REASON_TEXT[k])+'</option>';
+    });
+    return '<div class="hd">'
+      +'<span class="badge'+(item.resolved?' ok':'')+'">'+(item.resolved?'已补题':esc(item.statusLabel))+'</span>'
+      +'<span class="tt">'+title+'</span>'
+      +'</div>'
+      +'<div class="meta">'
+      +'<span>'+esc(item.statusText)+' · 失败 '+item.attempts+' 次</span>'
+      +'<span>最近 '+esc(rel(item.lastAt))+'</span>'
+      +(item.resolved&&item.resolvedAt?'<span>补题于 '+esc(rel(item.resolvedAt))+'</span>':'')
+      +(item.recordUrl?'<a href="'+esc(item.recordUrl)+'">查看最近提交</a>':'')
+      +'</div>'
+      +'<div class="editor">'
+      +'<div class="rowline"><label for="reason-'+item.pid+'">错误原因</label><select id="reason-'+item.pid+'">'+opts+'</select></div>'
+      +'<textarea id="note-'+item.pid+'" maxlength="'+state.noteMaxLength+'" placeholder="复盘笔记：错在哪里、正确思路是什么、以后怎么避免…">'+esc(item.note||'')+'</textarea>'
+      +'<div class="rowline">'
+      +'<button type="button" class="btn small" data-act="save" data-pid="'+item.pid+'">保存复盘</button>'
+      +'<button type="button" class="btn ghost small" data-act="toggle" data-pid="'+item.pid+'">'+(item.resolved?'恢复待补':'标记已补')+'</button>'
+      +'<button type="button" class="btn ghost small" data-act="remove" data-pid="'+item.pid+'">移除</button>'
+      +'<span class="itemmsg" id="imsg-'+item.pid+'" role="status"></span>'
+      +'</div></div>';
+  }
+  async function load(){
+    $('loading').hidden=false;$('error').hidden=true;$('list').innerHTML='';$('empty').hidden=true;$('pager').hidden=true;
+    var d;
+    try{
+      var resp=await fetch('/mistakes/data?filter='+encodeURIComponent(state.filter)+'&page='+state.page,{headers:{'Accept':'application/json'}});
+      d=await resp.json();
+      if(!resp.ok||!d||!d.ok)throw new Error('bad');
+    }catch(e){
+      $('loading').hidden=true;$('error').hidden=false;return;
+    }
+    state.page=d.page;state.pages=d.pages;state.noteMaxLength=d.noteMaxLength||2000;
+    $('n-open').textContent=d.open?String(d.open):'';
+    var list=$('list');
+    d.items.forEach(function(item){
+      var div=document.createElement('div');
+      div.className='item'+(item.resolved?' done':'');
+      div.innerHTML=itemHtml(item);
+      list.appendChild(div);
+    });
+    $('empty').textContent=EMPTY_TEXT[state.filter]||EMPTY_TEXT.all;
+    $('empty').hidden=d.items.length>0;
+    if(d.pages>1){
+      $('pager').hidden=false;
+      $('page-info').textContent=d.page+' / '+d.pages+' 页 · 共 '+d.total+' 题';
+      $('prev').disabled=d.page<=1;$('next').disabled=d.page>=d.pages;
+    }
+    $('loading').hidden=true;
+  }
+  function itemMsg(pid,text,cls){var el=$('imsg-'+pid);if(el){el.textContent=text;el.className='itemmsg '+cls}}
+  $('list').addEventListener('click',async function(e){
+    var btn=e.target.closest('button[data-act]');
+    if(!btn||btn.disabled)return;
+    var pid=btn.getAttribute('data-pid'),act=btn.getAttribute('data-act');
+    if(act==='save'){
+      btn.disabled=true;itemMsg(pid,'保存中…','');
+      var d=await api('/mistakes/update',{pid:pid,reason:$('reason-'+pid).value,note:$('note-'+pid).value});
+      btn.disabled=false;
+      itemMsg(pid,d.ok?'已保存。':(d.message||'保存失败，请稍后重试。'),d.ok?'ok':'err');
+    }else if(act==='toggle'){
+      btn.disabled=true;
+      var resolved=btn.textContent==='标记已补';
+      var d2=await api('/mistakes/update',{pid:pid,resolved:resolved?'1':'0'});
+      if(d2.ok){load()}else{btn.disabled=false;itemMsg(pid,d2.message||'操作失败，请稍后重试。','err')}
+    }else if(act==='remove'){
+      if(!window.confirm('确定把这道题移出错题本吗？复盘笔记会一并删除。'))return;
+      btn.disabled=true;
+      var d3=await api('/mistakes/remove',{pid:pid});
+      if(d3.ok){load()}else{btn.disabled=false;itemMsg(pid,d3.message||'移除失败，请稍后重试。','err')}
+    }
+  });
+  $('tab-open').addEventListener('click',function(){setTab('open')});
+  $('tab-done').addEventListener('click',function(){setTab('done')});
+  $('tab-all').addEventListener('click',function(){setTab('all')});
+  $('prev').addEventListener('click',function(){if(state.page>1){state.page--;load()}});
+  $('next').addEventListener('click',function(){if(state.page<state.pages){state.page++;load()}});
+  $('retry').addEventListener('click',load);
+  $('sync').addEventListener('click',async function(){
+    var btn=$('sync');
+    if(btn.disabled)return;
+    btn.disabled=true;btn.textContent='同步中…';
+    var d=await api('/mistakes/sync',{});
+    btn.textContent=d&&d.ok?('已同步（新收 '+d.collected+' 题）'):'同步近期记录';
+    if(d&&d.ok){load();setTimeout(function(){btn.disabled=false;btn.textContent='同步近期记录'},60000)}
+    else{btn.disabled=false}
+  });
+  setTab('open');
+})();
+</script>
+</body>
+</html>

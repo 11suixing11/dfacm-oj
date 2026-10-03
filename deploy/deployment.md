@@ -101,7 +101,22 @@ pm2 restart hydrooj
 
 两个报表脚本只读；同一 addon 默认启用的 RP 钩子会更新排名。它过滤评测过程并串行合并重算，设置 `SWPU_LIVE_RP=0` 后重启可以关闭。
 
-**不要**在 `/root/.hydro/addons/swpu-regcode/` 运行 `npm install` 或 `npm ci`，避免重建运行目录的 `node_modules` 和 Hydro 软链。开发测试在独立仓库检出目录的 `plugin-swpu-regcode/` 中运行 `npm ci && npm test`，依赖按锁文件安装。
+训练工作台与错题本可选安装（面向登录用户，无管理员权限要求）：
+
+```bash
+mkdir -p /root/.hydro/addons/swpu-train
+cp /root/swpu-oj/plugin-swpu-train/{index.ts,mistakes.cjs,workbench.cjs,workbench.html,mistakes.html,package.json} \
+   /root/.hydro/addons/swpu-train/
+mkdir -p /root/.hydro/addons/swpu-train/node_modules
+ln -sfn /usr/local/share/.config/yarn/global/node_modules/hydrooj \
+        /root/.hydro/addons/swpu-train/node_modules/hydrooj
+# 参考 plugin-swpu-train/addon.json.example，把插件路径加入 /root/.hydro/addon.json
+pm2 restart hydrooj
+```
+
+安装后 `/workbench` 与 `/mistakes` 出现在登录用户导航中。错题收集只在 pm2 instance 0 运行；设置 `SWPU_TRAIN_MISTAKES=0` 并重启可关闭收集（页面仍可用）。数据口径与限制见 [plugin-swpu-train/README.md](../plugin-swpu-train/README.md)。
+
+**不要**在 `/root/.hydro/addons/swpu-regcode/` 运行 `npm install` 或 `npm ci`（其他插件同理），避免重建运行目录的 `node_modules` 和 Hydro 软链。开发测试在独立仓库检出目录的插件目录中运行 `npm ci && npm test`，依赖按锁文件安装。
 
 ## 5. 邮件系统
 
@@ -182,6 +197,8 @@ curl -sSI https://<域名>/ | grep -Ei 'strict-transport|x-content-type|referrer
 - [ ] 注册流程走通（验证码邮件到达）。
 - [ ] `/reg?tab=pwd` 密码登录后回首页；合法 `return` 回原页面，`//外站`、反斜杠及控制字符输入均不能导致站外导航。
 - [ ] 两步验证 / 通行密钥账号能通过常显原生入口完成登录；iframe 内的原生入口、OAuth、找回密码都在顶层打开。
+- [ ] 登录后 `/workbench` 与 `/mistakes` 返回 200 且出现在导航中；未登录访问被重定向到登录页。
+- [ ] 提交一份固定错误输出（WA）判题结束后，该题出现在 `/mistakes`；补题 AC 后自动标记已补题。
 - [ ] 找回密码邮件里的链接是绝对地址（`server.url` 必须是完整 `https://域名`，当前为 `https://swpuacm.xyz`）。
 
 ## 15. 第三方登录（GitHub）

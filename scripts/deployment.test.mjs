@@ -270,15 +270,21 @@ test('first and repeated theme installs preserve upstream CSS and unique backups
   assert.equal(fs.readFileSync(fixture.files.STATIC_SW, 'utf8'), fs.readFileSync(path.join(repo, 'deploy/service-worker-killswitch.js'), 'utf8'));
 });
 
-test('documented ops installation contains every local module required by the entry', () => {
+test('documented addon installations contain every module and asset the entries load', () => {
   const instructions = fs.readFileSync(path.join(repo, 'deploy/deployment.md'), 'utf8');
-  const names = instructions.match(/cp \/root\/swpu-oj\/plugin-swpu-ops\/\{([^}]+)\}/)[1].split(',');
-  const installed = fs.mkdtempSync(path.join(root, 'installed-ops-'));
-  for (const name of names) fs.copyFileSync(path.join(repo, 'plugin-swpu-ops', name), path.join(installed, name));
-  const entry = path.join(installed, 'index.ts');
-  const requireInstalled = createRequire(entry);
-  for (const match of fs.readFileSync(entry, 'utf8').matchAll(/require\('([.]\/[^']+)'\)/g)) {
-    assert.doesNotThrow(() => requireInstalled(match[1]), `deployment omitted ${match[1]}`);
+  for (const addon of ['plugin-swpu-ops', 'plugin-swpu-train']) {
+    const names = instructions.match(new RegExp(`cp /root/swpu-oj/${addon}/\\{([^}]+)\\}`))[1].split(',');
+    const installed = fs.mkdtempSync(path.join(root, 'installed-addon-'));
+    for (const name of names) fs.copyFileSync(path.join(repo, addon, name), path.join(installed, name));
+    const entry = path.join(installed, 'index.ts');
+    const source = fs.readFileSync(entry, 'utf8');
+    const requireInstalled = createRequire(entry);
+    for (const match of source.matchAll(/require\('([.]\/[^']+)'\)/g)) {
+      assert.doesNotThrow(() => requireInstalled(match[1]), `deployment omitted ${match[1]}`);
+    }
+    for (const match of source.matchAll(/readFileSync\(join\(__dirname, '([^']+)'\)/g)) {
+      assert.ok(fs.existsSync(path.join(installed, match[1])), `deployment omitted ${match[1]}`);
+    }
   }
 });
 
