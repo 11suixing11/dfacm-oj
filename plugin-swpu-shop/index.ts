@@ -48,7 +48,9 @@ class ShopPageHandler extends Handler {
         const models = badgeModels();
         const rows: any[] = [];
         if (models.badge) {
-            const bdocs = await models.badge.badgeGetMulti(this).toArray();
+            // badge-for-hydrooj 的模型函数内部访问 ctx.db：必须传 Handler 的路由
+            // 上下文（this.ctx），Handler 实例本身没有 db 服务。
+            const bdocs = await models.badge.badgeGetMulti(this.ctx).toArray();
             const priceDocs = await price.find({}).toArray();
             const priceMap = new Map(priceDocs.map((doc: any) => [doc._id, doc]));
             for (const bdoc of bdocs) {
@@ -71,7 +73,7 @@ class ShopPageHandler extends Handler {
         if (signedIn) {
             balance = await getBalance(collections(), this.user._id);
             if (models.userBadge) {
-                const owned = await models.userBadge.userBadgeGetMulti(this, this.user._id).toArray();
+                const owned = await models.userBadge.userBadgeGetMulti(this.ctx, this.user._id).toArray();
                 ownedIds = new Set(owned.map((doc: any) => doc.badgeId));
             }
         }
@@ -93,7 +95,7 @@ class ShopRedeemHandler extends Handler {
         if (!models.badge || !models.userBadge) {
             throw new ShopError('徽章组件未就绪，请联系管理员。');
         }
-        const result = await redeem(this, {
+        const result = await redeem(this.ctx, {
             badge: models.badge,
             userBadge: models.userBadge,
             problem: { async get() { return null; } },
@@ -136,7 +138,7 @@ class ShopManageHandler extends Handler {
         const models = badgeModels();
         const rows: any[] = [];
         if (models.badge) {
-            const bdocs = await models.badge.badgeGetMulti(this).toArray();
+            const bdocs = await models.badge.badgeGetMulti(this.ctx).toArray();
             const priceDocs = await price.find({}).toArray();
             const priceMap = new Map(priceDocs.map((doc: any) => [doc._id, doc]));
             for (const bdoc of bdocs) {
