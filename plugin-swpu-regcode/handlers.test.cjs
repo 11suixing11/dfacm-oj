@@ -56,7 +56,7 @@ class Collection {
 async function fixture() {
     const collection = new Collection();
     const users = new Map();
-    const events = [], audits = [], mails = [], limits = [], routes = new Map();
+    const events = [], audits = [], mails = [], limits = [], joins = [], routes = new Map();
     const settings = { 'server.login': true };
     const privilege = { PRIV_USER_PROFILE: 1, PRIV_REGISTER_USER: 8, PRIV_EDIT_SYSTEM: 1024 };
     const normalize = (mail) => {
@@ -89,7 +89,9 @@ async function fixture() {
     const state = { sendMailError: null, createError: null, missingAtFinalLogin: false, loginMethods: null };
     const stub = {
         BlackListModel: { async get() { return null; } },
-        db: { collection() { return collection; } }, Handler,
+        db: { collection() { return collection; } },
+        DomainModel: { async setUserRole(domainId, uid, role, autojoin) { joins.push({ domainId, uid, role, autojoin }); } },
+        Handler,
         Logger: class { info() {} error() {} }, PERM: { PERM_ALL: 123n }, PRIV: privilege,
         post: () => () => {},
         OplogModel: { async log(handler, type, data) { audits.push({ type, data, args: structuredClone(handler.args) }); } },
@@ -128,7 +130,7 @@ async function fixture() {
         await h.post('system', mail, purpose);
         return h;
     }
-    return { collection, users, user, handler, issue, routes, events, audits, mails, limits, settings, state, UserAlreadyExistError };
+    return { collection, users, user, handler, issue, routes, events, audits, mails, limits, joins, settings, state, UserAlreadyExistError };
 }
 
 test('input alias delivers the login code only to the bound account mailbox', async () => {
@@ -304,4 +306,19 @@ test('loopback proxy peer falls back to X-Forwarded-For for limits and login rec
     await login.post('system', 'ab@school.example', f.mails[0].code);
     assert.equal(login.session.uid, user._id);
     assert.equal(f.users.get(user._id).loginip, '198.51.100.9');
+});
+
+test('registration auto-joins the ranking domains with the default role', async () => {
+    const f = await fixture();
+    await f.issue('123456@qq.com', 'reg');
+    const args = { mail: '123456@qq.com', code: f.mails[0].code, uname: 'newuser', password: 'secret-password' };
+    const h = f.handler('/reg/complete', args);
+    await h.post('system', args.mail, args.code, args.uname, args.password);
+    assert.equal(h.response.body.ok, true);
+    // Hydro ranks only dudocs with join=true; both the system domain and the POJ
+    // mirror must be joined with the default role, or the new member never ranks.
+    assert.deepEqual(f.joins, [
+        { domainId: 'system', uid: 50, role: 'default', autojoin: true },
+        { domainId: 'poj', uid: 50, role: 'default', autojoin: true },
+    ]);
 });

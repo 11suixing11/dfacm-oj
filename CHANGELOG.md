@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.12.0 - 2026-10-04
+
+### Fixed
+
+- **New students were invisible on the ranking board.** Hydro lists only domain users with `join=true`, and neither native registration nor `UserModel.create` sets that flag — it normally only comes from an explicit domain join or an admin role assignment, so members could solve problems and still never appear on `/ranking` (or `/d/poj/ranking`). `/reg/complete` now auto-joins the system domain and the POJ mirror via `DomainModel.setUserRole(..., 'default', true)` right after account creation, so the boards pick members up as soon as they solve something. Existing members were joined on the server during the fix.
+- Server ops (not in-repo): the hidden judge account still carried solved-problem statuses in `document.status` — the earlier cleanup removed its `record` rows, but Hydro's RP script (`src/script/rating.ts`) scores `document.status`, not `record`, so every recalculation resurrected phantom RP=40 and rank 1 for it, pushing each real member's stored rank down by one (the only human on the board showed rank 2 while topping the visible list). All residue (problem statuses in both domains, a training-plan enrollment, mistake-book rows) was deleted with backup and ranks recomputed; operating rule: never let the judge account AC a problem, or clean its `document.status` afterwards.
+
 ## v1.11.0 - 2026-10-04
 
 ### Added

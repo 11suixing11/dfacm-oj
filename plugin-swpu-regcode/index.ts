@@ -7,7 +7,7 @@
 import fs from 'fs';
 import { join } from 'path';
 import {
-    BlackListModel, Context, db, Handler, Logger, OplogModel, PERM, post, PRIV,
+    BlackListModel, Context, db, DomainModel, Handler, Logger, OplogModel, PERM, post, PRIV,
     sendMail, SettingModel, SystemModel, Types, UserAlreadyExistError, UserModel,
 } from 'hydrooj';
 import { loginPolicyFailure } from './auth';
@@ -253,6 +253,17 @@ class RegCompleteHandler extends Handler {
             $set.qq = `${id}`;
         }
         if (Object.keys($set).length) await UserModel.setById(uid, $set);
+        // Hydro's ranking board lists only domain users with join=true, and neither
+        // native registration nor UserModel.create sets it (the flag normally comes
+        // from an explicit domain join or an admin role assignment) — new students
+        // would solve problems yet never appear on /ranking. Auto-join the system
+        // domain and the POJ mirror so the boards pick members up once they solve.
+        try {
+            await DomainModel.setUserRole(domainId, uid, 'default', true);
+            await DomainModel.setUserRole('poj', uid, 'default', true);
+        } catch (e) {
+            logger.error('auto-join domain failed:', e instanceof Error ? e.message : String(e));
+        }
         await authAudit(this, 'user.register', uid);
         if (!await loginAs(this, domainId, uid)) {
             const response = this.response.body as { ok: boolean; message: string };
