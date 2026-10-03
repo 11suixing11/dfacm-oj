@@ -1,12 +1,18 @@
 # Changelog
 
+## v1.8.0 - 2026-10-04
+
+### Fixed
+
+- **Auth overlay escape routes are usable from the first frame** (`deploy/clean-auth-entries.js`): while the embedded `/reg` iframe loads, the shell now shows a close ✕ and a 「直接打开登录页」 link immediately instead of a blank dark box; a failed/stalled load (10 s) falls into an error state that keeps both. The direct link now opens the **top-level `/reg` without `embed=1`** — it previously carried the embed flag, so the top-level page booted in iframe mode where the in-card ✕ and the `swpu-auth-success` postMessage had no host to receive them (close and login relay both dead). The iframe success check now requires a `/reg`-specific DOM marker (`#tab-reg`) instead of "URL contains /reg and has a body", so a Caddy/Hydro error page served at the same URL can no longer be revealed as the login card. Closing the overlay also cancels the pending load timer. Verified the OAuth root cause on the way: `@hydrooj/login-with-github` concatenates `` `${server.url}oauth/github/callback` `` for the token-exchange `redirect_uri`, so the missing trailing slash on `server.url` (not the GitHub App callback, which is correctly registered without one) was what broke the exchange — the live config already carries `https://swpuacm.xyz/`.
+
 ## v1.7.0 - 2026-10-03
 
 ### Added
 
 - **GitHub third-party login is live** (official `@hydrooj/login-with-github` addon; OAuth App credentials configured in the server system config on 2026-10-03 — secrets stay server-side only). Verified end to end: the branded `/reg` page and the in-place auth modal render the button via the server-injected `loginMethods`, and `/oauth/github/login` redirects to GitHub's authorize page. First sign-in auto-creates the account (GitHub name/email, avatar as `github:<login>`).
 - **Roles `acmer` and `teamleader`** on the system domain (permission equals builtin `default`, value `1370624076369558733505`); new users keep the builtin default role. Previous roles state backed up at `system.roles.backup-20261003`.
-- System config `server.url` fixed from the retired `.bot.cd` domain to `https://swpuacm.xyz` (it feeds lost-password mail links, OAuth redirect URIs and share links; the old value is backed up at `config.backup-20261003`).
+- System config `server.url` fixed from the retired `.bot.cd` domain to `https://swpuacm.xyz/` (the trailing slash is required by Hydro's OAuth callback concatenation; it feeds lost-password mail links and share links; the old value is backed up at `config.backup-20261003`). GitHub's registered callback remains `https://swpuacm.xyz/oauth/github/callback` without a trailing slash.
 
 ## v1.6.0 - 2026-10-03
 

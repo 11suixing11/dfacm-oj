@@ -256,6 +256,10 @@ body.embed .embed-close{display:flex}
     eclose.setAttribute('aria-label','关闭登录窗口');eclose.title='关闭 (Esc)';
     eclose.addEventListener('click',function(){try{parent.postMessage({type:'swpu-auth-close'},location.origin)}catch(e){}});
     document.body.appendChild(eclose);
+    document.querySelectorAll('a[href]').forEach(function(a){
+      var href=a.getAttribute('href')||'';
+      if(href.charAt(0)==='/'&&href.charAt(1)!=='/')a.target='_top';
+    });
   }
   var names=['reg','login','pwd'];
   var tabs=[$('tab-reg'),$('tab-login'),$('tab-pwd')],panes=[$('pane-reg'),$('pane-login'),$('pane-pwd')];
@@ -376,6 +380,7 @@ body.embed .embed-close{display:flex}
       if(!p||typeof p.id!=='string'||typeof p.icon!=='string')return;
       var a=document.createElement('a');
       a.href='/oauth/'+encodeURIComponent(p.id)+'/login?redirect='+encodeURIComponent(RETURN||'/');
+      if(EMBED)a.target='_top';
       a.className='btn btn-oauth';
       a.innerHTML=p.icon+'<span>'+(p.text||('使用 '+p.id+' 登录'))+'</span>';
       list.appendChild(a);

@@ -239,3 +239,50 @@ test('judge role accepts a hydrojudge host without hydrooj, config.json or /data
     fs.rmSync(judgeRoot, { recursive: true, force: true });
   }
 });
+
+test('clean-auth-entries.js installs a one-line script with embed-free escape routes', () => {
+  const source = fs.readFileSync(path.join(repo, 'deploy', 'clean-auth-entries.js'), 'utf8');
+  const installer = new Function('db', 'print', 'quit', source);
+  const runInstall = (existing) => {
+    const installed = [];
+    const db = {
+      system: {
+        findOne: () => ({ value: existing }),
+        updateOne: (filter, update) => installed.push(update.$set.value),
+      },
+    };
+    installer(db, () => {}, () => { throw new Error('quit called'); });
+    assert.equal(installed.length, 1);
+    return installed[0];
+  };
+  // Fresh install and replacement of a previous mark both end with exactly
+  // one block: the marker comment plus the script line.
+  const fresh = runInstall('<li>footer item</li>');
+  const replaced = runInstall('stale\n<!-- swpu-clean-auth -->\n<script>/* swpu-clean-auth */old()</script>');
+  for (const value of [fresh, replaced]) {
+    assert.equal(value.includes('stale'), value === replaced);
+    assert.equal((value.match(/swpu-clean-auth/g) || []).length, 2);
+    const scriptLine = value.split('\n').filter((line) => line.startsWith('<script>'));
+    assert.equal(scriptLine.length, 1);
+    // Hydro shreds multi-line scripts into inert <ol> items.
+    assert.doesNotMatch(scriptLine[0], /\n/);
+  }
+  const script = fresh.split('\n').find((line) => line.startsWith('<script>'));
+  // Loading state is usable before the iframe reveals anything.
+  assert.match(script, /swpu-auth-loading/);
+  assert.match(script, /swpu-auth-direct/);
+  assert.match(script, /swpu-auth-close/);
+  // The escape link must not carry the embed flag: a top-level page booted in
+  // iframe mode has no host for the in-card close/success postMessage.
+  assert.match(script, /direct\.href=topUrl/);
+  assert.match(script, /fallback\.href=topUrl/);
+  assert.match(script, /var topUrl='\/reg\?tab=pwd&return='/);
+  assert.doesNotMatch(script, /fallback\.href=url/);
+  assert.doesNotMatch(script, /direct\.href=url/);
+  // The iframe is only revealed for the real /reg page, not any same-URL
+  // Caddy/Hydro error document.
+  assert.match(script, /getElementById\('tab-reg'\)/);
+  assert.doesNotMatch(script, /d\.body\}/);
+  // The payload must be syntactically valid browser JavaScript.
+  new Function(script.replace(/^<script>/, '').replace(/<\/script>$/, ''));
+});

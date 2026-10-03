@@ -172,7 +172,7 @@ curl -sSI https://<域名>/ | grep -Ei 'strict-transport|x-content-type|referrer
 - [ ] `/p` `/login` `/reg` `/training` 全部 200。
 - [ ] 裸 `GET /login` 直接 200 返回品牌页（Caddy `rewrite`，非 302），`curl -s https://<域名>/login | grep -c '__SWPU_BOOT.tab="pwd"'` 为 1；带 query 的 `GET /login?x=1` 返回原生页。
 - [ ] `/reg` 响应头为 `X-Frame-Options: SAMEORIGIN` 且 CSP 含 `frame-ancestors 'self'`（登录内嵌层依赖）；其余路由仍是 `DENY` / `'none'`。
-- [ ] 未登录在任意页触发登录（顶栏「登录」或「登录后递交」）弹出的是品牌页内嵌层（`#swpu-auth-overlay`），原生 `dialog--signin` 不再显示；iframe 加载期间显示 loading，超时提供直接打开登录页的备用入口；内嵌页的站内链接必须跳到顶层页面；`footer_extra_html` 中所有脚本必须保持单行（Hydro 会把多行脚本按行拆碎成不执行的文本）。
+- [ ] 未登录在任意页触发登录（顶栏「登录」或「登录后递交」）弹出的是品牌页内嵌层（`#swpu-auth-overlay`），原生 `dialog--signin` 不再显示；iframe 加载期间就有 loading、右上角关闭 ✕ 与「直接打开登录页」入口，加载失败/超时进入错误态并保留同样的出口；「直接打开登录页」必须指向**不带 `embed=1` 的顶层 `/reg`**（带上 embed=1 时顶层页面会以内嵌模式启动，卡内 ✕ 与登录成功回传都无人接收）；iframe 成功判定要认 `/reg` 特有标记（`#tab-reg`），不能只看 URL，防止 Caddy/Hydro 错误页冒充登录卡；内嵌页的站内链接必须跳到顶层页面；`footer_extra_html` 中所有脚本必须保持单行（Hydro 会把多行脚本按行拆碎成不执行的文本）。
 - [ ] `/reg/complete` 在无验证码时返回 `{ ok: false }`，不会 500。
 - [ ] `curl -I` 检查字体和图标有 `Cache-Control`。
 - [ ] 注册流程走通（验证码邮件到达）。

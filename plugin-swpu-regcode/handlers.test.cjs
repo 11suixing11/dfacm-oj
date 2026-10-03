@@ -164,6 +164,7 @@ test('registration page boots the initial tab from merged query args', async () 
     // The in-place auth modal requests the embedded variant.
     const embed = f.handler('/reg', { tab: 'pwd', embed: '1' }); await embed.get();
     assert.match(String(embed.response.body), /__SWPU_BOOT\.embed=true/);
+    assert.match(String(embed.response.body), /a\.target='_top'/);
     const plain = f.handler('/reg', { tab: 'pwd' }); await plain.get();
     assert.equal(String(plain.response.body).includes('__SWPU_BOOT.embed='), false);
 });
