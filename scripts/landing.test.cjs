@@ -35,6 +35,8 @@ test('landing wiring: swap targets, detection marker and stats exist in shipped 
     assert.ok(html.includes('class="hero-help"'));
     assert.ok(html.includes('name="nav_logout"'), 'detection marker missing');
     assert.ok(html.includes("credentials:'same-origin'"));
+    assert.ok(html.includes("cache:'no-store'"), 'probe must bypass the HTTP cache');
+    assert.ok(html.includes("addEventListener('pageshow'"), 'bfcache restore must re-probe login state');
     assert.ok(html.includes('data-count="4298"'), 'problem count must not regress');
     assert.ok(html.includes('data-count="29"'), '29 selectable languages');
     assert.ok(html.includes('data-count="2.5"'), 'fastest judge run is 2.5ms now');
@@ -58,7 +60,13 @@ class El {
 
 const GUEST_HELP = '第一次来？<a href="#start">查看新生入门指引</a><span>已有账号 <a href="/reg?tab=pwd">登录</a></span>';
 
-async function runPage({ page, cached } = {}) {
+const REJECT = Symbol('network down');
+const settle = async () => {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+};
+
+async function runPage({ page, pages, cached } = {}) {
     const els = {
         '#nav a.login': new El('登录', '/reg?tab=pwd'),
         '#nav a.cta': new El('注册账号', '/reg'),
@@ -70,6 +78,9 @@ async function runPage({ page, cached } = {}) {
     const store = new Map();
     if (cached) store.set('swpu-me', JSON.stringify(cached));
     const fetches = [];
+    const responses = pages || [page];
+    let call = 0;
+    const handlers = {};
     const context = vm.createContext({
         document: { querySelector: (sel) => els[sel] || null },
         sessionStorage: {
@@ -77,15 +88,23 @@ async function runPage({ page, cached } = {}) {
             setItem: (k, v) => store.set(k, String(v)),
             removeItem: (k) => store.delete(k),
         },
+        window: { addEventListener: (type, fn) => { (handlers[type] = handlers[type] || []).push(fn); } },
         fetch: async (url, opts) => {
             fetches.push({ url, opts });
-            return { text: async () => page };
+            const response = responses[Math.min(call, responses.length - 1)];
+            call += 1;
+            if (response === REJECT) throw new Error('network down');
+            return { text: async () => response };
         },
     });
     vm.runInContext(sessionScript(), context);
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    return { els, store, fetches };
+    await settle();
+    return {
+        els,
+        store,
+        fetches,
+        fire: (ev) => { (handlers.pageshow || []).forEach((fn) => fn(ev)); },
+    };
 }
 
 // Captured from the live SSR render (2026-10-04 e2e, temp account since removed).
@@ -161,4 +180,52 @@ test('logged-in page without a parseable user link fails safe (no swap)', async 
     assert.equal(els['#nav a.login'].textContent, '登录');
     assert.equal(els['#nav a.cta'].textContent, '注册账号');
     assert.equal(els['.hero-help'].innerHTML, GUEST_HELP);
+});
+
+test('probe failure rolls the optimistic paint back to guest and drops the cache', async () => {
+    const { els, store, fetches } = await runPage({
+        pages: [REJECT],
+        cached: { uid: 4, name: 'core', at: Date.now() },
+    });
+    assert.equal(fetches.length, 1);
+    assert.equal(fetches[0].opts.cache, 'no-store');
+    assert.equal(els['#nav a.login'].textContent, '登录');
+    assert.equal(els['#nav a.login'].getAttribute('href'), '/reg?tab=pwd');
+    assert.equal(els['#nav a.cta'].textContent, '注册账号');
+    assert.equal(els['.hero-help'].innerHTML, GUEST_HELP);
+    assert.ok(!store.has('swpu-me'), 'unconfirmed cache must not survive a failed probe');
+});
+
+test('bfcache restore (persisted pageshow) resets to the guest baseline then re-probes', async () => {
+    // Reproduces the reported bug: log out on an OJ page, press Back, and the
+    // bfcache-restored landing page used to keep the logged-in paint forever.
+    const { els, store, fetches, fire } = await runPage({ pages: [AUTH_PAGE, GUEST_PAGE] });
+    assert.equal(els['#nav a.login'].textContent, 'e2etest');
+    assert.ok(store.has('swpu-me'));
+    fire({ persisted: true });
+    assert.equal(els['#nav a.login'].textContent, '登录', 'baseline must reset the moment bfcache restores');
+    assert.equal(els['#nav a.cta'].textContent, '注册账号');
+    assert.ok(!store.has('swpu-me'));
+    assert.equal(fetches.length, 2);
+    await settle();
+    assert.equal(fetches[1].opts.cache, 'no-store');
+    assert.equal(els['#nav a.login'].textContent, '登录', 'guest re-probe keeps the guest UI');
+    assert.equal(els['.hero-help'].innerHTML, GUEST_HELP);
+    assert.ok(!store.has('swpu-me'));
+});
+
+test('persisted pageshow after a fresh login re-detects the signed-in user', async () => {
+    const { els, fetches, fire } = await runPage({ pages: [GUEST_PAGE, AUTH_PAGE] });
+    assert.equal(els['#nav a.login'].textContent, '登录');
+    fire({ persisted: true });
+    await settle();
+    assert.equal(fetches.length, 2);
+    assert.equal(els['#nav a.login'].textContent, 'e2etest', 're-probe must repaint the member UI');
+    assert.equal(els['#nav a.login'].getAttribute('href'), '/user/5');
+});
+
+test('non-persisted pageshow (normal load) never triggers a second probe', async () => {
+    const { fetches, fire } = await runPage({ page: GUEST_PAGE });
+    fire({ persisted: false });
+    assert.equal(fetches.length, 1);
 });

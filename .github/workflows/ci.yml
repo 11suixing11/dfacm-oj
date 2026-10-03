@@ -54,6 +54,8 @@ jobs:
           grep -q "html.dark" landing/index.html
           grep -q "nav_logout" landing/index.html
           grep -q "swpu-me" landing/index.html
+          grep -q "pageshow" landing/index.html
+          grep -q "no-store" landing/index.html
           grep -q "swpu-theme" deploy/update-footer-toggle-sync.js
           grep -q "SWPU ACM brand overlay" theme/00-brand.css
           grep -q "theme--light" theme/00-brand.css
