@@ -1,5 +1,15 @@
 # Changelog
 
+## v1.11.0 - 2026-10-04
+
+### Added
+
+- **Session-aware landing page.** The static homepage no longer greets signed-in members with “登录 / 注册账号”: since `sid` is HttpOnly and `home.html` is served straight from Caddy, the page now probes an SSR route (`fetch('/p')`, same-origin) for the nav markers Hydro renders — `nav_login` for guests, `nav_logout` plus the `<a href="/user/<uid>" class="nav__item">` link for members (verified against the live template). Members see their username linked to their profile, a 工作台 pill in place of 注册账号, a “欢迎回来” hero line, and matching mobile-menu entries; a 1-hour `sessionStorage` cache paints returning visitors without waiting for the probe and rolls back if the probe reports guest. Covered by `scripts/landing.test.cjs` (vm sandbox over the shipped script: wiring lock, member, guest, stale-cache rollback, expired cache, displayName variant and fail-safe paths).
+
+### Fixed
+
+- Landing stats had drifted from reality: “4 判题语言” (29 languages are selectable on local problems, verified on A+B) and “8.1ms 最快一次评测” (a 2026-10-04 AC on problem 4326 judged in 2.5ms, verified in `db.record`). Both refreshed; the display font subset was regenerated (440 → 545 CJK), which also restores display-font glyphs for onboarding copy added by the frontend merge.
+
 ## v1.10.0 - 2026-10-04
 
 ### Added

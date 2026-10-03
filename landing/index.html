@@ -597,8 +597,8 @@ int main() {
       <div class="row">
         <div class="cell"><div class="num"><span data-count="4298">4,298</span><i>+</i></div><div class="lab">精选题目</div></div>
         <div class="cell"><div class="num"><span data-count="12">12</span></div><div class="lab">训练章节</div></div>
-        <div class="cell"><div class="num"><span data-count="4">4</span></div><div class="lab">判题语言</div></div>
-        <div class="cell"><div class="num"><span data-count="8.1" data-dec="1">8.1</span><i>ms</i></div><div class="lab">最快一次评测</div></div>
+        <div class="cell"><div class="num"><span data-count="29">29</span></div><div class="lab">判题语言</div></div>
+        <div class="cell"><div class="num"><span data-count="2.5" data-dec="1">2.5</span><i>ms</i></div><div class="lab">最快一次评测</div></div>
       </div>
     </div>
   </div>
@@ -913,6 +913,68 @@ int main() {
         i.remove()})
   });
 
+})();
+</script>
+<script>
+'use strict';
+(function(){
+  /* ---------- 登录态感知 ----------
+     落地页是静态文件，读不到 HttpOnly 的 sid；同源 fetch 一个 SSR 页即可从
+     导航标记判断：游客 HTML 含 name="nav_login"，登录态含 name="nav_logout"
+     与 <a href="/user/<uid>" class="nav__item">用户名（Hydro nav.html 实测）。 */
+  var doc=document;
+  var navLogin=doc.querySelector('#nav a.login'),navCta=doc.querySelector('#nav a.cta');
+  var mLogin=doc.querySelector('#mmenu a[href="/reg?tab=pwd"]'),mReg=doc.querySelector('#mmenu a[href="/reg"]');
+  var help=doc.querySelector('.hero-help');
+  if(!navLogin||!navCta||!help)return;
+  var orig={
+    login:{t:navLogin.textContent,h:navLogin.getAttribute('href')},
+    cta:{t:navCta.textContent,h:navCta.getAttribute('href')},
+    ml:mLogin?{t:mLogin.textContent,h:mLogin.getAttribute('href')}:null,
+    mr:mReg?{t:mReg.textContent,h:mReg.getAttribute('href')}:null,
+    help:help.innerHTML
+  };
+  var KEY='swpu-me',TTL=3600000;
+  function cacheSave(v){try{sessionStorage.setItem(KEY,JSON.stringify(v))}catch(e){}}
+  function cacheLoad(){try{var s=sessionStorage.getItem(KEY);if(!s)return null;var v=JSON.parse(s);if(!v||!v.uid||!v.at||Date.now()-v.at>TTL)return null;return v}catch(e){return null}}
+  function cacheDrop(){try{sessionStorage.removeItem(KEY)}catch(e){}}
+  function paintUser(uid,name){
+    var label=name||'我的主页';
+    navLogin.textContent=label;navLogin.setAttribute('href','/user/'+uid);navLogin.title='个人主页';
+    navCta.textContent='工作台';navCta.setAttribute('href','/workbench');
+    if(mLogin){mLogin.textContent=label;mLogin.setAttribute('href','/user/'+uid)}
+    if(mReg){mReg.textContent='工作台';mReg.setAttribute('href','/workbench')}
+    if(name)help.innerHTML='欢迎回来，<b>'+name+'</b>。<a href="/workbench">打开工作台</a><span><a href="/training/6abf5251aaa235606eedfb84">继续训练路线</a></span>';
+  }
+  function paintGuest(){
+    navLogin.textContent=orig.login.t;navLogin.setAttribute('href',orig.login.h);navLogin.title='';
+    navCta.textContent=orig.cta.t;navCta.setAttribute('href',orig.cta.h);
+    if(mLogin&&orig.ml){mLogin.textContent=orig.ml.t;mLogin.setAttribute('href',orig.ml.h)}
+    if(mReg&&orig.mr){mReg.textContent=orig.mr.t;mReg.setAttribute('href',orig.mr.h)}
+    help.innerHTML=orig.help;
+  }
+  var cached=cacheLoad();
+  if(cached)paintUser(cached.uid,cached.name);
+  fetch('/p',{credentials:'same-origin'}).then(function(r){return r.text()}).then(function(h){
+    var cut=h.indexOf('name="nav_logout"');
+    if(cut<0){if(cached)paintGuest();cacheDrop();return}
+    var head=h.substring(0,cut),tok='class="nav__item">',k=head.indexOf(tok),uid=0,name='';
+    while(k>=0&&!uid){
+      var back=head.substring(k-48,k),u=back.lastIndexOf('href="/user/');
+      if(u>=0){
+        var n=parseInt(back.substring(u+12),10);
+        if(n>0){
+          uid=n;
+          var nm=head.substring(k+tok.length);
+          name=nm.substring(0,nm.indexOf('<')).trim();
+        }
+      }
+      k=head.indexOf(tok,k+tok.length);
+    }
+    if(!uid)return;
+    paintUser(uid,name);
+    cacheSave({uid:uid,name:name,at:Date.now()});
+  }).catch(function(){});
 })();
 </script>
 <noscript><style>#burger{display:none}#theme-btn{display:none}#nav .login{display:block;margin-left:auto}.rc-map{display:none}</style></noscript>

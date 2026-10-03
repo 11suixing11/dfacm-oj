@@ -52,6 +52,8 @@ jobs:
           grep -q "twitter:card" landing/index.html
           grep -q "theme-btn" landing/index.html
           grep -q "html.dark" landing/index.html
+          grep -q "nav_logout" landing/index.html
+          grep -q "swpu-me" landing/index.html
           grep -q "swpu-theme" deploy/update-footer-toggle-sync.js
           grep -q "SWPU ACM brand overlay" theme/00-brand.css
           grep -q "theme--light" theme/00-brand.css
@@ -93,4 +95,4 @@ jobs:
       - name: Run ops plugin tests
         run: node --test plugin-swpu-ops/tests/*.test.cjs
       - name: Run deployment script tests
-        run: node --test scripts/deployment.test.mjs
+        run: node --test scripts/deployment.test.mjs scripts/landing.test.cjs
