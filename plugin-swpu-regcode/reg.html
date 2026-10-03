@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>注册 / 登录 · SWPU ACM 训练场</title>
-<meta name="description" content="注册或登录 SWPU ACM 在线训练场：邮箱验证码注册，验证码免密登录。">
+<meta name="description" content="注册或登录 SWPU ACM 在线训练场：邮箱验证码注册、验证码免密登录、用户名密码登录。">
 <meta name="theme-color" content="#070d18">
 <link rel="icon" type="image/png" href="/favicon.png">
 <link rel="preload" href="/swpu-display.woff2" as="font" type="font/woff2" crossorigin>
@@ -98,6 +98,9 @@ input[aria-invalid="true"]{border-color:#ff8d87}
 .ft{gap:8px;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:16px;margin-top:24px}
 .ft a{display:inline-flex;align-items:center;min-height:44px;color:var(--txt-2);font-size:13px}
 .noscript-hint{color:var(--gold-hi);margin-top:16px;font-size:13px}
+.noscript-hint a{color:var(--gold-hi);text-underline-offset:4px}
+.remember{display:flex;align-items:center;gap:9px;min-height:24px;font-size:13.5px;color:var(--txt-2);cursor:pointer;-webkit-user-select:none;user-select:none}
+.remember input[type="checkbox"]{width:16px;height:16px;min-height:16px;padding:0;accent-color:var(--blue);cursor:pointer;flex-shrink:0}
 [hidden]{display:none!important}
 @media(max-width:860px){.wrap{gap:28px 36px;grid-template-columns:minmax(0,1fr) minmax(0,430px)}.intro h2{font-size:28px}}
 @media(max-width:720px){body{padding:24px 16px;justify-content:flex-start}.wrap{max-width:460px;display:block}.brand{justify-content:center;margin:0 0 24px}.intro{display:none}.card{padding:26px 24px}}
@@ -133,6 +136,7 @@ input[aria-invalid="true"]{border-color:#ff8d87}
     <div class="tabs" role="tablist" aria-label="账号操作">
       <button type="button" id="tab-reg" class="on" role="tab" aria-selected="true" aria-controls="pane-reg" tabindex="0">注册账号</button>
       <button type="button" id="tab-login" role="tab" aria-selected="false" aria-controls="pane-login" tabindex="-1">验证码登录</button>
+      <button type="button" id="tab-pwd" role="tab" aria-selected="false" aria-controls="pane-pwd" tabindex="-1">密码登录</button>
     </div>
 
     <div class="pane on" id="pane-reg" role="tabpanel" aria-labelledby="tab-reg">
@@ -189,9 +193,30 @@ input[aria-invalid="true"]{border-color:#ff8d87}
       </form>
     </div>
 
-    <noscript><p class="noscript-hint">邮箱验证码需要 JavaScript。请启用后重试，或使用下方的密码登录。</p></noscript>
+    <div class="pane" id="pane-pwd" role="tabpanel" aria-labelledby="tab-pwd" hidden>
+      <h1>密码登录</h1>
+      <p class="sub">使用用户名与密码登录训练场。</p>
+      <form id="f-pwd" action="/login" method="post" novalidate>
+        <input type="hidden" name="tfa" value="">
+        <input type="hidden" name="authnChallenge" value="">
+        <div class="field">
+          <label for="p-uname">用户名</label>
+          <input id="p-uname" name="uname" type="text" autocapitalize="none" spellcheck="false" placeholder="你的用户名" autocomplete="username" required aria-describedby="p-msg">
+        </div>
+        <div class="field">
+          <label for="p-pw">密码</label>
+          <div class="password-field"><input id="p-pw" name="password" type="password" placeholder="账号密码" autocomplete="current-password" required aria-describedby="p-msg"><button type="button" class="password-toggle" aria-controls="p-pw" aria-label="显示密码" aria-pressed="false" hidden>显示</button></div>
+        </div>
+        <label class="remember" for="p-remember"><input id="p-remember" name="rememberme" type="checkbox" value="1"> 记住我</label>
+        <button type="submit" id="p-go" class="btn btn-go">登录</button>
+        <div class="msg" id="p-msg" role="status" aria-live="polite"></div>
+      </form>
+    </div>
+
+    <noscript><p class="noscript-hint">本页需要 JavaScript；如不便启用，可前往 <a href="/login">原生登录页</a> 或 <a href="/register">原生注册页</a>。</p></noscript>
     <div class="ft">
-      <a href="/login">密码登录 / 找回密码</a>
+      <a href="/reg?tab=pwd">密码登录</a>
+      <a href="/lostpass">找回密码</a>
       <a class="mono" href="/">SWPUACM.XYZ</a>
     </div>
   </main>
@@ -200,29 +225,32 @@ input[aria-invalid="true"]{border-color:#ff8d87}
 'use strict';
 (function(){
   var $=function(id){return document.getElementById(id)};
-  var tabs=[$('tab-reg'),$('tab-login')],panes=[$('pane-reg'),$('pane-login')];
+  var names=['reg','login','pwd'];
+  var tabs=[$('tab-reg'),$('tab-login'),$('tab-pwd')],panes=[$('pane-reg'),$('pane-login'),$('pane-pwd')];
   function showTab(which,focus){
-    var index=which==='login'?1:0;
+    var index=Math.max(0,names.indexOf(which));
     tabs.forEach(function(tab,i){
       var active=i===index;
       tab.classList.toggle('on',active);tab.setAttribute('aria-selected',String(active));tab.tabIndex=active?0:-1;
       panes[i].classList.toggle('on',active);panes[i].hidden=!active;
     });
     var url=new URL(location.href);
-    if(index)url.searchParams.set('tab','login');else url.searchParams.delete('tab');
-    if(url.hash==='#login')url.hash='';
+    if(index)url.searchParams.set('tab',names[index]);else url.searchParams.delete('tab');
+    if(url.hash==='#login'||url.hash==='#pwd')url.hash='';
     history.replaceState(null,'',url.pathname+url.search+url.hash);
     if(focus)tabs[index].focus();
   }
   tabs.forEach(function(tab,i){
-    tab.addEventListener('click',function(){showTab(i?'login':'reg',false)});
+    tab.addEventListener('click',function(){showTab(names[i],false)});
     tab.addEventListener('keydown',function(e){
       if(!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;
-      e.preventDefault();var next=e.key==='Home'?0:e.key==='End'?1:1-i;
-      showTab(next?'login':'reg',true);
+      e.preventDefault();
+      var next=e.key==='Home'?0:e.key==='End'?tabs.length-1:(i+(e.key==='ArrowRight'?1:-1)+tabs.length)%tabs.length;
+      showTab(names[next],true);
     });
   });
-  showTab(new URLSearchParams(location.search).get('tab')==='login'||location.hash==='#login'?'login':'reg',false);
+  var initial=new URLSearchParams(location.search).get('tab');
+  showTab(names.indexOf(initial)>=0?initial:(location.hash==='#login'||location.hash==='#pwd'?location.hash.slice(1):'reg'),false);
   document.querySelectorAll('.password-toggle').forEach(function(btn){
     btn.hidden=false;
     btn.addEventListener('click',function(){
@@ -304,6 +332,37 @@ input[aria-invalid="true"]{border-color:#ff8d87}
     });
   }
   bindForm('r','/reg/complete');bindForm('l','/reg/login');
+
+  /* 密码登录：直接提交 Hydro 原生 /login。成功时服务端 302 跳走（含两步验证页），
+     失败时重新渲染 /login——以最终 URL 判定成败；无 JS 时表单原生提交兜底。 */
+  var pwdForm=$('f-pwd'),pwdGo=$('p-go'),pwdLabel=pwdGo.textContent;
+  pwdForm.addEventListener('submit',async function(e){
+    e.preventDefault();
+    if(pwdGo.disabled)return;
+    clearErrors(pwdForm);hide($('p-msg'));
+    var uname=$('p-uname').value.trim(),pw=$('p-pw').value;
+    if(!uname){invalid('p','p-uname','请输入用户名。');return}
+    if(!pw){invalid('p','p-pw','请输入密码。');return}
+    var body=new URLSearchParams({uname:uname,password:pw,tfa:'',authnChallenge:''});
+    if($('p-remember').checked)body.set('rememberme','1');
+    pwdGo.disabled=true;pwdGo.textContent='登录中…';pwdForm.setAttribute('aria-busy','true');
+    try{
+      var resp=await fetch('/login',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:body.toString()});
+      var final=new URL(resp.url,location.origin);
+      if(final.pathname==='/login'){
+        msg($('p-msg'),'用户名或密码不正确，请重试。','err');
+        pwdGo.disabled=false;pwdGo.textContent=pwdLabel;
+      }else{
+        pwdGo.textContent='登录成功，正在进入…';
+        msg($('p-msg'),'登录成功，正在进入…','ok');
+        location.href=final.pathname+(final.search||'')||'/';
+      }
+    }catch(err){
+      msg($('p-msg'),'网络连接失败，请检查网络后重试。','err');
+      pwdGo.disabled=false;pwdGo.textContent=pwdLabel;
+    }
+    pwdForm.removeAttribute('aria-busy');
+  });
 })();
 </script>
 </body>

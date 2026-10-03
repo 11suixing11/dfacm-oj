@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.3.0 - 2026-10-03
+
+### Added
+
+- `/reg` is now a one-stop auth page with a third `密码登录` tab: the form posts natively to Hydro's `/login` (uname/password/rememberme plus the tfa/authnChallenge hidden fields), enhanced with a seamless fetch submit that detects success by the final URL (wrong credentials return 403 on `/login`; success redirects away, including two-step-verification flows). The footer links switch to the password tab in-page and point lost-password to `/lostpass`; landing page login links now target `/reg?tab=pwd`. Verified end to end with a temporary user (created, logged in via POST /login with session cookie, preference page 200, deleted).
+
 ## v1.2.0 - 2026-10-03
 
 ### Changed

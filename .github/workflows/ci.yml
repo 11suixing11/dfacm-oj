@@ -40,6 +40,9 @@ jobs:
           test -f landing/index.html
           test ! -f landing/reg.html
           test -f plugin-swpu-regcode/reg.html
+          grep -q "tab-pwd" plugin-swpu-regcode/reg.html
+          grep -q 'action="/login"' plugin-swpu-regcode/reg.html
+          grep -q "/reg?tab=pwd" landing/index.html
           test -f theme/00-brand.css
           test ! -f theme/00-native-dark-brand.css
           test -f theme/05-full-dark.css
