@@ -5,6 +5,8 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
+import vm from 'node:vm';
+import { createRequire } from 'node:module';
 
 // Test only temporary fixtures and mock commands; no installed OJ is used.
 const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -289,4 +291,90 @@ test('clean-auth-entries.js installs a one-line script with embed-free escape ro
   assert.match(page, /id="tab-reg"/);
   // The payload must be syntactically valid browser JavaScript.
   new Function(script.replace(/^<script>/, '').replace(/<\/script>$/, ''));
+});
+
+function themeFixture() {
+  const directory = fs.mkdtempSync(path.join(root, 'theme-'));
+  const files = Object.fromEntries(['STATIC_THEME', 'SOURCE_THEME', 'STATIC_SW', 'SOURCE_SW']
+    .map((key) => [key, path.join(directory, key + (key.endsWith('THEME') ? '.css' : '.js'))]));
+  // No trailing newline: typical minified upstream assets must survive reinstallation.
+  for (const [key, filename] of Object.entries(files)) fs.writeFileSync(filename, key.endsWith('THEME') ? 'body{color:blue}' : 'originalWorker()');
+  return { directory, files, overrides: Object.fromEntries(Object.entries(files).map(([key, filename]) => [key, unixPath(filename)])) };
+}
+
+test('theme deployment fails before mutation when any required target is absent', () => {
+  for (const legacy of ['0', '1']) {
+    const fixture = themeFixture();
+    const missing = path.join(fixture.directory, 'missing.css');
+    const result = run('../deploy/install-theme.sh', [], { ...fixture.overrides, SOURCE_THEME: unixPath(missing), SWPU_THEME_LEGACY: legacy });
+    assert.equal(result.status, 66, result.stdout + result.stderr);
+    assert.match(result.stderr, /required target missing/);
+    assert.equal(fs.existsSync(missing), false);
+    assert.equal(fs.readFileSync(fixture.files.STATIC_THEME, 'utf8'), 'body{color:blue}');
+    assert.equal(fs.readdirSync(fixture.directory).length, 4);
+  }
+});
+
+test('first and repeated theme installs preserve upstream CSS and unique backups', () => {
+  const fixture = themeFixture();
+  const first = run('../deploy/install-theme.sh', [], fixture.overrides);
+  assert.equal(first.status, 0, first.stdout + first.stderr);
+  const firstCss = fs.readFileSync(fixture.files.STATIC_THEME, 'utf8');
+  assert.ok(firstCss.startsWith('body{color:blue}\n'));
+  assert.equal([...firstCss.matchAll(/\/\* ==== SWPU ACM brand overlay/g)].length, 1);
+  const second = run('../deploy/install-theme.sh', [], fixture.overrides);
+  assert.equal(second.status, 0, second.stdout + second.stderr);
+  assert.equal(fs.readFileSync(fixture.files.STATIC_THEME, 'utf8'), firstCss);
+  for (const [key, filename] of Object.entries(fixture.files)) {
+    const backups = fs.readdirSync(fixture.directory).filter((name) => name.startsWith(path.basename(filename) + '.bak-'));
+    assert.equal(backups.length, 2, key);
+    assert.ok(backups.some((name) => fs.readFileSync(path.join(fixture.directory, name), 'utf8') === (key.endsWith('THEME') ? 'body{color:blue}' : 'originalWorker()')));
+  }
+  assert.equal(fs.readFileSync(fixture.files.STATIC_SW, 'utf8'), fs.readFileSync(path.join(repo, 'deploy/service-worker-killswitch.js'), 'utf8'));
+});
+
+test('documented addon installations contain every module and asset the entries load', () => {
+  const instructions = fs.readFileSync(path.join(repo, 'deploy/deployment.md'), 'utf8');
+  for (const addon of ['plugin-swpu-ops', 'plugin-swpu-train']) {
+    const names = instructions.match(new RegExp(`cp /root/swpu-oj/${addon}/\\{([^}]+)\\}`))[1].split(',');
+    const installed = fs.mkdtempSync(path.join(root, 'installed-addon-'));
+    for (const name of names) fs.copyFileSync(path.join(repo, addon, name), path.join(installed, name));
+    const entry = path.join(installed, 'index.ts');
+    const source = fs.readFileSync(entry, 'utf8');
+    const requireInstalled = createRequire(entry);
+    for (const match of source.matchAll(/require\('([.]\/[^']+)'\)/g)) {
+      assert.doesNotThrow(() => requireInstalled(match[1]), `deployment omitted ${match[1]}`);
+    }
+    for (const match of source.matchAll(/readFileSync\(join\(__dirname, '([^']+)'\)/g)) {
+      assert.ok(fs.existsSync(path.join(installed, match[1])), `deployment omitted ${match[1]}`);
+    }
+  }
+});
+
+test('light default initialization supports a new site and preserves user choices on rerun', () => {
+  const docs = new Map();
+  const users = [{ uid: 1, theme: 'dark' }, { uid: 2, theme: 'light' }];
+  const originalUsers = structuredClone(users);
+  const context = vm.createContext({
+    print() {}, printjson() {},
+    db: {
+      system: {
+        findOne: ({ _id }) => docs.get(_id) || null,
+        updateOne({ _id }, update, options) {
+          assert.ok(docs.has(_id) || options?.upsert);
+          docs.set(_id, { _id, ...docs.get(_id), ...update.$set });
+        },
+      },
+      user: { updateMany() { assert.fail('must not clear user preferences'); } },
+    },
+  });
+  const source = fs.readFileSync(path.join(repo, 'deploy/set-theme-light.js'), 'utf8');
+  const runMigration = () => vm.runInContext(`(function(){\n${source}\n})()`, context);
+  runMigration();
+  assert.equal(docs.get('preference.theme').value, 'light');
+  const footer = docs.get('ui-default.footer_extra_html').value;
+  assert.match(footer, /swpu-theme-toggle/);
+  runMigration();
+  assert.equal(docs.get('ui-default.footer_extra_html').value, footer);
+  assert.deepEqual(users, originalUsers);
 });

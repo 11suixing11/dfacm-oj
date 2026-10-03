@@ -7,9 +7,10 @@
     "node": ">=22"
   },
   "devDependencies": {
-    "esbuild": "0.25.12"
+    "esbuild": "0.25.12",
+    "tsx": "4.19.2"
   },
   "scripts": {
-    "test": "npx --yes tsx@4.19.2 --test logic.test.ts codes.test.ts config.test.ts && node --test handlers.test.cjs"
+    "test": "tsx --test logic.test.ts codes.test.ts config.test.ts && node --test handlers.test.cjs frontend.test.cjs"
   }
 }

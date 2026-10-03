@@ -43,8 +43,27 @@ SOURCE_SW="${SOURCE_SW:-/usr/local/share/.config/yarn/global/node_modules/@hydro
 BRAND_MARKER="SWPU ACM brand overlay"
 LEGACY_MARKER="SWPU ACM legacy overlay set"
 
+# Validate every required target before touching any file. Version drift must
+# fail deployment, rather than silently skipping all work with exit code 0.
+for target in "$STATIC_THEME" "$SOURCE_THEME" "$STATIC_SW" "$SOURCE_SW"; do
+    if [ ! -f "$target" ] || [ ! -r "$target" ] || [ ! -w "$target" ]; then
+        printf 'required target missing or inaccessible: %s; check THEME_VERSION and target paths\n' "$target" >&2
+        exit 66
+    fi
+done
+for source in "$ROOT/theme/00-brand.css" "$ROOT/deploy/service-worker-killswitch.js"; do
+    [ -r "$source" ] || { printf 'source missing: %s\n' "$source" >&2; exit 66; }
+done
+if [ "${SWPU_THEME_LEGACY:-0}" = "1" ]; then
+    for name in 01-dark-band.css 02-polish.css 03-immersive.css 04-immersive-buttons.css 05-full-dark.css; do
+        [ -r "$ROOT/theme/$name" ] || { printf 'source missing: %s\n' "$name" >&2; exit 66; }
+    done
+fi
+
 backup_file() {
-    cp -a "$1" "$1.bak-$(date +%Y%m%d-%H%M%S)"
+    local backup
+    backup="$(mktemp "$1.bak-$(date +%Y%m%d-%H%M%S)-XXXXXX")"
+    cp -a "$1" "$backup"
 }
 
 strip_overlays() {
@@ -52,7 +71,6 @@ strip_overlays() {
     local line
     line="$(grep -n -m1 -E '==== SWPU ACM' "$target" | head -1 | cut -d: -f1 || true)"
     if [ -n "$line" ]; then
-        backup_file "$target"
         head -n $((line - 1)) "$target" > "$target.tmp"
         mv "$target.tmp" "$target"
         printf 'stripped previous overlays: %s\n' "$target"
@@ -61,11 +79,11 @@ strip_overlays() {
 
 apply_brand() {
     local target="$1"
-    if [ ! -f "$target" ]; then
-        printf 'skip missing: %s\n' "$target"
-        return
-    fi
+    backup_file "$target"
     strip_overlays "$target"
+    # Minified upstream CSS may have no trailing newline. Keep our marker on its
+    # own line so a later reinstall never strips the original CSS with it.
+    if [ -n "$(tail -c 1 "$target")" ]; then printf '\n' >> "$target"; fi
     cat "$ROOT/theme/00-brand.css" >> "$target"
     printf 'brand overlay applied: %s\n' "$target"
 }
@@ -84,10 +102,6 @@ apply_legacy() {
 
 install_service_worker_killswitch() {
     local target="$1"
-    if [ ! -f "$target" ]; then
-        printf 'skip missing: %s\n' "$target"
-        return
-    fi
     backup_file "$target"
     install -m 0644 "$ROOT/deploy/service-worker-killswitch.js" "$target"
     printf 'service worker neutralized: %s\n' "$target"
@@ -104,4 +118,10 @@ for target in "$STATIC_SW" "$SOURCE_SW"; do
     install_service_worker_killswitch "$target"
 done
 
-printf 'theme targets rebuilt; default theme is light (users can switch via preferences or /set_theme)\n'
+for target in "$STATIC_THEME" "$SOURCE_THEME"; do
+    grep -q "$BRAND_MARKER" "$target" || { printf 'brand verification failed: %s\n' "$target" >&2; exit 65; }
+done
+for target in "$STATIC_SW" "$SOURCE_SW"; do
+    cmp -s "$ROOT/deploy/service-worker-killswitch.js" "$target" || { printf 'service worker verification failed: %s\n' "$target" >&2; exit 65; }
+done
+printf 'theme targets rebuilt and verified; user theme preferences were not changed\n'

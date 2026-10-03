@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>训练工作台 · SWPU ACM 训练场</title>
+<meta name="description" content="个人训练工作台：当前路线、下一题、本周进度与最近未通过的题目。">
+<meta name="theme-color" content="#070d18">
+<link rel="icon" type="image/png" href="/favicon.png">
+<style>
+@font-face{font-family:'SWPU Display';src:url('/swpu-display.woff2') format('woff2');font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:'SWPU Mono';src:url('/swpu-mono.woff2') format('woff2');font-weight:100 800;font-style:normal;font-display:swap}
+:root{--ink:#070d18;--panel:#0d182a;--line:rgba(198,216,240,.10);--line-strong:rgba(198,216,240,.18);--txt:#e8edf5;--txt-2:#a7b4c7;--txt-3:#94a4bb;--blue:#2a5caa;--gold:#c9a227;--gold-hi:#e9c455;--ac:#3fb950;--font-d:'SWPU Display','PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif;--font-b:-apple-system,'PingFang SC','Microsoft YaHei','Segoe UI','Noto Sans CJK SC',sans-serif;--font-m:'SWPU Mono','JetBrains Mono',Consolas,'PingFang SC',monospace;color-scheme:dark}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:radial-gradient(1100px 600px at 50% -200px,rgba(42,92,170,.16),transparent 60%),var(--ink);color:var(--txt);font-family:var(--font-b);font-size:15px;line-height:1.7;min-height:100svh;-webkit-font-smoothing:antialiased}
+:focus-visible{outline:2px solid var(--gold-hi);outline-offset:2px;border-radius:6px}
+a{color:var(--txt-2);text-decoration:none}
+a:hover{color:var(--gold-hi)}
+.top{display:flex;align-items:center;justify-content:space-between;gap:16px;max-width:960px;margin:0 auto;padding:18px 20px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none}
+.brand svg{width:30px;height:30px}
+.brand b{font-family:var(--font-d);font-weight:400;font-size:15px;letter-spacing:.08em;color:var(--txt)}
+.brand span{display:block;font-family:var(--font-m);font-size:9.5px;letter-spacing:.14em;color:var(--txt-3)}
+.nav{display:flex;gap:4px;flex-wrap:wrap}
+.nav a{padding:8px 12px;border-radius:9px;font-size:13.5px;min-height:40px;display:inline-flex;align-items:center}
+.nav a:hover{background:rgba(198,216,240,.06)}
+.nav a.on{color:var(--gold-hi);background:rgba(201,162,39,.10)}
+main{max-width:960px;margin:0 auto;padding:10px 20px 60px}
+h1{font-size:22px;font-weight:600;margin:14px 0 4px}
+h1 i{font-style:normal;color:var(--gold-hi)}
+.sub{color:var(--txt-3);font-size:13px;margin-bottom:22px}
+.grid{display:grid;gap:14px}
+@media(min-width:760px){.grid{grid-template-columns:1fr 1fr}}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px 22px}
+.panel>h2{font-size:15px;font-weight:600;display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:14px}
+.panel>h2 small{font-size:12px;color:var(--txt-3);font-weight:400}
+.panel>h2 a{font-size:12.5px}
+.route{margin-bottom:16px}
+.route:last-child{margin-bottom:0}
+.route .rt{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
+.route .rt a{font-size:15px;font-weight:600;color:var(--txt)}
+.route .rt a:hover{color:var(--gold-hi)}
+.route .rt span{font-family:var(--font-m);font-size:12px;color:var(--txt-3)}
+.bar{height:6px;border-radius:4px;background:rgba(198,216,240,.08);margin:10px 0 12px;overflow:hidden}
+.bar i{display:block;height:100%;border-radius:4px;background:linear-gradient(90deg,var(--blue),var(--gold));transition:width .6s ease}
+.next{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:13.5px;color:var(--txt-2)}
+.next .np{color:var(--txt-3);font-size:12.5px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:10px;padding:9px 16px;font-size:13.5px;font-weight:600;cursor:pointer;border:1px solid transparent;min-height:40px;background:var(--blue);color:#fff;text-decoration:none;transition:background .25s}
+.btn:hover{background:#3568b3;color:#fff}
+.btn.ghost{background:none;border-color:var(--line-strong);color:var(--txt-2)}
+.btn.ghost:hover{border-color:rgba(233,196,85,.45);color:var(--gold-hi)}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;text-align:center}
+@media(max-width:560px){.stats{grid-template-columns:repeat(2,1fr)}}
+.stats b{display:block;font-family:var(--font-d);font-weight:400;font-size:26px;color:var(--gold-hi)}
+.stats span{font-size:12px;color:var(--txt-3)}
+.list{display:flex;flex-direction:column}
+.rowitem{display:flex;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--line);font-size:14px;flex-wrap:wrap}
+.rowitem:first-child{border-top:none}
+.rowitem .tt{flex:1;min-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rowitem .tt.off{color:var(--txt-3)}
+.badge{font-family:var(--font-m);font-size:11px;padding:2px 8px;border-radius:6px;background:rgba(248,81,73,.12);color:#ff9a94;flex-shrink:0}
+.rowitem time{font-size:12px;color:var(--txt-3);flex-shrink:0}
+.rowitem .rl{font-size:12px;flex-shrink:0}
+.empty{color:var(--txt-3);font-size:13.5px;padding:6px 0}
+.empty a{color:var(--gold-hi);text-underline-offset:4px}
+.state{padding:40px 0;text-align:center;color:var(--txt-3);font-size:14px}
+.state.err{color:#ff9a94}
+.state button{margin-top:12px}
+.foot{max-width:960px;margin:0 auto;padding:0 20px 30px;color:var(--txt-3);font-size:12px;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.foot .mono{font-family:var(--font-m);letter-spacing:.08em}
+[hidden]{display:none!important}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="/" aria-label="返回首页">
+    <svg viewBox="0 0 64 64" aria-hidden="true">
+      <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1c3e78"/><stop offset="1" stop-color="#0c1a36"/></linearGradient></defs>
+      <rect x="1.5" y="1.5" width="61" height="61" rx="15" fill="url(#g)" stroke="#c9a227" stroke-opacity=".8" stroke-width="1.6"/>
+      <path d="M20 21 L11.5 32 L20 43" fill="none" stroke="#e8edf5" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M44 21 L52.5 32 L44 43" fill="none" stroke="#e8edf5" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M24.5 43 L32.5 26.5 L36.8 32.8 L39.6 28.6 L46 43 Z" fill="#e8edf5"/>
+      <path d="M32.5 26.5 L36.8 32.8 L39.6 28.6 L41.2 32 L37 32.5 Z" fill="#e9c455"/>
+      <circle cx="33.6" cy="20.5" r="1.5" fill="#e9c455"/>
+    </svg>
+    <span><b>SWPU ACM</b><span>TRAINING GROUND</span></span>
+  </a>
+  <nav class="nav" aria-label="站点导航">
+    <a href="/">首页</a>
+    <a href="/training">训练</a>
+    <a href="/p">题目</a>
+    <a href="/workbench" class="on" aria-current="page">工作台</a>
+    <a href="/mistakes">错题本</a>
+  </nav>
+</header>
+<main>
+  <h1 id="greet">训练工作台</h1>
+  <p class="sub" id="greet-sub">继续上次的进度，从下一题开始。</p>
+  <div id="loading" class="state" role="status">正在读取你的训练数据…</div>
+  <div id="error" class="state err" hidden>加载失败，请稍后重试。<br><button type="button" class="btn ghost" id="retry">重新加载</button></div>
+  <div class="grid" id="content" hidden>
+    <section class="panel" aria-labelledby="h-route">
+      <h2 id="h-route">当前路线 <a href="/training">全部训练计划</a></h2>
+      <div id="routes"></div>
+      <p class="empty" id="routes-empty" hidden>还没有加入训练路线。去 <a href="/training">训练计划</a> 选一条路线开始吧。</p>
+    </section>
+    <section class="panel" aria-labelledby="h-week">
+      <h2 id="h-week">本周进度 <small id="week-range"></small></h2>
+      <div class="stats">
+        <div><b id="w-sub">0</b><span>提交次数</span></div>
+        <div><b id="w-ac">0</b><span>AC 题目</span></div>
+        <div><b id="w-try">0</b><span>尝试题目</span></div>
+        <div><b id="w-day">0</b><span>活跃天数</span></div>
+      </div>
+      <p class="empty" id="week-empty" hidden>本周还没有训练提交，从下一题开始吧。</p>
+    </section>
+    <section class="panel" aria-labelledby="h-fail">
+      <h2 id="h-fail">最近未通过 <a href="/mistakes">错题本 <span id="open-count"></span></a></h2>
+      <div class="list" id="failed"></div>
+      <p class="empty" id="failed-empty" hidden>最近的日常训练提交全部通过，继续保持。</p>
+    </section>
+    <section class="panel" aria-labelledby="h-mistake">
+      <h2 id="h-mistake">错题复习</h2>
+      <p class="empty" style="padding-bottom:14px">未通过的题目会自动收入错题本；记录错误原因与复盘笔记，补题 AC 后自动标记完成。</p>
+      <a class="btn ghost" href="/mistakes">打开错题本</a>
+    </section>
+  </div>
+</main>
+<footer class="foot">
+  <span>向山顶，提交你的答案</span>
+  <span class="mono">SWPUACM.XYZ</span>
+</footer>
+<script>
+'use strict';
+(function(){
+  var $=function(id){return document.getElementById(id)};
+  function esc(s){var d=document.createElement('div');d.textContent=s==null?'':String(s);return d.innerHTML}
+  function rel(iso){
+    if(!iso)return'';
+    var t=Date.parse(iso);if(!isFinite(t))return'';
+    var s=Math.max(0,(Date.now()-t)/1000);
+    if(s<60)return'刚刚';
+    if(s<3600)return Math.floor(s/60)+' 分钟前';
+    if(s<86400)return Math.floor(s/3600)+' 小时前';
+    if(s<30*86400)return Math.floor(s/86400)+' 天前';
+    var d=new Date(t);return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();
+  }
+  function titleOf(item){
+    if(item.url)return'<a href="'+esc(item.url)+'">'+esc(item.title)+'</a>';
+    return'<span class="off">'+esc(item.title)+'</span>';
+  }
+  async function load(){
+    $('loading').hidden=false;$('error').hidden=true;$('content').hidden=true;
+    var d;
+    try{
+      var resp=await fetch('/workbench/data',{headers:{'Accept':'application/json'}});
+      d=await resp.json();
+      if(!resp.ok||!d||!d.ok)throw new Error('bad');
+    }catch(e){
+      $('loading').hidden=true;$('error').hidden=false;return;
+    }
+    var data=d.data;
+    $('greet').innerHTML='继续训练，<i>'+esc(data.user.uname||'同学')+'</i>';
+    var ws=Date.parse(data.week.weekStart);
+    if(isFinite(ws)){
+      var s=new Date(ws),e=new Date(ws+6*86400000);
+      $('week-range').textContent='统计日常训练提交 · '+(s.getMonth()+1)+'月'+s.getDate()+'日 – '+(e.getMonth()+1)+'月'+e.getDate()+'日';
+    }
+    $('w-sub').textContent=data.week.submissions;
+    $('w-ac').textContent=data.week.accepted;
+    $('w-try').textContent=data.week.attempted;
+    $('w-day').textContent=data.week.activeDays;
+    $('week-empty').hidden=data.week.submissions>0;
+    var routes=$('routes');routes.innerHTML='';
+    data.trainings.forEach(function(t){
+      var div=document.createElement('div');div.className='route';
+      var next=t.next
+        ?(t.next.url?'<a class="btn" href="'+esc(t.next.url)+'">做下一题</a>':'<span class="np">'+esc(t.next.title)+'</span>')
+        :(t.completed?'<span class="np">路线已完成，恭喜登顶</span>':'<span class="np">当前章节暂无待做题</span>');
+      div.innerHTML='<div class="rt"><a href="'+esc(t.url)+'">'+esc(t.title)+'</a><span>'+t.done+' / '+t.total+' 题 · '+t.percent+'%</span></div>'
+        +'<div class="bar"><i style="width:'+Math.min(100,Math.max(0,t.percent))+'%"></i></div>'
+        +'<div class="next"><span class="np">'+(t.currentTitle?'当前章节：'+esc(t.currentTitle):'')+'</span><span>'+next+'</span></div>';
+      routes.appendChild(div);
+    });
+    $('routes-empty').hidden=data.trainings.length>0;
+    var list=$('failed');list.innerHTML='';
+    data.recentFailed.forEach(function(item){
+      var row=document.createElement('div');row.className='rowitem';
+      row.innerHTML='<span class="badge">'+esc(item.statusLabel)+'</span><span class="tt">'+titleOf(item)+'</span>'
+        +(item.recordUrl?'<a class="rl" href="'+esc(item.recordUrl)+'">查看提交</a>':'')
+        +'<time>'+esc(rel(item.at))+'</time>';
+      list.appendChild(row);
+    });
+    $('failed-empty').hidden=data.recentFailed.length>0;
+    $('open-count').textContent=data.mistakes.open?('（待补 '+data.mistakes.open+'）'):'';
+    $('loading').hidden=true;$('content').hidden=false;
+  }
+  $('retry').addEventListener('click',load);
+  load();
+})();
+</script>
+</body>
+</html>

@@ -1,11 +1,11 @@
 # swpu-regcode — 数字验证码注册插件
 
-Hydro v5 的原生注册流程是「邮箱 → 点邮件里的链接 → 设账密」。国内用户更习惯**输数字验证码**。本插件在 Hydro 旁边实现了验证码注册 + 验证码免密登录（双标签页），登录后按来源跳转（新号直达训练路线）。v1.1 起验证码存储与消费独立到 `codes.ts`，登录策略独立到 `auth.ts`，真实客户端 IP 解析独立到 `logic.ts`，并补齐单元测试和 handler 回归测试。
+Hydro v5 的原生注册流程是「邮箱 → 点邮件里的链接 → 设账密」。本插件提供验证码注册、验证码免密登录与密码登录三个标签页，登录后按安全的站内来源返回；第二因素通过常显的原生登录入口完成。验证码存储与消费独立到 `codes.ts`，登录策略独立到 `auth.ts`，真实客户端 IP 解析独立到 `logic.ts`。
 
 ## 工作方式
 
 ```
-GET  /reg            注册 + 验证码登录双标签页（读取插件目录下的 reg.html）
+GET  /reg            注册 / 验证码 / 密码登录页（读取插件目录下的 reg.html）
 POST /reg/code       {mail, purpose}   发送 6 位验证码（purpose: reg=注册 / login=免密登录）
 POST /reg/complete   {mail, code, uname, password}   注册并自动登录
 POST /reg/login      {mail, code}      验证码免密登录
@@ -64,16 +64,24 @@ pm2 restart hydrooj
 
 ```bash
 cd plugin-swpu-regcode
+npm ci
 npm test
 ```
 
-`npm test` 先跑 `logic/codes/config` 的纯单元测试，再用 `node --test` 跑 `handlers.test.cjs`：后者通过 `npx` 调用 esbuild 编译 `index.ts`（首次运行需要联网缓存 `tsx` / `esbuild`），以 Hydro API 替身覆盖收件地址、登录策略、注册关闭、验证码一次性消费、审计脱敏和真实 IP 回退等行为。测试不连接线上数据库、SMTP 或判题机，也不需要在插件目录安装依赖。
+`npm ci` 按锁文件安装仅用于开发测试的 `tsx` / `esbuild`。`npm test` 运行 `logic/codes/config` 单元测试、使用 Hydro API 替身的 handler 回归测试，以及执行实际页面脚本的 DOM/fetch 替身测试。页面测试覆盖站外返回地址、密码登录落点、原生入口、OAuth 顶层导航和失败恢复。测试不连接线上数据库、SMTP 或判题机；真实认证仍需在同版本测试实例验收。
 
 ## 依赖
 
 - Hydro 的 SMTP 已配置（`smtp.host / user / pass / from / secure`），验证码邮件走 `sendMail`
 - reg.html 引用 `/swpu-display.woff2`、`/swpu-mono.woff2` 与 `/favicon.png`（同源路径，配合本仓库 `landing/` 部署；缺失时优雅降级系统字体）
-- 反向代理部署时，Caddy 需要覆盖客户端传入的 XFF，Hydro 建议同时设置 `server.xproxy: true`，见 [部署清单](../../deploy/deployment.md)
+- 反向代理部署时，Caddy 需要覆盖客户端传入的 XFF，Hydro 建议同时设置 `server.xproxy: true`，见 [部署清单](../deploy/deployment.md)
+
+## 登录验收
+
+- `return` 及后端响应中的跳转只能指向同源站内路径；密码登录显式传 `redirect`，默认回首页。
+- 启用两步验证或通行密钥的账号使用常显入口 `/login?fallback=1`；它离开 iframe，在原生页面完成第二因素。
+- 第三方登录、找回密码同样在顶层打开，避免被 iframe / 响应头限制拦截。
+- 密码登录保留 15 秒超时、重复提交保护、限流提示和错误后的输入。测试实例还需验证普通密码、验证码、第二因素、OAuth 和弹层返回的完整流程。
 
 ## 安全细节
 

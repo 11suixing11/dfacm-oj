@@ -1,5 +1,26 @@
 # Changelog
 
+## v1.9.0 - 2026-10-04
+
+### Added
+
+- **Personal training workbench at `/workbench`** (plugin `swpu-train`, from PR #4): enrolled plans with progress, the next unfinished problem in the current chapter, this week's training stats (Asia/Shanghai week, non-contest submissions) and recently failed problems, so returning users can resume training directly.
+- **Mistake book at `/mistakes`**: judged failures (WA/TLE/MLE/OLE/RE/CE) are collected automatically per problem, with editable error reason, review notes and re-solve status; a later AC marks the entry resolved. First visit backfills from recent submissions; contest finals are included, pretest/generate excluded. `SWPU_TRAIN_MISTAKES=0` disables live collection.
+
+### Fixed
+
+- Reject external, backslash and control-character auth return paths on the branded page; password login now submits an explicit safe redirect instead of returning to its Referer.
+- Add a visible native two-factor/passkey login entry and top-level OAuth/password-recovery links; retain inputs and restore controls on login failure or timeout.
+- Serialize live RP recalculations and coalesce changes arriving during a slow run. Ignore progress, pretest and generation events, bound diagnostic history, and stop queued work when the addon unloads. `SWPU_LIVE_RP=0` disables live recalculation.
+- Include `live-rp.cjs` in the documented addon installation. Theme deployment now validates all targets before writing, creates unique backups even on first install, preserves minified CSS without a trailing newline on reinstall, and verifies installed assets.
+- Set the light system default without resetting users' choices; initialize missing footer configuration safely and idempotently.
+
+### Tests and documentation
+
+- Add page-script regression tests and slow-RP, disposal, fresh-install and theme-reinstall scenarios; pin development dependencies with an npm lockfile and use `npm ci` in CI.
+- Cover mistake-book collection/backfill, workbench assembly and route wiring with unit tests.
+- Synchronize theme filenames, default behavior, addon write effects and development/deployment instructions.
+
 ## v1.8.0 - 2026-10-04
 
 ### Fixed

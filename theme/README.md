@@ -4,23 +4,17 @@
 
 Hydro 的 `ui-default` 自带完整、持续维护的 Light / Dark 两套主题（编译进 `theme-<版本>.css` 的 `.theme--light` / `.theme--dark` 规则）。站点默认 light，用户可随时切换 dark；品牌薄层 `00-brand.css` 同时覆盖两种模式。
 
-默认 light 的三步设置（曾强制全员 dark 的反向操作）：
+默认 light 的设置（保留每个用户已选的主题）：
 
-1. 删掉系统级强制主题键，让代码默认值（`ui-default/index.ts` 中 `Setting('setting_display', 'theme', 'light', ...)`）生效：
-
-   ```js
-   db.system.deleteOne({ _id: 'preference.theme' })
-   ```
-
-   若 `index.ts` 中的默认值仍是 `'dark'`，先改回 `'light'`（约 182 行）。
-
-2. 清空用户级强制主题，让每人跟随默认并自行选择：
+1. 设置系统默认值，不修改 `ui-default` 源码，也不清空 `db.user.theme`：
 
    ```js
-   db.user.updateMany({}, { $unset: { theme: '' } })
+   db.system.updateOne({ _id: 'preference.theme' }, { $set: { value: 'light' } }, { upsert: true })
    ```
 
-3. 重启 `hydrooj`，让用户缓存刷新：
+2. 如需同时安装页脚切换入口，用 `mongosh` 执行 `deploy/set-theme-light.js`。它设置系统默认 light，首次安装时创建缺失的页脚配置，重复执行不会重复追加入口或重置用户偏好。
+
+3. 重启 `hydrooj`，让设置缓存刷新：
 
    ```bash
    pm2 restart hydrooj
@@ -70,6 +64,7 @@ bash deploy/install-theme.sh
 - 默认只追加 `00-brand.css`，通过 `==== SWPU ACM` 标记做幂等。
 - 每次执行会先删掉 CSS 中第一处 `==== SWPU ACM` 之后的内容，再追加当前品牌层，保证重复执行和旧主题残留不会叠加。
 - 同时把 static 和源包的 `service-worker.js` 换成 kill-switch：清空旧 CacheStorage 后注销自身，避免 webpack 注入的旧主题 CSS 覆盖品牌层。
-- 主题版本号自动探测：脚本取 `~/.hydro/static/theme-*.css` 中版本最高的一个，UI 升级换文件名也不会把品牌层打到不存在的旧路径；需要手动指定时设 `THEME_VERSION=<版本>`，或分别覆盖 `STATIC_THEME` / `SOURCE_THEME`。
+- 主题版本号自动探测：脚本取 `~/.hydro/static/theme-*.css` 中版本最高的一个，UI 升级换文件名也不会把品牌层打到不存在的旧路径；需要手动指定时设 `THEME_VERSION=<版本>`，也可分别覆盖 `STATIC_THEME` / `SOURCE_THEME` / `STATIC_SW` / `SOURCE_SW`。
+- 四个目标都必须存在且可读写；任一缺失会在修改文件之前以 66 退出。首次及重复部署都会创建不重名备份，安装后验证品牌标记与 Service Worker 内容。
 - 旧浅色 Hydro 需要完整回退时，显式运行 `SWPU_THEME_LEGACY=1 bash deploy/install-theme.sh`，才会追加 01-05。
-- 脚本不会替你修改系统主题偏好；仍需按本文开头的 `preference.theme` / `user.theme` 步骤恢复 light 默认。
+- CSS 安装脚本不会修改主题偏好；系统默认值按本文开头设置，用户已选择的主题始终保留。

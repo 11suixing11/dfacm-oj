@@ -24,10 +24,10 @@ export function apply(ctx: Context) {
         staleMinutes: Schema.number().default(10),
     }), ops.healthSummary);
     // RP normally only recalculates in task.daily (03:00); rerun it shortly
-    // after each judged submission so the ranking page stays current. Only
-    // instance 0 registers; if that instance is down, RP falls back to the
-    // nightly run (idempotent compute, no data loss).
-    if (!process.env.NODE_APP_INSTANCE || process.env.NODE_APP_INSTANCE === '0') {
-        ctx.on('record/change', createLiveRp().hook);
+    // after each judged submission so the ranking page stays current.
+    if (process.env.SWPU_LIVE_RP !== '0' && (!process.env.NODE_APP_INSTANCE || process.env.NODE_APP_INSTANCE === '0')) {
+        const live = createLiveRp();
+        ctx.on('record/change', live.hook);
+        ctx.on('dispose', live.stop);
     }
 }

@@ -20,6 +20,11 @@ test('judged records trigger one debounced rp run per domain', async () => {
 test('non-judged progress events never schedule a run', async () => {
     const live = createLiveRp({ debounceMs: 10, script });
     live.hook({ domainId: 'system', status: 0 });
+    for (const status of [20, 21, 22, -1, 99, '1']) live.hook({ domainId: 'system', status });
+    live.hook({ domainId: 'system', status: 1 }, {}, {}, { key: 'next' });
+    live.hook({ domainId: 'system', status: 1, contest: '000000000000000000000000' });
+    live.hook({ domainId: 'system', status: 1, contest: { toString: () => '000000000000000000000001' } });
+    live.hook({ domainId: 'system', status: 1, uid: -1, pid: 0 });
     live.hook({ domainId: 'system' });
     live.hook(null);
     await sleep(40);
@@ -64,12 +69,54 @@ test('non-zero pm2 instances stay idle', async () => {
     live.stop();
 });
 
-test('history arrays stay bounded over long uptime', async () => {
-    const live = createLiveRp({ debounceMs: 0, script, historyLimit: 2 });
-    for (let i = 0; i < 5; i++) {
-        live.hook({ domainId: 'system', status: 1 });
-        await sleep(5);
-    }
-    assert.equal(live.runs.length, 2);
+test('slow RP runs never overlap and coalesce changes into one follow-up per domain', async (t) => {
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    const started = [], releases = [];
+    let active = 0, maximum = 0;
+    const live = createLiveRp({ debounceMs: 30, instance: '0', script: { run: async ({ domainId }) => {
+        started.push(domainId);
+        maximum = Math.max(maximum, ++active);
+        await new Promise((resolve) => releases.push(resolve));
+        active--;
+    } } });
+    t.after(live.stop);
+    const flush = async () => { for (let i = 0; i < 10; i++) await Promise.resolve(); };
+    live.hook({ domainId: 'system', status: 1 });
+    t.mock.timers.tick(30);
+    for (let i = 0; i < 10; i++) live.hook({ domainId: 'system', status: 1 });
+    live.hook({ domainId: 'other', status: 2 });
+    t.mock.timers.tick(300);
+    assert.deepEqual(started, ['system']);
+    releases.shift()(); await flush();
+    t.mock.timers.tick(30);
+    assert.deepEqual(started, ['system', 'system']);
+    releases.shift()(); await flush();
+    assert.deepEqual(started, ['system', 'system', 'other']);
+    releases.shift()(); await flush();
+    t.mock.timers.tick(300);
+    assert.equal(started.length, 3);
+    assert.equal(maximum, 1);
+});
+
+test('dispose cancels queued work and ignores future events, including during a run', async (t) => {
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    let release, count = 0;
+    const live = createLiveRp({ debounceMs: 10, script: { run: async () => {
+        count++;
+        await new Promise((resolve) => { release = resolve; });
+    } } });
+    live.hook({ domainId: 'system', status: 1 });
+    t.mock.timers.tick(10);
+    live.hook({ domainId: 'other', status: 1 });
     live.stop();
+    release();
+    for (let i = 0; i < 10; i++) await Promise.resolve();
+    live.hook({ domainId: 'system', status: 1 });
+    t.mock.timers.tick(100);
+    assert.equal(count, 1);
+    const queued = createLiveRp({ debounceMs: 10, script: { run: async () => { count++; } } });
+    queued.hook({ domainId: 'system', status: 1 });
+    queued.stop();
+    t.mock.timers.tick(100);
+    assert.equal(count, 1);
 });
