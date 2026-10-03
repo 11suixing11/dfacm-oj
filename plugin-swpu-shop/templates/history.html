@@ -1,0 +1,53 @@
+{% extends "layout/basic.html" %}
+{% block content %}
+<div class="section">
+  <div class="section__header">
+    <h1 class="section__title">{{ _('积分流水') }}</h1>
+    <div class="section__tools">
+      <span class="typo">{{ _('当前余额') }}: <b>{{ balance }}</b></span>
+      <a href="{{ url('swpu_shop') }}" class="rounded button">{{ _('返回商店') }}</a>
+    </div>
+  </div>
+  <div class="section__body no-padding">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>{{ _('时间') }}</th>
+          <th>{{ _('类型') }}</th>
+          <th>{{ _('明细') }}</th>
+          <th>{{ _('变动') }}</th>
+          <th>{{ _('累计余额') }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {%- for doc in items -%}
+        <tr>
+          <td>{{ datetimeSpan(doc.ts)|safe }}</td>
+          <td>
+            {% if doc.kind == 'solve' %}{{ _('做题') }}
+            {% elif doc.kind == 'redeem' %}{{ _('兑换') }}
+            {% elif doc.kind == 'backfill' %}{{ _('历史入账') }}
+            {% else %}{{ _('管理员调整') }}{% endif %}
+          </td>
+          <td>{{ doc.detail }}</td>
+          <td>{% if doc.delta > 0 %}+{% endif %}{{ doc.delta }}</td>
+          <td>{{ doc.balance }}</td>
+        </tr>
+        {%- endfor -%}
+        {% if not items.length %}
+        <tr><td colspan="5">{{ _('还没有积分记录，去通过一道题赚积分吧。') }}</td></tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+  <div class="section__body">
+    {% if pages > 1 %}
+    <ul class="pager">
+      {% if page > 1 %}<li><a class="pager__item link" href="?page={{ page - 1 }}">{{ _('上一页') }}</a></li>{% endif %}
+      <li class="typo">{{ page }} / {{ pages }}</li>
+      {% if page < pages %}<li><a class="pager__item link" href="?page={{ page + 1 }}">{{ _('下一页') }}</a></li>{% endif %}
+    </ul>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

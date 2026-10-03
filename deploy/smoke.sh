@@ -33,6 +33,10 @@ req "https://$HOST/register" | grep -aF 'tab-reg' >/dev/null; check $? "bare /re
 # --- guest gates ---
 [ "$(code "https://$HOST/workbench")" = "302" ]; check $? "GET /workbench gated (302)"
 [ "$(code "https://$HOST/mistakes")" = "302" ]; check $? "GET /mistakes gated (302)"
+[ "$(code "https://$HOST/shop")" = "200" ]; check $? "GET /shop = 200 (points shop, guest-visible)"
+req "https://$HOST/shop" | grep -aF 'data-table' >/dev/null; check $? "shop page renders the badge table"
+[ "$(code "https://$HOST/shop/history")" = "302" ]; check $? "GET /shop/history gated (302)"
+[ "$(code "https://$HOST/manage/shop")" = "302" ]; check $? "GET /manage/shop gated (302)"
 
 # --- regcode POST path (validation-only: no mail sent, no rate consumed) ---
 req -X POST -d 'mail=smoke@example.com&purpose=hack' "https://$HOST/reg/code" \

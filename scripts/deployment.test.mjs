@@ -351,6 +351,49 @@ test('documented addon installations contain every module and asset the entries 
   }
 });
 
+test('points-shop plugin ships every documented file and its templates render the badge table', () => {
+  // The shop addon resolves templates through ui-default's addon template
+  // registry, so the documented cp blocks must cover index.ts, points.ts,
+  // package.json and all three templates — anything missing breaks the
+  // deploy.sh manifest, which parses the same blocks.
+  const instructions = fs.readFileSync(path.join(repo, 'deploy/deployment.md'), 'utf8');
+  const documented = [];
+  for (const match of instructions.matchAll(/cp \/root\/swpu-oj\/plugin-swpu-shop\/\{([^}]+)\}/g)) {
+    documented.push(...match[1].split(',').map((name) => name.trim()));
+  }
+  assert.deepEqual(documented.sort(), [
+    'index.ts', 'package.json', 'points.ts',
+    'templates/history.html', 'templates/manage.html', 'templates/shop.html',
+  ]);
+  for (const name of documented) {
+    assert.ok(fs.existsSync(path.join(repo, 'plugin-swpu-shop', name)), `missing ${name}`);
+  }
+  // Template wiring: Nunjucks pages extend the site layout, use the shared
+  // section/data-table classes and the badge preview DOM contract.
+  for (const template of ['shop.html', 'history.html', 'manage.html']) {
+    const source = fs.readFileSync(path.join(repo, 'plugin-swpu-shop', 'templates', template), 'utf8');
+    assert.match(source, /\{% extends "layout\/basic.html" %\}/, `${template} must extend the site layout`);
+    assert.match(source, /class="section"/, `${template} must use the section component`);
+    assert.match(source, /data-table/, `${template} must use the data-table component`);
+  }
+  const shop = fs.readFileSync(path.join(repo, 'plugin-swpu-shop', 'templates', 'shop.html'), 'utf8');
+  assert.match(shop, /user-profile-badge v-center/, 'badge preview must reuse the badge DOM contract');
+  assert.match(shop, /href="\/badge\/{{ bdoc\._id }}"/, 'badge title must link to the badge plugin detail page');
+  assert.match(shop, /href="\/reg\?tab=login"/, 'guests must be sent to the branded login tab');
+  const manage = fs.readFileSync(path.join(repo, 'plugin-swpu-shop', 'templates', 'manage.html'), 'utf8');
+  assert.match(manage, /name="operation" value="price"/, 'manage form must post operation=price');
+  assert.match(manage, /name="badgeId"/, 'manage form must carry badgeId');
+  // Integration wiring: smoke battery, CI matrix, addon registry example.
+  const smoke = fs.readFileSync(path.join(repo, 'deploy', 'smoke.sh'), 'utf8');
+  assert.match(smoke, /\/shop/) && assert.match(smoke, /shop\/history/);
+  const ci = fs.readFileSync(path.join(repo, '.github', 'workflows', 'ci.yml'), 'utf8');
+  assert.match(ci, /node --test plugin-swpu-shop\/tests\/\*\.test\.cjs/);
+  const addonExample = fs.readFileSync(path.join(repo, 'plugin-swpu-shop', 'addon.json.example'), 'utf8');
+  assert.match(addonExample, /swpu-shop/);
+  const orchestrator = fs.readFileSync(path.join(repo, 'deploy', 'deploy.sh'), 'utf8');
+  assert.match(orchestrator, /plugin-swpu-shop/, 'deploy.sh must ship the shop addon');
+});
+
 test('light default initialization supports a new site and preserves user choices on rerun', () => {
   const docs = new Map();
   const users = [{ uid: 1, theme: 'dark' }, { uid: 2, theme: 'light' }];

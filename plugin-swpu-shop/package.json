@@ -1,0 +1,11 @@
+{
+  "name": "swpu-shop",
+  "version": "0.0.1",
+  "private": true,
+  "main": "index.ts",
+  "engines": { "node": ">=22" },
+  "devDependencies": {
+    "esbuild": "0.25.12"
+  },
+  "scripts": { "test": "node --test tests/*.test.cjs" }
+}

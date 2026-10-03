@@ -1,5 +1,15 @@
 # Changelog
 
+## v1.13.0 - 2026-10-04
+
+### Added
+
+- **Points shop (`plugin-swpu-shop`)** — badges become something you earn and spend. Every problem's first AC credits 1–10 points by difficulty (the same algorithm Hydro's RP script uses, ported verbatim from `lib/difficulty.ts`), and admins put badges on sale at `/manage/shop` for members to redeem with their balance at `/shop` (guest-browsable). Redemption reuses the installed badge-for-hydrooj model for ownership (`userBadgeAdd`) — no fork, no modification; wearing still happens on `/mybadge`.
+  - Idempotency is index-backed: `swpuPointsLedger` has a unique `{uid, ref}` key (`solve:{domainId}:{docId}` per solve, `redeem:{badgeId}` per redemption), so resubmissions, event replays and double-spend races can never double-credit; inserts that hit the key are silently absorbed.
+  - `/shop/history` shows the full ledger with a running balance (prefix sums across pages, 20/page); balance is a live `$sum` aggregation — the site is small, no cache yet.
+  - `swpuShopBackfill` script replays historical AC records (`kind: 'backfill'`, same idempotency key, safe to rerun); the `record/change` hook awards live, pm2 instance 0 only, error-isolated from judging.
+  - New collection prefix `swpu` (`swpuPointsLedger`, `swpuBadgePrice`); no new npm runtime dependencies; covered by 21 unit tests plus deployment wiring assertions; smoke battery gains `/shop` 200, badge-table render and the `/shop/history`, `/manage/shop` guest gates.
+
 ## v1.12.0 - 2026-10-04
 
 ### Fixed

@@ -1,0 +1,53 @@
+{% extends "layout/basic.html" %}
+{% block content %}
+<div class="section">
+  <div class="section__header">
+    <h1 class="section__title">{{ _('积分商店管理') }}</h1>
+    <div class="section__tools">
+      <a href="{{ url('swpu_shop') }}" class="rounded button">{{ _('查看商店') }}</a>
+    </div>
+  </div>
+  <div class="section__body no-padding">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>{{ _('徽章') }}</th>
+          <th>{{ _('名称') }}</th>
+          <th>{{ _('价格（正整数）') }}</th>
+          <th>{{ _('上架') }}</th>
+          <th>{{ _('操作') }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {%- for bdoc in badges -%}
+        <tr>
+          <td>
+            <span class="user-profile-badge v-center" style="background-color:{{ bdoc.backgroundColor }};color:{{ bdoc.fontColor }};" data-tooltip="{{ bdoc.title }}">{{ bdoc.short }}</span>
+          </td>
+          <td><a href="/badge/{{ bdoc._id }}">{{ bdoc.title }}</a></td>
+          <td>
+            <form method="post" action="{{ url('swpu_shop_manage_save') }}" class="inline-form">
+              <input type="hidden" name="operation" value="price">
+              <input type="hidden" name="badgeId" value="{{ bdoc._id }}">
+              <input type="number" name="price" min="1" step="1" value="{{ bdoc.price or 1 }}" class="input--price">
+              <label class="compact checkbox">
+                <input type="checkbox" name="enabled" value="1" {% if bdoc.enabled %}checked{% endif %}> {{ _('上架') }}
+              </label>
+              <button type="submit" class="primary rounded button">{{ _('保存') }}</button>
+            </form>
+          </td>
+          <td>{{ _('上架') if bdoc.enabled else _('未上架') }}</td>
+          <td>#{{ bdoc._id }}</td>
+        </tr>
+        {%- endfor -%}
+        {% if not badges.length %}
+        <tr><td colspan="5">{{ _('还没有徽章，请先在徽章管理中创建。') }}</td></tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+  <div class="section__body typo">
+    <p>{{ _('价格为正整数；勾选「上架」后用户才能在商店看到并兑换。每行单独保存。') }}</p>
+  </div>
+</div>
+{% endblock %}

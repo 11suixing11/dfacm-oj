@@ -131,6 +131,38 @@ pm2 restart hydrooj
 
 安装后 `/workbench` 与 `/mistakes` 出现在登录用户导航中。错题收集只在 pm2 instance 0 运行；设置 `SWPU_TRAIN_MISTAKES=0` 并重启可关闭收集（页面仍可用）。数据口径与限制见 [plugin-swpu-train/README.md](../plugin-swpu-train/README.md)。
 
+积分商店可选安装（做题赚积分、花积分兑徽章，徽章能力由服务器已装的 badge-for-hydrooj 提供）：
+
+```bash
+mkdir -p /root/.hydro/addons/swpu-shop/templates
+cp /root/swpu-oj/plugin-swpu-shop/{index.ts,points.ts,package.json} \
+   /root/.hydro/addons/swpu-shop/
+cp /root/swpu-oj/plugin-swpu-shop/{templates/shop.html,templates/history.html,templates/manage.html} \
+   /root/.hydro/addons/swpu-shop/templates/
+mkdir -p /root/.hydro/addons/swpu-shop/node_modules
+ln -sfn /usr/local/share/.config/yarn/global/node_modules/hydrooj \
+        /root/.hydro/addons/swpu-shop/node_modules/hydrooj
+# 参考 plugin-swpu-shop/addon.json.example，把插件路径加入 /root/.hydro/addon.json
+pm2 restart hydrooj
+```
+
+安装后用户下拉菜单出现「积分商店」（`/shop`），控制面板出现「积分商店管理」（`/manage/shop`）。每道题首次 AC 按难度（Hydro RP 同源算法，1~10 分）自动入账；管理员在 `/manage/shop` 给徽章定价并上架后，用户即可用积分兑换，兑换记录进 `swpuPointsLedger`，徽章持有关系写入 badge 插件的 `userBadge`（只调用其模型，不修改它）。佩戴仍在 badge 插件的 `/mybadge` 完成。
+
+历史 AC 回填（站点 2026-10-01 上线，记录量极小，一次跑完）：
+
+```bash
+hydrooj cli script swpuShopBackfill '{"domainId":""}'   # 空 domainId 时回填 system 与 poj 两个域
+```
+
+脚本幂等（唯一键 `solve:{domainId}:{docId}` 挡重复），可重复运行、增量运行；`kind` 记 `backfill`，与实时入账互不冲突。
+
+验收：
+
+- `/shop` 游客可达（200），徽章卡片显示预览色块/标题/价格/状态；登录后显示「我的积分」与兑换按钮。
+- `/shop/history` 登录后 200，显示时间/类型/明细/变动/累计余额，分页 20/页。
+- `/manage/shop` 域管理员可见，每行价格 + 上架 checkbox 可保存。
+- 兑换成功后跳转 `/mybadge`，佩戴后全站用户名旁出现徽章。
+
 **不要**在 `/root/.hydro/addons/swpu-regcode/` 运行 `npm install` 或 `npm ci`（其他插件同理），避免重建运行目录的 `node_modules` 和 Hydro 软链。开发测试在独立仓库检出目录的插件目录中运行 `npm ci && npm test`，依赖按锁文件安装。
 
 ## 5. 邮件系统

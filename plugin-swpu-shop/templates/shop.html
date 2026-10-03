@@ -1,0 +1,69 @@
+{% extends "layout/basic.html" %}
+{% block content %}
+<div class="section">
+  <div class="section__header">
+    <h1 class="section__title">{{ _('积分商店') }}</h1>
+    <div class="section__tools">
+      {% if signedIn %}
+        <span class="typo">{{ _('我的积分') }}: <b>{{ balance }}</b></span>
+        <a href="{{ url('swpu_shop_history') }}" class="rounded button">{{ _('积分流水') }}</a>
+      {% else %}
+        <a href="/reg?tab=login" class="primary rounded button">{{ _('登录后兑换') }}</a>
+      {% endif %}
+    </div>
+  </div>
+  <div class="section__body no-padding">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>{{ _('徽章') }}</th>
+          <th>{{ _('名称') }}</th>
+          <th>{{ _('价格') }}</th>
+          <th>{{ _('状态') }}</th>
+          <th>{{ _('操作') }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {%- for bdoc in badges -%}
+        <tr>
+          <td>
+            <span class="user-profile-badge v-center" style="background-color:{{ bdoc.backgroundColor }};color:{{ bdoc.fontColor }};" data-tooltip="{{ bdoc.title }}">{{ bdoc.short }}</span>
+          </td>
+          <td><a href="/badge/{{ bdoc._id }}">{{ bdoc.title }}</a></td>
+          <td>{{ bdoc.price }}</td>
+          <td>
+            {% if bdoc.owned %}
+              <span class="icon icon-check"></span> {{ _('已拥有') }}
+            {% elif bdoc.enabled %}
+              {{ _('上架中') }}
+            {% else %}
+              {{ _('未上架') }}
+            {% endif %}
+          </td>
+          <td>
+            {% if bdoc.owned %}
+              <a href="/mybadge" class="rounded button">{{ _('佩戴') }}</a>
+            {% elif bdoc.enabled and signedIn %}
+              <form method="post" action="{{ url('swpu_shop_redeem') }}" class="inline-form">
+                <input type="hidden" name="badgeId" value="{{ bdoc._id }}">
+                <button type="submit" class="primary rounded button">{{ _('兑换') }}（{{ bdoc.price }} {{ _('分') }}）</button>
+              </form>
+            {% elif bdoc.enabled %}
+              <a href="/reg?tab=login" class="rounded button">{{ _('登录后兑换') }}</a>
+            {% else %}
+              —
+            {% endif %}
+          </td>
+        </tr>
+        {%- endfor -%}
+        {% if not badges.length %}
+        <tr><td colspan="5">{{ _('暂无徽章。') }}</td></tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+  <div class="section__body typo">
+    <p>{{ _('每道题首次通过（AC）按难度获得 1~10 积分；在此用积分兑换徽章，兑换后到「我的徽章」页面佩戴。') }}</p>
+  </div>
+</div>
+{% endblock %}

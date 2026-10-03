@@ -101,5 +101,10 @@ jobs:
         run: npm test
       - name: Run ops plugin tests
         run: node --test plugin-swpu-ops/tests/*.test.cjs
+      - name: Install shop test dependencies
+        working-directory: plugin-swpu-shop
+        run: npm ci --no-audit --no-fund
+      - name: Run shop plugin tests
+        run: node --test plugin-swpu-shop/tests/*.test.cjs
       - name: Run deployment script tests
         run: node --test scripts/deployment.test.mjs scripts/landing.test.cjs

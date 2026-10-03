@@ -72,7 +72,7 @@ doc_files() {
 # Prints "<local repo path><TAB><remote absolute path>" for every shipped file.
 stage_manifest() {
     local addon files f
-    for addon in plugin-swpu-regcode plugin-swpu-ops plugin-swpu-train; do
+    for addon in plugin-swpu-regcode plugin-swpu-ops plugin-swpu-train plugin-swpu-shop; do
         files="$(doc_files "$addon")"
         if [ -z "$files" ]; then
             echo "deployment.md has no cp block for $addon" >&2
