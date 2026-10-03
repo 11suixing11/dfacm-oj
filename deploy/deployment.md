@@ -193,6 +193,7 @@ curl -sSI https://<域名>/ | grep -Ei 'strict-transport|x-content-type|referrer
    ```
    （或 `db.system` 的 `config` 文档追加同名键后 `pm2 restart hydrooj`。）
 3. 重启后品牌 `/reg` 页与原地登录弹层会自动出现「使用 GitHub 登录」按钮（按钮由服务端 `loginMethods` 注入，未配置时自动隐藏）。
+4. 已于 2026-10-03 配置完成并验证：按钮出现、`/oauth/github/login` 302 到 GitHub 授权页。凭据只存服务器 `db.system` 的 `config` 文档，**不得写入本仓库**（secret-scan 也会拦截）。
 
 ## 16. 角色分组
 
