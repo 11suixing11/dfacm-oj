@@ -237,10 +237,9 @@ export async function apply(ctx: Context) {
         { key: { uid: 1, ref: 1 }, name: 'uid_ref', unique: true },
         { key: { uid: 1, ts: -1 }, name: 'uid_ts' },
     );
-    await db.ensureIndexes(
-        db.collection('swpuBadgePrice' as any),
-        { key: { _id: 1 }, name: '_id' },
-    );
+    // No explicit index for swpuBadgePrice: the collection is a handful of
+    // badges, and an _id spec is rejected by MongoDB ("background is not valid
+    // for an _id index") because Hydro's ensureIndexes injects background:true.
     ctx.Route('swpu_shop', '/shop', ShopPageHandler);
     ctx.Route('swpu_shop_redeem', '/shop/redeem', ShopRedeemHandler, PRIV.PRIV_USER_PROFILE);
     ctx.Route('swpu_shop_history', '/shop/history', ShopHistoryHandler, PRIV.PRIV_USER_PROFILE);

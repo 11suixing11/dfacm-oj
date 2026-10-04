@@ -46,7 +46,7 @@ hydrooj cli script swpuHealthSummary '{"domainId":"system","staleMinutes":10}'
 hydrooj cli script swpuRpSweep '{}'
 ```
 
-`swpuRpSweep` 无参数。先清服务号在 `document.status` 的全部残留，再对每个域重算 RP（含等级与排名分配）；返回 `{recalculated, failures}`，`recalculated:false` 表示当前有另一个 RP 计算正在执行或脚本注册缺失，稍后重跑即可。绕过应用修改数据（删比赛、清理状态行）之后运行一次，可立即恢复排名一致。
+`swpuRpSweep` 无参数。先清服务号在 `document.status` 的全部残留，再对每个域重算 RP（含等级与排名分配）；返回 `{recalculated, failures}`，`recalculated:false` 表示本进程内已有另一个 RP 计算在执行（排队的清扫/实时重算）或脚本注册缺失，稍后重跑即可。注意 CLI 是独立进程，与主进程内的清扫互不感知，若恰好同时执行也只是重复计算一遍（幂等）。绕过应用修改数据（删比赛、清理状态行）之后运行一次，可立即恢复排名一致。
 
 周报参数：
 

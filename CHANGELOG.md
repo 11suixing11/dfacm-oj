@@ -8,6 +8,10 @@
 - **Hourly RP sweep (`rp-sweep.cjs`).** Mutations that bypass the record flow — contest deletion, admin edits, manual database fixes — fire no events, and Hydro's own `task.daily` only recomputes at 03:00. The sweep reruns the RP script for all domains every hour (3-minute startup delay past the 75-second readiness window, pm2 instance 0 only, `SWPU_RP_SWEEP=0` to disable, serialized with the live path through a shared lock so two RP computations never overlap), bounding out-of-band staleness to one hour.
 - **`swpuRpSweep` admin script** — `hydrooj cli script swpuRpSweep '{}'` performs an immediate purge + full-domain recalculation after out-of-band data fixes, replacing the hand-typed `rp` CLI invocation.
 
+### Fixed
+
+- The shop plugin asked MongoDB to create an explicit `_id` index on `swpuBadgePrice` at every boot; Hydro's `ensureIndexes` injects `background: true`, which MongoDB rejects for `_id` specifications, so each restart (and every CLI invocation) logged an index error. The call was dead weight — the `_id` index is implicit — and is removed; the ledger's idempotency indexes are untouched.
+
 ### Removed
 
 - The landing page's “最快一次评测 2.5ms” stat. The 2.5ms came from a judge test submission whose records were removed in the v1.12.0 cleanup, leaving the headline number unattributable to any real member; the stats row now shows three cells. `scripts/landing.test.cjs` locks the removal.
