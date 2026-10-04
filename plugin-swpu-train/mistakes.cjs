@@ -20,6 +20,13 @@ const STATUS_TEXTS = Object.freeze({
 
 // Review reason categories selectable on the mistakes page.
 const REASONS = Object.freeze(['idea', 'boundary', 'complexity', 'implement', 'misread', 'other']);
+// The page offers an explicit "未分类" option whose value is the empty string.
+// It must be storable, or selecting it returns "错误原因不在可选范围内。".
+// Accepting '' also makes the endpoint immune to whether the framework hands an
+// empty string through or normalises it to undefined: undefined simply leaves
+// the stored reason untouched.
+const REASON_UNSET = '';
+const REASON_VALUES = Object.freeze([REASON_UNSET, ...REASONS]);
 const NOTE_MAX_LENGTH = 2000;
 const PAGE_SIZE_DEFAULT = 20;
 const PAGE_SIZE_MAX = 50;
@@ -72,7 +79,7 @@ function createMistakeStore(collection, options = {}) {
         if (!validTarget(domainId, uid, pid)) return false;
         const at = now();
         const res = await collection.updateOne(
-            { domainId, uid, pid, resolved: { $ne: true } },
+            { domainId, uid, pid, resolved: false },
             { $set: { resolved: true, resolvedAt: at, resolvedRid: rid ?? null, updatedAt: at } },
         );
         return (res.modifiedCount || 0) > 0;
@@ -94,7 +101,12 @@ function createMistakeStore(collection, options = {}) {
 
     function queryFor(domainId, uid, filter) {
         const query = { domainId, uid, pid: { $ne: MARKER_PID } };
-        if (filter === 'open') query.resolved = { $ne: true };
+        // `resolved` is written as an explicit boolean by every path (the
+        // record hook's $set and the backfill's $setOnInsert), so `false` is
+        // equivalent to `$ne: true` here — but unlike $ne it is a usable index
+        // range bound, so the {domainId, uid, resolved, lastAt} index serves
+        // both the filter and the lastAt sort instead of sorting in memory.
+        if (filter === 'open') query.resolved = false;
         if (filter === 'done') query.resolved = true;
         return query;
     }
@@ -104,7 +116,7 @@ function createMistakeStore(collection, options = {}) {
         const $set = {};
         const $unset = {};
         if (patch.reason !== undefined) {
-            if (!REASONS.includes(patch.reason)) throw new Error('错误原因不在可选范围内。');
+            if (!REASON_VALUES.includes(patch.reason)) throw new Error('错误原因不在可选范围内。');
             $set.reason = patch.reason;
         }
         if (patch.note !== undefined) {
@@ -133,7 +145,7 @@ function createMistakeStore(collection, options = {}) {
     }
 
     async function countOpen(domainId, uid) {
-        return collection.countDocuments({ domainId, uid, pid: { $ne: MARKER_PID }, resolved: { $ne: true } });
+        return collection.countDocuments({ domainId, uid, pid: { $ne: MARKER_PID }, resolved: false });
     }
 
     async function isSynced(domainId, uid) {

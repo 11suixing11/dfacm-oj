@@ -88,7 +88,7 @@ async function fixture({ env = {} } = {}) {
     }
     const handler = (url) => new (routes.get(url).HandlerClass)();
     return {
-        collection, routes, listeners, nav, locales, limits, recordQueries, handler,
+        collection, routes, listeners, nav, locales, limits, recordQueries, stub, handler,
     };
 }
 
@@ -171,6 +171,53 @@ test('update validates input, saves review fields and toggles resolution', async
     await remove.post('system', 1001);
     assert.equal(remove.response.body.ok, true);
     assert.equal(f.collection.docs.filter((d) => d.pid === 1001).length, 0);
+});
+
+// The mistakes page offers a "未分类" option whose value is the empty string.
+// The store rejected it, so choosing it returned "错误原因不在可选范围内。".
+test('the "unclassified" reason is storable and clearing it is allowed', async () => {
+    const f = await fixture();
+    f.listeners['record/change']({ domainId: 'system', uid: 42, pid: 1001, status: 2, _id: 'rid1' }, null, null, { key: 'end' });
+    await new Promise((resolve) => setImmediate(resolve));
+    const set = f.handler('/mistakes/update');
+    await set.post('system', 1001, '', undefined, undefined);
+    assert.equal(set.response.body.ok, true, JSON.stringify(set.response.body));
+    assert.equal(f.collection.docs.find((d) => d.pid === 1001).reason, '');
+    // Still refuses a genuinely unknown value.
+    const bad = f.handler('/mistakes/update');
+    await bad.post('system', 1001, 'nonsense', undefined, undefined);
+    assert.equal(bad.response.body.ok, false);
+});
+
+// remove() reported whether a row went away, but the handler discarded it and
+// always answered ok, claiming a deletion that never happened.
+test('removing a row that is not in the mistake book is reported, not faked', async () => {
+    const f = await fixture();
+    f.listeners['record/change']({ domainId: 'system', uid: 42, pid: 1001, status: 2, _id: 'rid1' }, null, null, { key: 'end' });
+    await new Promise((resolve) => setImmediate(resolve));
+    const absent = f.handler('/mistakes/remove');
+    await absent.post('system', 9999);
+    assert.equal(absent.response.body.ok, false);
+    assert.match(absent.response.body.message, /不在你的错题本/);
+    // Another member's row is out of reach: remove scopes on the session uid.
+    const other = f.handler('/mistakes/remove');
+    f.collection.docs.push({ domainId: 'system', uid: 99, pid: 1001, resolved: false, lastAt: new Date() });
+    await other.post('system', 1001);
+    assert.equal(other.response.body.ok, true);
+    assert.equal(f.collection.docs.some((d) => d.uid === 42), false, 'the caller\'s own row is gone');
+    assert.equal(f.collection.docs.some((d) => d.uid === 99 && d.pid === 1001), true, 'another member\'s row is untouched');
+});
+
+// /mistakes/sync ran the backfill unguarded while its two siblings caught
+// errors, so a database failure surfaced as a 500.
+test('a failing sync is reported as a message rather than thrown', async () => {
+    const f = await fixture();
+    // The backfill reads through RecordModel.getMulti first.
+    f.stub.RecordModel.getMulti = () => { throw new Error('db exploded'); };
+    const h = f.handler('/mistakes/sync');
+    await h.post('system');
+    assert.equal(h.response.body.ok, false);
+    assert.match(h.response.body.message, /同步失败/);
 });
 
 test('record/change hook collects failures live and AC resolves them', async () => {

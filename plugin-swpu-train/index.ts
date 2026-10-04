@@ -179,7 +179,12 @@ class MistakesRemoveHandler extends Handler {
     async post(domainId: string, pid: number) {
         await this.limitRate('swpu_train_update', 60, 30, `u${this.user._id}`);
         try {
-            await mistakes.remove(domainId, this.user._id, pid);
+            // remove() reports whether a row actually went away; answering ok
+            // regardless would claim a deletion that never happened.
+            if (!await mistakes.remove(domainId, this.user._id, pid)) {
+                this.response.body = { ok: false, message: '该题不在你的错题本中，无需删除。' };
+                return;
+            }
             this.response.body = { ok: true };
         } catch (e) {
             this.response.body = { ok: false, message: (e as Error).message };
@@ -190,8 +195,12 @@ class MistakesRemoveHandler extends Handler {
 class MistakesSyncHandler extends Handler {
     async post(domainId: string) {
         await this.limitRate('swpu_train_sync', 60, 1, `u${this.user._id}`);
-        const result = await runBackfill(domainId, this.user._id);
-        this.response.body = { ok: true, ...result };
+        try {
+            const result = await runBackfill(domainId, this.user._id);
+            this.response.body = { ok: true, ...result };
+        } catch (e) {
+            this.response.body = { ok: false, message: `同步失败：${(e as Error).message}` };
+        }
     }
 }
 
