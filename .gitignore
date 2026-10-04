@@ -10,3 +10,20 @@ __pycache__/
 deploy/secrets/
 qa/
 lwqq.tgz
+
+# Editor and OS cruft
+*.swp
+.idea/
+.vscode/
+
+# Theme/service-worker backups written by deploy/install-theme.sh on the server.
+# They are never in the repository, and a stray copy must not be committed
+# either: /root/.hydro/static is served by Caddy, so a *.bak-* file next to a
+# real asset is a public download.
+*.bak-*
+
+# Agent/editor session state. The operational knowledge distilled from these
+# lives in docs/ops-knowledge.md; the raw session dirs must not be committed.
+.codely/
+.codely-cli/
+.zcode/

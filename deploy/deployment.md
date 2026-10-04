@@ -4,18 +4,23 @@
 
 ## 0. 一键部署（推荐入口）
 
-`deploy/deploy.sh` 在**本地仓库**运行（Git Bash 可用）：同步插件、门面、主题与冒烟脚本 → 双端 sha256 对账 → 才执行**唯一一次** `pm2 restart hydrooj` → 等新进程就绪（≥75s）→ 在服务器上跑 `deploy/smoke.sh` 匿名冒烟电池。
+`deploy/deploy.sh` 在**本地仓库**运行（Git Bash 可用）：把全部文件上传到服务器上的临时暂存目录 → **对暂存副本**做双端 sha256 对账 → 通过后才安装到真实位置并安装主题/门面 → 再对已安装文件对账 → 才执行**唯一一次** `pm2 restart hydrooj` → 等新进程就绪（≥75s）→ 在服务器上跑 `deploy/smoke.sh` 匿名冒烟电池。
 
 ```bash
-bash deploy/deploy.sh             # 完整部署：同步 → 对账 → 重启 → 等就绪 → 冒烟
-bash deploy/deploy.sh --sync-only # 只同步+对账，不重启（适合只改静态资源）
+bash deploy/deploy.sh --stage-only # 只上传并对账暂存副本，完全不碰线上（演练用）
+bash deploy/deploy.sh --sync-only  # 再安装+对账，但不重启（适合只改静态资源）
+bash deploy/deploy.sh              # 完整部署
 ```
 
+- **先对账后安装**：早期版本先安装再对账，哈希不一致时虽然拒绝重启，但服务器已经被改动（新 CSS / 新 SW / 新插件源码），旧进程却还在提供这些新资源，且没有回退手段。现在暂存对账失败时线上完全未被触碰。
+- 暂存目录用 `mktemp -d` 随机生成并在退出时清理（早期固定的 `/tmp/swpu-deploy-stage` 可被本机低权限用户预先创建或植入符号链接）。
+- SSH 默认 `StrictHostKeyChecking=accept-new`：首次连接固定主机密钥，之后任何变更都会被拒绝（本次会话以 root 同时走 Tailscale 与公网）。应急可用 `SSH_STRICT_HOST_KEY_CHECKING=no` 临时关闭。
+- 发货清单覆盖 `landing/` **整棵树**（两个子集化 woff2 字体与整套图标）。早期清单只有 `landing/index.html`，换字体或图标必须手工跑 `install-landing.sh`，而本脚本永远不会替你做。
 - 插件文件清单直接解析第 4 节的 `cp /root/swpu-oj/<插件>/{...}` 块，文档与实际发货不会漂移；**新增插件文件必须先改本文档**。
 - 退出码：64 用法；65 双端哈希不一致（**绝不重启**）；66 本地缺文件或服务器不可达；67 新进程 75 秒内未就绪；68 冒烟有失败项。
-- 环境变量：`SSH_TARGET`（默认 `root@100.69.19.62` 走 Tailscale，断连时用 `root@107.151.246.137`）、`SSH_KEY`、`WAIT_SECONDS`、`SMOKE_HOST`。
+- 环境变量：`SSH_TARGET`（默认 `root@100.69.19.62` 走 Tailscale，断连时用 `root@107.151.246.137`）、`SSH_KEY`、`SSH_STRICT_HOST_KEY_CHECKING`、`WAIT_SECONDS`、`SMOKE_HOST`。
 - Caddyfile 与 footer 的 mongosh 迁移仍按第 7/4 节手动执行（改动频率远低于插件代码）。
-- 冒烟电池覆盖：boot 三维度服务端注入（tab/embed/oauth）、裸 /login /register 收敛、访客门禁 302、regcode 恶意 purpose 拒绝、安全头、缓存头、404 无缓存、308、Service Worker killswitch。**教训**：2026-10-04 曾因文件在重启之后才落盘，线上进程跑旧代码而磁盘哈希全对——顺序即正确性。
+- 冒烟电池覆盖：boot 三维度服务端注入（tab/embed/oauth）、裸 /login /register 收敛、访客门禁 302、regcode 恶意 purpose 拒绝、安全头、缓存头、字体与图标可达、404 无缓存、308、Service Worker killswitch。**教训**：2026-10-04 曾因文件在重启之后才落盘，线上进程跑旧代码而磁盘哈希全对——顺序即正确性。
 
 ## 1. Hydro 安装
 
@@ -55,7 +60,11 @@ bash /root/swpu-oj/deploy/install-theme.sh
 
 脚本会先剥掉两处 CSS 里所有 `==== SWPU ACM` 旧 overlay，再追加 `00-brand.css`，并把两处 `service-worker.js` 换成自注销清缓存版本。这样 UI 重建、重复执行和旧主题残留都不会覆盖最新品牌层。
 
-运行前会检查四个目标是否存在且可读写；路径或版本不对时以非零状态退出，不会跳过后报告成功。首次和重复部署都会备份，完成后校验资源。默认主题用 `deploy/set-theme-light.js` 设置，它支持空页脚配置并保留用户主题选择。
+运行前会检查四个目标是否存在且可读写；路径或版本不对时以非零状态退出，不会跳过后报告成功。完成后校验资源，**校验失败会自动回滚本次已改动的全部文件**。默认主题用 `deploy/set-theme-light.js` 设置，它支持空页脚配置并保留用户主题选择。
+
+- **备份写在资产目录之外**：备份目录默认 `/root/swpu-theme-backups`（`BACKUP_DIR` 可改）。绝不能放在 `/root/.hydro/static` 里——Caddy 用 `root *` + `try_files {path}` + `file_server` 服务该目录，任何 `*.bak-*` 都是公开可下载的。脚本会检测并拒绝这种配置。每个目标保留最近 `SWPU_THEME_BACKUP_KEEP`（默认 10）份，更早的自动清理。
+- **写入是原子的**：新内容先在目标同目录暂存，再单次 `mv` 换入，因此中断只会留下旧文件或新文件，不会留下被截断的样式表。
+- 主题备份只在两个 theme CSS 与两个 service-worker.js 上产生；手动回滚可从 `/root/swpu-theme-backups` 取对应时间戳最新的那份覆盖回去。
 
 它同时处理两处主题 CSS：
 
@@ -247,8 +256,9 @@ curl -sSI https://<域名>/ | grep -Ei 'strict-transport|x-content-type|referrer
 - [ ] 登录后 `/workbench` 与 `/mistakes` 返回 200 且出现在导航中；未登录访问被重定向到登录页。
 - [ ] 提交一份固定错误输出（WA）判题结束后，该题出现在 `/mistakes`；补题 AC 后自动标记已补题。
 - [ ] 找回密码邮件里的链接是绝对地址（`server.url` 必须是完整的 `https://域名/`，当前为 `https://swpuacm.xyz/`，**保留结尾 `/`**）。
+- [ ] 注册接口日志里的 `request.ip` 不再是 127.0.0.1（真实 IP 链路见第 6 节）。
 
-## 15. 第三方登录（GitHub）
+## 11. 第三方登录（GitHub）
 
 官方 `@hydrooj/login-with-github` 已安装。启用步骤：
 
@@ -266,12 +276,11 @@ curl -sSI https://<域名>/ | grep -Ei 'strict-transport|x-content-type|referrer
 3. 重启后品牌 `/reg` 页与原地登录弹层会自动出现「使用 GitHub 登录」按钮（按钮由服务端 `loginMethods` 注入，未配置时自动隐藏）。
 4. 已于 2026-10-03 配置完成并验证：按钮出现、`/oauth/github/login` 302 到 GitHub 授权页。凭据只存服务器 `db.system` 的 `config` 文档，**不得写入本仓库**（secret-scan 也会拦截）。
 
-## 16. 角色分组
+## 12. 角色分组
 
 `system` 域内已创建 `acmer`、`teamleader` 两个角色，权限与内置 `default` 相同；新用户注册后自动使用内置 default 角色，在「域管理 → 加域管理/管理用户」里把人分到对应角色即可。角色定义存 `db.domain` 的 `system.roles` 字段。
-- [ ] `request.ip` 不再是 127.0.0.1。
 
-## 11. 缓存策略
+## 13. 缓存策略
 
 使用 [Caddyfile.example](Caddyfile.example) 的完整处理分支，不要把缓存头放在全站范围：
 
@@ -290,7 +299,7 @@ curl -sSI https://<域名>/home.html | grep -i cache-control
 
 两个入口都应是 `no-cache`。
 
-## 17. Cloudflare 免费版接入
+## 14. Cloudflare 免费版接入
 
 背景：小厂境外线路晚高峰跨境拥塞（TCP 可握手、传输掉到数百 B/s），应用层已无优化空间。用 CF 免费版把「访客 → 跨境烂路」换成「访客 → CF 骨干 → 回源」：静态资源（字体/图标/CSS/JS）按 Caddy 的 `Cache-Control` 在边缘缓存 1 小时~7 天，动态请求由 CF 回源到台湾机（CF 边缘到源站走海外骨干，不经过拥塞的跨境段）。
 
@@ -336,7 +345,7 @@ curl -sSI https://<域名>/home.html | grep -i cache-control
 - CF 免费版对国内访客通常回落美西节点，RTT 约 150–250ms：比直连拥塞线路强一个量级，但根治仍需国内服务器 + 备案。
 - `service-worker.js` 是 kill-switch 静态文件，可能被边缘缓存至多一周，无行为影响。
 
-## 12. 备份、异机副本与恢复演练
+## 15. 备份、异机副本与恢复演练
 
 `scripts/backup-hydro.sh` 是显式执行的 Linux 包装器，不安装定时任务、不停止服务、不自动删除任何文件。需要 `hydrooj`、MongoDB Database Tools 的 `mongodump`、`zip`、`unzip`、`tar`、`flock`、`sha256sum`、`realpath`。以运行 Hydro 的同一用户执行；如使用 `HYDRO_PROFILE`，应使用与该实例相同的值。
 
@@ -366,7 +375,7 @@ bash /opt/swpu-oj/scripts/backup-hydro.sh \
 - **恢复演练（轻量版）**：每次拉取后可直接用 `Expand-Archive` / 压缩软件打开 zip 核对 `dump/`（BSON）与 `file/`（测试数据）在位；完整恢复演练仍按本节上文流程在备用实例做。
 - **应急大文件传输（深夜 SSH 批量被掐时）**：跨境链路深夜可能对 SSH 数据流整体限速（交互命令正常、scp/scp 并行全部 0 速率），而 443+代理路线实测 ~1MB/s。应急法：把文件以**不可猜测的随机名**放进 `/root/.hydro/static/`（Caddy 直出），本地 `curl --proxy <代理> -C -` 断点续传拉取，sha256 对账后**立即删除**并验证 URL 已 404。此法暴露完整数据库内容，仅限应急窗口使用。
 
-## 13. 默认只读的部署检查
+## 16. 默认只读的部署检查
 
 ```bash
 bash /opt/swpu-oj/scripts/check-deployment.sh \
@@ -380,7 +389,7 @@ bash /opt/swpu-oj/scripts/check-deployment.sh \
 - 只有显式添加 `--url` 才执行 HTTP GET，检查 `/` 与 `/home.html` 为 `200` 且带 `no-cache`；不会发验证码或提交代码。
 - `caddy adapt` 只做适配检查，不预配置模块；正式上线前的 `caddy validate` 由管理员在确认配置路径后执行。进程存在不代表判题正确，也不代表没有排队。
 
-## 14. 人工判题验收与升级回退
+## 17. 人工判题验收与升级回退
 
 在独立测试域准备一题明确的 A+B，用支持的 C++ 和 Python 各提交一份正确程序确认 AC；提交固定错误输出确认 WA、死循环确认 TLE、非法语法确认 CE。对照题目限时检查结果，确认有判题机执行、测试数据可读、沙箱限制生效。不要在正式比赛排名里运行这些测试。
 

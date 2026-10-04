@@ -316,12 +316,6 @@
   border-radius: 999px;
 }
 
-/* 原生 /login 兜底页（带 query 直达时）的验证码登录入口 */
-.theme--light #swpu-codelogin { color: #2a5caa; }
-.theme--light #swpu-codelogin:hover { color: #1e4488; text-decoration: underline; }
-.theme--dark #swpu-codelogin { color: #e9c455; }
-.theme--dark #swpu-codelogin:hover { color: #f4d47c; text-decoration: underline; }
-
 /* ---------- shared: mobile & reduced motion ---------- */
 @media (max-width: 600px) {
   .theme--dark .data-table td,

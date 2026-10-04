@@ -115,6 +115,21 @@ jobs:
             exit 1
           fi
           echo "both Cloudflare range lists agree ($(printf '%s\n' "$first" | wc -l) ranges)"
+      - name: Reject documented-but-unimplemented tuning claims
+        run: |
+          # The README advertised BBR congestion control, but no sysctl or
+          # kernel tuning exists anywhere in the repository. Claims like this
+          # are unfalsifiable for a reader and rot silently.
+          if grep -niE "\bBBR\b|拥塞控制" README.md deploy/deployment.md; then
+            echo "README/deployment.md claims kernel congestion tuning that this repository does not configure"
+            exit 1
+          fi
+          # Cloudflare auto-publishes HTTPS/SVCB records for proxied hosts; the
+          # docs say so, and the README must not contradict them.
+          if grep -n 'alpn="h3,h2"' README.md; then
+            echo "README contradicts deployment.md §17: HTTPS records are published by Cloudflare, not maintained by hand"
+            exit 1
+          fi
       - name: Check shell scripts
         run: |
           bash -n deploy/*.sh scripts/*.sh

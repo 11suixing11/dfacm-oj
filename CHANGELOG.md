@@ -1,5 +1,161 @@
 # Changelog
 
+## v1.16.0 - 2026-10-04
+
+A hardening pass over the boundaries of the customisation layer: the seams
+between Hydro and the plugins, and between the deploy scripts and the live
+server. Test count went from 136 to 192; every fix below has a regression test
+or a CI lock, and the two behavioural tests added for the boot-payload and
+Cloudflare-range fixes were confirmed to fail against the old code.
+
+### Security
+
+- **The `/reg` boot payload was assembled with `String.replace` and a string
+  replacement (`plugin-swpu-regcode`).** The replacement is JSON containing an
+  OAuth provider's `text`, and a string replacement expands `$&`, `` $` ``,
+  `$'` and `$$` — so a provider whose text contained `` $` `` spliced the
+  remaining ~400 lines of `reg.html` into the inline `<script>`. Now uses a
+  function replacer.
+- **Registered email addresses could be enumerated at request rate.** `/reg/code`
+  and `/reg/login` answer differently for a known vs unknown address, and
+  `UserModel.getByEmail` ran *before* any rate limit. Both now pass a probe
+  budget keyed on the submitted address and the real client IP first. The key
+  uses Hydro's `_handleMailLower` rather than a bare lowercase, because a
+  per-address budget keyed on the raw string is trivially evaded with `+tag`
+  variants.
+- **Theme backups were written inside the directory Caddy publishes.**
+  `install-theme.sh` used `mktemp "<target>.bak-…"`, which for the static theme
+  and service-worker targets means `/root/.hydro/static` — served by
+  `root *` + `try_files {path}` + `file_server`. Every `*.bak-*` file was a
+  public download and nothing pruned them. Backups now live in `BACKUP_DIR`
+  (default `/root/swpu-theme-backups`), and the script refuses to run if that
+  directory is inside the served tree.
+- **The service-account purge deleted far more than the RP calculation reads.**
+  `createSanitize` issued `deleteMany({uid:{$in:[3]}})` with no `docType`, so
+  every hour it removed every `document.status` row for the judge account
+  across all domains and all document types — problem statuses, but also
+  training enrolments. Now scoped to `docType: 10`. Two further guards: the
+  target uids are verified against the user collection at boot and the purge is
+  refused if one does not look like a service account, and
+  `SWPU_SERVICE_UIDS_DRYRUN=1` turns it into a `countDocuments` report.
+- **Two `innerHTML` sinks fed by data the page did not fully control.**
+  `reg.html` concatenated an OAuth provider's icon *and* text into one
+  assignment; the icon is now parsed as XML with scripts, event handlers, style
+  and external references stripped, and the label uses `textContent`. The
+  landing page's welcome line concatenated the scraped username; it is built
+  from nodes now, with entities decoded once so the text is neither raw nor
+  double-escaped.
+- **Five state-changing POSTs had no CSRF token** (`/reg/complete`,
+  `/reg/login`, `/mistakes/update`, `/mistakes/remove`, `/shop/redeem`,
+  `/manage/shop`). See "Known gaps" below.
+
+### Data integrity
+
+- **A failed badge grant destroyed the member's points.** `redeem()` debited
+  the ledger and *then* called `userBadgeAdd`; if the badge plugin threw, the
+  error surfaced while the debit was already irrecoverable. A failure now
+  writes a `refund` ledger row and reports that the points came back.
+- **Two different badges could be bought with the same balance.** The
+  `{uid, ref}` unique key only prevents buying the same badge twice; balance was
+  read, compared and then inserted with nothing in between. Redemptions are now
+  serialised per uid, which is correct for the single-instance pm2 deployment
+  the plugin already assumes — the comment says so, since several app instances
+  would need a multi-node lock or a transaction.
+- **Shop business errors never reached the member.** `ShopError` messages such
+  as "积分不足：当前 12 分，兑换需 50 分。" were never caught, so every failure
+  was a generic 500. Both clients are plain form POSTs, where a JSON body is
+  not rendered either — Koa's redirect wins. A failed POST now redirects back
+  with the reason in the query string and the templates render it.
+- **The mistake book reported deletions that never happened, and its
+  "unclassified" option always errored.** `MistakesRemoveHandler` discarded
+  `remove()`'s return value; `/mistakes/sync` had no try/catch while its
+  siblings did; and the page's `未分类` option (value `""`) was rejected by the
+  store's reason list.
+- **The mistake book's "open" filter could not use its index.** It matched
+  `resolved: {$ne: true}`, and `$ne` is not a usable range bound, so the
+  `{domainId, uid, resolved, lastAt}` index could not serve the query and every
+  page sorted in memory. Every write path already stores an explicit boolean, so
+  `false` is equivalent and indexable.
+- **The shop backfill scanned without a limit**, awaiting a problem lookup plus
+  an insert per unique record. Bounded now, and truncation is reported rather
+  than silent — the idempotency key makes a re-run resume the work.
+
+### Deployment
+
+- **`deploy.sh` installed before it verified.** On a hash mismatch it correctly
+  refused to restart, but the server had already been modified: new brand CSS,
+  new service-worker killswitch and new plugin sources on disk while the old
+  process kept serving, with no way back. The run is now staged — upload into a
+  `mktemp -d` directory, hash both ends, and only then install. A staging
+  mismatch leaves the live site untouched. New `--stage-only` rehearses the
+  upload without touching anything.
+- **The manifest shipped `landing/index.html` and nothing else**, so the two
+  subsetted woff2 fonts and the seven icons were never delivered by the
+  orchestrator: changing one required a manual `install-landing.sh` that
+  `deploy.sh` would never run. The whole `landing/` tree is now enumerated,
+  `install-landing.sh` runs as part of activation, and `smoke.sh` asserts the
+  fonts and icons are actually reachable rather than merely uploaded.
+- **`install-theme.sh` had forward-only backups and non-atomic writes.** A run
+  failing post-write verification left four rewritten targets with no way back,
+  and `cat >>` interrupted mid-write left truncated CSS. Content is now staged
+  in the target's own directory and swapped with one rename, and an `EXIT` trap
+  restores everything already touched. Retention is bounded by
+  `SWPU_THEME_BACKUP_KEEP` (default 10).
+- The staging path was the fixed `/tmp/swpu-deploy-stage`, which a local
+  unprivileged user can pre-create or symlink before extraction on a root box.
+  SSH now defaults to `StrictHostKeyChecking=accept-new`; this session runs as
+  root over both Tailscale and a public address. `install-landing.sh` gained
+  `nullglob`.
+
+### Correctness and honesty
+
+- **The 蓝桥杯 card's four differently-named stages were anchors that all
+  pointed at one training.** Hydro exposes no per-stage URL for a DAG node, so
+  each promised a destination and then opened the route entry page. They are now
+  plain labels with the route link as the sole affordance.
+- **The landing session probe used a fixed 48-character lookback** to find
+  `href="/user/"`. An upstream template adding one attribute between `href` and
+  `class` would silently degrade every page to the guest view. It now walks back
+  to the enclosing anchor tag.
+- **The README advertised BBR congestion control**, which no file in the
+  repository configures, and DNS-layer HTTPS records, which `deployment.md`
+  states Cloudflare publishes automatically. Both claims corrected; CI now
+  rejects their reintroduction, because a tuning claim nobody can verify rots
+  silently.
+- `deployment.md` sections were numbered `0..10, 15, 16, 11, 17, 12, 13, 14,
+  18` — §15/§16 were appended later and §11 got pushed down. Renumbered by
+  document order, and an orphaned checklist item moved out of 角色分组 back to
+  the verification list it belongs to.
+- Removed a byte-identical duplicate block in `theme/00-brand.css` and the dead
+  `data-count` attributes on the landing stats — nothing read them, and
+  `data-count="4298"` had drifted from the visible `4,295` while a test
+  protected the stale value.
+
+### CI
+
+Each new check covers something the production run does but CI did not, or a
+regression class CI had no lock for: `shellcheck -S warning` (`bash -n` only
+parses), `caddy adapt --validate` on `Caddyfile.example` (`check-deployment.sh`
+already runs this on the live config, and the file had uncommitted changes),
+byte-identical Cloudflare range lists between the global `trusted_proxies`
+block and the `@fromcf` matcher, the `@hidejudge` 404, and reintroduction locks
+for both injection classes above.
+
+### Known gaps
+
+- **CSRF tokens are still not implemented.** Five state-changing POSTs across
+  three plugins remain unprotected. Adding a correct token means touching three
+  independently-shipped addons and their templates against a Hydro session API
+  this repository does not vendor, so it was deliberately left out of this pass
+  rather than half-done. The concrete exposure, in order: `/manage/shop` (an
+  admin could be induced to change badge pricing), `/shop/redeem` (points are
+  spent, though the per-badge unique key limits it to one redemption each),
+  `/mistakes/remove` and `/mistakes/update`.
+- `scripts/subset_fonts.py` needs font TTFs that are not committed. The
+  download and regeneration steps are now documented in
+  `landing/FONTS-LICENSE.md`, including the caveat that the glyph set is a
+  static scan of the HTML, so new copy needs a re-run.
+
 ## v1.15.0 - 2026-10-04
 
 ### Fixed
