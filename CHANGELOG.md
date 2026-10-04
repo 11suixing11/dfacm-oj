@@ -1,5 +1,17 @@
 # Changelog
 
+## v1.14.0 - 2026-10-04
+
+### Added
+
+- **Self-enforcing service-account hygiene (`plugin-swpu-ops`).** The v1.12.0 incident root cause — the RP script scores `document.status`, not `record`, and `calcLevel` writes the stored rank without filtering `join`, so one leftover solved-status row for the judge service account (hydsvc-0074) resurrected phantom RP and displaced every real member — is now guarded by the system instead of a human memory item: every RP recalculation purges service-account rows from `document.status` before computing (aborting the run, not computing on a dirty source), the live hook deletes a service account's just-written status row on sight, and the purge list is configurable via `SWPU_SERVICE_UIDS` (default `3`, empty disables). The judge account's `record` rows are deliberately left alone — they are debugging evidence and do not feed RP.
+- **Hourly RP sweep (`rp-sweep.cjs`).** Mutations that bypass the record flow — contest deletion, admin edits, manual database fixes — fire no events, and Hydro's own `task.daily` only recomputes at 03:00. The sweep reruns the RP script for all domains every hour (3-minute startup delay past the 75-second readiness window, pm2 instance 0 only, `SWPU_RP_SWEEP=0` to disable, serialized with the live path through a shared lock so two RP computations never overlap), bounding out-of-band staleness to one hour.
+- **`swpuRpSweep` admin script** — `hydrooj cli script swpuRpSweep '{}'` performs an immediate purge + full-domain recalculation after out-of-band data fixes, replacing the hand-typed `rp` CLI invocation.
+
+### Removed
+
+- The landing page's “最快一次评测 2.5ms” stat. The 2.5ms came from a judge test submission whose records were removed in the v1.12.0 cleanup, leaving the headline number unattributable to any real member; the stats row now shows three cells. `scripts/landing.test.cjs` locks the removal.
+
 ## v1.13.0 - 2026-10-04
 
 ### Added

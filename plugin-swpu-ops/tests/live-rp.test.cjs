@@ -1,6 +1,7 @@
 const assert = require('node:assert/strict');
 const { test } = require('node:test');
 const { createLiveRp } = require('../live-rp.cjs');
+const { createRpLock } = require('../rp-sweep.cjs');
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const script = { run: async ({ domainId }) => ({ domainId }) };
@@ -119,4 +120,91 @@ test('dispose cancels queued work and ignores future events, including during a 
     queued.stop();
     t.mock.timers.tick(100);
     assert.equal(count, 1);
+});
+
+test('a service-account record purges its status row on sight and still schedules a run', async () => {
+    const purged = [];
+    const live = createLiveRp({
+        debounceMs: 10, script,
+        serviceUids: [3],
+        purgeDoc: async (domainId, uid, pid) => { purged.push([domainId, uid, pid]); return { deletedCount: 1 }; },
+    });
+    live.hook({ domainId: 'system', status: 1, uid: 3, pid: 4326 });
+    assert.deepEqual(purged, [['system', 3, 4326]]);
+    await sleep(40);
+    assert.deepEqual(live.runs.map((r) => r.domainId), ['system']);
+    live.stop();
+});
+
+test('non-service records never trigger a purge', async () => {
+    const purged = [];
+    const live = createLiveRp({
+        debounceMs: 10, script, serviceUids: [3],
+        purgeDoc: async (...args) => { purged.push(args); },
+    });
+    live.hook({ domainId: 'system', status: 1, uid: 2, pid: 4326 });
+    assert.deepEqual(purged, []);
+    await sleep(40);
+    live.stop();
+});
+
+test('an immediate purge failure never blocks the recalculation path', async () => {
+    const live = createLiveRp({
+        debounceMs: 10, script, serviceUids: [3],
+        purgeDoc: async () => { throw new Error('boom'); },
+    });
+    live.hook({ domainId: 'system', status: 1, uid: 3, pid: 1 });
+    await sleep(40);
+    assert.equal(live.runs.length, 1);
+    live.stop();
+});
+
+test('every run purges service-account rows before recomputing', async () => {
+    const order = [];
+    const live = createLiveRp({
+        debounceMs: 10,
+        script: { run: async ({ domainId }) => { order.push('rp:' + domainId); } },
+        sanitize: async () => { order.push('purge'); return { deletedCount: 2 }; },
+    });
+    live.hook({ domainId: 'system', status: 1 });
+    live.hook({ domainId: 'poj', status: 1 });
+    await sleep(40);
+    assert.deepEqual(order, ['purge', 'rp:system', 'rp:poj']);
+    live.stop();
+});
+
+test('a failed pre-run sanitize aborts the run and requeues the domains', async () => {
+    const ran = [];
+    let healthy = false;
+    const live = createLiveRp({
+        debounceMs: 10,
+        script: { run: async () => { ran.push(1); } },
+        sanitize: async () => {
+            if (!healthy) throw new Error('db down');
+            return { deletedCount: 0 };
+        },
+    });
+    live.hook({ domainId: 'system', status: 1 });
+    await sleep(40);
+    assert.deepEqual(ran, [], 'must not compute on a possibly dirty source');
+    assert.ok(live.failures.some((f) => /db down/.test(f.message || '')));
+    healthy = true;
+    await sleep(60);
+    assert.deepEqual(ran, [1], 'the requeued domains retry after the purge recovers');
+    live.stop();
+});
+
+test('the shared lock keeps live runs out of a concurrent RP computation', async () => {
+    const lock = createRpLock();
+    let release;
+    const blocker = lock(async () => { await new Promise((r) => { release = r; }); });
+    const live = createLiveRp({ debounceMs: 10, script, lock });
+    live.hook({ domainId: 'system', status: 1 });
+    await sleep(40);
+    assert.equal(live.runs.length, 0, 'queued behind the external RP work');
+    release();
+    await blocker;
+    await sleep(30);
+    assert.equal(live.runs.length, 1);
+    live.stop();
 });

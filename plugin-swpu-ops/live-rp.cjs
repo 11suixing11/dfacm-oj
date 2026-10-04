@@ -5,6 +5,13 @@
 // night. This hook watches judged submissions and reruns the domain RP script
 // shortly after, debounced so a contest burst triggers at most one run per
 // window. Registered on pm2 instance 0 only; the compute is idempotent.
+//
+// Service accounts (the judge daemon's hydsvc-0074) are special-cased: the RP
+// script scores `document.status`, so an AC by such an account writes a
+// solved-status row that would resurrect a phantom rank on the very
+// recalculation this hook triggers (the v1.12.0 incident). The hook deletes
+// that row on sight, and every run purges any service-account rows before
+// computing — see rp-sweep.cjs for the shared helpers.
 
 const RP_DEBOUNCE_MS = 30000;
 const FINAL_STATUSES = new Set([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 30, 31, 32, 33]);
@@ -23,6 +30,12 @@ function createLiveRp(options = {}) {
         // Injectable for tests; defaults to Hydro's global script registry.
         script = null,
         instance = process.env.NODE_APP_INSTANCE,
+        // Service-account hygiene: uids whose status rows must never feed RP.
+        serviceUids = [],
+        purgeDoc = null,
+        sanitize = null,
+        // Shared with the hourly sweep so two RP computations never overlap.
+        lock = null,
     } = options;
     if (!Number.isSafeInteger(debounceMs) || debounceMs < 1) throw new TypeError('debounceMs must be a positive integer');
     const runs = [];
@@ -50,23 +63,43 @@ function createLiveRp(options = {}) {
         timer = null;
         if (stopped || running) return;
         running = true;
-        const domains = [...pending];
-        pending.clear();
         try {
-            const rp = resolveScript();
-            if (!rp || typeof rp.run !== 'function') return;
-            for (const domainId of domains) {
-                if (stopped) break;
-                const startedAt = Date.now();
-                try {
-                    await rp.run({ domainId }, () => {});
-                    remember(runs, { domainId, at: new Date().toISOString(), durationMs: Date.now() - startedAt });
-                    logger.info('rp recalculated:', domainId);
-                } catch (e) {
-                    remember(failures, { domainId, message: e && e.message });
-                    logger.error('rp recalculation failed:', e);
+            const work = async () => {
+                const domains = [...pending];
+                pending.clear();
+                const rp = resolveScript();
+                if (!rp || typeof rp.run !== 'function') return;
+                if (sanitize) {
+                    try {
+                        const purge = await sanitize();
+                        if (purge && purge.deletedCount > 0) logger.info('purged service-account status rows:', purge.deletedCount);
+                    } catch (e) {
+                        // Requeue the domains: the debounced retry (or the
+                        // hourly sweep) recomputes once the source is clean —
+                        // never score a document.status that may still hold
+                        // service-account rows.
+                        for (const domainId of domains) pending.add(domainId);
+                        throw e;
+                    }
                 }
-            }
+                for (const domainId of domains) {
+                    if (stopped) break;
+                    const startedAt = Date.now();
+                    try {
+                        await rp.run({ domainId }, () => {});
+                        remember(runs, { domainId, at: new Date().toISOString(), durationMs: Date.now() - startedAt });
+                        logger.info('rp recalculated:', domainId);
+                    } catch (e) {
+                        remember(failures, { domainId, message: e && e.message });
+                        logger.error('rp recalculation failed:', e);
+                    }
+                }
+            };
+            if (lock) await lock(work);
+            else await work();
+        } catch (e) {
+            remember(failures, { domainId: '(sanitize)', message: e && e.message });
+            logger.error('rp run aborted before recalculation:', e);
         } finally {
             running = false;
             // Changes arriving during a slow run become one later run per domain.
@@ -80,6 +113,13 @@ function createLiveRp(options = {}) {
         if (stopped || (instance !== undefined && instance !== '0')) return;
         if (!rdoc || !FINAL_STATUSES.has(rdoc.status) || (body && body.key !== 'end')) return;
         if (rdoc.uid <= 0 || rdoc.pid <= 0 || RESERVED_CONTESTS.has(String(rdoc.contest))) return;
+        if (purgeDoc && serviceUids.includes(rdoc.uid)) {
+            // A service account just finished judging: its solved-status row is
+            // the ghost-RP seed. Delete it now; the pre-run sanitize covers the
+            // ordering race where the row lands after this event.
+            Promise.resolve(purgeDoc((rdoc && rdoc.domainId) || 'system', rdoc.uid, rdoc.pid))
+                .catch((e) => logger.error('service psdoc purge failed:', e));
+        }
         pending.add((rdoc && rdoc.domainId) || 'system');
         schedule();
     }

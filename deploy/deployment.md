@@ -103,7 +103,7 @@ pm2 restart hydrooj
 
 ```bash
 mkdir -p /root/.hydro/addons/swpu-ops
-cp /root/swpu-oj/plugin-swpu-ops/{index.ts,operations.cjs,report.cjs,live-rp.cjs,package.json} \
+cp /root/swpu-oj/plugin-swpu-ops/{index.ts,operations.cjs,report.cjs,live-rp.cjs,rp-sweep.cjs,package.json} \
    /root/.hydro/addons/swpu-ops/
 mkdir -p /root/.hydro/addons/swpu-ops/node_modules
 ln -sfn /usr/local/share/.config/yarn/global/node_modules/hydrooj \

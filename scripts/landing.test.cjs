@@ -43,8 +43,9 @@ test('landing wiring: swap targets, detection marker and stats exist in shipped 
     assert.ok(html.includes("addEventListener('pageshow'"), 'bfcache restore must re-probe login state');
     assert.ok(html.includes('data-count="4298"'), 'problem count must not regress');
     assert.ok(html.includes('data-count="29"'), '29 selectable languages');
-    assert.ok(html.includes('data-count="2.5"'), 'fastest judge run is 2.5ms now');
+    assert.ok(!html.includes('data-count="2.5"'), 'the judge-sourced 2.5ms stat must stay gone');
     assert.ok(!html.includes('data-count="8.1"'), 'stale 8.1ms stat must be gone');
+    assert.ok(!html.includes('最快一次评测'), 'the fastest-run cell was removed — do not reintroduce an unattributable headline stat');
 });
 
 class El {

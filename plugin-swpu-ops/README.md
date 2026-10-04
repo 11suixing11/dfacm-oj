@@ -1,12 +1,15 @@
-# swpu-ops — 管理员训练周报、判题健康摘要与 RP 准实时重算
+# swpu-ops — 管理员训练周报、判题健康摘要与 RP 自动重算
 
-这是 Hydro **5.0.7** 的小型后台 addon。注册两个只读管理员报表脚本，以及一个可关闭的事件驱动 RP 重算钩子；不添加前端页面、公共 HTTP 接口或迁移逻辑。
+这是 Hydro **5.0.7** 的小型后台 addon。注册两个只读管理员报表脚本、一个立即全域重算 RP 的管理脚本，以及一组可关闭的 RP 自动重算机制（事件驱动的准实时重算 + 每小时清扫 + 服务号状态自洁）；不添加前端页面、公共 HTTP 接口或迁移逻辑。
 
 ## 能做什么
 
 - `swpuWeeklyReport`：按域、提交时间和可选小组生成 UTF-8 BOM 的 CSV 及 Markdown。包含每个 UID 的提交数、本期不同 AC 题数、新增 AC 题数、活跃天数、WA/TLE/MLE/OLE/RE/CE/SE、未结束提交及其他状态。
 - `swpuHealthSummary`：读取原生 `task` / `record` 集合，生成 Markdown 及 JSON，区分尚未领取的任务队列、当前未结束提交、近期结果分布和较长时间未结束的原提交。
 - **RP 准实时重算**（`live-rp.cjs`）：监听 `record/change` 的最终结果，排除评测过程、自测和数据生成，30 秒后重算对应域。插件内始终串行执行，慢计算期间的新事件合并为下一轮，每域只补算一次；卸载后停止排队。只在 pm2 instance 0（或未设置实例号）注册，会通过 Hydro RP 脚本更新排名。设置环境变量 `SWPU_LIVE_RP=0` 并重启可关闭。
+- **RP 每小时清扫**（`rp-sweep.cjs`）：删比赛、管理页编辑、直接改库等绕过判题流程的变动不触发任何事件，原生 `task.daily` 又只在 03:00 重算——清扫在启动 3 分钟后（避开 75 秒就绪窗口）及此后每小时执行一次"服务号自洁 + 全域 RP 重算"，把这类漂移的自愈时间压缩到 1 小时内。与准实时重算共享同一把锁，两个 RP 计算永不并发。设置 `SWPU_RP_SWEEP=0` 可单独关闭。
+- **服务号自洁（幽灵 RP 免疫）**：RP 脚本的打分依据是 `document.status` 而非 `record`，且 calcLevel 写入的存储排名不过滤 `join`——评测机服务号（hydsvc-0074，uid 3）只要在 `document.status` 留下一条解题状态，下次重算就会复活幽灵 RP 并把真人排名整体挤后一位（v1.12.0 事故）。现在每次 RP 重算前都会 `deleteMany` 掉服务号的全部状态行，实时钩子还会在服务号终态记录出现的瞬间删除对应状态行；这条 v1.12.0 的手工运维铁律由此变成系统自动执行。服务号列表用 `SWPU_SERVICE_UIDS` 配置（逗号分隔 uid，默认 `3`，留空关闭自洁）。
+- `swpuRpSweep`：立即执行一次"服务号自洁 + 全域重算"，用于绕过应用的数据库修补之后马上纠正排名，不必等清扫周期。
 
 RP 的本地成功/失败记录各保留最近 100 条，成功记录包含耗时。串行保证仅覆盖本插件的调用，原生每日 RP 任务及管理员手动调用仍独立运行；大站应结合实际耗时决定是否开启事件重算。
 
@@ -16,7 +19,7 @@ RP 的本地成功/失败记录各保留最近 100 条，成功记录包含耗�
 
 本仓库不会自动连接或修改线上实例。以下是后续在测试环境验证、再由管理员部署时使用的操作说明。
 
-1. 将整个目录放到 `/root/.hydro/addons/swpu-ops`（其他服务器账户请调整路径）。运行文件必须包含 `index.ts`、`operations.cjs`、`report.cjs`、`live-rp.cjs`、`package.json`。
+1. 将整个目录放到 `/root/.hydro/addons/swpu-ops`（其他服务器账户请调整路径）。运行文件必须包含 `index.ts`、`operations.cjs`、`report.cjs`、`live-rp.cjs`、`rp-sweep.cjs`、`package.json`。
 2. 让 addon 复用服务器已经安装的 `hydrooj` 包，不要为此安装一整套新 Hydro。例如：
 
    ```bash
@@ -39,7 +42,11 @@ hydrooj cli script swpuWeeklyReport '{}'
 hydrooj cli script swpuWeeklyReport '{"domainId":"system","since":"2026-09-21","until":"2026-09-28","group":"2026级新生"}'
 
 hydrooj cli script swpuHealthSummary '{"domainId":"system","staleMinutes":10}'
+
+hydrooj cli script swpuRpSweep '{}'
 ```
+
+`swpuRpSweep` 无参数。先清服务号在 `document.status` 的全部残留，再对每个域重算 RP（含等级与排名分配）；返回 `{recalculated, failures}`，`recalculated:false` 表示当前有另一个 RP 计算正在执行或脚本注册缺失，稍后重跑即可。绕过应用修改数据（删比赛、清理状态行）之后运行一次，可立即恢复排名一致。
 
 周报参数：
 
