@@ -99,8 +99,12 @@ jobs:
       - name: Check the reverse proxy config parses and stays internally consistent
         run: |
           # check-deployment.sh runs this on the server; CI must not be the only
-          # place it is skipped.
-          caddy adapt --validate --config deploy/Caddyfile.example > /dev/null
+          # place it is skipped. The runner image ships no caddy, so fetch the
+          # official static binary first (same endpoint as caddyserver.com's
+          # custom-download page; verified against Caddyfile.example on 2.11.6).
+          curl -sSL "https://caddyserver.com/api/download?os=linux&arch=amd64" -o caddy
+          chmod +x caddy
+          ./caddy adapt --validate --config deploy/Caddyfile.example > /dev/null
           # The judge service account must stay hidden.
           grep -q "@hidejudge path /user/3" deploy/Caddyfile.example
           # Cloudflare's ranges appear twice: the global trusted_proxies block
