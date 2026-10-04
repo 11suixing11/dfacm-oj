@@ -71,13 +71,36 @@ class El {
         this.attrs = href === undefined ? {} : { href };
         this.title = '';
         this._innerHTML = '';
+        this.tagName = '';
+        this.childNodes = [];
     }
     get innerHTML() { return this._innerHTML; }
-    set innerHTML(v) { this._innerHTML = String(v); }
+    set innerHTML(v) {
+        this._innerHTML = String(v);
+        // Assigning innerHTML replaces the children in a real DOM.
+        this.childNodes = [];
+        if (this._innerHTML === '') this.textContent = '';
+    }
+    appendChild(node) { this.childNodes.push(node); return node; }
     setAttribute(name, value) { this.attrs[name] = String(value); }
     getAttribute(name) {
         return Object.prototype.hasOwnProperty.call(this.attrs, name) ? this.attrs[name] : null;
     }
+    // Serialize the constructed tree so assertions can read it like markup.
+    toHTML() {
+        if (!this.childNodes.length) return this._innerHTML || escapeText(this.textContent);
+        return this.childNodes.map((n) => (n.tagName
+            ? `<${n.tagName} href="${n.getAttribute('href') || ''}">${n.toHTML()}</${n.tagName}>`
+            : escapeText(n.textContent))).join('');
+    }
+}
+
+function escapeText(value) {
+    return String(value).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+}
+
+function textNode(text) {
+    return { tagName: '', textContent: String(text) };
 }
 
 const GUEST_HELP = '第一次来？<a href="#start">查看新生入门指引</a><span>已有账号 <a href="/reg?tab=pwd">登录</a></span>';
@@ -104,7 +127,11 @@ async function runPage({ page, pages, cached } = {}) {
     let call = 0;
     const handlers = {};
     const context = vm.createContext({
-        document: { querySelector: (sel) => els[sel] || null },
+        document: {
+            querySelector: (sel) => els[sel] || null,
+            createElement: (tag) => { const el = new El(''); el.tagName = tag; return el; },
+            createTextNode: textNode,
+        },
         sessionStorage: {
             getItem: (k) => (store.has(k) ? store.get(k) : null),
             setItem: (k, v) => store.set(k, String(v)),
@@ -163,12 +190,70 @@ test('logged-in SSR page swaps nav to username + workbench and caches the sessio
     assert.equal(els['#mmenu a[href="/reg?tab=pwd"]'].getAttribute('href'), '/user/5');
     assert.equal(els['#mmenu a[href="/reg"]'].textContent, '工作台');
     assert.equal(els['#mmenu a[href="/reg"]'].getAttribute('href'), '/workbench');
-    assert.ok(els['.hero-help'].innerHTML.includes('欢迎回来'));
-    assert.ok(els['.hero-help'].innerHTML.includes('e2etest'));
-    assert.ok(els['.hero-help'].innerHTML.includes('/workbench'));
+    assert.ok(els['.hero-help'].toHTML().includes('欢迎回来'));
+    assert.ok(els['.hero-help'].toHTML().includes('e2etest'));
+    assert.ok(els['.hero-help'].toHTML().includes('/workbench'));
     const saved = JSON.parse(store.get('swpu-me'));
     assert.equal(saved.uid, 5);
     assert.equal(saved.name, 'e2etest');
+});
+
+// The username is scraped out of server-rendered markup with nm.indexOf('<'),
+// so a name containing a tag truncates to empty rather than reaching the DOM.
+// That truncation is load-bearing for safety, so lock it: the help line must
+// not be repainted at all, and the nav falls back to a neutral label.
+test('a username containing markup is dropped rather than inserted', async () => {
+    const page = [
+        '<li class="nav__list-item"><a href="/p" class="nav__item">题库</a></li>',
+        '<li class="nav__list-item"><a href="/user/7" class="nav__item"><img src=x onerror=alert(1)></a></li>',
+    ].join('');
+    const { els } = await runPage({ page });
+    assert.equal(els['#nav a.login'].textContent, '我的主页', 'falls back to a neutral label');
+    assert.equal(els['#nav a.login'].getAttribute('href'), '/user/7');
+    // The welcome line is only painted for a non-empty name, so the guest
+    // markup stays and no <img> can be constructed from the username.
+    assert.equal(els['.hero-help'].toHTML(), GUEST_HELP);
+    assert.ok(!html.includes("help.innerHTML='欢迎回来"), 'the username must never be concatenated into markup');
+});
+
+// An upstream template change that inserts attributes between href and class
+// used to break detection, because the probe looked at a fixed-length window.
+test('detection survives a longer anchor tag than the old 48-character window', async () => {
+    const page = [
+        '<li class="nav__list-item"><a href="/p" class="nav__item">题库</a></li>',
+        '<li class="nav__list-item"><a data-foo="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" href="/user/42" title="a very long title indeed" class="nav__item">longtag</a></li>',
+    ].join('');
+    const { els, store } = await runPage({ page });
+    assert.equal(els['#nav a.login'].textContent, 'longtag');
+    assert.equal(els['#nav a.login'].getAttribute('href'), '/user/42');
+    assert.equal(JSON.parse(store.get('swpu-me')).uid, 42);
+    assert.ok(!html.includes('substring(k-48'), 'the fixed-length lookback window must stay gone');
+});
+
+test('HTML entities in a username are decoded once, not double-escaped', async () => {
+    const page = [
+        '<li class="nav__list-item"><a href="/p" class="nav__item">题库</a></li>',
+        '<li class="nav__list-item"><a href="/user/8" class="nav__item">a&amp;b &lt;c&gt;</a></li>',
+    ].join('');
+    const { els } = await runPage({ page });
+    assert.equal(els['#nav a.login'].textContent, 'a&b <c>');
+    const help = els['.hero-help'].toHTML();
+    assert.ok(help.includes('a&amp;b &lt;c&gt;'), help);
+    assert.ok(!help.includes('&amp;amp;'), 'must not double-escape');
+});
+
+// Two routes exist, so both ids must stay internally consistent.
+test('each training route id is used consistently across markup and script', () => {
+    const byId = new Map();
+    for (const m of html.matchAll(/\/training\/([0-9a-f]{24})/g)) {
+        byId.set(m[1], (byId.get(m[1]) || 0) + 1);
+    }
+    assert.equal(byId.size, 2, `expected exactly two routes, got ${[...byId.keys()].join(', ')}`);
+    const [entry, contest] = [...byId.keys()].sort((a, b) => byId.get(b) - byId.get(a));
+    assert.ok(byId.get(entry) >= 4, 'the entry route is linked from several places');
+    assert.equal(byId.get(contest), 1, 'the contest route has a single entry link');
+    assert.ok(html.includes(`var ROUTE_URL='/training/${entry}'`), 'the script constant must match the entry route');
+    assert.ok(html.includes(`var url='/training/${entry}'`), 'the route map must match the entry route');
 });
 
 test('guest SSR page keeps the registration UI and drops any stale cache', async () => {

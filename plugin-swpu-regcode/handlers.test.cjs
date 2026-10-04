@@ -306,10 +306,33 @@ test('strict contest registration reports account creation separately from block
 test('campus IP and site mail ceilings are explicit, while email cooldown uses normalized key', async () => {
     const f = await fixture(); await f.issue('a.b+tag@school.example', 'reg');
     assert.deepEqual(f.limits, [
+        // Existence probes are throttled before the lookup, not after.
+        ['regcode_probe_ip', 3600, 200, '192.0.2.1'],
+        ['regcode_probe_mail', 3600, 200, 'ab@school.example'],
         ['regcode_send', 60, 1, 'ab@school.example'],
         ['regcode_send_ip', 3600, 200, '192.0.2.1'],
         ['regcode_send_global', 3600, 500, 'site'],
     ]);
+});
+
+// /reg/code and /reg/login both answer differently for a registered vs an
+// unregistered address, so the lookup must sit behind a throttle.
+test('an exhausted probe budget hides whether an address is registered', async () => {
+    for (const [url, purpose] of [['/reg/code', 'reg'], ['/reg/code', 'login'], ['/reg/login', 'verify']]) {
+        const f = await fixture(); f.user(42);
+        const h = f.handler(url);
+        // Simulate an exhausted probe budget: limitRate throws, as Hydro's does.
+        h.limitRate = async (action) => {
+            if (action.startsWith('regcode_probe')) { const e = new Error('Rate limit exceeded'); e.status = 429; throw e; }
+        };
+        try {
+            if (purpose === 'verify') await h.post('system', 'ab@school.example', '000000');
+            else await h.post('system', 'ab@school.example', purpose);
+        } catch (e) { assert.equal(e.status, 429); }
+        // The generic throttle error must replace the existence verdict.
+        assert.doesNotMatch(JSON.stringify(h.response.body || {}), /已注册|未注册/);
+        assert.equal(f.mails.length, 0);
+    }
 });
 
 test('loopback proxy peer falls back to X-Forwarded-For for limits and login records', async () => {
@@ -318,7 +341,7 @@ test('loopback proxy peer falls back to X-Forwarded-For for limits and login rec
     send.request = { ip: '127.0.0.1', headers: { 'x-forwarded-for': '198.51.100.9, 10.0.0.1' } };
     await send.post('system', 'ab@school.example', 'login');
     assert.equal(send.response.body.ok, true);
-    assert.deepEqual(f.limits[1], ['regcode_send_ip', 3600, 200, '198.51.100.9']);
+    assert.deepEqual(f.limits[3], ['regcode_send_ip', 3600, 200, '198.51.100.9']);
     const login = f.handler('/reg/login');
     login.request = { ip: '127.0.0.1', headers: { 'x-forwarded-for': '198.51.100.9' } };
     await login.post('system', 'ab@school.example', f.mails[0].code);

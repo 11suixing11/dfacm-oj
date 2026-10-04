@@ -86,6 +86,20 @@ async function limitVerification(handler: Handler, mailKey: string) {
         positiveLimit(SystemModel.get('limit.regcode_verify_account'), DEFAULTS.verifyAccountMinute), mailKey);
 }
 
+// Both /reg/code and /reg/login answer differently depending on whether the
+// address exists, so UserModel.getByEmail must never be reachable at request
+// rate. Keyed on the submitted address and the real client IP - never on the
+// resolved account - so the budget cannot be aimed at one victim, and kept
+// separate from the send/verify counters so probing cannot silently eat a
+// legitimate user's own quota.
+async function limitProbe(handler: Handler, mail: string) {
+    const budget = positiveLimit(SystemModel.get('limit.regcode_send_ip'), DEFAULTS.sendIpHourly);
+    // Hydro's canonical mail normalization, not a bare lowercase: a per-address
+    // budget keyed on the raw string would be trivially evaded with +tag variants.
+    await handler.limitRate('regcode_probe_ip', 3600, budget, getClientIp(handler));
+    await handler.limitRate('regcode_probe_mail', 3600, budget, UserModel._handleMailLower(mail));
+}
+
 // OplogModel.log copies handler.args. Remove the one-time secret before logging.
 async function authAudit(handler: Handler, type: string, uid: number) {
     const originalArgs = handler.args;
@@ -139,6 +153,7 @@ class RegCodeHandler extends Handler {
         }
         const mode: CodePurpose = purpose === 'login' ? 'login' : 'reg';
         if (mode === 'reg' && !checkRegistration(this)) return;
+        await limitProbe(this, mail);
         const registered = await UserModel.getByEmail('system', mail);
         if (mode === 'reg' && registered) {
             this.response.body = { ok: false, message: '该邮箱已注册过账号，请直接登录或找回密码。' };
@@ -285,6 +300,7 @@ class CodeLoginHandler extends Handler {
     @post('mail', Types.Email)
     @post('code', Types.String)
     async post(domainId: string, mail: string, code: string) {
+        await limitProbe(this, mail);
         const udoc = await UserModel.getByEmail('system', mail);
         if (!udoc) {
             this.response.body = { ok: false, message: '该邮箱未注册，请先注册账号。' };

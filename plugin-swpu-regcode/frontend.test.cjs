@@ -9,7 +9,7 @@ const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((match) 
 
 // Run the shipped page scripts, replacing only DOM, navigation, network and timers.
 // No credentials, emails or requests ever leave this fixture.
-function page({ returnTo = '', embed = false, response, fetchError, oauth = [] } = {}) {
+function page({ returnTo = '', embed = false, response, fetchError, oauth = [], oauthDoc = null } = {}) {
     const elements = new Map(), requests = [], messages = [], timers = new Map();
     let timerId = 0;
     class Element {
@@ -26,6 +26,18 @@ function page({ returnTo = '', embed = false, response, fetchError, oauth = [] }
         focus() {}
         remove() {}
     }
+    // Minimal XML node standing in for a parsed <svg>: enough for the icon
+    // sanitizer to walk attributes and detach dangerous elements.
+    class XmlNode {
+        constructor(nodeName, attrs = {}) {
+            this.nodeName = nodeName; this.attrs = { ...attrs }; this.parentNode = null;
+        }
+        get attributes() { return Object.entries(this.attrs).map(([name, value]) => ({ name, value })); }
+        getElementsByTagName() { return []; }
+        getAttribute(name) { return this.attrs[name] ?? null; }
+        removeAttribute(name) { delete this.attrs[name]; }
+        querySelector() { return null; }
+    }
     for (const match of html.matchAll(/<[^>]+\bid="([^"]+)"[^>]*>/g)) {
         const element = new Element();
         for (const attr of match[0].matchAll(/([\w-]+)="([^"]*)"/g)) element.setAttribute(attr[1], attr[2]);
@@ -39,12 +51,19 @@ function page({ returnTo = '', embed = false, response, fetchError, oauth = [] }
         getElementById: (id) => elements.get(id),
         querySelectorAll: () => [],
         createElement: () => new Element(),
+        importNode: (node) => node,
         body: new Element(),
     };
+    class DOMParserStub {
+        parseFromString() {
+            if (!oauthDoc) throw new Error('no icon document configured for this fixture');
+            return oauthDoc;
+        }
+    }
     const window = {};
     window.self = window; window.top = embed ? {} : window;
     const context = vm.createContext({
-        window, document, location, URL, URLSearchParams, AbortController,
+        window, document, location, URL, URLSearchParams, AbortController, DOMParser: DOMParserStub,
         parent: { postMessage: (data, origin) => messages.push({ data, origin }) },
         history: { replaceState: (_, __, url) => { location.href = new URL(url, location).href; } },
         setTimeout: (fn) => { timers.set(++timerId, fn); return timerId; },
@@ -65,7 +84,7 @@ function page({ returnTo = '', embed = false, response, fetchError, oauth = [] }
         elements.get('p-uname').value = 'fixture-student';
         elements.get('p-pw').value = 'fixture-password';
     }
-    return { elements, requests, messages, location, timers, submit, credentials };
+    return { elements, requests, messages, location, timers, submit, credentials, XmlNode, Element };
 }
 
 test('password login rejects external, backslash, control and auth-loop return paths', async () => {
@@ -137,4 +156,36 @@ test('OAuth and password recovery leave the iframe and preserve only safe return
     assert.equal(oauth.target, '_top');
     assert.equal(new URL(oauth.href, p.location).searchParams.get('redirect'), '/training');
     assert.match(html, /<a href="\/lostpass" target="_top">/);
+});
+
+// p.icon and p.text come from the OAuth provider registry. Both used to be
+// concatenated into one innerHTML assignment, so a provider could ship markup.
+test('OAuth provider markup is parsed and sanitized, and the label is never parsed as HTML', () => {
+    // Bootstrap a provider-free page just to reach the harness node classes.
+    const { XmlNode } = page();
+    const script = new XmlNode('script');
+    const onload = new XmlNode('image', { onload: 'alert(1)', href: 'javascript:alert(2)', alt: 'keep me' });
+    const detached = [];
+    script.parentNode = { removeChild: (n) => detached.push(n.nodeName) };
+    const root = new XmlNode('svg');
+    root.getElementsByTagName = () => [script, onload];
+    const oauthDoc = { documentElement: root, querySelector: () => null };
+    const q = page({ oauth: [{ id: 'evil', text: '<img src=x onerror=alert(1)>', icon: '<svg/>' }], oauthDoc });
+
+    const anchor = q.elements.get('oauth-list').children[0];
+    // The script element was detached before insertion.
+    assert.deepEqual(detached, ['script']);
+    assert.equal(onload.getAttribute('onload'), null);
+    assert.equal(onload.getAttribute('href'), null);
+    assert.equal(onload.getAttribute('alt'), 'keep me', 'inert attributes survive');
+    // The parsed svg root became the anchor's first child.
+    assert.equal(anchor.children[0], root);
+    // The label is a text node, so the markup is displayed, never parsed.
+    const label = anchor.children[1];
+    assert.equal(label.textContent, '<img src=x onerror=alert(1)>');
+    assert.equal(label.innerHTML, undefined);
+
+    // Nothing in the shipped page concatenates provider data into innerHTML.
+    assert.doesNotMatch(html, /innerHTML\s*=\s*p\./);
+    assert.doesNotMatch(html, /innerHTML\s*=\s*providers/);
 });

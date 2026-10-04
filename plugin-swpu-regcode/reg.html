@@ -389,16 +389,47 @@ body.embed .embed-close{display:flex}
   (function(){
     var list=$('oauth-list');if(!list)return;
     var providers=(window.__SWPU_BOOT&&window.__SWPU_BOOT.oauth)||[];
+
+    /* p.icon 是 OAuth 注册表里的 SVG 片段（站点配置，不是用户输入），但它必须
+       以解析后的节点插入，不能拼进 innerHTML 字符串：脚本、事件属性和外部引用
+       都要在这里被丢掉。p.text 是纯文案，走 textContent。 */
+    function safeIcon(markup){
+      var doc,root,nodes,el,attrs,i,j,n,v;
+      try{doc=new DOMParser().parseFromString(markup,'image/svg+xml')}catch(e){return null}
+      if(!doc||!doc.documentElement||doc.querySelector('parsererror'))return null;
+      root=doc.documentElement;
+      if(String(root.nodeName).toLowerCase()!=='svg')return null;
+      nodes=root.getElementsByTagName('*');
+      for(i=nodes.length-1;i>=0;i--){
+        el=nodes[i];
+        if(/^(script|foreignObject|iframe|object|embed|animate|set)$/i.test(el.nodeName)){
+          if(el.parentNode)el.parentNode.removeChild(el);
+          continue;
+        }
+        attrs=Array.prototype.slice.call(el.attributes||[]);
+        for(j=0;j<attrs.length;j++){
+          n=attrs[j].name;v=attrs[j].value;
+          if(/^on/i.test(n)||/^(href|xlink:href|src|action|formaction|style)$/i.test(n)){el.removeAttribute(n);continue}
+          if(/javascript:|vbscript:|data:text\/html/i.test(v))el.removeAttribute(n);
+        }
+      }
+      return document.importNode(root,true);
+    }
+
     providers.forEach(function(p){
       if(!p||typeof p.id!=='string'||typeof p.icon!=='string')return;
       var a=document.createElement('a');
       a.href='/oauth/'+encodeURIComponent(p.id)+'/login?redirect='+encodeURIComponent(RETURN||'/');
       a.target='_top';
       a.className='btn btn-oauth';
-      a.innerHTML=p.icon+'<span>'+(p.text||('使用 '+p.id+' 登录'))+'</span>';
+      var icon=safeIcon(p.icon);
+      if(icon)a.appendChild(icon);
+      var span=document.createElement('span');
+      span.textContent=p.text||('使用 '+p.id+' 登录');
+      a.appendChild(span);
       list.appendChild(a);
     });
-    if(!list.children.length){list.previousElementSibling?list.previousElementSibling.remove():0;list.remove()}
+    if(!list.children.length){if(list.previousElementSibling)list.previousElementSibling.remove();list.remove()}
   })();
 
   /* Hydro 5.0.7 的密码 POST 在成功时重定向；第二因素通过常显的原生入口完成。

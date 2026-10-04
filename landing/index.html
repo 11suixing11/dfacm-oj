@@ -940,17 +940,36 @@ int main() {
     help:help.innerHTML
   };
   var KEY='swpu-me',TTL=3600000;
+  /* 单点定义训练路线 ID：脚本里曾有 8 处硬编码同一个 ObjectId */
+  var ROUTE_URL='/training/6abf5251aaa235606eedfb84';
   function cacheSave(v){try{sessionStorage.setItem(KEY,JSON.stringify(v))}catch(e){}}
   function cacheLoad(){try{var s=sessionStorage.getItem(KEY);if(!s)return null;var v=JSON.parse(s);if(!v||!v.uid||!v.at||Date.now()-v.at>TTL)return null;return v}catch(e){return null}}
   function cacheDrop(){try{sessionStorage.removeItem(KEY)}catch(e){}}
   var asUser=false;
+  /* 服务端 HTML 里的实体先解成纯文本，随后只经 textContent 落回 DOM：
+     用户名即使含 < > & 也不会被当成标记。 */
+  function decodeEntities(s){return String(s).replace(/&(#x?[0-9a-f]+|[a-z]+);/gi,function(m,g){
+    if(g[0]==='#'){var n=g[1].toLowerCase()==='x'?parseInt(g.slice(2),16):parseInt(g.slice(1),10);return isNaN(n)?m:String.fromCodePoint(n)}
+    return ({amp:'&',lt:'<',gt:'>',quot:'"',apos:"'",nbsp:' '}[g.toLowerCase()]||m)})}
+  function paintWelcome(help,name){
+    function txt(s){return document.createTextNode(s)}
+    function a(href,label){var n=document.createElement('a');n.setAttribute('href',href);n.textContent=label;return n}
+    help.textContent='';
+    help.appendChild(txt('欢迎回来，'));
+    var b=document.createElement('b');b.textContent=decodeEntities(name);help.appendChild(b);
+    help.appendChild(txt('。'));
+    help.appendChild(a('/workbench','打开工作台'));
+    var span=document.createElement('span');
+    span.appendChild(a(ROUTE_URL,'继续训练路线'));
+    help.appendChild(span);
+  }
   function paintUser(uid,name){
-    var label=name||'我的主页';
+    var label=decodeEntities(name||'')||'我的主页';
     navLogin.textContent=label;navLogin.setAttribute('href','/user/'+uid);navLogin.title='个人主页';
     navCta.textContent='工作台';navCta.setAttribute('href','/workbench');
     if(mLogin){mLogin.textContent=label;mLogin.setAttribute('href','/user/'+uid)}
     if(mReg){mReg.textContent='工作台';mReg.setAttribute('href','/workbench')}
-    if(name)help.innerHTML='欢迎回来，<b>'+name+'</b>。<a href="/workbench">打开工作台</a><span><a href="/training/6abf5251aaa235606eedfb84">继续训练路线</a></span>';
+    if(name)paintWelcome(help,name);
     asUser=true;
   }
   function paintGuest(){
@@ -963,12 +982,15 @@ int main() {
   }
   function probe(){
     fetch('/p',{credentials:'same-origin',cache:'no-store'}).then(function(r){return r.text()}).then(function(h){
-      /* 唯一可信锚点：nav__item 里带 href="/user/<uid>" 的用户名链接，全页扫描取首个 */
+      /* 唯一可信锚点：nav__item 里带 href="/user/<uid>" 的用户名链接，全页扫描取首个。
+         向前找最近的 <a 标签而不是固定长度的回溯窗口——上游只要在 href 和
+         class 之间多插一个属性，固定窗口就会静默失配并退回游客视图。 */
       var tok='class="nav__item">',k=h.indexOf(tok),uid=0,name='';
       while(k>=0&&!uid){
-        var back=h.substring(k-48,k),u=back.lastIndexOf('href="/user/');
-        if(u>=0){
-          var n=parseInt(back.substring(u+12),10);
+        var open=h.lastIndexOf('<a ',k),tag=open>=0?h.substring(open,k):'';
+        var m=/href="\/user\/(\d+)"/.exec(tag);
+        if(m){
+          var n=parseInt(m[1],10);
           if(n>0){
             uid=n;
             var nm=h.substring(k+tok.length);
