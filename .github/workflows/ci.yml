@@ -72,6 +72,9 @@ jobs:
           grep -q "service-worker-killswitch" deploy/install-theme.sh
           test -f deploy/deploy.sh
           test -f deploy/smoke.sh
+          test -f deploy/patch-ranking-template.sh
+          grep -q "SWPU ACM patch: ranking own-row dedup" deploy/patch-ranking-template.sh
+          grep -q "ranking own-row dedup" deploy/deployment.md
           grep -q "pm2 restart hydrooj" deploy/deploy.sh
           grep -q "deployment.md" deploy/deploy.sh
       - name: Check shell scripts

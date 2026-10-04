@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.15.0 - 2026-10-04
+
+### Fixed
+
+- **The ranking board showed the signed-in user twice (`deploy/patch-ranking-template.sh`).** Upstream `ranking.html` renders the viewer's own rank row above the list unconditionally, so the #1-ranked member saw themself duplicated and the numbering read 1, 1, 2, 3... The pinned row is now skipped while the viewer's stored rank already falls inside the current page's window — it still pins on later pages and for members without a rank, keeping the upstream "show my position" intent. The patch is idempotent and marker-based so a ui-default upgrade can be repaired by re-running the script, which fails loudly if the upstream anchor moves. The condition is deliberately pure arithmetic: the bundled nunjucks build has no `namespace` global, no `map` filter, and crashes on attribute assignment in `{% set %}`.
+
 ## v1.14.0 - 2026-10-04
 
 ### Added

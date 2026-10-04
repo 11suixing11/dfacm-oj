@@ -193,15 +193,14 @@ server:
   xproxy: true
 ```
 
-2. Caddy 覆盖客户端传入的 XFF，只信任自己的直接连接（[Caddyfile.example](Caddyfile.example) 已包含）：
+2. Caddy 按入口双路钉死 XFF（[Caddyfile.example](Caddyfile.example) 已包含），客户端自带任何转发头都到不了 Hydro：
 
-```caddyfile
-reverse_proxy http://127.0.0.1:8888 {
-  header_up X-Forwarded-For {remote_host}
-}
-```
+   - **来自 CF 边缘**（连接对端命中 `@fromcf remote_ip` CF 段）：`header_up X-Forwarded-For {http.request.header.CF-Connecting-IP}`——CF 会用真实访客 IP 覆写客户端伪造的 `CF-Connecting-IP`，因此可安全作为 XFF；
+   - **其他直连**：`header_up X-Forwarded-For {remote_host}`——对端即访客，伪造头一律不透传。
 
-改完执行 `pm2 restart hydrooj`，并确认注册接口日志里的 IP 不再是 127.0.0.1。
+   不能只靠全局 `trusted_proxies + client_ip_headers`：Caddy 对可信代理是**保留并追加**入站 XFF 而非替换，CF 会把客户端伪造的 XFF 首段透传在链首，按首段取 IP 的 Hydro 会被绕过限速。全局块保留，用于访问日志 `client_ip` 字段的正确性。CF 的 IP 段以 <https://www.cloudflare.com/ips/> 为准，全局块与 `@fromcf` 匹配器两处要保持同步。
+
+改完执行 `caddy reload --config /root/.hydro/Caddyfile`（或 `pm2 restart caddy`），并确认注册接口日志里的 IP 不再是 127.0.0.1；前置 CF 后 `tail /data/access.log` 里 `remote_ip` 应为 CF 边缘 IP、`client_ip` 应为访客 IP。
 
 ## 7. 安全响应头
 
@@ -231,6 +230,7 @@ curl -sSI https://<域名>/ | grep -Ei 'strict-transport|x-content-type|referrer
 - [ ] 确认 `/service-worker.js` 是 kill-switch（`grep -q unregister`）。
 - [ ] 门面、字体、图标在 `custom/`，**无需重放**。
 - [ ] 如果 Hydro 头部引用 static 下的默认 favicon，确认 `@custom` 路径列表覆盖同名文件。
+- [ ] `bash deploy/patch-ranking-template.sh` 重新打排名页 own-row 去重补丁（上游升级会换掉整个模板文件），然后 `pm2 restart hydrooj`。
 
 ## 10. 验证清单
 
@@ -290,6 +290,52 @@ curl -sSI https://<域名>/home.html | grep -i cache-control
 
 两个入口都应是 `no-cache`。
 
+## 17. Cloudflare 免费版接入
+
+背景：小厂境外线路晚高峰跨境拥塞（TCP 可握手、传输掉到数百 B/s），应用层已无优化空间。用 CF 免费版把「访客 → 跨境烂路」换成「访客 → CF 骨干 → 回源」：静态资源（字体/图标/CSS/JS）按 Caddy 的 `Cache-Control` 在边缘缓存 1 小时~7 天，动态请求由 CF 回源到台湾机（CF 边缘到源站走海外骨干，不经过拥塞的跨境段）。
+
+### 拓扑与职责
+
+- DNS：注册商（阿里云）NS 迁到 CF 分配的两个 NS；`A @` 与 `A www` → `107.151.246.137`，全部开橙云（proxied）。
+- TLS：SSL/TLS 模式必须 **Full (strict)**；源站 Caddy 继续用 Let's Encrypt，HTTP-01 挑战经 CF 80 端口可正常续期（TLS-ALPN 在 CF 后不可用，HTTP-01 成功即续期成功）。
+- 真实 IP：见第 6 节（trusted_proxies + CF-Connecting-IP），是本次接入唯一的源站配置改动。
+- 只有 80/443 流量过 CF；SSH、Tailscale、判题机出站、SMTP 出站均不经过 CF，不受影响。
+
+### Dashboard 检查单
+
+- SSL/TLS → Overview → **Full (strict)**。不要 Flexible：会出现重定向循环且 CF→源站明文。
+- SSL/TLS → Edge Certificates → Always Use HTTPS：开。
+- Speed → Optimization → Rocket Loader：**关**（会打乱 Hydro webpack 资源的执行顺序）。
+- Network → HTTP/3、WebSockets：默认开，确认未被关闭（评测状态推送与 LSP websocket 依赖后者）。
+- DNS 记录里的 HTTPS/SVCB 类型不用手动维护：CF 会为橙云主机自动发布自己的 HTTPS 记录（alpn h3,h2）。
+- 免费 plan 上传体上限 100MB：给题目传超大测试数据若被 413，临时把 A 记录切灰云或直接走 SSH 上传。
+
+### 变更步骤（2026-10-04 执行顺序）
+
+1. 源站先上第 6 节的 Caddy 配置并 reload（直连行为等价，可先于 NS 迁移执行）。
+2. CF 添加站点 `swpuacm.xyz`（Free plan），核对自动导入的 `A @`/`A www` 与源 IP 一致，全部开橙云。
+3. 阿里云域名控制台把 DNS 服务器改为 CF 分配的两个 NS（站点未启用 DNSSEC，无需预处理）。
+4. CF 「Check nameservers now」等待激活；旧 zone TTL 600s，一般 1 小时内。
+5. 激活后按 Dashboard 检查单逐项配置。
+
+### 验证
+
+- `curl -sI https://swpuacm.xyz/ | grep -iE 'server|cf-ray'` → `server: cloudflare`。
+- 服务器 `tail -f /data/access.log`：`remote_ip` 变为 CF 边缘段 IP，`client_ip` 保持访客 IP。
+- `bash deploy/smoke.sh` 仍全部通过（注意它默认 `SMOKE_IP=127.0.0.1`，永远直测源站、**绕过 CF**——它验证回源链路，不能证明 CF 生效）。
+- 门面、`/p`、`/login`、提交一次代码看评测状态推送（websocket）。
+
+### 回滚
+
+- 快速：CF DNS 面板把 A 记录切灰云（DNS only），流量立即回到直连，NS 不用改回。
+- 彻底：阿里云把 NS 改回 `dns1.hichina.com` / `dns2.hichina.com`。
+- 源站 Caddy 配置无需回滚（灰云/橙云两种模式下行为等价）。
+
+### 已知边界
+
+- CF 免费版对国内访客通常回落美西节点，RTT 约 150–250ms：比直连拥塞线路强一个量级，但根治仍需国内服务器 + 备案。
+- `service-worker.js` 是 kill-switch 静态文件，可能被边缘缓存至多一周，无行为影响。
+
 ## 12. 备份、异机副本与恢复演练
 
 `scripts/backup-hydro.sh` 是显式执行的 Linux 包装器，不安装定时任务、不停止服务、不自动删除任何文件。需要 `hydrooj`、MongoDB Database Tools 的 `mongodump`、`zip`、`unzip`、`tar`、`flock`、`sha256sum`、`realpath`。以运行 Hydro 的同一用户执行；如使用 `HYDRO_PROFILE`，应使用与该实例相同的值。
@@ -339,3 +385,11 @@ bash /opt/swpu-oj/scripts/check-deployment.sh \
 在独立测试域准备一题明确的 A+B，用支持的 C++ 和 Python 各提交一份正确程序确认 AC；提交固定错误输出确认 WA、死循环确认 TLE、非法语法确认 CE。对照题目限时检查结果，确认有判题机执行、测试数据可读、沙箱限制生效。不要在正式比赛排名里运行这些测试。
 
 升级流程：记录当前组件与自研插件版本 → 保存并核验完整备份和异机副本 → 备用实例升级 → 注册/登录与人工判题验收 → 在人工确认的维护窗口应用到正式机。升级失败时，优先切换到验证过的备用实例，或按相匹配的程序版本和数据备份恢复；数据库迁移后不要直接降级 npm 包当作回退。本仓库没有自动发布、重启或回滚脚本。
+
+## 18. 排名页 own-row 去重补丁
+
+上游 `ui-default` 的 `templates/ranking.html` 会把登录用户自己的排名行**无条件**渲染在榜单之前：第 1 名登录后看到自己出现两次，序号变成 1、1、2、3…（置顶行显示存储的 `rank`，榜单行显示循环序号；游客不受影响）。补丁把置顶行改成仅当用户存储的 `rank` **不在**当前页排名区间内才渲染——用户已被本页列出时不再重复；翻到后面页或没有排名（rp=0）时置顶行照常出现，保留上游"显示自己位置"的设计意图。
+
+- 应用：`bash deploy/patch-ranking-template.sh`（幂等：带 `SWPU ACM patch: ranking own-row dedup` 标记即跳过；ui-default 升级会覆盖模板文件，重跑即可恢复）。模板加载进内存后不再读盘，改完必须 `pm2 restart hydrooj`。
+- 补丁条件刻意只用纯算术：随 ui-default 附带的 nunjucks 裁剪版没有 `namespace` 全局、没有 `map` 过滤器，属性式 `{% set ns.v = ... %}` 会直接编译崩溃。
+- 验证：匿名 `/ranking` 行数 = 榜单人数；登录已上榜用户查看 `/ranking` 不应再出现第二行自己。

@@ -1,4 +1,18 @@
 # For more information, refer to caddy v2 documentation.
+
+# Cloudflare (free plan) fronts this site. Trust only CF's edge IPs when
+# deriving the client IP (used by access logs' client_ip field). Upstream
+# X-Forwarded-For is pinned per-path in the @fromcf/direct handles below, so
+# client-supplied forwarding headers never reach Hydro either way. Ranges from
+# https://www.cloudflare.com/ips/ (they rarely move; re-verify when touching
+# this file — the global block and the @fromcf matcher must stay in sync).
+{
+  servers {
+    trusted_proxies static 173.245.48.0/20 103.21.244.0/22 103.22.200.0/22 103.31.4.0/22 141.101.64.0/18 108.162.192.0/18 190.93.240.0/20 188.114.96.0/20 197.234.240.0/22 198.41.128.0/17 162.158.0.0/15 104.16.0.0/13 104.24.0.0/14 172.64.0.0/13 131.0.72.0/22 2400:cb00::/32 2606:4700::/32 2803:f800::/32 2405:b500::/32 2405:8100::/32 2a06:98c0::/29 2c0f:f248::/32
+    client_ip_headers CF-Connecting-IP
+  }
+}
+
 swpuacm.xyz, www.swpuacm.xyz {
   encode zstd gzip
 
@@ -97,10 +111,31 @@ swpuacm.xyz, www.swpuacm.xyz {
     }
     file_server
   }
+
+  # Hide the judge service account profile from everyone (revert: remove this handle)
+  @hidejudge path /user/3
+  handle @hidejudge {
+    respond 404
+  }
+
+  # Real-IP ingress policy, two mutually exclusive paths — a client can never
+  # inject its own X-Forwarded-For into either (Caddy keeps-and-appends the
+  # incoming XFF chain for trusted peers, so trusting it via client_ip_headers
+  # alone would let a spoofed first element through Cloudflare; deployment.md §6).
+  @fromcf remote_ip 173.245.48.0/20 103.21.244.0/22 103.22.200.0/22 103.31.4.0/22 141.101.64.0/18 108.162.192.0/18 190.93.240.0/20 188.114.96.0/20 197.234.240.0/22 198.41.128.0/17 162.158.0.0/15 104.16.0.0/13 104.24.0.0/14 172.64.0.0/13 131.0.72.0/22 2400:cb00::/32 2606:4700::/32 2803:f800::/32 2405:b500::/32 2405:8100::/32 2a06:98c0::/29 2c0f:f248::/32
+  handle @fromcf {
+    # CF overwrites any client-supplied CF-Connecting-IP with the real visitor
+    # IP, so pinning XFF to it is safe; a CF connection without the header
+    # degrades XFF to empty (Hydro falls back to the CF edge IP).
+    reverse_proxy http://127.0.0.1:8888 {
+      header_up X-Forwarded-For {http.request.header.CF-Connecting-IP}
+    }
+  }
   handle {
     # Dynamic downloads (including /resource/*) retain Hydro's own cache policy.
+    # Direct ingress: trust only the connection peer — forged CF-Connecting-IP
+    # / XFF from open-internet clients are not forwarded.
     reverse_proxy http://127.0.0.1:8888 {
-      # Caddy is the only trusted proxy; overwrite client-supplied XFF.
       header_up X-Forwarded-For {remote_host}
     }
   }
