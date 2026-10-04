@@ -30,7 +30,9 @@
 .theme--light samp,
 .theme--dark .monospace,
 .theme--light .monospace {
-  font-family: 'SWPU Mono', 'Cascadia Code', Consolas, 'Microsoft YaHei', monospace;
+  /* SWPU Mono 是子集字体(覆盖范围见 scripts/subset_fonts.py);
+     子集外字符(如 CJK)沿字体栈回退,扩充字形只需重新生成 woff2 */
+  font-family: 'SWPU Mono', 'Cascadia Code', Consolas, 'PingFang SC', 'Microsoft YaHei', monospace;
   font-variant-ligatures: none;
 }
 .theme--dark ::selection,
@@ -79,18 +81,19 @@
 .theme--light .data-table td { font-size: 14px; line-height: 1.65; padding-top: 10px; padding-bottom: 10px; }
 .theme--dark .data-table .col--problem-name,
 .theme--light .data-table .col--problem-name { white-space: normal; overflow-wrap: anywhere; }
-.theme--dark .markdown-body,
-.theme--light .markdown-body,
-.theme--dark .prose,
-.theme--light .prose { line-height: 1.85; overflow-wrap: break-word; }
-.theme--dark .markdown-body img,
-.theme--light .markdown-body img,
-.theme--dark .prose img,
-.theme--light .prose img { max-width: 100%; height: auto; }
-.theme--dark .markdown-body pre,
-.theme--light .markdown-body pre,
-.theme--dark .prose pre,
-.theme--light .prose pre { overflow-x: auto; overflow-wrap: normal; tab-size: 4; }
+/* Hydro 题面/讨论正文容器是 .typo(见 ui-default partials/problem_description.html);
+   原先写成 .markdown-body/.prose 在 Hydro 不匹配任何元素,这些规则一直静默失效 */
+.theme--dark .typo,
+.theme--light .typo { line-height: 1.85; overflow-wrap: break-word; }
+.theme--dark .typo img,
+.theme--light .typo img { max-width: 100%; height: auto; }
+.theme--dark .typo pre,
+.theme--light .typo pre { overflow-x: auto; overflow-wrap: normal; tab-size: 4; }
+/* 长块级公式与宽表格在自身内横向滚动,不再拖累整个题面容器(上游仅 .typo{overflow:auto hidden}) */
+.theme--dark .typo .katex-display,
+.theme--light .typo .katex-display { overflow-x: auto; overflow-y: hidden; padding-bottom: 3px; }
+.theme--dark .typo table,
+.theme--light .typo table { display: block; max-width: 100%; overflow-x: auto; }
 
 /* ---------- dark specifics ---------- */
 .theme--dark ::-webkit-scrollbar-thumb {
