@@ -73,11 +73,15 @@ async function fixture() {
         users.set(uid, record);
         return record;
     }
-    class Handler {
+    // One session object shared by every handler, standing in for Hydro's
+// cookie-backed session: a token minted while rendering /reg must be visible to
+// the POST handlers, and loginAs must write uid where a later handler reads it.
+const session = {};
+class Handler {
         constructor() {
             this.args = {};
             this.response = { body: {}, headers: {}, addHeader: (key, value) => { this.response.headers[key] = value; } };
-            this.session = {};
+            this.session = session;
             this.request = { ip: '192.0.2.1', headers: {} };
             this.context = { HydroContext: {} };
             this.ctx = { async serial(event, handler, udoc) { events.push([event, udoc._id]); } };
@@ -126,12 +130,21 @@ async function fixture() {
     loaded._compile(compiled, pluginPath);
     await loaded.exports.apply({ effect(fn) { fn(); }, Route(name, url, HandlerClass, priv) { routes.set(url, { HandlerClass, priv }); } });
     function handler(url, args = {}) { const h = new (routes.get(url).HandlerClass)(); h.args = args; h.loginMethods = state.loginMethods; return h; }
-    async function issue(mail, purpose) {
+    // Renders /reg and returns the CSRF token it injected, the way a browser
+    // obtains one before posting.
+    async function csrf() {
+        const page = handler('/reg');
+        await page.get();
+        const match = /__SWPU_BOOT\.csrf="([0-9a-f]{64})"/.exec(String(page.response.body));
+        if (!match) throw new Error('no CSRF token injected into /reg');
+        return match[1];
+    }
+    async function issue(mail, purpose, token) {
         const h = handler('/reg/code', { mail, purpose });
         await h.post('system', mail, purpose);
         return h;
     }
-    return { collection, users, user, handler, issue, routes, events, audits, mails, limits, joins, settings, state, UserAlreadyExistError };
+    return { collection, users, user, handler, issue, csrf, session, routes, events, audits, mails, limits, joins, settings, state, UserAlreadyExistError };
 }
 
 test('input alias delivers the login code only to the bound account mailbox', async () => {
@@ -139,8 +152,9 @@ test('input alias delivers the login code only to the bound account mailbox', as
     const issued = await f.issue('ab@school.example', 'login');
     assert.equal(issued.response.body.ok, true);
     assert.equal(f.mails[0].to, 'a.b@school.example');
+    const token = await f.csrf();
     const login = f.handler('/reg/login', { mail: 'ab@school.example', code: f.mails[0].code });
-    await login.post('system', 'ab@school.example', f.mails[0].code);
+    await login.post('system', 'ab@school.example', f.mails[0].code, token);
     assert.equal(login.session.uid, 42);
     assert.deepEqual(f.events, [['auth/before-login', 42], ['auth/login', 42]]);
     assert.equal(f.audits[0].type, 'user.loginSuccess');
@@ -228,8 +242,9 @@ test('registration closure is enforced during both send and completion', async (
     assert.equal(f.routes.get('/reg/complete').priv, 8);
     const send = f.handler('/reg/code'); send.canRegister = false;
     await assert.rejects(send.post('system', 'new@school.example', 'reg'), /registration disabled/);
+    const token = await f.csrf();
     const complete = f.handler('/reg/complete'); complete.canRegister = false;
-    await assert.rejects(complete.post('system', 'new@school.example', '123456', 'student', 'password'), /registration disabled/);
+    await assert.rejects(complete.post('system', 'new@school.example', '123456', 'student', 'password', token), /registration disabled/);
     assert.equal(f.users.size, 0);
 });
 
@@ -251,7 +266,7 @@ test('registration succeeds with audit, hooks, QQ avatar and configurable local 
     await f.issue('123456@qq.com', 'reg');
     const args = { mail: '123456@qq.com', code: f.mails[0].code, uname: 'newuser', password: 'secret-password' };
     const h = f.handler('/reg/complete', args);
-    await h.post('system', args.mail, args.code, args.uname, args.password);
+    await h.post('system', args.mail, args.code, args.uname, args.password, await f.csrf());
     assert.deepEqual(h.response.body, { ok: true, redirect: '/training/team' });
     assert.equal(h.session.uid, 50);
     assert.equal(f.users.get(50).avatar, 'qq:123456');
@@ -265,18 +280,19 @@ test('Hydro business duplicate error becomes an actionable JSON response', async
     const f = await fixture(); await f.issue('new@school.example', 'reg');
     f.state.createError = new f.UserAlreadyExistError('duplicate');
     const h = f.handler('/reg/complete');
-    await h.post('system', 'new@school.example', f.mails[0].code, 'newuser', 'password');
+    await h.post('system', 'new@school.example', f.mails[0].code, 'newuser', 'password', await f.csrf());
     assert.equal(h.response.body.ok, false);
     assert.match(h.response.body.message, /重新获取验证码/);
 });
 
 test('registration cannot replace the verified delivery address with a normalized alias', async () => {
     const f = await fixture(); await f.issue('a.b@school.example', 'reg');
+    const token = await f.csrf();
     const h = f.handler('/reg/complete');
-    await h.post('system', 'ab@school.example', f.mails[0].code, 'newuser', 'password');
+    await h.post('system', 'ab@school.example', f.mails[0].code, 'newuser', 'password', token);
     assert.equal(h.response.body.ok, false);
     assert.equal(f.users.size, 0);
-    await h.post('system', 'a.b@school.example', f.mails[0].code, 'newuser', 'password');
+    await h.post('system', 'a.b@school.example', f.mails[0].code, 'newuser', 'password', token);
     assert.equal(h.response.body.ok, true);
     assert.equal(f.users.get(50).mail, 'a.b@school.example');
 });
@@ -285,7 +301,7 @@ test('an account removed during final authentication produces a clear failure wi
     const f = await fixture(); f.user(); await f.issue('ab@school.example', 'login');
     f.state.missingAtFinalLogin = true;
     const h = f.handler('/reg/login');
-    await h.post('system', 'ab@school.example', f.mails[0].code);
+    await h.post('system', 'ab@school.example', f.mails[0].code, await f.csrf());
     assert.equal(h.response.body.ok, false);
     assert.match(h.response.body.message, /账号不存在/);
     assert.equal(h.session.uid, undefined);
@@ -296,7 +312,7 @@ test('strict contest registration reports account creation separately from block
     f.settings['system.contestmode'] = 'strict';
     await f.issue('new@school.example', 'reg');
     const h = f.handler('/reg/complete');
-    await h.post('system', 'new@school.example', f.mails[0].code, 'newuser', 'password');
+    await h.post('system', 'new@school.example', f.mails[0].code, 'newuser', 'password', await f.csrf());
     assert.equal(h.response.body.ok, false);
     assert.equal(f.users.has(50), true);
     assert.match(h.response.body.message, /账号已创建.*当前 IP 已绑定/);
@@ -335,6 +351,48 @@ test('an exhausted probe budget hides whether an address is registered', async (
     }
 });
 
+// /reg/complete creates an account and /reg/login establishes a session; both
+// were reachable with nothing but the visitor's cookie.
+test('account creation and passwordless login reject a missing or wrong CSRF token', async () => {
+    for (const [label, url, args] of [
+        ['complete without a token', '/reg/complete', ['system', 'new@school.example', '123456', 'newuser', 'password']],
+        ['complete with a wrong token', '/reg/complete', ['system', 'new@school.example', '123456', 'newuser', 'password', 'f'.repeat(64)]],
+        ['complete with a truncated token', '/reg/complete', ['system', 'new@school.example', '123456', 'newuser', 'password', 'abc']],
+        ['login without a token', '/reg/login', ['system', 'ab@school.example', '123456']],
+        ['login with a wrong token', '/reg/login', ['system', 'ab@school.example', '123456', '0'.repeat(64)]],
+    ]) {
+        const f = await fixture();
+        await f.csrf(); // mint a legitimate token so only the submitted value is wrong
+        await f.issue('new@school.example', 'reg');
+        const h = f.handler(url);
+        await h.post(...args);
+        assert.equal(h.response.body.ok, false, label);
+        assert.match(h.response.body.message, /会话已过期/, label);
+        assert.equal(f.users.size, 0, `${label}: no account may be created`);
+        assert.equal(f.session.uid, undefined, `${label}: no session may be established`);
+    }
+});
+
+// Sending a code has no session to protect and no account to create, so it stays
+// reachable without a token — otherwise a first-time visitor could never start.
+test('sending a login code does not require a CSRF token', async () => {
+    const f = await fixture(); f.user(42);
+    const issued = await f.issue('ab@school.example', 'login');
+    assert.equal(issued.response.body.ok, true);
+    assert.equal(f.mails.length, 1);
+});
+
+test('the injected CSRF token is per-session and stable across renders', async () => {
+    const f = await fixture();
+    const first = await f.csrf();
+    const second = await f.csrf();
+    assert.match(first, /^[0-9a-f]{64}$/);
+    assert.equal(first, second, 'a reload must not invalidate the token the page already holds');
+    // A different session gets a different token.
+    const other = await fixture();
+    assert.notEqual(await other.csrf(), first);
+});
+
 test('loopback proxy peer falls back to X-Forwarded-For for limits and login records', async () => {
     const f = await fixture(); const user = f.user();
     const send = f.handler('/reg/code');
@@ -344,7 +402,7 @@ test('loopback proxy peer falls back to X-Forwarded-For for limits and login rec
     assert.deepEqual(f.limits[3], ['regcode_send_ip', 3600, 200, '198.51.100.9']);
     const login = f.handler('/reg/login');
     login.request = { ip: '127.0.0.1', headers: { 'x-forwarded-for': '198.51.100.9' } };
-    await login.post('system', 'ab@school.example', f.mails[0].code);
+    await login.post('system', 'ab@school.example', f.mails[0].code, await f.csrf());
     assert.equal(login.session.uid, user._id);
     assert.equal(f.users.get(user._id).loginip, '198.51.100.9');
 });
@@ -354,7 +412,7 @@ test('registration auto-joins the ranking domains with the default role', async 
     await f.issue('123456@qq.com', 'reg');
     const args = { mail: '123456@qq.com', code: f.mails[0].code, uname: 'newuser', password: 'secret-password' };
     const h = f.handler('/reg/complete', args);
-    await h.post('system', args.mail, args.code, args.uname, args.password);
+    await h.post('system', args.mail, args.code, args.uname, args.password, await f.csrf());
     assert.equal(h.response.body.ok, true);
     // Hydro ranks only dudocs with join=true; both the system domain and the POJ
     // mirror must be joined with the default role, or the new member never ranks.

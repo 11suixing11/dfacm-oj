@@ -9,7 +9,7 @@ const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((match) 
 
 // Run the shipped page scripts, replacing only DOM, navigation, network and timers.
 // No credentials, emails or requests ever leave this fixture.
-function page({ returnTo = '', embed = false, response, fetchError, oauth = [], oauthDoc = null } = {}) {
+function page({ returnTo = '', embed = false, response, fetchError, oauth = [], oauthDoc = null, csrf = 'a'.repeat(64) } = {}) {
     const elements = new Map(), requests = [], messages = [], timers = new Map();
     let timerId = 0;
     class Element {
@@ -76,6 +76,7 @@ function page({ returnTo = '', embed = false, response, fetchError, oauth = [], 
     });
     vm.runInContext(scripts[0], context);
     window.__SWPU_BOOT.oauth = oauth;
+    window.__SWPU_BOOT.csrf = csrf;
     for (const script of scripts.slice(1)) vm.runInContext(script, context);
     async function submit(form) {
         await elements.get(form).events.submit({ preventDefault() {} });
@@ -148,6 +149,31 @@ test('mail login also rejects an external API redirect and posts only a safe pat
     assert.equal(p.messages.length, 1);
     assert.equal(p.messages[0].data.return, '/');
     assert.equal(p.messages[0].origin, 'https://oj.example');
+});
+
+// /reg/complete creates an account and /reg/login establishes a session, so the
+// page script must attach the server-injected token to both.
+test('every account-creating request carries the injected CSRF token', async () => {
+    for (const [form, mail, code] of [['f-reg', 'r-mail', 'r-code'], ['f-login', 'l-mail', 'l-code']]) {
+        const p = page({ csrf: 'b'.repeat(64) });
+        p.elements.get(mail).value = 'fixture@example.com';
+        p.elements.get(code).value = '123456';
+        if (form === 'f-reg') {
+            p.elements.get('r-uname').value = 'fixture-student';
+            p.elements.get('r-pw').value = 'fixture-password';
+            p.elements.get('r-pw2').value = 'fixture-password';
+        }
+        await p.submit(form);
+        assert.ok(p.requests.length > 0, form);
+        assert.equal(new URLSearchParams(p.requests[0].options.body).get('csrf'), 'b'.repeat(64), `${form} must send the token`);
+    }
+    // With no token injected (a bare static copy of the page) the field is still
+    // present and empty rather than absent, so the server-side check still runs.
+    const bare = page({ csrf: '' });
+    bare.elements.get('l-mail').value = 'fixture@example.com';
+    bare.elements.get('l-code').value = '123456';
+    await bare.submit('f-login');
+    assert.equal(new URLSearchParams(bare.requests[0].options.body).get('csrf'), '');
 });
 
 test('OAuth and password recovery leave the iframe and preserve only safe return paths', () => {

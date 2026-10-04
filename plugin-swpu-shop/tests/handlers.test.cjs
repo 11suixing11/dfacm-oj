@@ -131,10 +131,15 @@ async function fixture({ env = {}, badgeReady = true, badges = [], records = [],
             collection: (name) => collectionsByName[name],
             ensureIndexes: async (coll, ...args) => { indexes.push([coll, args]); },
         },
+        // A shared session object stands in for Hydro's, so a token minted by one
+        // handler is visible to the next — which is exactly the property CSRF
+        // depends on.
+        session: {},
         Handler: class {
             constructor() {
                 this.response = { body: {}, headers: {}, addHeader: (k, v) => { this.response.headers[k] = v; } };
                 this.user = { _id: 42, uname: 'student', hasPriv: (bit) => (bit & 4) === 4 };
+                this.session = stub.session;
             }
             async limitRate() {}
         },
@@ -249,12 +254,59 @@ test('redeem endpoint debits the ledger and redirects to /mybadge', async () => 
         prices: [{ _id: 7, price: 10, enabled: true }],
     });
     await f.ledger.insertOne({ uid: 42, delta: 15, ref: 'solve:system:1', kind: 'solve', detail: 'P1', ts: NOW });
+    const page = f.handler('/shop');
+    await page.get('system');
     const h = f.handler('/shop/redeem');
-    await h.post('system', 7);
+    await h.post('system', 7, page.response.body.csrf);
     assert.equal(h.response.redirect, '/mybadge');
     assert.equal(f.ledger.docs.length, 2);
     assert.equal(f.ledger.docs[1].delta, -10);
     assert.deepEqual(f.userBadgeAdds, [{ uid: 42, badgeId: 7 }]);
+});
+
+// Both POSTs spend points or rewrite pricing using nothing but the session
+// cookie, so a cross-site form post would otherwise go through.
+test('state-changing POSTs reject a missing or wrong CSRF token', async () => {
+    for (const [label, url, args] of [
+        ['redeem without a token', '/shop/redeem', ['system', 7]],
+        ['redeem with a wrong token', '/shop/redeem', ['system', 7, 'f'.repeat(64)]],
+        ['redeem with a truncated token', '/shop/redeem', ['system', 7, 'abc']],
+        ['pricing without a token', '/manage/shop', ['system', 'price', 7, 30, true]],
+        ['pricing with a wrong token', '/manage/shop', ['system', 'price', 7, 30, true, '0'.repeat(64)]],
+    ]) {
+        const f = await fixture({
+            badges: [{ _id: 7, short: '队长', title: '队长徽章' }],
+            prices: [{ _id: 7, price: 10, enabled: true }],
+        });
+        await f.ledger.insertOne({ uid: 42, delta: 15, ref: 'solve:system:1', kind: 'solve', detail: 'P1', ts: NOW });
+        // Mint a legitimate token so only the submitted value is wrong.
+        const page = f.handler(url === '/shop/redeem' ? '/shop' : '/manage/shop');
+        await page.get('system');
+        assert.equal(page.response.body.csrf.length, 64, label);
+        const h = f.handler(url, 'post');
+        await assert.rejects(() => h.post(...args), label);
+        // The message travels URL-encoded in the query string.
+        assert.match(decodeURIComponent(h.response.redirect), /会话已过期/, label);
+        assert.equal(f.userBadgeAdds.length, 0, `${label}: must not grant a badge`);
+        assert.equal(f.ledger.docs.length, 1, `${label}: must not debit`);
+        assert.equal(f.price.docs.length, 1, `${label}: must not change pricing`);
+    }
+});
+
+// The token must be per-session and stable across requests, or every POST fails.
+test('the CSRF token is stable within a session and absent for guests', async () => {
+    const f = await fixture({ badges: [{ _id: 7, short: 'a', title: 'A' }], prices: [] });
+    const first = f.handler('/shop');
+    await first.get('system');
+    const second = f.handler('/shop');
+    await second.get('system');
+    assert.equal(first.response.body.csrf, second.response.body.csrf);
+    assert.match(first.response.body.csrf, /^[0-9a-f]{64}$/);
+    // A guest has no redeem form, so no token is minted for them.
+    const guest = f.handler('/shop');
+    guest.user = { _id: 0, uname: 'Guest', hasPriv: () => false };
+    await guest.get('system');
+    assert.equal(guest.response.body.csrf, '');
 });
 
 // Both shop clients are plain HTML form POSTs, so a JSON error body is never
@@ -271,18 +323,20 @@ test('a failed redemption returns the member to /shop with the reason', async ()
             prices,
         });
         await f.ledger.insertOne({ uid: 42, delta: balance, ref: 'solve:system:1', kind: 'solve', detail: 'P1', ts: NOW });
+        const page = f.handler('/shop');
+        await page.get('system');
         const h = f.handler('/shop/redeem');
         const target = label === 'no such badge' ? 8 : 7;
-        await assert.rejects(() => h.post('system', target));
+        await assert.rejects(() => h.post('system', target, page.response.body.csrf));
         assert.match(h.response.redirect, /^\/shop\?error=/, label);
         const message = decodeURIComponent(h.response.redirect.split('error=')[1]);
         assert.ok(message.length > 0, label);
         assert.equal(h.response.body.ok, false);
         assert.equal(f.userBadgeAdds.length, 0, `${label} must not grant a badge`);
         // The GET handler hands the message to the template.
-        const page = f.handler('/shop', 'get', { error: message });
-        await page.get('system');
-        assert.equal(page.response.body.error, message);
+        const bounced = f.handler('/shop', 'get', { error: message });
+        await bounced.get('system');
+        assert.equal(bounced.response.body.error, message);
     }
 });
 
@@ -294,8 +348,10 @@ test('a failed badge grant refunds the debit and explains itself', async () => {
     });
     await f.ledger.insertOne({ uid: 42, delta: 15, ref: 'solve:system:1', kind: 'solve', detail: 'P1', ts: NOW });
     f.userBadgeModel.userBadgeAdd = async () => { throw new Error('badge plugin exploded'); };
+    const page = f.handler('/shop');
+    await page.get('system');
     const h = f.handler('/shop/redeem');
-    await assert.rejects(() => h.post('system', 7));
+    await assert.rejects(() => h.post('system', 7, page.response.body.csrf));
     assert.match(h.response.redirect, /^\/shop\?error=/);
     assert.match(decodeURIComponent(h.response.redirect.split('error=')[1]), /积分已退回/);
     // Debit plus its compensating credit, so the balance is unchanged.
@@ -349,8 +405,10 @@ test('manage page lists every badge including unpriced ones', async () => {
 
 test('manage save upserts the price row and rejects bad operations', async () => {
     const f = await fixture();
+    const page = f.handler('/manage/shop');
+    await page.get('system');
     const h = f.handler('/manage/shop', 'post');
-    await h.post('system', 'price', 7, 30, true);
+    await h.post('system', 'price', 7, 30, true, page.response.body.csrf);
     assert.equal(h.response.redirect, '/manage/shop');
     assert.equal(f.price.docs.length, 1);
     assert.equal(f.price.docs[0]._id, 7);
@@ -359,7 +417,7 @@ test('manage save upserts the price row and rejects bad operations', async () =>
     assert.ok(f.price.docs[0].updatedAt instanceof Date);
     // A rejected operation returns the admin to the page with the reason.
     const bad = f.handler('/manage/shop', 'post');
-    await assert.rejects(bad.post('system', 'destroy', 7, 1, true), /不支持的操作/);
+    await assert.rejects(bad.post('system', 'destroy', 7, 1, true, page.response.body.csrf), /不支持的操作/);
     assert.match(bad.response.redirect, /^\/manage\/shop\?error=/);
 });
 

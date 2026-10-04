@@ -49,8 +49,9 @@
             {% if bdoc.owned %}
               <a href="/mybadge" class="rounded button">{{ _('佩戴') }}</a>
             {% elif bdoc.enabled and signedIn %}
-              <form method="post" action="{{ url('swpu_shop_redeem') }}" class="inline-form">
-                <input type="hidden" name="badgeId" value="{{ bdoc._id }}">
+<form method="post" action="{{ url('swpu_shop_redeem') }}" class="inline-form">
+              <input type="hidden" name="csrf" value="{{ csrf }}">
+              <input type="hidden" name="badgeId" value="{{ bdoc._id }}">
                 <button type="submit" class="primary rounded button">{{ _('兑换') }}（{{ bdoc.price }} {{ _('分') }}）</button>
               </form>
             {% elif bdoc.enabled %}

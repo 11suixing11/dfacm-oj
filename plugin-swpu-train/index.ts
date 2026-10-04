@@ -9,6 +9,7 @@
  */
 import fs from 'fs';
 import { join } from 'path';
+import { randomBytes, timingSafeEqual } from 'crypto';
 import {
     Context, db, Handler, Logger, param, post, PRIV, ProblemModel, RecordModel, Time, TrainingModel, Types,
 } from 'hydrooj';
@@ -30,8 +31,42 @@ const RECENT_SCAN_LIMIT = 60;
 const RECENT_LIMIT = 8;
 const MAX_TRAININGS = 3;
 
+// --- CSRF -----------------------------------------------------------------
+// /mistakes/update, /mistakes/remove and /mistakes/sync all change state for
+// the signed-in member using nothing but the session cookie. Hydro sessions are
+// plain mutable objects (regcode's loginAs sets viewLang, oauthBind and sudo on
+// the same one), so the token is minted there and only its value reaches the
+// page. Defined locally because each addon ships as an independent directory.
+const CSRF_SESSION_KEY = 'swpuTrainCsrf';
+const CSRF_MARKER = '/*__SWPU_CSRF__*/';
+
+function csrfToken(handler: Handler): string {
+    const session = handler.session;
+    if (!session) return '';
+    const existing = session[CSRF_SESSION_KEY];
+    if (typeof existing === 'string' && existing.length === 64) return existing;
+    const token = randomBytes(32).toString('hex');
+    session[CSRF_SESSION_KEY] = token;
+    return token;
+}
+
+function csrfRejected(handler: Handler, sent: unknown): boolean {
+    const expected = handler.session && handler.session[CSRF_SESSION_KEY];
+    if (typeof expected !== 'string' || typeof sent !== 'string') return true;
+    const a = Buffer.from(sent);
+    const b = Buffer.from(expected);
+    return a.length === 0 || a.length !== b.length || !timingSafeEqual(a, b);
+}
+
 function servePage(handler: Handler, page: string) {
-    handler.response.body = page;
+    // Only /mistakes mutates, and only that page carries the marker, so a
+    // read-only page mints no token at all. The replacement is a hex token, but
+    // a function replacer keeps that guarantee local.
+    let body = page;
+    if (page.includes(CSRF_MARKER)) {
+        body = page.replace(CSRF_MARKER, () => `window.__SWPU_CSRF__=${JSON.stringify(csrfToken(handler))};`);
+    }
+    handler.response.body = body;
     handler.response.type = 'text/html; charset=utf-8';
     handler.response.addHeader('Cache-Control', 'no-store');
 }
@@ -156,7 +191,9 @@ class MistakesUpdateHandler extends Handler {
     @post('reason', Types.String, true)
     @post('note', Types.String, true)
     @post('resolved', Types.Boolean, true)
-    async post(domainId: string, pid: number, reason?: string, note?: string, resolved?: boolean) {
+    @post('csrf', Types.String, true)
+    async post(domainId: string, pid: number, reason?: string, note?: string, resolved?: boolean, csrf?: string) {
+        if (csrfRejected(this, csrf)) { this.response.body = { ok: false, message: '会话已过期，请刷新页面后重试。' }; return; }
         await this.limitRate('swpu_train_update', 60, 30, `u${this.user._id}`);
         const patch: { reason?: string; note?: string; resolved?: boolean } = {};
         if (reason !== undefined) patch.reason = reason;
@@ -176,7 +213,9 @@ class MistakesUpdateHandler extends Handler {
 
 class MistakesRemoveHandler extends Handler {
     @post('pid', Types.UnsignedInt)
-    async post(domainId: string, pid: number) {
+    @post('csrf', Types.String, true)
+    async post(domainId: string, pid: number, csrf?: string) {
+        if (csrfRejected(this, csrf)) { this.response.body = { ok: false, message: '会话已过期，请刷新页面后重试。' }; return; }
         await this.limitRate('swpu_train_update', 60, 30, `u${this.user._id}`);
         try {
             // remove() reports whether a row actually went away; answering ok
@@ -193,7 +232,9 @@ class MistakesRemoveHandler extends Handler {
 }
 
 class MistakesSyncHandler extends Handler {
-    async post(domainId: string) {
+    @post('csrf', Types.String, true)
+    async post(domainId: string, csrf?: string) {
+        if (csrfRejected(this, csrf)) { this.response.body = { ok: false, message: '会话已过期，请刷新页面后重试。' }; return; }
         await this.limitRate('swpu_train_sync', 60, 1, `u${this.user._id}`);
         try {
             const result = await runBackfill(domainId, this.user._id);

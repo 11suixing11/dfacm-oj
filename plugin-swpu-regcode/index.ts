@@ -5,6 +5,7 @@
  * POST /reg/login      {mail, code}     验证码免密登录
  */
 import fs from 'fs';
+import { randomBytes, timingSafeEqual } from 'crypto';
 import { join } from 'path';
 import {
     BlackListModel, Context, db, DomainModel, Handler, Logger, OplogModel, PERM, post, PRIV,
@@ -79,6 +80,32 @@ function checkRegistration(handler: Handler) {
     return true;
 }
 
+// --- CSRF -----------------------------------------------------------------
+// /reg/complete creates an account and /reg/login calls ctx.serial('auth/login')
+// then establishes a session. Both are reachable with nothing but the visitor's
+// own cookie, so the token has to come from the session rather than from
+// anything the requester controls. Defined locally because each addon ships as an
+// independently-installed directory.
+const CSRF_SESSION_KEY = 'swpuRegcodeCsrf';
+
+function csrfToken(handler: Handler): string {
+    const session = handler.session;
+    if (!session) return '';
+    const existing = session[CSRF_SESSION_KEY];
+    if (typeof existing === 'string' && existing.length === 64) return existing;
+    const token = randomBytes(32).toString('hex');
+    session[CSRF_SESSION_KEY] = token;
+    return token;
+}
+
+function csrfRejected(handler: Handler, sent: unknown): boolean {
+    const expected = handler.session && handler.session[CSRF_SESSION_KEY];
+    if (typeof expected !== 'string' || typeof sent !== 'string') return true;
+    const a = Buffer.from(sent);
+    const b = Buffer.from(expected);
+    return a.length === 0 || a.length !== b.length || !timingSafeEqual(a, b);
+}
+
 async function limitVerification(handler: Handler, mailKey: string) {
     await handler.limitRate('regcode_verify_ip', 60,
         positiveLimit(SystemModel.get('limit.regcode_verify_ip'), DEFAULTS.verifyIpMinute), getClientIp(handler));
@@ -126,6 +153,11 @@ class RegPageHandler extends Handler {
     noCheckPermView = true;
     async get() {
         const boot: string[] = [];
+        // /reg/complete creates an account and /reg/login establishes a session,
+        // both reachable with nothing but the visitor's cookie. The token is
+        // minted into the session (a guest still gets one) and handed to the page
+        // through the same boot payload as the tab.
+        boot.push(`window.__SWPU_BOOT.csrf=${JSON.stringify(csrfToken(this))};`);
         const tab = String(this.args.tab ?? '');
         if (TABS.includes(tab)) boot.push(`window.__SWPU_BOOT.tab=${JSON.stringify(tab)};`);
         // The in-place auth modal embeds this page in a same-origin iframe.
@@ -235,7 +267,9 @@ class RegCompleteHandler extends Handler {
     @post('code', Types.String)
     @post('uname', Types.String)
     @post('password', Types.Password)
-    async post(domainId: string, mail: string, code: string, uname: string, password: string) {
+    @post('csrf', Types.String, true)
+    async post(domainId: string, mail: string, code: string, uname: string, password: string, csrf?: string) {
+        if (csrfRejected(this, csrf)) { fail(this, '会话已过期，请刷新页面后重试。'); return; }
         if (!checkRegistration(this)) return;
         const recipient = normalizeMail(mail);
         const mailKey = UserModel._handleMailLower(recipient);
@@ -299,7 +333,9 @@ class CodeLoginHandler extends Handler {
     noCheckPermView = true;
     @post('mail', Types.Email)
     @post('code', Types.String)
-    async post(domainId: string, mail: string, code: string) {
+    @post('csrf', Types.String, true)
+    async post(domainId: string, mail: string, code: string, csrf?: string) {
+        if (csrfRejected(this, csrf)) { fail(this, '会话已过期，请刷新页面后重试。'); return; }
         await limitProbe(this, mail);
         const udoc = await UserModel.getByEmail('system', mail);
         if (!udoc) {

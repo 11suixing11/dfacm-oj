@@ -41,10 +41,15 @@ async function fixture({ env = {} } = {}) {
     });
     const stub = {
         db: { collection: () => collection, ensureIndexes: async () => {} },
+        // A shared session object stands in for Hydro's, so a token minted while
+        // rendering /mistakes is visible to the POST handlers — which is the
+        // property CSRF relies on.
+        session: {},
         Handler: class {
             constructor() {
                 this.response = { body: {}, headers: {}, addHeader: (k, v) => { this.response.headers[k] = v; } };
                 this.user = { _id: 42, uname: 'student' };
+                this.session = stub.session;
             }
             async limitRate(...args) { limits.push(args); }
         },
@@ -89,6 +94,15 @@ async function fixture({ env = {} } = {}) {
     const handler = (url) => new (routes.get(url).HandlerClass)();
     return {
         collection, routes, listeners, nav, locales, limits, recordQueries, stub, handler,
+        // Renders /mistakes and returns the CSRF token it embedded, the way a
+        // real client obtains one.
+        csrf: async () => {
+            const page = handler('/mistakes');
+            await page.get('system');
+            const match = /window\.__SWPU_CSRF__="([0-9a-f]{64})"/.exec(String(page.response.body));
+            if (!match) throw new Error('no CSRF token embedded in /mistakes');
+            return match[1];
+        },
     };
 }
 
@@ -148,44 +162,83 @@ test('first mistakes visit backfills from recent failures, later visits skip it'
 
 test('update validates input, saves review fields and toggles resolution', async () => {
     const f = await fixture();
+    const token = await f.csrf();
     f.listeners['record/change']({ domainId: 'system', uid: 42, pid: 1001, status: 2, _id: 'rid1' }, null, null, { key: 'end' });
     await new Promise((resolve) => setImmediate(resolve));
     const bad = f.handler('/mistakes/update');
-    await bad.post('system', 1001, 'nonsense', undefined, undefined);
+    await bad.post('system', 1001, 'nonsense', undefined, undefined, token);
     assert.equal(bad.response.body.ok, false);
     assert.match(bad.response.body.message, /错误原因/);
     const missing = f.handler('/mistakes/update');
-    await missing.post('system', 9999, undefined, 'note', undefined);
+    await missing.post('system', 9999, undefined, 'note', undefined, token);
     assert.equal(missing.response.body.ok, false);
     assert.match(missing.response.body.message, /错题本/);
     const good = f.handler('/mistakes/update');
-    await good.post('system', 1001, 'boundary', ' 没考虑 n=1 ', undefined);
+    await good.post('system', 1001, 'boundary', ' 没考虑 n=1 ', undefined, token);
     assert.equal(good.response.body.ok, true);
     const doc = f.collection.docs.find((d) => d.pid === 1001);
     assert.equal(doc.reason, 'boundary');
     assert.equal(doc.note, '没考虑 n=1');
     const toggle = f.handler('/mistakes/update');
-    await toggle.post('system', 1001, undefined, undefined, true);
+    await toggle.post('system', 1001, undefined, undefined, true, token);
     assert.equal(f.collection.docs.find((d) => d.pid === 1001).resolved, true);
     const remove = f.handler('/mistakes/remove');
-    await remove.post('system', 1001);
+    await remove.post('system', 1001, token);
     assert.equal(remove.response.body.ok, true);
     assert.equal(f.collection.docs.filter((d) => d.pid === 1001).length, 0);
+});
+
+// The three POSTs change state for the signed-in member using nothing but the
+// session cookie, so a cross-site caller must not be able to drive them.
+test('mistake-book POSTs reject a missing or wrong CSRF token', async () => {
+    const cases = [
+        ['update without a token', '/mistakes/update', ['system', 1001, 'boundary', undefined, undefined]],
+        ['update with a wrong token', '/mistakes/update', ['system', 1001, 'boundary', undefined, undefined, 'f'.repeat(64)]],
+        ['update with a truncated token', '/mistakes/update', ['system', 1001, 'boundary', undefined, undefined, 'abc']],
+        ['remove without a token', '/mistakes/remove', ['system', 1001]],
+        ['remove with a wrong token', '/mistakes/remove', ['system', 1001, '0'.repeat(64)]],
+        ['sync without a token', '/mistakes/sync', ['system']],
+        ['sync with a wrong token', '/mistakes/sync', ['system', '0'.repeat(64)]],
+    ];
+    for (const [label, url, args] of cases) {
+        const f = await fixture();
+        // Mint a real token so only the submitted value is wrong.
+        await f.csrf();
+        f.listeners['record/change']({ domainId: 'system', uid: 42, pid: 1001, status: 2, _id: 'rid1' }, null, null, { key: 'end' });
+        await new Promise((resolve) => setImmediate(resolve));
+        const before = JSON.stringify(f.collection.docs);
+        const h = f.handler(url);
+        await h.post(...args);
+        assert.equal(h.response.body.ok, false, label);
+        assert.match(h.response.body.message, /会话已过期/, label);
+        assert.equal(JSON.stringify(f.collection.docs), before, `${label}: nothing may change`);
+        // A rejected request must not even consume the rate-limit budget.
+        assert.equal(f.limits.length, 0, `${label}: must not spend quota`);
+    }
+});
+
+test('the workbench page carries no token because it never mutates', async () => {
+    const f = await fixture();
+    const page = f.handler('/workbench');
+    await page.get('system');
+    assert.ok(!String(page.response.body).includes('__SWPU_CSRF__'));
+    assert.equal(f.stub.session.swpuTrainCsrf, undefined, 'no token is minted for a read-only page');
 });
 
 // The mistakes page offers a "未分类" option whose value is the empty string.
 // The store rejected it, so choosing it returned "错误原因不在可选范围内。".
 test('the "unclassified" reason is storable and clearing it is allowed', async () => {
     const f = await fixture();
+    const token = await f.csrf();
     f.listeners['record/change']({ domainId: 'system', uid: 42, pid: 1001, status: 2, _id: 'rid1' }, null, null, { key: 'end' });
     await new Promise((resolve) => setImmediate(resolve));
     const set = f.handler('/mistakes/update');
-    await set.post('system', 1001, '', undefined, undefined);
+    await set.post('system', 1001, '', undefined, undefined, token);
     assert.equal(set.response.body.ok, true, JSON.stringify(set.response.body));
     assert.equal(f.collection.docs.find((d) => d.pid === 1001).reason, '');
     // Still refuses a genuinely unknown value.
     const bad = f.handler('/mistakes/update');
-    await bad.post('system', 1001, 'nonsense', undefined, undefined);
+    await bad.post('system', 1001, 'nonsense', undefined, undefined, token);
     assert.equal(bad.response.body.ok, false);
 });
 
@@ -193,16 +246,17 @@ test('the "unclassified" reason is storable and clearing it is allowed', async (
 // always answered ok, claiming a deletion that never happened.
 test('removing a row that is not in the mistake book is reported, not faked', async () => {
     const f = await fixture();
+    const token = await f.csrf();
     f.listeners['record/change']({ domainId: 'system', uid: 42, pid: 1001, status: 2, _id: 'rid1' }, null, null, { key: 'end' });
     await new Promise((resolve) => setImmediate(resolve));
     const absent = f.handler('/mistakes/remove');
-    await absent.post('system', 9999);
+    await absent.post('system', 9999, token);
     assert.equal(absent.response.body.ok, false);
     assert.match(absent.response.body.message, /不在你的错题本/);
     // Another member's row is out of reach: remove scopes on the session uid.
     const other = f.handler('/mistakes/remove');
     f.collection.docs.push({ domainId: 'system', uid: 99, pid: 1001, resolved: false, lastAt: new Date() });
-    await other.post('system', 1001);
+    await other.post('system', 1001, token);
     assert.equal(other.response.body.ok, true);
     assert.equal(f.collection.docs.some((d) => d.uid === 42), false, 'the caller\'s own row is gone');
     assert.equal(f.collection.docs.some((d) => d.uid === 99 && d.pid === 1001), true, 'another member\'s row is untouched');
@@ -212,10 +266,11 @@ test('removing a row that is not in the mistake book is reported, not faked', as
 // errors, so a database failure surfaced as a 500.
 test('a failing sync is reported as a message rather than thrown', async () => {
     const f = await fixture();
+    const token = await f.csrf();
     // The backfill reads through RecordModel.getMulti first.
     f.stub.RecordModel.getMulti = () => { throw new Error('db exploded'); };
     const h = f.handler('/mistakes/sync');
-    await h.post('system');
+    await h.post('system', token);
     assert.equal(h.response.body.ok, false);
     assert.match(h.response.body.message, /同步失败/);
 });
@@ -246,8 +301,9 @@ test('hook registration honors SWPU_TRAIN_MISTAKES=0 and non-zero pm2 instances'
 
 test('manual sync is rate limited and writes the marker', async () => {
     const f = await fixture();
+    const token = await f.csrf();
     const h = f.handler('/mistakes/sync');
-    await h.post('system');
+    await h.post('system', token);
     assert.equal(h.response.body.ok, true);
     assert.equal(h.response.body.collected, 2);
     assert.ok(f.limits.some((l) => l[0] === 'swpu_train_sync' && l[2] === 1));

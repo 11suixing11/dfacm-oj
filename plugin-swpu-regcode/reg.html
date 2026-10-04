@@ -8,7 +8,7 @@
 <meta name="theme-color" content="#070d18">
 <link rel="icon" type="image/png" href="/favicon.png">
 <link rel="preload" href="/swpu-display.woff2" as="font" type="font/woff2" crossorigin>
-<script>/* 服务端注入初始标签页/内嵌模式/第三方登录方式（Caddy rewrite 后浏览器 URL 不带 query，见 RegPageHandler） */window.__SWPU_BOOT={tab:null,embed:false,oauth:[]};/*__SWPU_BOOT__*/</script>
+<script>/* 服务端注入初始标签页/内嵌模式/第三方登录方式/CSRF token（Caddy rewrite 后浏览器 URL 不带 query，见 RegPageHandler） */window.__SWPU_BOOT={tab:null,embed:false,oauth:[],csrf:''};/*__SWPU_BOOT__*/</script>
 <style>
 @font-face{font-family:'SWPU Display';src:url('/swpu-display.woff2') format('woff2');font-weight:400;font-style:normal;font-display:swap}
 @font-face{font-family:'SWPU Mono';src:url('/swpu-mono.woff2') format('woff2');font-weight:100 800;font-style:normal;font-display:swap}
@@ -319,7 +319,11 @@ body.embed .embed-close{display:flex}
   async function api(url,data){
     var controller=new AbortController(),timeout=setTimeout(function(){controller.abort()},15000);
     try{
-      var response=await fetch(url,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams(data),signal:controller.signal});
+      /* 服务端把 CSRF token 放在 __SWPU_BOOT.csrf，随页面一起下发；所有 POST 都从这里
+         带上它。外部站点能带着访客 cookie 发请求，但读不到这个 token。 */
+      var body=new URLSearchParams(data);
+      body.set('csrf',(window.__SWPU_BOOT&&window.__SWPU_BOOT.csrf)||'');
+      var response=await fetch(url,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:body,signal:controller.signal});
       var d;
       try{d=await response.json()}catch(e){
         if(e.name==='AbortError')throw e;

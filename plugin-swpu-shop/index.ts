@@ -10,6 +10,7 @@
 import {
     Context, db, Handler, Logger, param, post, PRIV, RecordModel, Schema, Types,
 } from 'hydrooj';
+import { randomBytes, timingSafeEqual } from 'crypto';
 import {
     LEDGER_PAGE_SIZE, awardSolve, getBalance, listLedger, problemDifficulty,
     redeem, setPrice, ShopError,
@@ -86,6 +87,8 @@ class ShopPageHandler extends Handler {
             balance,
             // Echoed back by a failed form POST so the member sees why.
             error: shopError(this),
+            // Redeem is a plain form POST, so the token travels as a hidden field.
+            csrf: signedIn ? csrfToken(this) : '',
             badges: rows.map((row) => ({ ...row, owned: ownedIds.has(row._id) })),
         };
         this.response.template = 'shop.html';
@@ -114,9 +117,41 @@ function shopError(handler: Handler): string {
     return typeof raw === 'string' ? raw.slice(0, 200) : '';
 }
 
+// --- CSRF -----------------------------------------------------------------
+// Both POSTs here change state with the member's session cookie and nothing
+// else: /shop/redeem spends points and /manage/shop rewrites pricing for every
+// member. A cross-site form post would carry the session cookie, so the token
+// has to come from the session rather than from anything the attacker controls.
+//
+// Hydro sessions are plain mutable objects (loginAs sets viewLang, oauthBind,
+// sudo on the same object), so the token is stored there and only its value is
+// rendered into the page. Kept in this file rather than a shared module because
+// each addon ships as an independently-installed directory.
+const CSRF_SESSION_KEY = 'swpuShopCsrf';
+
+function csrfToken(handler: Handler): string {
+    const session = handler.session;
+    if (!session) return '';
+    const existing = session[CSRF_SESSION_KEY];
+    if (typeof existing === 'string' && existing.length === 64) return existing;
+    const token = randomBytes(32).toString('hex');
+    session[CSRF_SESSION_KEY] = token;
+    return token;
+}
+
+function csrfRejected(handler: Handler, sent: unknown): boolean {
+    const expected = handler.session && handler.session[CSRF_SESSION_KEY];
+    if (typeof expected !== 'string' || typeof sent !== 'string') return true;
+    const a = Buffer.from(sent);
+    const b = Buffer.from(expected);
+    return a.length === 0 || a.length !== b.length || !timingSafeEqual(a, b);
+}
+
 class ShopRedeemHandler extends Handler {
     @post('badgeId', Types.PositiveInt)
-    async post(domainId: string, badgeId: number) {
+    @post('csrf', Types.String, true)
+    async post(domainId: string, badgeId: number, csrf?: string) {
+        if (csrfRejected(this, csrf)) { failShop(this, new ShopError('会话已过期，请刷新页面后重试。'), '/shop'); }
         const models = badgeModels();
         if (!models.badge || !models.userBadge) {
             failShop(this, new ShopError('徽章组件未就绪，请联系管理员。'), '/shop');
@@ -185,7 +220,7 @@ class ShopManageHandler extends Handler {
             }
             rows.sort((a, b) => a._id - b._id);
         }
-        this.response.body = { badges: rows, error: shopError(this) };
+        this.response.body = { badges: rows, error: shopError(this), csrf: csrfToken(this) };
         this.response.template = 'manage.html';
     }
 }
@@ -195,7 +230,9 @@ class ShopManageSaveHandler extends Handler {
     @post('badgeId', Types.PositiveInt)
     @post('price', Types.PositiveInt)
     @post('enabled', Types.Boolean, true)
-    async post(domainId: string, operation: string, badgeId: number, price: number, enabled?: boolean) {
+    @post('csrf', Types.String, true)
+    async post(domainId: string, operation: string, badgeId: number, price: number, enabled?: boolean, csrf?: string) {
+        if (csrfRejected(this, csrf)) { failShop(this, new ShopError('会话已过期，请刷新页面后重试。'), '/manage/shop'); }
         try {
             if (operation && operation !== 'price') throw new ShopError('不支持的操作。');
             await setPrice(collections(), now, badgeId, price, enabled !== false);

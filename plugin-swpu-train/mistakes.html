@@ -121,6 +121,7 @@ textarea:focus,select:focus{outline:none;border-color:rgba(233,196,85,.55)}
 </footer>
 <script>
 'use strict';
+/*__SWPU_CSRF__*/
 (function(){
   var $=function(id){return document.getElementById(id)};
   var REASON_TEXT={idea:'思路不会',boundary:'边界情况没考虑到',complexity:'复杂度不够（超时）',implement:'实现细节出错',misread:'题意理解偏差',other:'其他'};
@@ -140,7 +141,11 @@ textarea:focus,select:focus{outline:none;border-color:rgba(233,196,85,.55)}
   async function api(url,data){
     var controller=new AbortController(),timeout=setTimeout(function(){controller.abort()},15000);
     try{
-      var resp=await fetch(url,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams(data),signal:controller.signal});
+      /* Every state-changing request goes through here, so the CSRF token is
+         attached once. It is minted per session server-side and embedded in this
+         page; a cross-site caller can send the session cookie but cannot read it. */
+      var body=new URLSearchParams(data);body.set('csrf',window.__SWPU_CSRF__||'');
+      var resp=await fetch(url,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:body,signal:controller.signal});
       var d;try{d=await resp.json()}catch(e){return {ok:false,message:'服务暂时不可用，请稍后重试。'}}
       if(!d||typeof d!=='object')return {ok:false,message:'服务返回异常，请稍后重试。'};
       return d;

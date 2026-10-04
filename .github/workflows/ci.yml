@@ -115,6 +115,43 @@ jobs:
             exit 1
           fi
           echo "both Cloudflare range lists agree ($(printf '%s\n' "$first" | wc -l) ranges)"
+      - name: Require CSRF coverage on every state-changing POST
+        run: |
+          # These five POSTs change state using nothing but the session cookie.
+          # Each must declare the token parameter and check it; each client must
+          # send it. A silent removal here is the whole protection disappearing.
+          node - <<'EOF'
+          const fs = require('fs');
+          const specs = [
+            ['plugin-swpu-regcode/index.ts', 2],
+            ['plugin-swpu-shop/index.ts', 2],
+            ['plugin-swpu-train/index.ts', 3],
+          ];
+          let bad = 0;
+          for (const [file, expected] of specs) {
+            const src = fs.readFileSync(file, 'utf8');
+            const declared = (src.match(/@post\('csrf'/g) || []).length;
+            const checked = (src.match(/csrfRejected\(/g) || []).length - 1; // minus the definition
+            if (declared !== expected || checked !== expected) {
+              console.error(`${file}: expected ${expected} csrf params and checks, found ${declared}/${checked}`);
+              bad++;
+            }
+          }
+          for (const client of ['plugin-swpu-regcode/reg.html', 'plugin-swpu-train/mistakes.html']) {
+            if (!/body\.set\('csrf'/.test(fs.readFileSync(client, 'utf8'))) {
+              console.error(`${client} does not send the csrf token`);
+              bad++;
+            }
+          }
+          for (const tpl of ['plugin-swpu-shop/templates/shop.html', 'plugin-swpu-shop/templates/manage.html']) {
+            if (!/name="csrf"/.test(fs.readFileSync(tpl, 'utf8'))) {
+              console.error(`${tpl} has no csrf hidden field`);
+              bad++;
+            }
+          }
+          if (bad) process.exit(1);
+          console.log('csrf wiring verified across all three plugins');
+          EOF
       - name: Reject documented-but-unimplemented tuning claims
         run: |
           # The README advertised BBR congestion control, but no sysctl or

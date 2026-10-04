@@ -4,9 +4,10 @@
 
 A hardening pass over the boundaries of the customisation layer: the seams
 between Hydro and the plugins, and between the deploy scripts and the live
-server. Test count went from 136 to 192; every fix below has a regression test
-or a CI lock, and the two behavioural tests added for the boot-payload and
-Cloudflare-range fixes were confirmed to fail against the old code.
+server. Test count went from 136 to 200; every fix below has a regression test
+or a CI lock, and the behavioural tests added for the boot-payload,
+Cloudflare-range and CSRF-wiring fixes were each confirmed to fail against the
+old code.
 
 ### Security
 
@@ -47,7 +48,14 @@ Cloudflare-range fixes were confirmed to fail against the old code.
   double-escaped.
 - **Five state-changing POSTs had no CSRF token** (`/reg/complete`,
   `/reg/login`, `/mistakes/update`, `/mistakes/remove`, `/shop/redeem`,
-  `/manage/shop`). See "Known gaps" below.
+  `/manage/shop`, and `/mistakes/sync`). Each now mints a token into the
+  session — a plain mutable object, the same one `loginAs` writes — and echoes
+  it through that page's existing data channel: the `/reg` boot payload, a
+  `window.__SWPU_CSRF__` marker in `mistakes.html`, and a hidden field in the
+  two shop forms. Comparison is `timingSafeEqual` with a length pre-check.
+  Sending a code (`/reg/code`) deliberately still works without a token: a
+  first-time visitor has no account to protect, and requiring one would make
+  registration impossible.
 
 ### Data integrity
 
@@ -138,23 +146,22 @@ regression class CI had no lock for: `shellcheck -S warning` (`bash -n` only
 parses), `caddy adapt --validate` on `Caddyfile.example` (`check-deployment.sh`
 already runs this on the live config, and the file had uncommitted changes),
 byte-identical Cloudflare range lists between the global `trusted_proxies`
-block and the `@fromcf` matcher, the `@hidejudge` 404, and reintroduction locks
-for both injection classes above.
+block and the `@fromcf` matcher, the `@hidejudge` 404, reintroduction locks for
+both injection classes above, and a wiring check that every state-changing POST
+declares *and* verifies the CSRF token while every client sends it.
+
+That last check earned its place immediately: it found that
+`ShopManageSaveHandler` read a `csrf` argument it had never declared with
+`@post`, so Hydro would not have populated it and admin pricing would have
+failed on every submission. The handler tests stub the decorators as no-ops, so
+only a check comparing declarations against call sites could see it.
 
 ### Known gaps
 
-- **CSRF tokens are still not implemented.** Five state-changing POSTs across
-  three plugins remain unprotected. Adding a correct token means touching three
-  independently-shipped addons and their templates against a Hydro session API
-  this repository does not vendor, so it was deliberately left out of this pass
-  rather than half-done. The concrete exposure, in order: `/manage/shop` (an
-  admin could be induced to change badge pricing), `/shop/redeem` (points are
-  spent, though the per-badge unique key limits it to one redemption each),
-  `/mistakes/remove` and `/mistakes/update`.
-- `scripts/subset_fonts.py` needs font TTFs that are not committed. The
-  download and regeneration steps are now documented in
-  `landing/FONTS-LICENSE.md`, including the caveat that the glyph set is a
-  static scan of the HTML, so new copy needs a re-run.
+`scripts/subset_fonts.py` needs font TTFs that are not committed. The download
+and regeneration steps are now documented in `landing/FONTS-LICENSE.md`,
+including the caveat that the glyph set is a static scan of the HTML, so new
+copy needs a re-run.
 
 ## v1.15.0 - 2026-10-04
 

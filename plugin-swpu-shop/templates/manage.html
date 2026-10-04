@@ -32,6 +32,7 @@
           <td><a href="/badge/{{ bdoc._id }}">{{ bdoc.title }}</a></td>
           <td>
             <form method="post" action="{{ url('swpu_shop_manage_save') }}" class="inline-form">
+              <input type="hidden" name="csrf" value="{{ csrf }}">
               <input type="hidden" name="operation" value="price">
               <input type="hidden" name="badgeId" value="{{ bdoc._id }}">
               <input type="number" name="price" min="1" step="1" value="{{ bdoc.price or 1 }}" class="input--price">
