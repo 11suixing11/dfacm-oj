@@ -1,8 +1,8 @@
 const assert = require('node:assert/strict');
 const { test } = require('node:test');
 const {
-    createAutoJoin, createJoinReconcile, createPurgeDoc, createRpLock, createRpSweep, createSanitize,
-    serviceUidsFromEnv, JOIN_DOMAINS, SWEEP_INTERVAL_MS, SWEEP_STARTUP_DELAY_MS,
+    assertServiceAccounts, createAutoJoin, createJoinReconcile, createPurgeDoc, createRpLock, createRpSweep, createSanitize,
+    dryRunFromEnv, serviceUidsFromEnv, JOIN_DOMAINS, SWEEP_INTERVAL_MS, SWEEP_STARTUP_DELAY_MS,
 } = require('../rp-sweep.cjs');
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -19,12 +19,57 @@ test('SWPU_SERVICE_UIDS parses, dedupes and can disable the purge', () => {
     assert.deepEqual(serviceUidsFromEnv({ SWPU_SERVICE_UIDS: ' 7,3, 3,0,-2,x ' }), [3, 7]);
 });
 
-test('sanitize deletes service-account status rows across all domains', async () => {
+// The purge feeds the RP calculation, which only reads problem statuses. An
+// unscoped uid-only delete also took out training enrolments and every other
+// document.type row for that account.
+test('sanitize is scoped to problem statuses, not the whole account', async () => {
     const deleted = [];
     const coll = { deleteMany: async (filter) => { deleted.push(filter); return { deletedCount: 2 }; } };
     const result = await createSanitize(coll, [3, 7])();
     assert.equal(result.deletedCount, 2);
-    assert.deepEqual(deleted, [{ uid: { $in: [3, 7] } }]);
+    assert.deepEqual(deleted, [{ uid: { $in: [3, 7] }, docType: 10 }]);
+    // The wide behaviour stays reachable for operators who really want it.
+    const wide = [];
+    const wideColl = { deleteMany: async (filter) => { wide.push(filter); return { deletedCount: 0 }; } };
+    await createSanitize(wideColl, [3], { docType: null })();
+    assert.deepEqual(wide, [{ uid: { $in: [3] } }]);
+});
+
+test('sanitize reports its blast radius without deleting when dry-run', async () => {
+    const deleted = [];
+    const coll = {
+        deleteMany: async (filter) => { deleted.push(filter); return { deletedCount: 9 }; },
+        countDocuments: async (filter) => { assert.deepEqual(filter, { uid: { $in: [3] }, docType: 10 }); return 42; },
+    };
+    const result = await createSanitize(coll, [3], { dryRun: true })();
+    assert.deepEqual(deleted, [], 'dry run must not delete');
+    assert.equal(result.deletedCount, 0);
+    assert.equal(result.wouldDelete, 42);
+    assert.equal(result.dryRun, true);
+});
+
+test('the purge refuses a uid that is not recognisably a service account', () => {
+    // A retired judge uid reassigned to a person must not have that account's
+    // statuses wiped every hour.
+    assert.throws(
+        () => assertServiceAccounts([{ _id: 3, uname: 'zhangsan' }], [3]),
+        /does not look like a service account/,
+    );
+    assert.throws(
+        () => assertServiceAccounts([{ _id: 3, uname: 'admin' }], [3]),
+        /SWPU_SERVICE_UIDS/,
+    );
+    // The real judge account and an absent uname both pass.
+    assert.doesNotThrow(() => assertServiceAccounts([{ _id: 3, uname: 'hydsvc-0074' }], [3]));
+    assert.doesNotThrow(() => assertServiceAccounts([{ _id: 3, uname: '' }], [3]));
+    assert.doesNotThrow(() => assertServiceAccounts([{ _id: 4, uname: 'zhangsan' }], [3]));
+    assert.doesNotThrow(() => assertServiceAccounts(null, [3]));
+});
+
+test('dry-run and service-account parsing read the environment', () => {
+    assert.equal(dryRunFromEnv({}), false);
+    for (const value of ['1', 'true', 'TRUE', 'yes']) assert.equal(dryRunFromEnv({ SWPU_SERVICE_UIDS_DRYRUN: value }), true, value);
+    for (const value of ['0', 'false', '', 'no', 'maybe']) assert.equal(dryRunFromEnv({ SWPU_SERVICE_UIDS_DRYRUN: value }), false, value);
 });
 
 test('sanitize with an empty list is a disabled no-op', async () => {

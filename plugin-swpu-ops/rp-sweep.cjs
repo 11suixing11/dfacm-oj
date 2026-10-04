@@ -38,16 +38,50 @@ function serviceUidsFromEnv(env = process.env) {
     return [...new Set(uids)].sort((a, b) => a - b);
 }
 
-// Deletes every document.status row of the service accounts, across all
-// domains and doc types (problem statuses, training enrollments, ...). Throws
-// on database errors so callers can refuse to compute on a polluted source.
-function createSanitize(coll, uids) {
+// Set SWPU_SERVICE_UIDS_DRYRUN=1 to report what the purge would delete without
+// deleting it. The purge is destructive and runs unattended every hour, so its
+// blast radius has to be inspectable before it is trusted.
+function dryRunFromEnv(env = process.env) {
+    const raw = String(env.SWPU_SERVICE_UIDS_DRYRUN === undefined ? '' : env.SWPU_SERVICE_UIDS_DRYRUN).trim().toLowerCase();
+    return raw === '1' || raw === 'true' || raw === 'yes';
+}
+
+// Refuse to purge a uid that is not recognisably a service account. Reusing a
+// retired judge's uid for a person would otherwise destroy that account's
+// problem statuses and training enrolments every hour, silently.
+function assertServiceAccounts(users, uids, prefix = 'hydsvc') {
+    if (!Array.isArray(users)) return;
+    for (const doc of users) {
+        if (!doc || !uids.includes(doc._id)) continue;
+        const uname = String(doc.uname || '');
+        if (uname && !uname.startsWith(prefix)) {
+            throw new Error('uid ' + doc._id + ' is "' + uname + '", which does not look like a service '
+                + 'account (expected a uname starting with "' + prefix + '"). Refusing to purge; point '
+                + 'SWPU_SERVICE_UIDS at the right uid list, or set SWPU_SERVICE_UIDS_DRYRUN=1 to inspect.');
+        }
+    }
+}
+
+// Deletes the service accounts' problem-status rows. The docType filter is
+// deliberate: an unscoped uid-only delete also took out training enrolments and
+// every other document.type row for that account, which is far more than the RP
+// calculation reads. Pass docType: null to restore the old wide behaviour.
+// Throws on database errors so callers can refuse to compute on a polluted
+// source.
+function createSanitize(coll, uids, options = {}) {
     if (!coll || typeof coll.deleteMany !== 'function') throw new TypeError('sanitize needs the document.status collection');
     const targets = [...uids];
+    const docType = options.docType === undefined ? DOC_TYPE_PROBLEM : options.docType;
+    const filter = { uid: { $in: targets } };
+    if (docType !== null) filter.docType = docType;
     return async function sanitize() {
         if (!targets.length) return { deletedCount: 0, disabled: true };
-        const result = await coll.deleteMany({ uid: { $in: targets } });
-        return { deletedCount: (result && result.deletedCount) || 0, uids: targets };
+        if (options.dryRun) {
+            const count = typeof coll.countDocuments === 'function' ? await coll.countDocuments(filter) : null;
+            return { deletedCount: 0, wouldDelete: count, uids: targets, docType, dryRun: true };
+        }
+        const result = await coll.deleteMany(filter);
+        return { deletedCount: (result && result.deletedCount) || 0, uids: targets, docType };
     };
 }
 
@@ -183,7 +217,11 @@ function createRpSweep(options = {}) {
                 if (!rp || typeof rp.run !== 'function') return false;
                 if (sanitize) {
                     const purge = await sanitize();
-                    if (purge && purge.deletedCount > 0) logger.info('purged service-account status rows:', purge.deletedCount);
+                    if (purge && purge.dryRun) {
+                        logger.info('rp sweep DRY RUN, nothing deleted; would purge:', JSON.stringify(purge));
+                    } else if (purge && purge.deletedCount > 0) {
+                        logger.info('purged service-account status rows:', purge.deletedCount);
+                    }
                 }
                 if (reconcile) {
                     const result = await reconcile();
@@ -238,12 +276,14 @@ function createRpSweep(options = {}) {
 }
 
 module.exports = {
+    assertServiceAccounts,
     createAutoJoin,
     createJoinReconcile,
     createPurgeDoc,
     createRpLock,
     createRpSweep,
     createSanitize,
+    dryRunFromEnv,
     serviceUidsFromEnv,
     JOIN_DOMAINS,
     SWEEP_INTERVAL_MS,

@@ -3,14 +3,14 @@ import { Context, db, DomainModel, ObjectId, RecordModel, Schema, TaskModel, Use
 const { createOperations } = require('./operations.cjs');
 const { createLiveRp } = require('./live-rp.cjs');
 const {
-    createAutoJoin, createJoinReconcile, createPurgeDoc, createRpLock, createRpSweep, createSanitize, serviceUidsFromEnv,
+    assertServiceAccounts, createAutoJoin, createJoinReconcile, createPurgeDoc, createRpLock, createRpSweep, createSanitize, dryRunFromEnv, serviceUidsFromEnv,
 } = require('./rp-sweep.cjs');
 
 // Hydro's script administration requires PRIV_EDIT_SYSTEM and sudo authentication.
 // CLI execution is reserved for the server account with access to Hydro's config.
 // Deliberately register no HTTP route; the background work is the live-RP hook
 // plus the hourly sweep (see rp-sweep.cjs).
-export function apply(ctx: Context) {
+export async function apply(ctx: Context) {
     const ops = createOperations({ DomainModel, ObjectId, RecordModel, TaskModel, UserModel });
     const windowFields = {
         domainId: Schema.string().default('system'),
@@ -34,8 +34,22 @@ export function apply(ctx: Context) {
     const domainUserColl = db.collection('domain.user' as any);
     const userColl = db.collection('user' as any);
     const serviceUids = serviceUidsFromEnv();
+    const dryRun = dryRunFromEnv();
     const reconcile = createJoinReconcile({ userColl, domainUserColl, uids: serviceUids });
-    const manualSweep = createRpSweep({ sanitize: createSanitize(statusColl, serviceUids), reconcile });
+    // The purge is the only destructive thing this plugin does, and it runs
+    // unattended. Verify each target uid really is a service account before
+    // arming it, so a retired judge uid reassigned to a person cannot have that
+    // account's statuses wiped hourly. SWPU_SERVICE_UIDS_DRYRUN=1 then reports
+    // the blast radius without deleting anything.
+    if (serviceUids.length) {
+        const targets = await userColl.find({ _id: { $in: serviceUids } }, { projection: { _id: 1, uname: 1 } }).toArray();
+        assertServiceAccounts(targets, serviceUids);
+        const missing = serviceUids.filter((uid) => !targets.some((doc) => doc && doc._id === uid));
+        if (missing.length) console.warn('swpu-ops [W] SWPU_SERVICE_UIDS names uids with no user row:', missing.join(', '));
+        if (dryRun) console.warn('swpu-ops [W] SWPU_SERVICE_UIDS_DRYRUN=1: the service-account purge will not delete anything.');
+    }
+    const sanitize = createSanitize(statusColl, serviceUids, { dryRun });
+    const manualSweep = createRpSweep({ sanitize, reconcile });
     ctx.addScript('swpuRpSweep', 'SWPU RP 立即全域重算（清服务号残留 + 补齐域 join + 全域重算）', Schema.object({}),
         async () => ({ recalculated: await manualSweep.runOnce('manual'), failures: [...manualSweep.failures] }));
     // The v1.12.0 auto-join only covers /reg/complete. GitHub (and any OAuth)
@@ -57,7 +71,6 @@ export function apply(ctx: Context) {
     // Both paths purge service-account rows before computing, so the judge
     // account can never resurrect phantom RP (the v1.12.0 incident).
     if (process.env.SWPU_LIVE_RP !== '0' && (!process.env.NODE_APP_INSTANCE || process.env.NODE_APP_INSTANCE === '0')) {
-        const sanitize = createSanitize(statusColl, serviceUids);
         const lock = createRpLock();
         const live = createLiveRp({
             sanitize,
