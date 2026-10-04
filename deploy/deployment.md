@@ -240,7 +240,8 @@ curl -sSI https://<域名>/ | grep -Ei 'strict-transport|x-content-type|referrer
 - [ ] 确认 `/service-worker.js` 是 kill-switch（`grep -q unregister`）。
 - [ ] 门面、字体、图标在 `custom/`，**无需重放**。
 - [ ] 如果 Hydro 头部引用 static 下的默认 favicon，确认 `@custom` 路径列表覆盖同名文件。
-- [ ] `bash deploy/patch-ranking-template.sh` 重新打排名页 own-row 去重补丁（上游升级会换掉整个模板文件），然后 `pm2 restart hydrooj`。
+- [ ] `bash deploy/patch-ranking-template.sh` 重新打排名页模板补丁（own-row 去重 + 自己行高亮，上游升级会换掉整个模板文件），然后 `pm2 restart hydrooj`。
+- [ ] `bash deploy/patch-rating-floor.sh` 重打单题 RP 保底补丁（上游升级会覆盖 rating.ts），重启后触发一次 `hydrooj cli script swpuRpSweep '{}'` 重算。
 
 ## 10. 验证清单
 
@@ -396,10 +397,20 @@ bash /opt/swpu-oj/scripts/check-deployment.sh \
 
 升级流程：记录当前组件与自研插件版本 → 保存并核验完整备份和异机副本 → 备用实例升级 → 注册/登录与人工判题验收 → 在人工确认的维护窗口应用到正式机。升级失败时，优先切换到验证过的备用实例，或按相匹配的程序版本和数据备份恢复；数据库迁移后不要直接降级 npm 包当作回退。本仓库没有自动发布、重启或回滚脚本。
 
-## 18. 排名页 own-row 去重补丁
+## 18. 排名页模板补丁（own-row 去重 + 自己行高亮）
 
-上游 `ui-default` 的 `templates/ranking.html` 会把登录用户自己的排名行**无条件**渲染在榜单之前：第 1 名登录后看到自己出现两次，序号变成 1、1、2、3…（置顶行显示存储的 `rank`，榜单行显示循环序号；游客不受影响）。补丁把置顶行改成仅当用户存储的 `rank` **不在**当前页排名区间内才渲染——用户已被本页列出时不再重复；翻到后面页或没有排名（rp=0）时置顶行照常出现，保留上游"显示自己位置"的设计意图。
+上游 `ui-default` 的 `templates/ranking.html` 有两个问题，`deploy/patch-ranking-template.sh` 一次运行按序打两个补丁（幂等、各自带标记）：
 
-- 应用：`bash deploy/patch-ranking-template.sh`（幂等：带 `SWPU ACM patch: ranking own-row dedup` 标记即跳过；ui-default 升级会覆盖模板文件，重跑即可恢复）。模板加载进内存后不再读盘，改完必须 `pm2 restart hydrooj`。
+1. **own-row 去重**：上游把登录用户自己的排名行**无条件**渲染在榜单之前：第 1 名登录后看到自己出现两次，序号变成 1、1、2、3…（置顶行显示存储的 `rank`，榜单行显示循环序号；游客不受影响）。补丁把置顶行改成仅当用户存储的 `rank` **不在**当前页排名区间内才渲染——用户已被本页列出时不再重复；翻到后面页或没有排名（rp=0）时置顶行照常出现，保留上游"显示自己位置"的设计意图。标记：`SWPU ACM patch: ranking own-row dedup`。
+2. **自己行高亮**：人一多就很难在榜单里找到自己。补丁给登录用户自己的行（置顶行与榜内行）加 `swpu-row--self` 类，`theme/00-brand.css` 画品牌蓝高亮 + 左侧色条 + "你"徽章；类判定用 `handler.user._id == udoc._id`（两侧都是数字 uid，Guest 是 0 不会误匹配）。标记：`SWPU ACM patch: ranking self-row highlight`。
+
+- 应用：`bash deploy/patch-ranking-template.sh`（全新上游文件一次补齐两块；ui-default 升级会覆盖模板文件，重跑即可恢复）。模板加载进内存后不再读盘，改完必须 `pm2 restart hydrooj`。
 - 补丁条件刻意只用纯算术：随 ui-default 附带的 nunjucks 裁剪版没有 `namespace` 全局、没有 `map` 过滤器，属性式 `{% set ns.v = ... %}` 会直接编译崩溃。
-- 验证：匿名 `/ranking` 行数 = 榜单人数；登录已上榜用户查看 `/ranking` 不应再出现第二行自己。
+- 验证：匿名 `/ranking` 行数 = 榜单人数；登录已上榜用户查看 `/ranking` 不应再出现第二行自己，且自己的行带 `swpu-row--self` 类与"你"徽章。
+
+## 19. 单题 RP 保底补丁（problem 组件）
+
+上游 `hydrooj` 的 `src/script/rating.ts` problem 组件把每人原始分压成 `max(0, min(raw, log(raw) / log(1.03)))`：log 分支在 raw==1 时恰好为 0，而一道 d1（难度 1）题 AC 恰好贡献 raw 1——只做出第一道简单题的成员 rp=0，被排名页 `rp>0` 过滤器和 calcLevel 的排名字段**同时**排除，"明明 AC 了却查无此人"，个人页显示 `RP: 0 (No. ?)`。上游 contest 组件本就自带 `max(1, ...)` 保底，本补丁给 problem 组件同样的保底：任何正原始分至少 1 RP（部分分也保底，"有得分就上榜"）。
+
+- 应用：`bash deploy/patch-rating-floor.sh`（幂等：带 `SWPU ACM patch: problem RP floor` 标记即跳过；hydrooj 升级会覆盖 rating.ts，重跑即可恢复）。rating.ts 是启动时编译的 TS，改完必须 `pm2 restart hydrooj`，再触发一次重算：`hydrooj cli script swpuRpSweep '{}'`（或等 swpu-ops 每小时清扫、重启后 3 分钟的首次清扫）。
+- 验证：只 AC 过一道简单题的成员出现在 `/ranking`（RP 1），个人页显示 `RP: 1 (No. N)`；零得分账号仍不上榜；已有 rp 的成员数值不变（保底只影响原本算成 0 的正原始分）。

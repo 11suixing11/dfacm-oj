@@ -1,5 +1,30 @@
 # Changelog
 
+## v1.17.0 - 2026-10-05
+
+Ranking fixes: members who had solved exactly one easy problem were invisible
+on the leaderboard, and one's own row was hard to find as the board grows.
+
+### Fixed
+
+- **First-AC members got RP 0 and vanished from the leaderboard.** The
+  upstream problem component compresses raw scores with
+  `max(0, min(raw, log(raw) / log(1.03)))`, and the log branch is exactly 0 at
+  raw == 1 - which is precisely what a single difficulty-1 AC contributes.
+  The ranking page filters `rp > 0` and calcLevel only assigns ranks to
+  rp > 0, so those members appeared nowhere on the board while their profile
+  read "RP: 0 (No. ?)". `deploy/patch-rating-floor.sh` floors any positive
+  raw score at 1 RP, mirroring the contest component's own `max(1, ...)`
+  floor. Replay and verification notes: deployment.md §19.
+
+- **One's own position was hard to find on a long leaderboard.** The ranking
+  template patch now also brands the signed-in viewer's own row (the pinned
+  row and the in-list row) with `.swpu-row--self`; the brand layer paints a
+  highlight, a left accent bar and a "你" badge. New marker `SWPU ACM patch:
+  ranking self-row highlight`; the template script applies both ranking
+  patches in order, so a fresh upstream template is fully patched by a single
+  run. Replay and verification notes: deployment.md §18.
+
 ## v1.16.0 - 2026-10-04
 
 A hardening pass over the boundaries of the customisation layer: the seams

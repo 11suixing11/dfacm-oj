@@ -95,6 +95,35 @@
 .theme--dark .typo table,
 .theme--light .typo table { display: block; max-width: 100%; overflow-x: auto; }
 
+/* ---------- shared: ranking self-row highlight ---------- */
+/* 排名页"自己"的行由模板补丁(deploy/patch-ranking-template.sh)打上 .swpu-row--self：
+   置顶行(自己的排名不在当前页时)与榜内行同款品牌蓝高亮 + 左侧色条 + "你"徽章，
+   长榜单一眼定位自己。游客/Guest(_id=0)不会匹配任何行。 */
+.theme--dark .data-table tr.swpu-row--self td,
+.theme--light .data-table tr.swpu-row--self td {
+  background: rgba(42, 92, 170, .12);
+}
+.theme--dark .data-table tr.swpu-row--self td:first-child { box-shadow: inset 3px 0 0 #e9c455; }
+.theme--light .data-table tr.swpu-row--self td:first-child { box-shadow: inset 3px 0 0 #2a5caa; }
+.theme--dark .data-table tr.swpu-row--self .col--user::after,
+.theme--light .data-table tr.swpu-row--self .col--user::after {
+  content: '你';
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: #2a5caa;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 18px;
+  vertical-align: middle;
+}
+.theme--dark .data-table tr.swpu-row--self .col--user::after {
+  background: #c9a227;
+  color: #101d32;
+}
+
 /* ---------- dark specifics ---------- */
 .theme--dark ::-webkit-scrollbar-thumb {
   background: #263650;
