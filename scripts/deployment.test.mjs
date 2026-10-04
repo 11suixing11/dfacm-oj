@@ -385,6 +385,39 @@ test('old theme backups are pruned to the retention limit', () => {
   const prefix = unixPath(fixture.files.STATIC_THEME).replace(/\//g, '_');
   const kept = fs.readdirSync(fixture.backupDir).filter((n) => n.startsWith(prefix + '.bak-'));
   assert.equal(kept.length, 2, JSON.stringify(kept));
+  // Every target keeps its own quota: the four prefixes are distinct even
+  // though two pairs share a basename.
+  assert.equal(fs.readdirSync(fixture.backupDir).filter((n) => n.endsWith('.css.bak-') || n.includes('THEME.css.bak-')).length >= 4, true);
+});
+
+// Each target keeps its own quota, and pruning never reaches a file that is not
+// one of its own backups.
+test('pruning is scoped to the target it is pruning', () => {
+  const dir = fs.mkdtempSync(path.join(root, 'theme-collide-'));
+  const backupDir = fs.mkdtempSync(path.join(root, 'theme-collide-bak-'));
+  const files = {
+    STATIC_THEME: path.join(dir, 'a.css'),
+    SOURCE_THEME: path.join(dir, 'b.css'),
+    STATIC_SW: path.join(dir, 'sw.js'),
+    SOURCE_SW: path.join(dir, 'service-worker.js'),
+  };
+  for (const [key, f] of Object.entries(files)) fs.writeFileSync(f, key.endsWith('THEME') ? 'body{color:blue}' : 'originalWorker()');
+  const env = Object.fromEntries(Object.entries(files).map(([k, f]) => [k, unixPath(f)]));
+  env.BACKUP_DIR = unixPath(backupDir);
+  for (let i = 0; i < 4; i++) assert.equal(run('../deploy/install-theme.sh', [], { ...env, SWPU_THEME_BACKUP_KEEP: '3' }).status, 0);
+  const all = fs.readdirSync(backupDir);
+  // Exactly four targets, each keeping three: nothing extra was deleted and
+  // nothing was left unbounded.
+  assert.equal(all.length, 12, JSON.stringify(all));
+  for (const [key, f] of Object.entries(files)) {
+    const prefix = unixPath(f).replace(/\//g, '_') + '.bak-';
+    const kept = all.filter((n) => n.startsWith(prefix));
+    assert.equal(kept.length, 3, `${key}: ${JSON.stringify(all)}`);
+  }
+  // An unrelated file in the backup directory is never touched.
+  fs.writeFileSync(path.join(backupDir, 'README-do-not-delete'), 'keep me');
+  assert.equal(run('../deploy/install-theme.sh', [], { ...env, SWPU_THEME_BACKUP_KEEP: '1' }).status, 0);
+  assert.equal(fs.existsSync(path.join(backupDir, 'README-do-not-delete')), true);
 });
 
 // A failure detected before any mutation must leave the asset tree pristine and

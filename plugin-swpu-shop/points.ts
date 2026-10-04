@@ -173,16 +173,27 @@ export function refundRef(badgeId: number) {
 // transaction, not this map.
 const redeemLocks = new Map<number, Promise<unknown>>();
 
+// Exposed for tests: the lock map must not accumulate one entry per user who
+// ever redeemed.
+export function pendingLockCount() {
+    return redeemLocks.size;
+}
+
 async function withUserLock<T>(uid: number, work: () => Promise<T>): Promise<T> {
     const previous = redeemLocks.get(uid) || Promise.resolve();
     // Swallow the predecessor's rejection: one failed redemption must not poison
     // the queue for that user.
     const run = previous.then(work, work);
-    redeemLocks.set(uid, run.catch(() => undefined));
+    const tracked = run.catch(() => undefined);
+    redeemLocks.set(uid, tracked);
     try {
         return await run;
     } finally {
-        if (redeemLocks.get(uid) === undefined) redeemLocks.delete(uid);
+        // Only drop the entry when nobody has chained onto us. Comparing against
+        // our own promise matters: a later request for the same user will already
+        // have replaced the slot, and deleting on any other condition either
+        // strands that waiter behind a resolved promise or leaks the entry.
+        if (redeemLocks.get(uid) === tracked) redeemLocks.delete(uid);
     }
 }
 

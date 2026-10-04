@@ -311,6 +311,33 @@ test('redeem: the per-user lock does not serialise across accounts', async () =>
     assert.ok(results.every((r) => r.price === 10));
 });
 
+// The lock map must not grow one entry per user who ever redeemed. An earlier
+// version compared against undefined, which never matched a stored promise, so
+// the map leaked silently while appearing to clean up.
+test('redeem: the lock map releases its entries', async () => {
+    const points = loadPoints();
+    const m = models();
+    m.seedBadge(7, { _id: 7, title: 'A' });
+    m.seedBadge(8, { _id: 8, title: 'B' });
+    const ledger = new FakeLedger();
+    const collections = {
+        ledger,
+        price: new FakePrice([{ _id: 7, price: 1, enabled: true }, { _id: 8, price: 1, enabled: true }]),
+        userBadge: m.userBadge,
+    };
+    assert.equal(points.pendingLockCount(), 0, 'starts empty');
+    for (let uid = 1; uid <= 5; uid++) {
+        await ledger.insertOne({ uid, delta: 10, ref: `solve:system:${uid}`, kind: 'solve', detail: 'x', ts: now() });
+        await points.redeem({}, m, collections, now, uid, 7);
+    }
+    assert.equal(points.pendingLockCount(), 0, 'every entry released');
+    // A failed redemption must release its entry too.
+    m.userBadge.userBadgeAdd = async () => { throw new Error('badge plugin down'); };
+    await ledger.insertOne({ uid: 6, delta: 10, ref: 'solve:system:6', kind: 'solve', detail: 'x', ts: now() });
+    await assert.rejects(points.redeem({}, m, collections, now, 6, 8), /积分已退回/);
+    assert.equal(points.pendingLockCount(), 0, 'a rejected redemption released its entry');
+});
+
 test('redeem: a failed badge grant refunds the points instead of losing them', async () => {
     const points = loadPoints();
     const m = models();

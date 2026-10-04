@@ -150,10 +150,21 @@ backup_prefix() {
 }
 
 prune_backups() {
-    local prefix="$1" name
+    # A shell pattern rather than a regex: an unescaped "/" inside a sed bracket
+    # expression terminates the s command, and ls|grep|tail needs three passes
+    # where one loop does. `ls -t` is newest-first and filtering keeps that order,
+    # so counting down to BACKUP_KEEP is all the retention logic needed.
+    local prefix="$1" kept=0 name
     while IFS= read -r name; do
-        rm -f "$BACKUP_DIR/$name"
-    done < <(ls -1t "$BACKUP_DIR" 2>/dev/null | grep -F -- "$prefix" | tail -n "+$((BACKUP_KEEP + 1))")
+        case "$name" in
+            "$prefix"*) ;;
+            *) continue ;;
+        esac
+        kept=$((kept + 1))
+        if [ "$kept" -gt "$BACKUP_KEEP" ]; then
+            rm -f "$BACKUP_DIR/$name"
+        fi
+    done < <(ls -1t "$BACKUP_DIR" 2>/dev/null)
 }
 
 backup_file() {

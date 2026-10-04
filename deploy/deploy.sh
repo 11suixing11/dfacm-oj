@@ -167,8 +167,13 @@ upload_stage() {
     done < "$MANIFEST"
     # mktemp -d, not a fixed path: a predictable /tmp directory can be pre-created
     # or symlinked by a local unprivileged user before we extract into it.
-    STAGE="$(remote "mktemp -d /tmp/swpu-deploy-stage.XXXXXX")"
-    [ -n "$STAGE" ] || { echo "could not create a staging directory" >&2; exit 66; }
+    # tail -n 1 because a first-contact host-key notice or MOTD could otherwise
+    # end up inside the path we later interpolate into every remote command.
+    STAGE="$(remote "mktemp -d /tmp/swpu-deploy-stage.XXXXXX" 2>/dev/null | tail -n 1)"
+    case "$STAGE" in
+        /tmp/swpu-deploy-stage.*) ;;
+        *) echo "could not create a staging directory (got: '$STAGE')" >&2; exit 66 ;;
+    esac
     tar -C "$ROOT" -cf - "${tar_list[@]}" \
         | "$SSH_BIN" "${SSH_OPTS[@]}" "$SSH_TARGET" "tar -C '$STAGE' -xf -"
 }
