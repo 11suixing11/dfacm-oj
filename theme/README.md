@@ -36,7 +36,7 @@ Hydro 的 `ui-default` 自带完整、持续维护的 Light / Dark 两套主题�
 
 | 文件 | 作用 |
 |---|---|
-| `00-brand.css` | 双主题品牌薄层：共享段（字体、按钮、菜单、表格/阅读性、可访问性）+ dark 段（深色顶栏、正文对比度、沉浸页深色渐变）+ light 段（白底金边顶栏、深金高亮、浅色表头、沉浸页浅色渐变） |
+| `00-brand.css` | 双主题品牌薄层：共享段（字体、按钮、菜单、表格/阅读性、可访问性、题面代码块/长公式/宽表格修正）+ dark 段（深色顶栏、正文对比度、沉浸页深色渐变）+ light 段（白底金边顶栏、深金高亮、浅色表头、沉浸页浅色渐变） |
 | `01-dark-band.css` 至 `04-immersive-buttons.css` | 旧版浅色主题时代的 overlay，已停用，仅留作回退参考 |
 | `05-full-dark.css` | 旧版手写全站深色 overlay，已停用；原生 Dark 主题已覆盖其全部功能 |
 | `00-native-dark-brand.css` | 已由 `00-brand.css` 取代（原 dark-only 品牌层），已删除 |
@@ -52,6 +52,8 @@ grep -c "theme--dark" /root/.hydro/static/theme-4.58.5.css
 - 未登录首页根节点应输出 `class="... theme--light ..."` 且 `data-mantine-color-scheme="light"`
 - 用真实浏览器分别检查 `/p`、`/p/2`、`/training`、`/reg`、`/login` 的桌面与移动端，light 与 dark 各过一遍
 - 重点看表格斑马纹、题面 Copy 工具条、页脚分类链接、当前分页和沉浸式认证页
+- 题面/讨论正文的容器类名是 `.typo`（Hydro 没有 `.markdown-body` / `.prose`）——写正文相关覆盖时先在 DevTools 确认选择器命中，写错类名会静默失效；改完用一道含代码块、长公式、宽表格的题验证
+- 题面代码出现「一行内两种字体混排」时，先怀疑字形不在 `swpu-mono.woff2` 子集内，覆盖范围由 `scripts/subset_fonts.py` 的 `unicodes` 决定
 
 ## 部署脚本
 

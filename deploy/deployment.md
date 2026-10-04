@@ -222,6 +222,7 @@ curl -sSI https://<域名>/ | grep -Ei 'strict-transport|x-content-type|referrer
 ## 8. 字体与图标
 
 - 展示字体子集化：`python scripts/subset_fonts.py <zcool.ttf> <jbmono.ttf> landing`（需 fonttools + brotli）。脚本会同时读取 `landing/index.html` 和 `plugin-swpu-regcode/reg.html`，产出约 100KB 的 woff2。
+- 注意 `swpu-mono.woff2` 同时是 OJ 全站 code/pre 字体（`theme/00-brand.css`），子集已覆盖题面代码常用符号（箭头/数学运算符/制表框线等）；需要扩充时改 `subset_fonts.py` 里的 `unicodes` 重新生成并上传即可，无需改 CSS。
 - 图标全套由 Pillow 渲染（4x 超采样）：favicon 96px、logo 192px、apple-touch 180px、android-chrome 192px。
 
 ## 9. UI 重建后的重放清单
