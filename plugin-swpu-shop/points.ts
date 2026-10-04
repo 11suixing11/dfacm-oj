@@ -152,12 +152,48 @@ export class ShopError extends Error {}
 export interface RedeemResult {
     badgeTitle: string;
     price: number;
+    refunded: boolean;
+}
+
+export function refundRef(badgeId: number) {
+    return `refund:${badgeId}`;
+}
+
+// Serializes redemptions per user inside this process.
+//
+// The debit is a check-then-insert across two collections with no transaction,
+// so two different badges requested at the same moment could both pass the
+// balance check and both insert, driving the balance negative. The {uid, ref}
+// unique key only prevents buying the *same* badge twice.
+//
+// A per-user lock closes the window for the single-instance pm2 deployment this
+// instance already assumes elsewhere (the RP hook and the hourly sweep are
+// registered on NODE_APP_INSTANCE 0 for exactly this reason). Scaling Hydro to
+// several app instances would need a real multi-node lock or a Mongo
+// transaction, not this map.
+const redeemLocks = new Map<number, Promise<unknown>>();
+
+async function withUserLock<T>(uid: number, work: () => Promise<T>): Promise<T> {
+    const previous = redeemLocks.get(uid) || Promise.resolve();
+    // Swallow the predecessor's rejection: one failed redemption must not poison
+    // the queue for that user.
+    const run = previous.then(work, work);
+    redeemLocks.set(uid, run.catch(() => undefined));
+    try {
+        return await run;
+    } finally {
+        if (redeemLocks.get(uid) === undefined) redeemLocks.delete(uid);
+    }
 }
 
 // 兑换：未上架/已持有/余额不足各抛业务错误；扣分入账（redeem:{badgeId}
 // 唯一键）+ userBadgeAdd 发放。
-// 并发说明：单实例 pm2 + ledger 唯一键，双花只剩"两请求同时过余额检查"
-// 的窄窗口，v1 接受（用户量级极小）；未来可升级 Mongo transaction。
+//
+// 顺序刻意是"先扣分、后发徽章"：{uid, ref} 唯一键保证扣分至多发生一次，
+// 所以并发重复请求最多变成一次扣分。反过来（先发徽章）一旦扣分失败就会
+// 白送徽章。代价是 userBadgeAdd 失败时积分已经扣掉，因此这里写入一条
+// refund 冲正流水（ref 带后缀，不会撞唯一键），保证最终一致且有审计痕迹。
+// 单机部署无法给跨集合操作开事务，冲正比 abortTransaction 更实际。
 export async function redeem(
     ctx: Context,
     models: ShopModels,
@@ -168,30 +204,46 @@ export async function redeem(
 ): Promise<RedeemResult> {
     if (!Number.isSafeInteger(uid) || uid <= 0) throw new ShopError('请先登录。');
     if (!Number.isSafeInteger(badgeId) || badgeId <= 0) throw new ShopError('徽章无效。');
-    const priceDoc = await collections.price.findOne({ _id: badgeId });
-    if (!priceDoc || !priceDoc.enabled) throw new ShopError('该徽章未上架兑换。');
-    const bdoc = await models.badge.badgeGet(ctx, badgeId);
-    if (!bdoc) throw new ShopError('徽章不存在。');
-    const owned = await collections.userBadge.findOne({ owner: uid, badgeId });
-    if (owned) throw new ShopError('你已拥有该徽章，无需重复兑换。');
-    const balance = await getBalance(collections, uid);
-    const price = +priceDoc.price;
-    if (balance < price) throw new ShopError(`积分不足：当前 ${balance} 分，兑换需 ${price} 分。`);
-    try {
-        await collections.ledger.insertOne({
-            uid,
-            delta: -price,
-            kind: 'redeem',
-            ref: redeemRef(badgeId),
-            detail: `兑换徽章：${bdoc.title}`,
-            ts: now(),
-        });
-    } catch (e) {
-        if (isDuplicateKey(e)) throw new ShopError('你已拥有该徽章，无需重复兑换。');
-        throw e;
-    }
-    await models.userBadge.userBadgeAdd(ctx, uid, badgeId);
-    return { badgeTitle: bdoc.title, price };
+    return withUserLock(uid, async () => {
+        const priceDoc = await collections.price.findOne({ _id: badgeId });
+        if (!priceDoc || !priceDoc.enabled) throw new ShopError('该徽章未上架兑换。');
+        const bdoc = await models.badge.badgeGet(ctx, badgeId);
+        if (!bdoc) throw new ShopError('徽章不存在。');
+        const owned = await collections.userBadge.findOne({ owner: uid, badgeId });
+        if (owned) throw new ShopError('你已拥有该徽章，无需重复兑换。');
+        const balance = await getBalance(collections, uid);
+        const price = +priceDoc.price;
+        if (balance < price) throw new ShopError(`积分不足：当前 ${balance} 分，兑换需 ${price} 分。`);
+        try {
+            await collections.ledger.insertOne({
+                uid,
+                delta: -price,
+                kind: 'redeem',
+                ref: redeemRef(badgeId),
+                detail: `兑换徽章：${bdoc.title}`,
+                ts: now(),
+            });
+        } catch (e) {
+            if (isDuplicateKey(e)) throw new ShopError('你已拥有该徽章，无需重复兑换。');
+            throw e;
+        }
+        try {
+            await models.userBadge.userBadgeAdd(ctx, uid, badgeId);
+        } catch (e) {
+            // The debit already landed; hand the points back so a badge-plugin
+            // failure cannot silently destroy them.
+            await collections.ledger.insertOne({
+                uid,
+                delta: price,
+                kind: 'refund',
+                ref: `${refundRef(badgeId)}:${now().getTime()}`,
+                detail: `兑换失败冲正：${bdoc.title}`,
+                ts: now(),
+            });
+            throw new ShopError('徽章发放失败，积分已退回，请联系管理员。');
+        }
+        return { badgeTitle: bdoc.title, price, refunded: false };
+    });
 }
 
 // 流水分页（时间正序前缀和由调用方组装累计余额）。

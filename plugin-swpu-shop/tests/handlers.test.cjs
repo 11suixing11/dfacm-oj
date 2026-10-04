@@ -109,6 +109,7 @@ async function fixture({ env = {}, badgeReady = true, badges = [], records = [],
                     return this;
                 },
                 project() { return this; },
+                limit(n) { this._rows = this._rows.slice(0, n); return this; },
                 async toArray() { return [...this._rows]; },
                 async close() {},
                 [Symbol.asyncIterator]() {
@@ -170,10 +171,11 @@ async function fixture({ env = {}, badgeReady = true, badges = [], records = [],
         if (value === undefined) delete process.env[key];
         else process.env[key] = value;
     }
-    const handler = (url, method = 'get') => {
+    const handler = (url, method = 'get', args = undefined) => {
         const entry = routes.get(url);
         const h = new (method === 'post' && entry.post ? entry.post : entry).HandlerClass();
         if (badgeReady) h.ctx = {};
+        if (args !== undefined) h.args = args;
         return h;
     };
     return {
@@ -250,11 +252,59 @@ test('redeem endpoint debits the ledger and redirects to /mybadge', async () => 
     const h = f.handler('/shop/redeem');
     await h.post('system', 7);
     assert.equal(h.response.redirect, '/mybadge');
-    assert.equal(h.response.body.ok, true);
-    assert.match(h.response.body.message, /兑换成功/);
     assert.equal(f.ledger.docs.length, 2);
     assert.equal(f.ledger.docs[1].delta, -10);
     assert.deepEqual(f.userBadgeAdds, [{ uid: 42, badgeId: 7 }]);
+});
+
+// Both shop clients are plain HTML form POSTs, so a JSON error body is never
+// rendered: the redirect wins and the browser would show raw JSON. A failed
+// redemption therefore sends the member back with the reason in the query.
+test('a failed redemption returns the member to /shop with the reason', async () => {
+    for (const [label, prices, balance] of [
+        ['insufficient', [{ _id: 7, price: 10, enabled: true }], 2],
+        ['not listed', [{ _id: 7, price: 10, enabled: false }], 99],
+        ['no such badge', [{ _id: 8, price: 10, enabled: true }], 99],
+    ]) {
+        const f = await fixture({
+            badges: [{ _id: 7, short: '队长', title: '队长徽章' }],
+            prices,
+        });
+        await f.ledger.insertOne({ uid: 42, delta: balance, ref: 'solve:system:1', kind: 'solve', detail: 'P1', ts: NOW });
+        const h = f.handler('/shop/redeem');
+        const target = label === 'no such badge' ? 8 : 7;
+        await assert.rejects(() => h.post('system', target));
+        assert.match(h.response.redirect, /^\/shop\?error=/, label);
+        const message = decodeURIComponent(h.response.redirect.split('error=')[1]);
+        assert.ok(message.length > 0, label);
+        assert.equal(h.response.body.ok, false);
+        assert.equal(f.userBadgeAdds.length, 0, `${label} must not grant a badge`);
+        // The GET handler hands the message to the template.
+        const page = f.handler('/shop', 'get', { error: message });
+        await page.get('system');
+        assert.equal(page.response.body.error, message);
+    }
+});
+
+// A badge-plugin failure after the debit must not destroy the member's points.
+test('a failed badge grant refunds the debit and explains itself', async () => {
+    const f = await fixture({
+        badges: [{ _id: 7, short: '队长', title: '队长徽章' }],
+        prices: [{ _id: 7, price: 10, enabled: true }],
+    });
+    await f.ledger.insertOne({ uid: 42, delta: 15, ref: 'solve:system:1', kind: 'solve', detail: 'P1', ts: NOW });
+    f.userBadgeModel.userBadgeAdd = async () => { throw new Error('badge plugin exploded'); };
+    const h = f.handler('/shop/redeem');
+    await assert.rejects(() => h.post('system', 7));
+    assert.match(h.response.redirect, /^\/shop\?error=/);
+    assert.match(decodeURIComponent(h.response.redirect.split('error=')[1]), /积分已退回/);
+    // Debit plus its compensating credit, so the balance is unchanged.
+    assert.equal(f.ledger.docs.length, 3);
+    assert.equal(f.ledger.docs[1].delta, -10);
+    assert.equal(f.ledger.docs[2].delta, 10);
+    assert.equal(f.ledger.docs[2].kind, 'refund');
+    // The refund ref must be unique per attempt, not colliding with the debit key.
+    assert.notEqual(f.ledger.docs[2].ref, f.ledger.docs[1].ref);
 });
 
 test('history page shows prefix-sum balances with pagination', async () => {
@@ -301,14 +351,16 @@ test('manage save upserts the price row and rejects bad operations', async () =>
     const f = await fixture();
     const h = f.handler('/manage/shop', 'post');
     await h.post('system', 'price', 7, 30, true);
-    assert.equal(h.response.body.ok, true);
+    assert.equal(h.response.redirect, '/manage/shop');
     assert.equal(f.price.docs.length, 1);
     assert.equal(f.price.docs[0]._id, 7);
     assert.equal(f.price.docs[0].price, 30);
     assert.equal(f.price.docs[0].enabled, true);
     assert.ok(f.price.docs[0].updatedAt instanceof Date);
+    // A rejected operation returns the admin to the page with the reason.
     const bad = f.handler('/manage/shop', 'post');
     await assert.rejects(bad.post('system', 'destroy', 7, 1, true), /不支持的操作/);
+    assert.match(bad.response.redirect, /^\/manage\/shop\?error=/);
 });
 
 test('record/change hook awards on AC end events only, with instance-0 guard', async () => {

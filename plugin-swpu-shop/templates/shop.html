@@ -12,6 +12,11 @@
       {% endif %}
     </div>
   </div>
+  {% if error %}
+  <div class="section__body">
+    <blockquote class="note typo">{{ error }}</blockquote>
+  </div>
+  {% endif %}
   <div class="section__body no-padding">
     <table class="data-table">
       <thead>

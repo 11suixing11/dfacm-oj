@@ -262,6 +262,77 @@ test('redeem: insufficient balance is refused with both numbers in the message',
     assert.equal(m.userBadge.added.length, 0);
 });
 
+// The {uid, ref} unique key only stops the same badge being bought twice. Two
+// different badges could both pass the balance check and both insert, driving
+// the balance negative.
+test('redeem: concurrent redemptions of different badges cannot overdraw', async () => {
+    const points = loadPoints();
+    const m = models();
+    m.seedBadge(7, { _id: 7, title: 'A' });
+    m.seedBadge(8, { _id: 8, title: 'B' });
+    const ledger = new FakeLedger();
+    const collections = {
+        ledger,
+        price: new FakePrice([{ _id: 7, price: 10, enabled: true }, { _id: 8, price: 10, enabled: true }]),
+        userBadge: m.userBadge,
+    };
+    await ledger.insertOne({ uid: 42, delta: 10, ref: 'solve:system:1', kind: 'solve', detail: 'x', ts: now() });
+    const results = await Promise.allSettled([
+        points.redeem({}, m, collections, now, 42, 7),
+        points.redeem({}, m, collections, now, 42, 8),
+    ]);
+    const fulfilled = results.filter((r) => r.status === 'fulfilled');
+    assert.equal(fulfilled.length, 1, 'only one of two 10-point redemptions may succeed on a 10-point balance');
+    assert.match(String(results.find((r) => r.status === 'rejected').reason), /积分不足/);
+    // The balance never goes negative.
+    const balance = ledger.docs.reduce((sum, d) => sum + d.delta, 0);
+    assert.equal(balance, 0);
+    assert.equal(m.userBadge.added.length, 1);
+});
+
+// A different member must not be blocked by another member's redemption.
+test('redeem: the per-user lock does not serialise across accounts', async () => {
+    const points = loadPoints();
+    const m = models();
+    m.seedBadge(7, { _id: 7, title: 'A' });
+    const ledger = new FakeLedger();
+    const collections = {
+        ledger,
+        price: new FakePrice([{ _id: 7, price: 10, enabled: true }]),
+        userBadge: m.userBadge,
+    };
+    await ledger.insertOne({ uid: 42, delta: 10, ref: 'solve:system:1', kind: 'solve', detail: 'x', ts: now() });
+    await ledger.insertOne({ uid: 43, delta: 10, ref: 'solve:system:1', kind: 'solve', detail: 'y', ts: now() });
+    const results = await Promise.all([
+        points.redeem({}, m, collections, now, 42, 7),
+        points.redeem({}, m, collections, now, 43, 7),
+    ]);
+    assert.equal(results.length, 2);
+    assert.ok(results.every((r) => r.price === 10));
+});
+
+test('redeem: a failed badge grant refunds the points instead of losing them', async () => {
+    const points = loadPoints();
+    const m = models();
+    m.seedBadge(7, { _id: 7, title: '队长' });
+    m.userBadge.userBadgeAdd = async () => { throw new Error('badge plugin down'); };
+    const ledger = new FakeLedger();
+    const collections = {
+        ledger,
+        price: new FakePrice([{ _id: 7, price: 10, enabled: true }]),
+        userBadge: m.userBadge,
+    };
+    await ledger.insertOne({ uid: 42, delta: 25, ref: 'solve:system:1', kind: 'solve', detail: 'x', ts: now() });
+    await assert.rejects(points.redeem({}, m, collections, now, 42, 7), /积分已退回/);
+    assert.equal(ledger.docs.length, 3);
+    assert.equal(ledger.docs[1].delta, -10);
+    assert.equal(ledger.docs[2].delta, 10);
+    assert.equal(ledger.docs[2].kind, 'refund');
+    assert.equal(ledger.docs.reduce((sum, d) => sum + d.delta, 0), 25, 'balance is unchanged');
+    // Each retry gets a fresh refund key, so a repeated failure still balances.
+    assert.notEqual(ledger.docs[2].ref, ledger.docs[1].ref);
+});
+
 test('redeem: success debits once and grants the badge exactly once', async () => {
     const points = loadPoints();
     const m = models();
@@ -274,7 +345,7 @@ test('redeem: success debits once and grants the badge exactly once', async () =
     };
     await ledger.insertOne({ uid: 42, delta: 25, ref: 'solve:system:1', kind: 'solve', detail: 'x', ts: now() });
     const result = await points.redeem({}, m, collections, now, 42, 7);
-    assert.deepEqual(result, { badgeTitle: '队长', price: 10 });
+    assert.deepEqual(result, { badgeTitle: '队长', price: 10, refunded: false });
     assert.equal(ledger.docs.length, 2);
     const debit = ledger.docs[1];
     assert.equal(debit.delta, -10);

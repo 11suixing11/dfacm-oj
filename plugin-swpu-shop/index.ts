@@ -84,10 +84,34 @@ class ShopPageHandler extends Handler {
             uname: this.user.uname,
             signedIn,
             balance,
+            // Echoed back by a failed form POST so the member sees why.
+            error: shopError(this),
             badges: rows.map((row) => ({ ...row, owned: ownedIds.has(row._id) })),
         };
         this.response.template = 'shop.html';
     }
+}
+
+// A ShopError carries a message meant for the member ("积分不足：当前 12 分，
+// 兑换需 50 分。"). Uncaught it became a generic 500 and the text was lost.
+//
+// Both clients are plain HTML form POSTs, so a JSON body is never rendered —
+// Koa's redirect wins and the browser would only ever see raw JSON. The member
+// is sent back to the page they came from with the message in the query string,
+// which the GET handler hands to the template. Unexpected errors are re-thrown
+// untouched: they are bugs and must still surface as 500s.
+function failShop(handler: Handler, e: unknown, back: string): never {
+    if (!(e instanceof ShopError)) throw e;
+    handler.response.body = { ok: false, message: e.message };
+    handler.response.redirect = `${back}?error=${encodeURIComponent(e.message)}`;
+    throw e;
+}
+
+// The reason a failed form POST bounced back, capped and type-checked because it
+// arrives from the query string.
+function shopError(handler: Handler): string {
+    const raw = handler.args && handler.args.error;
+    return typeof raw === 'string' ? raw.slice(0, 200) : '';
 }
 
 class ShopRedeemHandler extends Handler {
@@ -95,15 +119,19 @@ class ShopRedeemHandler extends Handler {
     async post(domainId: string, badgeId: number) {
         const models = badgeModels();
         if (!models.badge || !models.userBadge) {
-            throw new ShopError('徽章组件未就绪，请联系管理员。');
+            failShop(this, new ShopError('徽章组件未就绪，请联系管理员。'), '/shop');
         }
-        const result = await redeem(this.ctx, {
-            badge: models.badge,
-            userBadge: models.userBadge,
-            problem: { async get() { return null; } },
-        }, collections(), now, this.user._id, badgeId);
+        try {
+            await redeem(this.ctx, {
+                badge: models.badge,
+                userBadge: models.userBadge,
+                problem: { async get() { return null; } },
+            }, collections(), now, this.user._id, badgeId);
+        } catch (e) {
+            failShop(this, e, '/shop');
+        }
+        // The badge is worn on /mybadge; a form POST cannot read a JSON body.
         this.response.redirect = '/mybadge';
-        this.response.body = { ok: true, message: `兑换成功：${result.badgeTitle}（-${result.price} 分），请在此佩戴徽章。` };
     }
 }
 
@@ -157,7 +185,7 @@ class ShopManageHandler extends Handler {
             }
             rows.sort((a, b) => a._id - b._id);
         }
-        this.response.body = { badges: rows };
+        this.response.body = { badges: rows, error: shopError(this) };
         this.response.template = 'manage.html';
     }
 }
@@ -168,10 +196,13 @@ class ShopManageSaveHandler extends Handler {
     @post('price', Types.PositiveInt)
     @post('enabled', Types.Boolean, true)
     async post(domainId: string, operation: string, badgeId: number, price: number, enabled?: boolean) {
-        if (operation && operation !== 'price') throw new ShopError('不支持的操作。');
-        await setPrice(collections(), now, badgeId, price, enabled !== false);
+        try {
+            if (operation && operation !== 'price') throw new ShopError('不支持的操作。');
+            await setPrice(collections(), now, badgeId, price, enabled !== false);
+        } catch (e) {
+            failShop(this, e, '/manage/shop');
+        }
         this.response.redirect = '/manage/shop';
-        this.response.body = { ok: true, message: '已保存。' };
     }
 }
 
@@ -193,6 +224,11 @@ function onRecordChange(rdoc: any, _set: any, _push: any, body: any) {
 
 // 回填历史 AC：按 (uid, domainId, pid) 去重逐条 awardSolve；幂等键保证
 // 脚本可重复跑、增量跑，且与事件入账天然互不冲突（同 ref 不重复入账）。
+//
+// 每域扫描上限 BACKFILL_SCAN_LIMIT：原来是无 limit 的游标，每条唯一记录都要
+// 一次 ProblemModel.get + 一次 insertOne，在大实例上会长时间占住单线程。幂等键
+// 让脚本可重复执行，所以截断只需报告、不需要断点续跑。
+const BACKFILL_SCAN_LIMIT = 20000;
 async function runBackfill(args: { domainId?: string }, report: (progress: any) => void) {
     const domainIds = args.domainId ? [args.domainId] : ['system', 'poj'];
     const { ProblemModel } = require('hydrooj');
@@ -203,10 +239,11 @@ async function runBackfill(args: { domainId?: string }, report: (progress: any) 
     };
     let awarded = 0;
     let scanned = 0;
+    const truncated: string[] = [];
     for (const domainId of domainIds) {
         const seen = new Set<string>();
         const cursor = RecordModel.coll.find({ domainId, status: STATUS_ACCEPTED })
-            .project({ uid: 1, pid: 1 }).sort({ _id: 1 });
+            .project({ uid: 1, pid: 1 }).sort({ _id: 1 }).limit(BACKFILL_SCAN_LIMIT);
         for await (const rdoc of cursor) {
             scanned++;
             const key = `${rdoc.uid}:${rdoc.pid}`;
@@ -223,7 +260,11 @@ async function runBackfill(args: { domainId?: string }, report: (progress: any) 
             if (scanned % 500 === 0) report({ progress: scanned, message: `${domainId}: 已扫描 ${scanned} 条` });
         }
         await cursor.close();
+        if (scanned >= BACKFILL_SCAN_LIMIT) truncated.push(domainId);
         report({ message: `${domainId}: 扫描完成（${scanned} 条 AC，新入账 ${awarded} 条）` });
+    }
+    if (truncated.length) {
+        report({ message: `注意：以下域达到单次回填上限 ${BACKFILL_SCAN_LIMIT} 条，剩余部分需再次运行本脚本（幂等可续）：${truncated.join('、')}` });
     }
     report({ message: `回填完成：共新入账 ${awarded} 条（幂等，可重复运行）` });
     return true;
@@ -261,7 +302,6 @@ export async function apply(ctx: Context) {
     // 多 pm2 实例只跑一份（照抄 swpu-ops 守卫），错误隔离：计分失败只记日志。
     if (!process.env.NODE_APP_INSTANCE || process.env.NODE_APP_INSTANCE === '0') {
         ctx.on('record/change', onRecordChange);
-        ctx.on('dispose', () => {});
     }
     logger.info('swpu-shop routes ready: /shop, /shop/history, /manage/shop');
 }
