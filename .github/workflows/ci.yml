@@ -104,7 +104,12 @@ jobs:
           # custom-download page; verified against Caddyfile.example on 2.11.6).
           curl -sSL "https://caddyserver.com/api/download?os=linux&arch=amd64" -o caddy
           chmod +x caddy
-          ./caddy adapt --validate --config deploy/Caddyfile.example > /dev/null
+          # check-deployment.sh runs the deeper `caddy validate` on the server,
+          # as root where /data exists. CI must not: --validate provisions the
+          # access-log writer at the absolute path /data/access.log and dies
+          # with "mkdir /data: permission denied" on a non-root runner, so only
+          # adapt (Caddyfile -> JSON parse) is checked here.
+          ./caddy adapt --config deploy/Caddyfile.example > /dev/null
           # The judge service account must stay hidden.
           grep -q "@hidejudge path /user/3" deploy/Caddyfile.example
           # Cloudflare's ranges appear twice: the global trusted_proxies block
