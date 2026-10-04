@@ -28,7 +28,8 @@ set -euo pipefail
 # manual (see deployment.md §7/§4): they change far less often than code.
 #
 # Exit codes: 64 usage, 65 hash mismatch, 66 missing local source or
-# unreachable server, 67 service never became ready, 68 smoke battery failed.
+# unreachable server, 67 service never became ready, 68 smoke battery failed,
+# 69 external probe failed.
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SSH_BIN="${SSH_BIN:-ssh}"
@@ -37,8 +38,18 @@ SSH_TARGET="${SSH_TARGET:-root@100.69.19.62}"
 # accept-new pins the host key on first contact and then rejects any change,
 # so a later MITM of this root session cannot go unnoticed. Set
 # SSH_STRICT_HOST_KEY_CHECKING=no only for a known-good one-off recovery.
-SSH_OPTS=(-o BatchMode=yes -o ConnectTimeout=15
+# ConnectTimeout only bounds TCP establishment. Once connected, a stalled
+# channel (the 2026-10-04 tar-pipe hang that wedged two deploys) would block
+# forever; ServerAlive* makes ssh give up ~45s after the path goes dark.
+# ConnectionAttempts rides out the flappy cross-border path where consecutive
+# TCP connects alternately succeed and time out (2026-10-04, ~50% loss).
+SSH_OPTS=(-o BatchMode=yes -o ConnectTimeout=15 -o ConnectionAttempts=3
+    -o ServerAliveInterval=15 -o ServerAliveCountMax=3
     -o "StrictHostKeyChecking=${SSH_STRICT_HOST_KEY_CHECKING:-accept-new}" -i "$SSH_KEY")
+# Second line of defense for stalls that keep trickling traffic: every remote
+# step is bounded so a hang fails loudly instead of pinning the deploy. Bash
+# dynamic scoping lets a caller `local REMOTE_TIMEOUT=...` to override.
+REMOTE_TIMEOUT="${REMOTE_TIMEOUT:-180}"
 REMOTE_ADDONS=/root/.hydro/addons
 REMOTE_CUSTOM=/root/.hydro/custom
 REMOTE_DEPLOY=/root/swpu-theme-deploy
@@ -49,7 +60,7 @@ SYNC_ONLY=0
 MANIFEST="$(mktemp)"
 STAGE=""
 
-remote() { "$SSH_BIN" "${SSH_OPTS[@]}" "$SSH_TARGET" "$@"; }
+remote() { timeout "$REMOTE_TIMEOUT" "$SSH_BIN" "${SSH_OPTS[@]}" "$SSH_TARGET" "$@"; }
 
 cleanup() {
     [ -n "$STAGE" ] && remote "test -n '$STAGE' && rm -rf '$STAGE'" >/dev/null 2>&1 || true
@@ -70,6 +81,7 @@ Environment overrides:
   SSH_KEY      default ~/.ssh/quiz_platform_server_ed25519
   SSH_STRICT_HOST_KEY_CHECKING  default accept-new
   WAIT_SECONDS readiness budget, default 75
+  REMOTE_TIMEOUT per-step ssh timeout in seconds, default 180
   SMOKE_HOST   site hostname for probes, default swpuacm.xyz
 EOF
     exit 64
@@ -126,7 +138,7 @@ preflight() {
     [ "$missing" -eq 0 ] || exit 66
     remote true || { echo "server unreachable: $SSH_TARGET" >&2; exit 66; }
     remote "command -v pm2 >/dev/null && test -d $REMOTE_ADDONS && test -d $REMOTE_CUSTOM" \
-        || { echo "server layout unexpected: pm2, $REMOTE_ADDONS or $REMOTE_CUSTOM missing" >&2; exit 66; }
+        || { echo "server layout check failed (connection dropped, or pm2/$REMOTE_ADDONS/$REMOTE_CUSTOM missing)" >&2; exit 66; }
 }
 
 # Hashes every manifest row on both ends and compares. $2 selects what the
@@ -178,8 +190,10 @@ upload_stage() {
         /tmp/swpu-deploy-stage.*) ;;
         *) echo "could not create a staging directory (got: '$STAGE')" >&2; exit 66 ;;
     esac
-    tar -C "$ROOT" -cf - "${tar_list[@]}" \
-        | "$SSH_BIN" "${SSH_OPTS[@]}" "$SSH_TARGET" "tar -C '$STAGE' -xf -"
+    # 600s bounds: the payload is a few MB, so a wedged pipe must fail loudly
+    # long before a human notices the deploy is "taking a while".
+    timeout 600 tar -C "$ROOT" -cf - "${tar_list[@]}" \
+        | timeout 600 "$SSH_BIN" "${SSH_OPTS[@]}" "$SSH_TARGET" "tar -C '$STAGE' -xf -"
 }
 
 activate() {
@@ -205,7 +219,7 @@ wait_ready() {
     # Three consecutive successes 1s apart: a single success can come from
     # the draining pre-restart process during the handover window, and the
     # smoke battery must not race that gap.
-    local probe
+    local probe REMOTE_TIMEOUT=$((WAIT_SECONDS + 60))
     probe="ok=0; for i in \$(seq 1 $WAIT_SECONDS); do if curl -sk --resolve $SMOKE_HOST:443:127.0.0.1 https://$SMOKE_HOST/reg 2>/dev/null | grep -a tab-reg >/dev/null; then ok=\$((ok+1)); [ \$ok -ge 3 ] && exit 0; else ok=0; fi; sleep 1; done; exit 1"
     if ! remote "$probe"; then
         echo "service did not serve the branded /reg stably within ${WAIT_SECONDS}s; check pm2 logs before trusting this deploy" >&2
@@ -218,6 +232,16 @@ run_smoke() {
         echo "smoke battery failed on the server" >&2
         exit 68
     fi
+}
+
+# The server-side smoke probes 127.0.0.1 and cannot see edge failures
+# (Caddy config, certificate, DNS). One probe of the public name from this
+# machine closes that gap; curl -m keeps it bounded.
+verify_from_outside() {
+    local code
+    code="$(curl -sk -o /dev/null -m 20 -w '%{http_code}' "https://$SMOKE_HOST/reg" || true)"
+    [ "$code" = "200" ] || { echo "external probe of https://$SMOKE_HOST/reg returned '$code'" >&2; exit 69; }
+    echo "external probe: https://$SMOKE_HOST/reg -> 200"
 }
 
 main() {
@@ -237,7 +261,8 @@ main() {
     restart_hydrooj
     wait_ready
     run_smoke
-    echo "deploy complete: staged, verified, activated, verified, restarted, ready, smoke green"
+    verify_from_outside
+    echo "deploy complete: staged, verified, activated, verified, restarted, ready, smoke green, external probe green"
 }
 
 main
