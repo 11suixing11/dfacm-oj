@@ -9,6 +9,7 @@ set -euo pipefail
 # overrides the source tree, which is what deploy.sh uses when it runs this from
 # its staging copy rather than from a checkout.
 
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SRC="${SWPU_LANDING_SRC:-$ROOT/landing}"
 DEST="${1:-/root/.hydro/custom}"
 
