@@ -324,13 +324,25 @@ test('theme backups are written outside the served asset directory', () => {
   assert.ok(fs.readdirSync(fixture.backupDir).length > 0, 'backups must exist somewhere');
 });
 
-test('install-theme refuses a BACKUP_DIR inside the served asset tree', () => {
+// The interesting cases need paths that do not exist yet, which is the normal
+// first-run situation: a guard that canonicalises with a bare `cd` yields an
+// empty string there and then matches, or fails to match, unpredictably.
+test('the BACKUP_DIR guard handles existing, nested and not-yet-created paths', () => {
   const fixture = themeFixture();
-  const result = run('../deploy/install-theme.sh', [], { ...fixture.overrides, BACKUP_DIR: unixPath(fixture.directory) });
-  assert.equal(result.status, 66, result.stdout + result.stderr);
-  assert.match(result.stderr, /would be served alongside/);
-  // Nothing was mutated on the way to the refusal.
-  assert.equal(fs.readFileSync(fixture.files.STATIC_THEME, 'utf8'), 'body{color:blue}');
+  const inside = (dir) => ({ ...fixture.overrides, BACKUP_DIR: unixPath(path.join(fixture.directory, dir)) });
+  // Equal to a served directory: refused.
+  for (const dir of ['', 'backups', 'deeply/nested']) {
+    const result = run('../deploy/install-theme.sh', [], inside(dir));
+    assert.equal(result.status, 66, `${dir || '<itself>'}: ${result.stdout}${result.stderr}`);
+    assert.match(result.stderr, /inside the directory serving/);
+  }
+  // A path that does not exist yet, and sits outside every target: accepted.
+  const outside = fs.mkdtempSync(path.join(root, 'theme-out-'));
+  const fresh = path.join(outside, 'not', 'created', 'yet');
+  const ok = run('../deploy/install-theme.sh', [], { ...fixture.overrides, BACKUP_DIR: unixPath(fresh) });
+  assert.equal(ok.status, 0, `${ok.stdout}${ok.stderr}`);
+  assert.ok(fs.existsSync(fresh));
+  assert.ok(fs.readdirSync(fresh).length > 0);
 });
 
 test('theme deployment fails before mutation when any required target is absent', () => {

@@ -66,20 +66,43 @@ if [ "${SWPU_THEME_LEGACY:-0}" = "1" ]; then
     done
 fi
 
-# true when directory $1 contains path $2
+# Canonicalise a path that need not exist yet: resolve the nearest existing
+# ancestor and re-append the remainder. A plain `cd` would fail on a
+# not-yet-created BACKUP_DIR and silently yield an empty string, which then
+# compares as a false match against everything.
+resolve_path() {
+    local p="$1" parent base
+    if [ -d "$p" ]; then
+        (cd "$p" && pwd -P)
+        return 0
+    fi
+    parent="$(dirname "$p")"
+    base="$(basename "$p")"
+    if [ "$parent" = "$p" ]; then
+        printf '%s' "$p"
+        return 0
+    fi
+    printf '%s/%s' "$(resolve_path "$parent")" "$base"
+}
+
+# true when path $2 is inside directory $1
 contains() {
-    local dir="$1" path="$2" rdir rpath
-    rdir="$(cd "$dir" && pwd -P)"
-    rpath="$(cd "$(dirname "$path")" && pwd -P)/$(basename "$path")"
-    [ "$rpath" = "$rdir" ] || case "$rpath/" in "$rdir"/*) return 0 ;; esac
+    local rdir rpath
+    rdir="$(resolve_path "$1")"
+    rpath="$(resolve_path "$2")"
+    if [ -z "$rdir" ] || [ -z "$rpath" ]; then return 1; fi
+    if [ "$rpath" = "$rdir" ]; then return 0; fi
+    case "$rpath/" in "$rdir"/*) return 0 ;; esac
     return 1
 }
 
-# Guard the leak this script used to have: a backup next to the served asset is
-# world-readable over HTTP and grows without bound.
+# Guard the leak this script used to have: backups are flat files named after
+# their target, so they are published if and only if BACKUP_DIR sits inside a
+# directory Caddy serves. One direction only — a backup directory that merely
+# contains an asset directory publishes nothing, and cannot happen anyway.
 for target in "$STATIC_THEME" "$SOURCE_THEME" "$STATIC_SW" "$SOURCE_SW"; do
-    if contains "$BACKUP_DIR" "$target"; then
-        printf 'refusing BACKUP_DIR=%s: it would be served alongside %s; pick a directory outside the asset tree\n' "$BACKUP_DIR" "$target" >&2
+    if contains "$(dirname "$target")" "$BACKUP_DIR"; then
+        printf 'refusing BACKUP_DIR=%s: it is inside the directory serving %s, so every *.bak-* file would be a public download; pick a directory outside the asset tree\n' "$BACKUP_DIR" "$target" >&2
         exit 66
     fi
 done
