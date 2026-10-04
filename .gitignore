@@ -27,3 +27,7 @@ lwqq.tgz
 .codely/
 .codely-cli/
 .zcode/
+
+# Broadcast bot credential file (read-only MongoDB URI). Only the
+# mongo_uri.txt.example template belongs in the repository.
+plugin-swpu-broadcast/mongo_uri.txt

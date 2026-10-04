@@ -1,0 +1,1 @@
+mongodb://bot_ro:PASSWORD@107.151.246.137:27017/hydro?authSource=hydro&directConnection=true
