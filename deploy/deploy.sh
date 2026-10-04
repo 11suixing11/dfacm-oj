@@ -9,12 +9,18 @@ set -euo pipefail
 # restart, while every on-disk hash verified clean. This script makes that
 # ordering structurally impossible:
 #
-#   preflight        - local sources exist, server reachable
-#   sync_files       - ship every file FIRST (plugins, landing, theme, smoke)
-#   verify_hashes    - sha256 on both ends; refuse to restart on mismatch
-#   restart_hydrooj  - the ONE restart, only after everything is in place
-#   wait_ready       - poll until the new process serves the branded /reg
-#   run_smoke        - anonymous smoke battery on the server
+#   preflight          - local sources exist, server reachable
+#   upload_stage       - ship every file into a private staging directory
+#   verify_stage       - sha256 both ends; NOTHING has been activated yet
+#   activate           - install staged files into their real locations
+#   verify_installed   - sha256 the installed paths
+#   restart_hydrooj    - the ONE restart, only after everything is in place
+#   wait_ready         - poll until the new process serves the branded /reg
+#   run_smoke          - anonymous smoke battery on the server
+#
+# Verifying the staging directory *before* activating is the point: previously
+# the install ran first, so a hash mismatch refused to restart but still left
+# the server on new assets with the old process serving them.
 #
 # Plugin file lists are parsed from deployment.md's documented
 # `cp /root/swpu-oj/<addon>/{...}` blocks, so the docs and what actually
@@ -28,29 +34,41 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SSH_BIN="${SSH_BIN:-ssh}"
 SSH_KEY="${SSH_KEY:-$HOME/.ssh/quiz_platform_server_ed25519}"
 SSH_TARGET="${SSH_TARGET:-root@100.69.19.62}"
-SSH_OPTS=(-o BatchMode=yes -o ConnectTimeout=15 -i "$SSH_KEY")
+# accept-new pins the host key on first contact and then rejects any change,
+# so a later MITM of this root session cannot go unnoticed. Set
+# SSH_STRICT_HOST_KEY_CHECKING=no only for a known-good one-off recovery.
+SSH_OPTS=(-o BatchMode=yes -o ConnectTimeout=15
+    -o "StrictHostKeyChecking=${SSH_STRICT_HOST_KEY_CHECKING:-accept-new}" -i "$SSH_KEY")
 REMOTE_ADDONS=/root/.hydro/addons
 REMOTE_CUSTOM=/root/.hydro/custom
 REMOTE_DEPLOY=/root/swpu-theme-deploy
-STAGE=/tmp/swpu-deploy-stage
 WAIT_SECONDS="${WAIT_SECONDS:-75}"
 SMOKE_HOST="${SMOKE_HOST:-swpuacm.xyz}"
+STAGE_ONLY=0
 SYNC_ONLY=0
 MANIFEST="$(mktemp)"
-trap 'rm -f "$MANIFEST"' EXIT
+STAGE=""
 
 remote() { "$SSH_BIN" "${SSH_OPTS[@]}" "$SSH_TARGET" "$@"; }
 
+cleanup() {
+    [ -n "$STAGE" ] && remote "test -n '$STAGE' && rm -rf '$STAGE'" >/dev/null 2>&1 || true
+    rm -f "$MANIFEST"
+}
+trap cleanup EXIT
+
 usage() {
     cat >&2 <<'EOF'
-Usage: bash deploy/deploy.sh [--sync-only]
+Usage: bash deploy/deploy.sh [--stage-only | --sync-only]
 
-  --sync-only    sync files and verify hashes, skip restart/wait/smoke
+  --stage-only   upload and hash-verify the staging copy, change nothing live
+  --sync-only    also activate and verify, but skip restart/wait/smoke
 
 Environment overrides:
   SSH_TARGET   default root@100.69.19.62 (Tailscale); use
                root@107.151.246.137 when Tailscale is down
   SSH_KEY      default ~/.ssh/quiz_platform_server_ed25519
+  SSH_STRICT_HOST_KEY_CHECKING  default accept-new
   WAIT_SECONDS readiness budget, default 75
   SMOKE_HOST   site hostname for probes, default swpuacm.xyz
 EOF
@@ -59,6 +77,7 @@ EOF
 
 for arg in "$@"; do
     case "$arg" in
+        --stage-only) STAGE_ONLY=1 ;;
         --sync-only) SYNC_ONLY=1 ;;
         *) usage ;;
     esac
@@ -82,11 +101,16 @@ stage_manifest() {
             printf '%s\t%s/%s\n' "$addon/$f" "$REMOTE_ADDONS/${addon#plugin-}" "$f"
         done
     done
-    printf 'landing/index.html\t%s/home.html\n' "$REMOTE_CUSTOM"
+    # The whole landing tree, not just index.html: the two subsetted woff2
+    # fonts and the icon set were previously never shipped at all, so changing
+    # one required a manual install-landing.sh that this script would not do.
+    while IFS= read -r f; do
+        printf 'landing/%s\t%s/landing/%s\n' "$f" "$REMOTE_DEPLOY" "$f"
+    done < <(cd "$ROOT/landing" && find . -type f | sed 's#^\./##' | LC_ALL=C sort)
     printf 'theme/00-brand.css\t%s/theme/00-brand.css\n' "$REMOTE_DEPLOY"
-    printf 'deploy/install-theme.sh\t%s/deploy/install-theme.sh\n' "$REMOTE_DEPLOY"
-    printf 'deploy/service-worker-killswitch.js\t%s/deploy/service-worker-killswitch.js\n' "$REMOTE_DEPLOY"
-    printf 'deploy/smoke.sh\t%s/deploy/smoke.sh\n' "$REMOTE_DEPLOY"
+    for f in install-theme.sh install-landing.sh service-worker-killswitch.js smoke.sh; do
+        printf 'deploy/%s\t%s/deploy/%s\n' "$f" "$REMOTE_DEPLOY" "$f"
+    done
 }
 
 preflight() {
@@ -101,52 +125,66 @@ preflight() {
     done < "$MANIFEST"
     [ "$missing" -eq 0 ] || exit 66
     remote true || { echo "server unreachable: $SSH_TARGET" >&2; exit 66; }
-    remote "command -v pm2 >/dev/null && test -d $REMOTE_ADDONS" \
-        || { echo "server layout unexpected: pm2 or $REMOTE_ADDONS missing" >&2; exit 66; }
+    remote "command -v pm2 >/dev/null && test -d $REMOTE_ADDONS && test -d $REMOTE_CUSTOM" \
+        || { echo "server layout unexpected: pm2, $REMOTE_ADDONS or $REMOTE_CUSTOM missing" >&2; exit 66; }
 }
 
-sync_files() {
-    local local_path remote_path
-    local tar_list=()
-    while IFS=$'\t' read -r local_path _; do
-        tar_list+=("$local_path")
-    done < "$MANIFEST"
-    remote "rm -rf $STAGE && mkdir -p $STAGE"
-    tar -C "$ROOT" -cf - "${tar_list[@]}" \
-        | "$SSH_BIN" "${SSH_OPTS[@]}" "$SSH_TARGET" "tar -C $STAGE -xf -"
-    {
-        while IFS=$'\t' read -r local_path remote_path; do
-            printf "install -D '%s/%s' '%s'\n" "$STAGE" "$local_path" "$remote_path"
-        done < "$MANIFEST"
-    } | remote bash -s
-    remote "chmod +x $REMOTE_DEPLOY/deploy/install-theme.sh $REMOTE_DEPLOY/deploy/smoke.sh"
-    # Re-apply the brand layer + SW killswitch; idempotent, no restart needed.
-    remote "bash $REMOTE_DEPLOY/deploy/install-theme.sh"
-}
-
-verify_hashes() {
-    local local_path remote_path local_hashes remote_hashes
+# Hashes every manifest row on both ends and compares. $2 selects what the
+# remote side hashes: "stage" the uploaded copy, "live" the installed path.
+compare_hashes() {
+    local label="$1" target="$2" local_path remote_path
+    local local_hashes remote_hashes
     local_hashes="$(
-        while IFS=$'\t' read -r local_path _; do
+        while IFS=$'\t' read -r local_path remote_path; do
             sha256sum "$ROOT/$local_path" | cut -d' ' -f1
         done < "$MANIFEST"
     )"
     if ! remote_hashes="$(
         {
-            while IFS=$'\t' read -r _ remote_path; do
-                printf "sha256sum '%s'\n" "$remote_path"
+            while IFS=$'\t' read -r local_path remote_path; do
+                case "$target" in
+                    stage) printf "sha256sum '%s/%s'\n" "$STAGE" "$local_path" ;;
+                    live) printf "sha256sum '%s'\n" "$remote_path" ;;
+                esac
             done < "$MANIFEST"
         } | remote bash -s | cut -d' ' -f1
     )"; then
-        echo "remote hash probe failed" >&2
+        echo "remote hash probe failed for $label" >&2
         exit 65
     fi
     if [ "$local_hashes" != "$remote_hashes" ]; then
-        echo "hash mismatch between local sources and deployed files; NOT restarting." >&2
+        echo "hash mismatch in $label; nothing further will be activated." >&2
         diff <(printf '%s\n' "$local_hashes") <(printf '%s\n' "$remote_hashes") >&2 || true
         exit 65
     fi
-    echo "hashes verified on both ends"
+    echo "$label verified on both ends"
+}
+
+upload_stage() {
+    local tar_list=() local_path
+    while IFS=$'\t' read -r local_path _; do
+        tar_list+=("$local_path")
+    done < "$MANIFEST"
+    # mktemp -d, not a fixed path: a predictable /tmp directory can be pre-created
+    # or symlinked by a local unprivileged user before we extract into it.
+    STAGE="$(remote "mktemp -d /tmp/swpu-deploy-stage.XXXXXX")"
+    [ -n "$STAGE" ] || { echo "could not create a staging directory" >&2; exit 66; }
+    tar -C "$ROOT" -cf - "${tar_list[@]}" \
+        | "$SSH_BIN" "${SSH_OPTS[@]}" "$SSH_TARGET" "tar -C '$STAGE' -xf -"
+}
+
+activate() {
+    local local_path remote_path
+    {
+        while IFS=$'\t' read -r local_path remote_path; do
+            printf "install -D -m 0644 '%s/%s' '%s'\n" "$STAGE" "$local_path" "$remote_path"
+        done < "$MANIFEST"
+    } | remote bash -s
+    remote "chmod +x $REMOTE_DEPLOY/deploy/install-theme.sh $REMOTE_DEPLOY/deploy/install-landing.sh $REMOTE_DEPLOY/deploy/smoke.sh"
+    # Idempotent, no restart needed. install-theme.sh rolls itself back if its
+    # own post-write verification fails.
+    remote "bash $REMOTE_DEPLOY/deploy/install-landing.sh"
+    remote "bash $REMOTE_DEPLOY/deploy/install-theme.sh"
 }
 
 restart_hydrooj() {
@@ -175,8 +213,14 @@ run_smoke() {
 
 main() {
     preflight
-    sync_files
-    verify_hashes
+    upload_stage
+    compare_hashes "staging copy" stage
+    if [ "$STAGE_ONLY" = 1 ]; then
+        echo "stage-only: staging copy verified, nothing was activated"
+        return 0
+    fi
+    activate
+    compare_hashes "installed files" live
     if [ "$SYNC_ONLY" = 1 ]; then
         echo "sync-only: files in place and verified, restart skipped"
         return 0
@@ -184,7 +228,7 @@ main() {
     restart_hydrooj
     wait_ready
     run_smoke
-    echo "deploy complete: synced, verified, restarted, ready, smoke green"
+    echo "deploy complete: staged, verified, activated, verified, restarted, ready, smoke green"
 }
 
 main

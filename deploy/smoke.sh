@@ -63,6 +63,23 @@ else
     check 1 "hydro bundle discoverable from /p"
 fi
 hdr "https://$HOST/favicon.png" 'cache-control: public, max-age=3600'; check $? "favicon 1h cache"
+# The two subsetted fonts are served from custom/ but were never shipped by
+# deploy.sh and never asserted here, so a missing or stale subset only showed up
+# as invisible fallback type in the browser.
+for font in swpu-display.woff2 swpu-mono.woff2; do
+    if [ "$(curl -sk --resolve "$HOST:443:$IP" -o /dev/null -w '%{http_code}' "https://$HOST/$font")" = "200" ]; then
+        check 0 "$font served"
+    else
+        check 1 "$font served"
+    fi
+done
+for icon in og-cover.png logo.png; do
+    if [ "$(curl -sk --resolve "$HOST:443:$IP" -o /dev/null -w '%{http_code}' "https://$HOST/$icon")" = "200" ]; then
+        check 0 "$icon served"
+    else
+        check 1 "$icon served"
+    fi
+done
 if req -D - -o /dev/null "https://$HOST/__swpu_missing__" | grep -aiq cache-control; then
     check 1 "404 carries no Cache-Control"
 else

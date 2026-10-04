@@ -506,14 +506,22 @@ test('light default initialization supports a new site and preserves user choice
   assert.deepEqual(users, originalUsers);
 });
 
-test('deploy orchestrator locks the sync-verify-restart-wait-smoke order', () => {
+test('deploy orchestrator locks the stage-verify-activate-restart-wait-smoke order', () => {
   const source = fs.readFileSync(path.join(repo, 'deploy', 'deploy.sh'), 'utf8');
   // main() must invoke the stages in the incident-proof order: the
-  // 2026-10-04 stale-process deploy shipped files AFTER the only restart.
+  // 2026-10-04 stale-process deploy shipped files AFTER the only restart, and
+  // the previous version installed before it verified, so a hash mismatch left
+  // the server on new assets with the old process still serving them.
   const body = source.slice(source.indexOf('main() {'));
-  const calls = [...body.matchAll(/^ {4}(preflight|sync_files|verify_hashes|restart_hydrooj|wait_ready|run_smoke)$/gm)]
+  const calls = [...body.matchAll(/^ {4}(preflight|upload_stage|activate|restart_hydrooj|wait_ready|run_smoke)$/gm)]
     .map((match) => match[1]);
-  assert.deepEqual(calls, ['preflight', 'sync_files', 'verify_hashes', 'restart_hydrooj', 'wait_ready', 'run_smoke']);
+  assert.deepEqual(calls, ['preflight', 'upload_stage', 'activate', 'restart_hydrooj', 'wait_ready', 'run_smoke']);
+  // The staging copy is hash-verified before anything is installed.
+  const firstVerify = body.indexOf('compare_hashes "staging copy" stage');
+  const activate = body.indexOf('    activate\n');
+  assert.ok(firstVerify > 0 && activate > 0);
+  assert.ok(firstVerify < activate, 'staging must be verified before activation');
+  assert.match(body, /compare_hashes "installed files" live/);
   // Every failure mode has its own documented exit code.
   for (const code of ['64', '65', '66', '67', '68']) assert.match(source, new RegExp(`exit ${code}`));
   // The readiness budget must cover the real boot window (>=75s).
@@ -522,11 +530,33 @@ test('deploy orchestrator locks the sync-verify-restart-wait-smoke order', () =>
   // Plugin file lists come from deployment.md's documented cp blocks, so
   // docs and shipping can never drift.
   assert.match(source, /cp \/root\/swpu-oj\/\$1\/\{\\\(\[\^}\]\*\\\)}/);
-  // The stage order above already locks restart-after-verify and
-  // smoke-after-restart; do not add indexOf checks here — the header comment
-  // mentions stage names before they are defined.
+  // A dry run that changes nothing live, and a predictable staging path are both
+  // regression risks worth locking.
+  assert.match(source, /--stage-only/);
+  assert.match(source, /mktemp -d \/tmp\/swpu-deploy-stage/);
+  assert.ok(!/STAGE=\/tmp\/swpu-deploy-stage$/.test(source), 'the staging path must not be fixed');
+  assert.match(source, /StrictHostKeyChecking/);
   // Smoke is executed from the synced copy, not from a stale leftover.
   assert.match(source, /bash \$REMOTE_DEPLOY\/deploy\/smoke\.sh/);
+});
+
+// The two subsetted fonts and the icon set are served from custom/ but were
+// never in deploy.sh's manifest, so changing one needed a manual
+// install-landing.sh that the orchestrator would never run.
+test('the deploy manifest ships the whole landing tree, not just index.html', () => {
+  const source = fs.readFileSync(path.join(repo, 'deploy', 'deploy.sh'), 'utf8');
+  const manifest = source.slice(source.indexOf('stage_manifest()'), source.indexOf('preflight()'));
+  assert.match(manifest, /find \. -type f/, 'the landing tree must be enumerated');
+  assert.match(manifest, /'landing\/%s\\t%s\/landing\/%s\\n'/);
+  assert.match(source, /bash \$REMOTE_DEPLOY\/deploy\/install-landing\.sh/);
+  for (const asset of ['landing/swpu-display.woff2', 'landing/swpu-mono.woff2', 'landing/assets/logo.png', 'landing/index.html']) {
+    assert.ok(fs.existsSync(path.join(repo, asset)), `${asset} must exist to be shipped`);
+  }
+  // And smoke asserts they are actually reachable, not merely uploaded.
+  const smoke = fs.readFileSync(path.join(repo, 'deploy', 'smoke.sh'), 'utf8');
+  assert.match(smoke, /swpu-display\.woff2/);
+  assert.match(smoke, /swpu-mono\.woff2/);
+  assert.match(smoke, /og-cover\.png/);
 });
 
 test('smoke battery locks the boot injection, auth gates and security headers', () => {
