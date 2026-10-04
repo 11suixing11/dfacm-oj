@@ -133,22 +133,26 @@ preflight() {
 # remote side hashes: "stage" the uploaded copy, "live" the installed path.
 compare_hashes() {
     local label="$1" target="$2" local_path remote_path
-    local local_hashes remote_hashes
+    local local_hashes remote_hashes remote_command=''
     local_hashes="$(
         while IFS=$'\t' read -r local_path remote_path; do
             sha256sum "$ROOT/$local_path" | cut -d' ' -f1
         done < "$MANIFEST"
     )"
-    if ! remote_hashes="$(
-        {
-            while IFS=$'\t' read -r local_path remote_path; do
-                case "$target" in
-                    stage) printf "sha256sum '%s/%s'\n" "$STAGE" "$local_path" ;;
-                    live) printf "sha256sum '%s'\n" "$remote_path" ;;
-                esac
-            done < "$MANIFEST"
-        } | remote bash -s | cut -d' ' -f1
-    )"; then
+    # Do not pipe a generated script into `ssh ... bash -s` here. On Windows
+    # Git Bash, a long stdin-fed SSH command can keep the channel open after
+    # the remote hashes have been produced, which made deployment hang during
+    # the otherwise harmless staging verification. The paths come only from
+    # the repository manifest and contain no shell quotes, so one remote
+    # command string is both simpler and bounded well below SSH's command-line
+    # limits.
+    while IFS=$'\t' read -r local_path remote_path; do
+        case "$target" in
+            stage) remote_command+="sha256sum '$STAGE/$local_path'"$'\n' ;;
+            live) remote_command+="sha256sum '$remote_path'"$'\n' ;;
+        esac
+    done < "$MANIFEST"
+    if ! remote_hashes="$(remote "$remote_command" | cut -d' ' -f1)"; then
         echo "remote hash probe failed for $label" >&2
         exit 65
     fi
