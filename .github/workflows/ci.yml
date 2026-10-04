@@ -19,6 +19,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          # Full history, so the scan sees secrets that were later removed.
           fetch-depth: 0
       - uses: gitleaks/gitleaks-action@v2
         env:
@@ -77,10 +78,52 @@ jobs:
           grep -q "ranking own-row dedup" deploy/deployment.md
           grep -q "pm2 restart hydrooj" deploy/deploy.sh
           grep -q "deployment.md" deploy/deploy.sh
+      - name: Reject reintroduced injection sinks
+        run: |
+          # Provider/username data must never be concatenated into markup.
+          if grep -nE "innerHTML\s*=\s*(p\.|providers|name)" plugin-swpu-regcode/reg.html landing/index.html; then
+            echo "operator- or user-supplied data reached an innerHTML assignment"
+            exit 1
+          fi
+          # A string replacement expands $&, $\`, $' and $$ in the replacement.
+          if grep -n "replace(BOOT_MARK, boot" plugin-swpu-regcode/index.ts; then
+            echo "the /reg boot payload must use a function replacer, not a string"
+            exit 1
+          fi
+      - name: Check the reverse proxy config parses and stays internally consistent
+        run: |
+          # check-deployment.sh runs this on the server; CI must not be the only
+          # place it is skipped.
+          caddy adapt --validate --config deploy/Caddyfile.example > /dev/null
+          # The judge service account must stay hidden.
+          grep -q "@hidejudge path /user/3" deploy/Caddyfile.example
+          # Cloudflare's ranges appear twice: the global trusted_proxies block
+          # (access-log client_ip) and the @fromcf matcher (XFF pinning). If they
+          # drift, real-IP resolution silently breaks for the differing ranges
+          # and nothing else reports it. Both lines must be byte-identical after
+          # whitespace normalisation.
+          grep -oE '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}/[0-9]{1,2}|[0-9a-f]{1,4}:[0-9a-f:]*:[0-9a-f:]*\/[0-9]{1,3}' deploy/Caddyfile.example > /tmp/cf-all
+          test -s /tmp/cf-all
+          grep -n 'trusted_proxies static\|@fromcf remote_ip' deploy/Caddyfile.example | cut -d: -f1 > /tmp/cf-lines
+          test "$(wc -l < /tmp/cf-lines)" -eq 2 || { echo "expected exactly two Cloudflare range lists"; exit 1; }
+          first=$(sed -n "$(head -1 /tmp/cf-lines)p" deploy/Caddyfile.example | tr ' ' '\n' | grep -E '/[0-9]+$' | sort)
+          second=$(sed -n "$(tail -1 /tmp/cf-lines)p" deploy/Caddyfile.example | tr ' ' '\n' | grep -E '/[0-9]+$' | sort)
+          test -n "$first" || { echo "first Cloudflare list is empty"; exit 1; }
+          if [ "$first" != "$second" ]; then
+            echo "Cloudflare range lists diverged between the global block and @fromcf:"
+            diff <(printf '%s\n' "$first") <(printf '%s\n' "$second") || true
+            exit 1
+          fi
+          echo "both Cloudflare range lists agree ($(printf '%s\n' "$first" | wc -l) ranges)"
       - name: Check shell scripts
-        run: bash -n deploy/*.sh scripts/*.sh
+        run: |
+          bash -n deploy/*.sh scripts/*.sh
+          # bash -n only parses. shellcheck is what catches the quoting and
+          # errexit gaps that turn a partial failure into a silent success.
+          sudo apt-get update -qq && sudo apt-get install -y -qq shellcheck
+          shellcheck -S warning -e SC1091 deploy/*.sh scripts/*.sh
       - name: Check Python syntax
-        run: python -m py_compile scripts/subset_fonts.py
+        run: python -m py_compile scripts/subset_fonts.py && rm -rf scripts/__pycache__
 
   plugin-tests:
     runs-on: ubuntu-latest
