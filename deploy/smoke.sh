@@ -16,27 +16,27 @@ fails=0
 check() { if [ "$1" -eq 0 ]; then echo "PASS $2"; else echo "FAIL $2"; fails=$((fails+1)); fi; }
 
 # --- pages ---
-[ "$(code "https://$HOST/")" = "200" ]; check $? "GET / = 200"
+if [ "$(code "https://$HOST/")" = "200" ]; then check 0 "GET / = 200"; else check 1 "GET / = 200"; fi
 req "https://$HOST/" | grep -aF 'swpuacm.xyz' >/dev/null; check $? "landing is the branded facade"
-[ "$(code "https://$HOST/reg")" = "200" ]; check $? "GET /reg = 200"
+if [ "$(code "https://$HOST/reg")" = "200" ]; then check 0 "GET /reg = 200"; else check 1 "GET /reg = 200"; fi
 req "https://$HOST/reg" | grep -aF 'tab-reg' >/dev/null; check $? "auth page renders the branded card"
 req "https://$HOST/reg" | grep -aF '__SWPU_BOOT.oauth=[{' >/dev/null; check $? "oauth providers injected (github button)"
 req "https://$HOST/reg?tab=pwd" | grep -aF '__SWPU_BOOT.tab="pwd"' >/dev/null; check $? "boot injection: tab=pwd"
 req "https://$HOST/reg?embed=1&tab=login" | grep -aF '__SWPU_BOOT.embed=true' >/dev/null; check $? "boot injection: embed flag"
 req "https://$HOST/login" | grep -aF '__SWPU_BOOT.tab="pwd"' >/dev/null; check $? "bare /login rewired to the password tab"
 req "https://$HOST/register" | grep -aF 'tab-reg' >/dev/null; check $? "bare /register serves the branded page"
-[ "$(code "https://$HOST/p")" = "200" ]; check $? "GET /p = 200"
-[ "$(code "https://$HOST/training")" = "200" ]; check $? "GET /training = 200"
-[ "$(code "https://$HOST/lostpass")" = "200" ]; check $? "GET /lostpass = 200"
-[ "$(code "https://$HOST/user/2")" = "200" ]; check $? "user profile renders (regat type regression)"
+if [ "$(code "https://$HOST/p")" = "200" ]; then check 0 "GET /p = 200"; else check 1 "GET /p = 200"; fi
+if [ "$(code "https://$HOST/training")" = "200" ]; then check 0 "GET /training = 200"; else check 1 "GET /training = 200"; fi
+if [ "$(code "https://$HOST/lostpass")" = "200" ]; then check 0 "GET /lostpass = 200"; else check 1 "GET /lostpass = 200"; fi
+if [ "$(code "https://$HOST/user/2")" = "200" ]; then check 0 "user profile renders (regat type regression)"; else check 1 "user profile renders (regat type regression)"; fi
 
 # --- guest gates ---
-[ "$(code "https://$HOST/workbench")" = "302" ]; check $? "GET /workbench gated (302)"
-[ "$(code "https://$HOST/mistakes")" = "302" ]; check $? "GET /mistakes gated (302)"
-[ "$(code "https://$HOST/shop")" = "200" ]; check $? "GET /shop = 200 (points shop, guest-visible)"
+if [ "$(code "https://$HOST/workbench")" = "302" ]; then check 0 "GET /workbench gated (302)"; else check 1 "GET /workbench gated (302)"; fi
+if [ "$(code "https://$HOST/mistakes")" = "302" ]; then check 0 "GET /mistakes gated (302)"; else check 1 "GET /mistakes gated (302)"; fi
+if [ "$(code "https://$HOST/shop")" = "200" ]; then check 0 "GET /shop = 200 (points shop, guest-visible)"; else check 1 "GET /shop = 200 (points shop, guest-visible)"; fi
 req "https://$HOST/shop" | grep -aF 'data-table' >/dev/null; check $? "shop page renders the badge table"
-[ "$(code "https://$HOST/shop/history")" = "302" ]; check $? "GET /shop/history gated (302)"
-[ "$(code "https://$HOST/manage/shop")" = "302" ]; check $? "GET /manage/shop gated (302)"
+if [ "$(code "https://$HOST/shop/history")" = "302" ]; then check 0 "GET /shop/history gated (302)"; else check 1 "GET /shop/history gated (302)"; fi
+if [ "$(code "https://$HOST/manage/shop")" = "302" ]; then check 0 "GET /manage/shop gated (302)"; else check 1 "GET /manage/shop gated (302)"; fi
 
 # --- regcode POST path (validation-only: no mail sent, no rate consumed) ---
 req -X POST -d 'mail=smoke@example.com&purpose=hack' "https://$HOST/reg/code" \
@@ -52,7 +52,7 @@ hdr "https://$HOST/home.html" 'cache-control: no-cache'; check $? "landing no-ca
 css="$(req "https://$HOST/p" | grep -aoE 'theme-[0-9.]+\.css' | head -1)"
 if [ -n "$css" ]; then
     hdr "https://$HOST/$css" 'cache-control: max-age=600'; check $? "theme css max-age=600"
-    [ "$(req "https://$HOST/$css" | grep -acF 'SWPU ACM brand overlay')" = "2" ]; check $? "brand overlay present in served css"
+    if [ "$(req "https://$HOST/$css" | grep -acF 'SWPU ACM brand overlay')" = "2" ]; then check 0 "brand overlay present in served css"; else check 1 "brand overlay present in served css"; fi
 else
     check 1 "theme css discoverable from /p"
 fi
@@ -87,7 +87,7 @@ else
 fi
 
 # --- protocol and service worker killswitch ---
-[ "$(curl -s --resolve "$HOST:80:$IP" -o /dev/null -w '%{http_code}' "http://$HOST/")" = "308" ]; check $? "http redirects 308"
+if [ "$(curl -s --resolve "$HOST:80:$IP" -o /dev/null -w '%{http_code}' "http://$HOST/")" = "308" ]; then check 0 "http redirects 308"; else check 1 "http redirects 308"; fi
 req "https://$HOST/service-worker.js" | grep -aF 'unregister' >/dev/null; check $? "service-worker killswitch alive"
 
 if [ "$fails" -gt 0 ]; then
