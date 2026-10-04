@@ -1,8 +1,8 @@
 const assert = require('node:assert/strict');
 const { test } = require('node:test');
 const {
-    createPurgeDoc, createRpLock, createRpSweep, createSanitize,
-    serviceUidsFromEnv, SWEEP_INTERVAL_MS, SWEEP_STARTUP_DELAY_MS,
+    createAutoJoin, createJoinReconcile, createPurgeDoc, createRpLock, createRpSweep, createSanitize,
+    serviceUidsFromEnv, JOIN_DOMAINS, SWEEP_INTERVAL_MS, SWEEP_STARTUP_DELAY_MS,
 } = require('../rp-sweep.cjs');
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -150,4 +150,150 @@ test('the lock chain survives a failed job', async () => {
     const lock = createRpLock();
     await assert.rejects(() => lock(async () => { throw new Error('boom'); }), /boom/);
     assert.equal(await lock(async () => 'ok'), 'ok');
+});
+
+function autoJoinFixture(docs) {
+    const writes = [];
+    const coll = {
+        findOne: async (filter) => docs.find((d) => d.domainId === filter.domainId && d.uid === filter.uid) || null,
+        updateOne: async (filter, update) => {
+            writes.push(['update', filter, update]);
+            const doc = docs.find((d) => d.domainId === filter.domainId && d.uid === filter.uid);
+            if (doc) Object.assign(doc, update.$set);
+            return { modifiedCount: doc ? 1 : 0 };
+        },
+    };
+    const domainModel = {
+        setUserRole: async (domainId, uid, role, join) => {
+            writes.push(['setUserRole', domainId, uid, role, join]);
+            docs.push({ domainId, uid, role, join });
+        },
+    };
+    return { coll, domainModel, writes };
+}
+
+test('auto-join creates missing domain docs and flags existing ones', async () => {
+    const docs = [
+        { domainId: 'system', uid: 4, role: 'acmer', join: false },
+        { domainId: 'system', uid: 7, role: 'default', join: true },
+        { domainId: 'poj', uid: 7, role: 'default', join: true },
+    ];
+    const { coll, domainModel, writes } = autoJoinFixture(docs);
+    const autoJoin = createAutoJoin({ coll, domainModel, uids: [3] });
+    assert.equal(await autoJoin({ _id: 4 }), true);
+    // existing doc: role preserved, only join set
+    assert.deepEqual(writes[0], ['update', { domainId: 'system', uid: 4 }, { $set: { join: true } }]);
+    assert.equal(docs[0].role, 'acmer');
+    // poj doc missing: official setUserRole upsert
+    assert.deepEqual(writes[1], ['setUserRole', 'poj', 4, 'default', true]);
+    // fully joined user is a no-op
+    writes.length = 0;
+    assert.equal(await autoJoin({ _id: 7 }), false);
+    assert.deepEqual(writes, []);
+});
+
+test('auto-join skips guests, the system account and service accounts', async () => {
+    const { coll, domainModel, writes } = autoJoinFixture([]);
+    const autoJoin = createAutoJoin({ coll, domainModel, uids: [3] });
+    assert.equal(await autoJoin({ _id: 0 }), false);
+    assert.equal(await autoJoin({ _id: 1 }), false);
+    assert.equal(await autoJoin({ _id: 3 }), false);
+    assert.equal(await autoJoin(null), false);
+    assert.deepEqual(writes, []);
+});
+
+test('JOIN_DOMAINS are the two ranking domains', () => {
+    assert.deepEqual(JOIN_DOMAINS, ['system', 'poj']);
+});
+
+function reconcileFixture(users, domainUsers) {
+    const writes = [];
+    const userColl = { find: () => ({ toArray: async () => users.map((u) => ({ _id: u })) }) };
+    const domainUserColl = {
+        find: (filter) => ({
+            toArray: async () => domainUsers.filter((d) => d.domainId === filter.domainId),
+        }),
+        updateOne: async (filter, update) => {
+            writes.push(['upsert', filter, update]);
+            if (!domainUsers.some((d) => d.domainId === filter.domainId && d.uid === filter.uid)) {
+                domainUsers.push({ ...update.$setOnInsert });
+            }
+            return { modifiedCount: 1 };
+        },
+        updateMany: async (filter, update) => {
+            writes.push(['many', filter, update]);
+            let count = 0;
+            for (const d of domainUsers) {
+                if (d.domainId === filter.domainId && d.uid > 1 && !filter.uid.$nin.includes(d.uid) && !d.join) {
+                    d.join = true;
+                    count++;
+                }
+            }
+            return { modifiedCount: count };
+        },
+    };
+    return { userColl, domainUserColl, writes };
+}
+
+test('reconcile inserts missing docs, flags existing ones and skips service accounts', async () => {
+    const domainUsers = [
+        { domainId: 'system', uid: 2, role: 'root', join: true },
+        { domainId: 'system', uid: 3, role: 'default', join: false },
+        { domainId: 'poj', uid: 2, role: 'default', join: true },
+    ];
+    const { userColl, domainUserColl, writes } = reconcileFixture([2, 3, 4, 5], domainUsers);
+    const reconcile = createJoinReconcile({ userColl, domainUserColl, uids: [3] });
+    const result = await reconcile();
+    // members = [2,4,5]; system missing {4,5}, poj missing {4,5} → 4 inserts
+    assert.deepEqual(result, { created: 4, joined: 0 });
+    // uid 3 is a service account: never inserted, never joined
+    assert.ok(!domainUsers.some((d) => d.uid === 3 && d.domainId === 'poj'));
+    assert.equal(domainUsers[1].join, false);
+    // inserts carry the default role and join
+    assert.deepEqual(writes[0], ['upsert', { domainId: 'system', uid: 4 }, { $setOnInsert: { domainId: 'system', uid: 4, join: true, role: 'default' } }]);
+    assert.deepEqual(writes[3], ['upsert', { domainId: 'poj', uid: 4 }, { $setOnInsert: { domainId: 'poj', uid: 4, join: true, role: 'default' } }]);
+    // system updateMany excludes service uids
+    const systemMany = writes.find(([kind, f]) => kind === 'many' && f.domainId === 'system');
+    assert.deepEqual(systemMany[1], { domainId: 'system', uid: { $gt: 1, $nin: [3] }, join: { $ne: true } });
+    // inserted docs are visible afterwards
+    assert.ok(domainUsers.some((d) => d.domainId === 'poj' && d.uid === 5 && d.join && d.role === 'default'));
+});
+
+test('reconcile flags existing unjoined docs via updateMany', async () => {
+    const domainUsers = [
+        { domainId: 'system', uid: 2, role: 'root', join: false },
+        { domainId: 'poj', uid: 2, role: 'default', join: true },
+    ];
+    const { userColl, domainUserColl, writes } = reconcileFixture([2, 4], domainUsers);
+    const reconcile = createJoinReconcile({ userColl, domainUserColl, uids: [3] });
+    const result = await reconcile();
+    // system missing {4}, poj missing {4} (poj uid 2 already present) → 2 inserts
+    assert.deepEqual(result, { created: 2, joined: 1 });
+    assert.equal(domainUsers[0].join, true);
+    assert.equal(domainUsers[0].role, 'root');
+    const many = writes.find(([kind, f]) => kind === 'many' && f.domainId === 'system');
+    assert.ok(many);
+});
+
+test('a sweep pass sanitizes, reconciles and then recomputes', async () => {
+    const order = [];
+    const sweep = createRpSweep({
+        script: { run: async () => { order.push('rp'); } },
+        sanitize: async () => { order.push('purge'); return { deletedCount: 0 }; },
+        reconcile: async () => { order.push('reconcile'); return { created: 1, joined: 0 }; },
+    });
+    assert.equal(await sweep.runOnce('manual'), true);
+    assert.deepEqual(order, ['purge', 'reconcile', 'rp']);
+});
+
+test('a failed reconcile aborts the pass without computing', async () => {
+    const ran = [];
+    const sweep = createRpSweep({
+        script: { run: async () => { ran.push(1); } },
+        sanitize: async () => ({ deletedCount: 0 }),
+        reconcile: async () => { throw new Error('db down'); },
+    });
+    assert.equal(await sweep.runOnce('manual'), false);
+    assert.deepEqual(ran, []);
+    assert.match(sweep.failures[0].message, /db down/);
 });

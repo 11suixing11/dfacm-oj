@@ -17,6 +17,9 @@ const SWEEP_INTERVAL_MS = 60 * 60 * 1000;
 const SWEEP_STARTUP_DELAY_MS = 3 * 60 * 1000;
 const HISTORY_LIMIT = 100;
 const DOC_TYPE_PROBLEM = 10;
+// The ranking domains every real member should be joined to (the v1.12.0
+// policy, extended to every registration path — see createAutoJoin below).
+const JOIN_DOMAINS = ['system', 'poj'];
 
 // Plain console shim: this module is also loaded by node:test without hydrooj.
 const logger = {
@@ -70,6 +73,74 @@ function createRpLock() {
     };
 }
 
+// Membership reconciliation. The v1.12.0 fix auto-joins members at
+// /reg/complete, but that is only one of the paths that create accounts:
+// a GitHub (or any OAuth) first login funnels into Hydro core's
+// UserRegisterWithCodeHandler, which sets no join flag, and neither does
+// admin-created accounts. The ranking board lists only join=true members, so
+// such members stay invisible even after solving. This hook closes that gap
+// at the one chokepoint every login path ends in: Hydro's serial
+// `auth/login` event (fired by successfulAuth on every real login and at the
+// end of registration; logout calls it with uid 0, which the uid check
+// skips). Existing domain docs keep their role; only the join flag is set.
+// Service accounts are skipped — the judge account's join is deliberately
+// withdrawn and must never come back.
+function createAutoJoin({ coll, domainModel, domains = JOIN_DOMAINS, uids = [] }) {
+    if (!coll || typeof coll.findOne !== 'function') throw new TypeError('autoJoin needs the domain.user collection');
+    if (!domainModel || typeof domainModel.setUserRole !== 'function') throw new TypeError('autoJoin needs DomainModel');
+    const excluded = [...uids];
+    return async function autoJoin(udoc) {
+        const uid = udoc && udoc._id;
+        if (!(uid > 1) || excluded.includes(uid)) return false;
+        let changed = false;
+        for (const domainId of domains) {
+            const dudoc = await coll.findOne({ domainId, uid });
+            if (dudoc && dudoc.join) continue;
+            if (dudoc) await coll.updateOne({ domainId, uid }, { $set: { join: true } });
+            else await domainModel.setUserRole(domainId, uid, 'default', true);
+            changed = true;
+        }
+        return changed;
+    };
+}
+
+// Hourly backstop for the same policy: reconcile every real member's join
+// flag in the ranking domains, whatever path created the account (or removed
+// the flag). Missing domain docs are inserted with the default role; existing
+// docs keep their role and only gain join=true.
+function createJoinReconcile({ userColl, domainUserColl, domains = JOIN_DOMAINS, uids = [] }) {
+    if (!userColl || typeof userColl.find !== 'function') throw new TypeError('reconcile needs the user collection');
+    if (!domainUserColl || typeof domainUserColl.find !== 'function') throw new TypeError('reconcile needs the domain.user collection');
+    const excluded = [...uids];
+    return async function reconcile() {
+        const members = (await userColl.find({ _id: { $gt: 1 } }, { projection: { _id: 1 } }).toArray())
+            .map((d) => d._id)
+            .filter((uid) => !excluded.includes(uid));
+        let created = 0;
+        let joined = 0;
+        for (const domainId of domains) {
+            const present = new Set(
+                (await domainUserColl.find({ domainId }, { projection: { uid: 1 } }).toArray()).map((d) => d.uid),
+            );
+            for (const uid of members) {
+                if (present.has(uid)) continue;
+                await domainUserColl.updateOne(
+                    { domainId, uid },
+                    { $setOnInsert: { domainId, uid, join: true, role: 'default' } },
+                    { upsert: true },
+                );
+                created++;
+            }
+            const result = await domainUserColl.updateMany(
+                { domainId, uid: { $gt: 1, $nin: excluded }, join: { $ne: true } },
+                { $set: { join: true } },
+            );
+            joined += (result && result.modifiedCount) || 0;
+        }
+        return { created, joined };
+    };
+}
+
 function createRpSweep(options = {}) {
     const {
         intervalMs = SWEEP_INTERVAL_MS,
@@ -77,6 +148,7 @@ function createRpSweep(options = {}) {
         // Injectable for tests; defaults to Hydro's global script registry.
         script = null,
         sanitize = null,
+        reconcile = null,
         lock = null,
         instance = process.env.NODE_APP_INSTANCE,
     } = options;
@@ -112,6 +184,12 @@ function createRpSweep(options = {}) {
                 if (sanitize) {
                     const purge = await sanitize();
                     if (purge && purge.deletedCount > 0) logger.info('purged service-account status rows:', purge.deletedCount);
+                }
+                if (reconcile) {
+                    const result = await reconcile();
+                    if (result && (result.created || result.joined)) {
+                        logger.info('reconciled ranking-domain joins:', JSON.stringify(result));
+                    }
                 }
                 const startedAt = Date.now();
                 await rp.run({}, () => {});
@@ -160,11 +238,14 @@ function createRpSweep(options = {}) {
 }
 
 module.exports = {
+    createAutoJoin,
+    createJoinReconcile,
     createPurgeDoc,
     createRpLock,
     createRpSweep,
     createSanitize,
     serviceUidsFromEnv,
+    JOIN_DOMAINS,
     SWEEP_INTERVAL_MS,
     SWEEP_STARTUP_DELAY_MS,
 };
