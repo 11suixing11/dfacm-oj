@@ -118,7 +118,11 @@ class RegPageHandler extends Handler {
         if (String(this.args.embed ?? '') === '1') boot.push('window.__SWPU_BOOT.embed=true;');
         const oauth = oauthEntries(this);
         if (oauth.length) boot.push(`window.__SWPU_BOOT.oauth=${JSON.stringify(oauth)};`);
-        this.response.body = boot.length ? PAGE.replace(BOOT_MARK, boot.join('')) : PAGE;
+        // A function replacer is mandatory, not stylistic: with a string
+        // replacement, boot's JSON (which embeds operator-supplied OAuth
+        // provider text) would have $&/$`/$'/$$ expanded, splicing the
+        // remainder of reg.html into the inline <script>.
+        this.response.body = boot.length ? PAGE.replace(BOOT_MARK, () => boot.join('')) : PAGE;
         this.response.type = 'text/html; charset=utf-8';
         this.response.addHeader('Cache-Control', 'no-store');
     }

@@ -301,12 +301,11 @@ section{position:relative}
 /* 蓝桥杯迷你路 */
 .mini{display:grid;grid-template-columns:repeat(4,1fr);gap:0;margin:30px 0 10px;position:relative}
 .mini::before{content:'';position:absolute;top:7px;left:6%;right:6%;height:1px;background:repeating-linear-gradient(90deg,var(--gold-veil) 0 7px,transparent 7px 14px)}
-.mini a{position:relative;text-align:center;padding-top:26px}
-.mini a::before{content:'';position:absolute;top:0;left:50%;transform:translateX(-50%);width:15px;height:15px;border-radius:50%;background:var(--ink-2);border:1.6px solid var(--gold-hi);transition:background .3s,box-shadow .3s}
-.mini a:hover::before{background:var(--gold);box-shadow:0 0 16px rgba(233,196,85,.5)}
+.mini .stage{position:relative;text-align:center;padding-top:26px}
+.mini .stage::before{content:'';position:absolute;top:0;left:50%;transform:translateX(-50%);width:15px;height:15px;border-radius:50%;background:var(--ink-2);border:1.6px solid var(--gold-hi)}
 .mini b{display:block;font-size:14.5px;font-weight:600;letter-spacing:.03em}
 .mini small{display:block;font-family:var(--font-m);font-size:10px;letter-spacing:.18em;color:var(--txt-3);margin-top:5px}
-@media(max-width:640px){.mini{grid-template-columns:1fr 1fr;gap:22px 0}.mini::before{display:none}.mini a:nth-child(3){border-left:1px solid var(--line)}}
+@media(max-width:640px){.mini{grid-template-columns:1fr 1fr;gap:22px 0}.mini::before{display:none}.mini .stage:nth-child(3){border-left:1px solid var(--line)}}
 
 /* ---------- 判题引擎 ---------- */
 .feat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
@@ -661,11 +660,14 @@ int main() {
         <span class="rc-n">254</span>
       </div>
       <p class="rc-sub">四关递进，直通省赛 · 历届真题全量数据 · 关关解锁</p>
-      <nav class="mini" aria-label="蓝桥杯路线 4 关">
-        <a href="/training/6abf552caaa235606eedfbee"><b>基础训练</b><small>15 题 · 大本营</small></a>
-        <a href="/training/6abf552caaa235606eedfbee"><b>算法训练</b><small>92 题 · 缓冲带</small></a>
-        <a href="/training/6abf552caaa235606eedfbee"><b>算法提高</b><small>113 题 · 陡坡</small></a>
-        <a href="/training/6abf552caaa235606eedfbee"><b>历届试题</b><small>34 题 · 冲顶段</small></a>
+      <!-- These four are DAG nodes inside ONE training, so Hydro has no per-stage
+           URL. They are deliberately not links: an anchor here would promise a
+           stage-specific destination and then land on the route's entry page. -->
+      <nav class="mini" aria-label="蓝桥杯路线包含 4 个递进章节">
+        <span class="stage"><b>基础训练</b><small>15 题 · 大本营</small></span>
+        <span class="stage"><b>算法训练</b><small>92 题 · 缓冲带</small></span>
+        <span class="stage"><b>算法提高</b><small>113 题 · 陡坡</small></span>
+        <span class="stage"><b>历届试题</b><small>34 题 · 冲顶段</small></span>
       </nav>
       <div class="rc-foot">
         <a class="rc-link" href="/training/6abf552caaa235606eedfbee">进入这条路线 <svg aria-hidden="true"><use href="#i-arrow"/></svg></a>

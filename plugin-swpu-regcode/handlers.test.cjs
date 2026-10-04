@@ -5,6 +5,7 @@ const Module = require('node:module');
 const esbuild = require('esbuild');
 
 const pluginPath = path.resolve(__dirname, 'index.ts');
+const BOOT_MARK = '/*__SWPU_BOOT__*/';
 // Bundle with the local esbuild devDependency so `hydrooj` can be stubbed below.
 const compiled = esbuild.buildSync({
     entryPoints: [pluginPath], bundle: true, platform: 'node', format: 'cjs', write: false,
@@ -184,6 +185,23 @@ test('registration page renders third-party login methods from handler.loginMeth
     f.state.loginMethods = [{ id: 'weibo', text: '微博登录', icon: '<svg/>' }];
     const h3 = f.handler('/reg'); await h3.get();
     assert.match(String(h3.response.body), /__SWPU_BOOT\.oauth=\[\{"id":"weibo","text":"微博登录"/);
+});
+
+test('boot injection does not expand replacement patterns from provider text', async () => {
+    const f = await fixture();
+    // A string replacement would expand $&/$\`/$'/$$ inside this JSON, splicing
+    // the rest of reg.html into the inline <script>.
+    f.state.loginMethods = [{ id: 'x', text: "$` $' $& $1 $$ $&", icon: '<svg/>' }];
+    const h = f.handler('/reg'); await h.get();
+    const body = String(h.response.body);
+    assert.match(body, /__SWPU_BOOT\.oauth=\[\{"id":"x","text":"\$` \$' \$& \$1 \$\$ \$&"/);
+    // The template must not be duplicated into the boot payload.
+    const oauthLine = body.split('\n').find((l) => l.includes('__SWPU_BOOT.oauth='));
+    assert.equal(oauthLine.includes('<!DOCTYPE'), false);
+    assert.equal(oauthLine.includes('</html>'), false);
+    // Still exactly one copy of the document.
+    assert.equal(body.match(/<\/html>/g).length, 1);
+    assert.equal(body.includes(BOOT_MARK), false);
 });
 
 test('2FA, passkey, disabled accounts and disabled built-in login cannot issue login codes', async () => {

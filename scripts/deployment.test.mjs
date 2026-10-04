@@ -295,12 +295,43 @@ test('clean-auth-entries.js installs a one-line script with embed-free escape ro
 
 function themeFixture() {
   const directory = fs.mkdtempSync(path.join(root, 'theme-'));
+  const backupDir = fs.mkdtempSync(path.join(root, 'theme-bak-'));
   const files = Object.fromEntries(['STATIC_THEME', 'SOURCE_THEME', 'STATIC_SW', 'SOURCE_SW']
     .map((key) => [key, path.join(directory, key + (key.endsWith('THEME') ? '.css' : '.js'))]));
   // No trailing newline: typical minified upstream assets must survive reinstallation.
   for (const [key, filename] of Object.entries(files)) fs.writeFileSync(filename, key.endsWith('THEME') ? 'body{color:blue}' : 'originalWorker()');
-  return { directory, files, overrides: Object.fromEntries(Object.entries(files).map(([key, filename]) => [key, unixPath(filename)])) };
+  return {
+    directory,
+    backupDir,
+    files,
+    overrides: {
+      ...Object.fromEntries(Object.entries(files).map(([key, filename]) => [key, unixPath(filename)])),
+      BACKUP_DIR: unixPath(backupDir),
+    },
+  };
 }
+
+// Every file Caddy publishes from /root/.hydro/static is reachable over HTTP, so
+// a *.bak-* file sitting next to it is a public download. install-theme.sh must
+// keep its backups outside the asset tree.
+test('theme backups are written outside the served asset directory', () => {
+  const fixture = themeFixture();
+  const result = run('../deploy/install-theme.sh', [], fixture.overrides);
+  assert.equal(result.status, 0, result.stdout + result.stderr);
+  const inServedDir = fs.readdirSync(fixture.directory).filter((n) => n.includes('.bak-'));
+  assert.deepEqual(inServedDir, [], 'no backup may land next to a served asset');
+  assert.deepEqual(fs.readdirSync(fixture.directory).sort(), Object.values(fixture.files).map((f) => path.basename(f)).sort());
+  assert.ok(fs.readdirSync(fixture.backupDir).length > 0, 'backups must exist somewhere');
+});
+
+test('install-theme refuses a BACKUP_DIR inside the served asset tree', () => {
+  const fixture = themeFixture();
+  const result = run('../deploy/install-theme.sh', [], { ...fixture.overrides, BACKUP_DIR: unixPath(fixture.directory) });
+  assert.equal(result.status, 66, result.stdout + result.stderr);
+  assert.match(result.stderr, /would be served alongside/);
+  // Nothing was mutated on the way to the refusal.
+  assert.equal(fs.readFileSync(fixture.files.STATIC_THEME, 'utf8'), 'body{color:blue}');
+});
 
 test('theme deployment fails before mutation when any required target is absent', () => {
   for (const legacy of ['0', '1']) {
@@ -326,11 +357,64 @@ test('first and repeated theme installs preserve upstream CSS and unique backups
   assert.equal(second.status, 0, second.stdout + second.stderr);
   assert.equal(fs.readFileSync(fixture.files.STATIC_THEME, 'utf8'), firstCss);
   for (const [key, filename] of Object.entries(fixture.files)) {
-    const backups = fs.readdirSync(fixture.directory).filter((name) => name.startsWith(path.basename(filename) + '.bak-'));
-    assert.equal(backups.length, 2, key);
-    assert.ok(backups.some((name) => fs.readFileSync(path.join(fixture.directory, name), 'utf8') === (key.endsWith('THEME') ? 'body{color:blue}' : 'originalWorker()')));
+    // Full paths are encoded into backup names, so the two same-basename theme
+    // targets and the two service-worker targets stay distinguishable.
+    const prefix = unixPath(filename).replace(/\//g, '_');
+    const backups = fs.readdirSync(fixture.backupDir).filter((name) => name.startsWith(prefix + '.bak-'));
+    assert.equal(backups.length, 2, `${key}: ${JSON.stringify(fs.readdirSync(fixture.backupDir))}`);
+    assert.ok(backups.some((name) => fs.readFileSync(path.join(fixture.backupDir, name), 'utf8') === (key.endsWith('THEME') ? 'body{color:blue}' : 'originalWorker()')));
   }
   assert.equal(fs.readFileSync(fixture.files.STATIC_SW, 'utf8'), fs.readFileSync(path.join(repo, 'deploy/service-worker-killswitch.js'), 'utf8'));
+});
+
+test('old theme backups are pruned to the retention limit', () => {
+  const fixture = themeFixture();
+  for (let i = 0; i < 5; i++) assert.equal(run('../deploy/install-theme.sh', [], { ...fixture.overrides, SWPU_THEME_BACKUP_KEEP: '2' }).status, 0);
+  const prefix = unixPath(fixture.files.STATIC_THEME).replace(/\//g, '_');
+  const kept = fs.readdirSync(fixture.backupDir).filter((n) => n.startsWith(prefix + '.bak-'));
+  assert.equal(kept.length, 2, JSON.stringify(kept));
+});
+
+// A failure detected before any mutation must leave the asset tree pristine and
+// must not create backups — there is nothing to roll back.
+test('a pre-validation failure touches nothing at all', () => {
+  const fixture = themeFixture();
+  const missing = path.join(fixture.directory, 'missing.css');
+  const result = run('../deploy/install-theme.sh', [], { ...fixture.overrides, SOURCE_SW: unixPath(missing) });
+  assert.equal(result.status, 66, result.stdout + result.stderr);
+  assert.doesNotMatch(result.stderr, /restoring/);
+  for (const [key, filename] of Object.entries(fixture.files)) {
+    const original = key.endsWith('THEME') ? 'body{color:blue}' : 'originalWorker()';
+    assert.equal(fs.readFileSync(filename, 'utf8'), original, key);
+  }
+  assert.deepEqual(fs.readdirSync(fixture.directory).sort(), Object.values(fixture.files).map((f) => path.basename(f)).sort());
+  assert.deepEqual(fs.readdirSync(fixture.backupDir), []);
+});
+
+// install-theme.sh used to have forward-only backups: a run that failed during
+// verification left the server on a half-written theme with no way back.
+test('a post-write verification failure rolls every file back', () => {
+  const fixture = themeFixture();
+  // An empty brand css makes the post-write marker check fail with exit 65,
+  // after all four targets have already been rewritten.
+  const brand = path.join(repo, 'theme', '00-brand.css');
+  const original = fs.readFileSync(brand, 'utf8');
+  fs.writeFileSync(brand, '/* no marker here */\n');
+  try {
+    const result = run('../deploy/install-theme.sh', [], fixture.overrides);
+    assert.equal(result.status, 65, result.stdout + result.stderr);
+    assert.match(result.stderr, /restoring 4 file\(s\)/);
+    for (const [key, filename] of Object.entries(fixture.files)) {
+      const pristine = key.endsWith('THEME') ? 'body{color:blue}' : 'originalWorker()';
+      assert.equal(fs.readFileSync(filename, 'utf8'), pristine, `${key} must be rolled back`);
+    }
+    // No staging files left behind.
+    assert.deepEqual(fs.readdirSync(fixture.directory).filter((n) => n.includes('.tmp.')), []);
+    // Backups are retained so an operator can still recover by hand.
+    assert.ok(fs.readdirSync(fixture.backupDir).length >= 4);
+  } finally {
+    fs.writeFileSync(brand, original);
+  }
 });
 
 test('documented addon installations contain every module and asset the entries load', () => {

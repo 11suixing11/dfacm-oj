@@ -48,6 +48,23 @@ test('landing wiring: swap targets, detection marker and stats exist in shipped 
     assert.ok(!html.includes('最快一次评测'), 'the fastest-run cell was removed — do not reintroduce an unattributable headline stat');
 });
 
+// The 蓝桥杯 card's four "stages" are DAG nodes inside ONE training, so Hydro
+// has no per-stage URL. They were four differently-named anchors all pointing
+// at the same training, which promised stage-specific destinations and then
+// landed on the route entry page.
+test('stage tiles that share one training must not be anchors', () => {
+    const mini = html.match(/<nav class="mini"[\s\S]*?<\/nav>/);
+    assert.ok(mini, 'stage nav missing');
+    assert.equal(mini[0].includes('<a '), false, 'a stage tile became a link again — it has no distinct destination');
+    assert.equal([...mini[0].matchAll(/class="stage"/g)].length, 4);
+    assert.equal(/aria-label="蓝桥杯路线包含 4 个递进章节"/.test(mini[0]), true);
+    // The card keeps exactly one real affordance into the route.
+    const card = html.slice(html.indexOf('蓝桥杯真题'), html.indexOf('蓝桥杯真题') + 2000);
+    assert.equal([...card.matchAll(/href="\/training\//g)].length, 1);
+    assert.ok(!html.includes('.mini a:hover'), 'non-clickable tiles must not keep a hover affordance');
+    assert.ok(html.includes('.mini .stage::before'), 'stage timeline dot styling must follow the element rename');
+});
+
 class El {
     constructor(text, href) {
         this.textContent = text;
