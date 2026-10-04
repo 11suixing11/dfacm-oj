@@ -9,6 +9,7 @@ import os
 import re
 import secrets
 import sqlite3
+import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -49,12 +50,19 @@ class SwpuAcmBroadcast(star.Star):
     SERVICE_UIDS: frozenset[int] = frozenset({1, 3})
     POLL_SECONDS = 15
     CARD_DRAIN_LIMIT = 20
-    WATCHING_WINDOW_SECONDS = 86_400
+    # Every poll also re-reads the last 30 minutes of records, which covers
+    # slow remote judges and in-place rejudges the watermark query misses.
+    RECENT_WINDOW_SECONDS = 1_800
+    # Safety-net cadence: re-check stuck verdicts and publish ended-contest
+    # reports once per hour.
+    STALE_SWEEP_SECONDS = 3_600
+    # Delivered, fully-judged rows older than this leave the local state
+    # store — MongoDB is the source of truth; the store is just a queue.
+    PURGE_HORIZON_SECONDS = 172_800
+    RECORDS_SCHEMA_VERSION = 2
     USER_QQ_MAP: dict[str, str] = {}
     DEFAULT_MERGE_ADMINS: tuple[str, ...] = ("1977717178",)
-    # Contest scoreboard polling stays available for future contests: add
-    # {id, oj_id, name, start, end} entries here to enable live broadcasts.
-    CONTEST_RANKINGS: tuple[dict[str, object], ...] = ()
+
     # Hydro STATUS enum -> the display text the web UI shows. The
     # "%Accepted%" LIKE matches downstream rely on status 1 being the exact
     # string "Accepted".
@@ -132,6 +140,11 @@ class SwpuAcmBroadcast(star.Star):
         self._mongo_client: pymongo.MongoClient | None = None
         self._user_cache: dict[int, dict] = {}
         self._problem_cache: dict[tuple[str, int], dict] = {}
+        self._contest_cache: dict[str, dict] = {}
+        self._hidden_pids_cache: dict[str, set[int]] = {}
+        self._hidden_pids_at: datetime | None = None
+        self._stale_sweep_at: float = 0.0
+        self._poll_count = 0
 
     def _load_state(self) -> dict:
         """Load, migrate, and normalize persisted plugin state.
@@ -267,40 +280,34 @@ class SwpuAcmBroadcast(star.Star):
             )
             tmp.replace(self._state_path)
 
-    def _init_db(self) -> None:
-        """Open (or create) the append-only local submission store."""
-        self._db_path.parent.mkdir(parents=True, exist_ok=True)
-        self._db = sqlite3.connect(self._db_path, isolation_level=None)
-        self._db.row_factory = sqlite3.Row
-        self._db.execute("PRAGMA journal_mode=WAL")
-        self._db.execute("PRAGMA synchronous=NORMAL")
-        self._db.executescript(
-            """
+    _RECORDS_DDL = """
             CREATE TABLE IF NOT EXISTS records (
                 rid TEXT PRIMARY KEY,
                 user_id TEXT NOT NULL,
                 user_name TEXT NOT NULL,
                 status TEXT NOT NULL,
+                domain_id TEXT NOT NULL DEFAULT 'system',
+                doc_id INTEGER NOT NULL DEFAULT 0,
                 problem_url TEXT NOT NULL,
                 problem_title TEXT NOT NULL DEFAULT '',
                 hidden INTEGER NOT NULL DEFAULT 0,
+                tid TEXT NOT NULL DEFAULT '',
+                contest_title TEXT NOT NULL DEFAULT '',
+                contest_key TEXT NOT NULL DEFAULT '',
                 language TEXT NOT NULL DEFAULT '',
                 difficulty TEXT NOT NULL DEFAULT '',
+                time_ms TEXT NOT NULL DEFAULT '',
+                memory_kb TEXT NOT NULL DEFAULT '',
+                tags TEXT NOT NULL DEFAULT '',
+                n_accept INTEGER NOT NULL DEFAULT 0,
                 avatar_url TEXT NOT NULL DEFAULT '',
                 submitted_at TEXT NOT NULL,
                 ts INTEGER NOT NULL,
                 card_sent INTEGER NOT NULL DEFAULT 1
             );
-            CREATE INDEX IF NOT EXISTS idx_records_user_prob
-                ON records(user_id, problem_url);
             CREATE INDEX IF NOT EXISTS idx_records_ts ON records(ts);
             CREATE INDEX IF NOT EXISTS idx_records_pending
                 ON records(card_sent) WHERE card_sent = 0;
-            CREATE TABLE IF NOT EXISTS users (
-                user_id TEXT PRIMARY KEY,
-                display_name TEXT NOT NULL,
-                last_ts INTEGER NOT NULL
-            );
             CREATE TABLE IF NOT EXISTS meta (
                 key TEXT PRIMARY KEY,
                 value TEXT NOT NULL
@@ -311,26 +318,33 @@ class SwpuAcmBroadcast(star.Star):
             );
             CREATE INDEX IF NOT EXISTS idx_user_merges_main
                 ON user_merges(main_id);
-            CREATE TABLE IF NOT EXISTS contest_solves (
-                contest_id TEXT NOT NULL,
-                uid TEXT NOT NULL,
-                user_name TEXT NOT NULL,
-                avatar_url TEXT NOT NULL DEFAULT '',
-                problem_key TEXT NOT NULL,
-                problem_title TEXT NOT NULL DEFAULT '',
-                solve_at TEXT NOT NULL DEFAULT '',
-                solve_seconds INTEGER NOT NULL DEFAULT 0,
-                solved_count INTEGER NOT NULL DEFAULT 0,
-                contest_rank INTEGER NOT NULL DEFAULT 0,
-                solve_order INTEGER NOT NULL DEFAULT 0,
-                first_seen_ts INTEGER NOT NULL,
-                card_sent INTEGER NOT NULL DEFAULT 0,
-                PRIMARY KEY (contest_id, uid, problem_key)
-            );
-            CREATE INDEX IF NOT EXISTS idx_contest_solves_pending
-                ON contest_solves(card_sent) WHERE card_sent = 0;
             """
-        )
+
+    def _init_db(self) -> None:
+        """Open (or create) the local record state store.
+
+        The store is a bounded queue: pending cards, in-flight verdicts and
+        a recent-history window for rejudge detection. History, dedup and
+        statistics all read MongoDB directly, so a schema bump simply drops
+        the table — the next poll refetches everything silently.
+        """
+        self._db_path.parent.mkdir(parents=True, exist_ok=True)
+        self._db = sqlite3.connect(self._db_path, isolation_level=None)
+        self._db.row_factory = sqlite3.Row
+        self._db.execute("PRAGMA journal_mode=WAL")
+        self._db.execute("PRAGMA synchronous=NORMAL")
+        self._db.executescript(self._RECORDS_DDL)
+        if self._db_get_meta("records_schema") != str(self.RECORDS_SCHEMA_VERSION):
+            self._db.executescript(
+                """
+                DROP TABLE IF EXISTS records;
+                DROP TABLE IF EXISTS users;
+                DROP TABLE IF EXISTS contest_solves;
+                """
+            )
+            self._db.executescript(self._RECORDS_DDL)
+            self._db.execute("DELETE FROM meta WHERE key = 'mongo_last_id'")
+            self._db_set_meta("records_schema", str(self.RECORDS_SCHEMA_VERSION))
 
     def _db_get_meta(self, key: str) -> str:
         row = self._db.execute(
@@ -355,91 +369,49 @@ class SwpuAcmBroadcast(star.Star):
             cutoff = datetime.strptime(datetime.now().strftime("%Y-%m-%d"), "%Y-%m-%d")
         return int(cutoff.replace(tzinfo=ZoneInfo("Asia/Shanghai")).timestamp())
 
-    def _earlier_ac_exists(self, user_id: str, problem_url: str, ts: int) -> bool:
-        """Whether the user ever AC'd this problem before `ts`.
+    def _ingest_records(self, items: list[dict]) -> int:
+        """Insert mapped records (oldest first).
 
-        Deliberately unbounded (no counting-window floor): once the full
-        history backfill has run, re-solving a problem first AC'd before
-        the counting window stays silent instead of re-broadcasting.
-        Person-level: merged alt accounts share the main account's
-        identity, so a re-solve on any of one person's accounts counts as
-        already solved.
-        """
-        row = self._db.execute(
-            "SELECT 1 FROM records r "
-            "LEFT JOIN user_merges um ON um.alt_id = r.user_id "
-            "WHERE COALESCE(um.main_id, r.user_id) = ? AND r.problem_url = ? "
-            "AND r.status LIKE '%Accepted%' AND r.ts < ? LIMIT 1",
-            (self._person_id(user_id), problem_url, ts),
-        ).fetchone()
-        return row is not None
-
-    def _ingest_records(self, items: list[dict], force_no_card: bool = False) -> int:
-        """Append parsed records (oldest first); returns how many were new.
-
-        Rows are re-sorted by submission time instead of trusting the page
-        order, so an earlier AC always lands in the store before a later
-        re-submission of the same problem is judged. `force_no_card` (used
-        by the history backfill) stores every row as never-broadcast
-        history, skipping the earlier-AC check entirely.
+        Card decisions are made by the poll flow (against MongoDB) and
+        carried in ``_card_sent``; this method only stores. Rows are
+        INSERT OR IGNORE so reprocessing is always safe.
         """
         new_count = 0
         for item in sorted(items, key=lambda entry: entry["ts"]):
-            if item.get("hidden"):
-                # Hidden problems have no stable URL, so synthesize a
-                # per-user per-day key. Hidden rows are fully invisible (no
-                # card, no count); the key only keeps storage well-formed.
-                day = datetime.fromtimestamp(
-                    item["ts"], tz=ZoneInfo("Asia/Shanghai")
-                ).strftime("%Y-%m-%d")
-                problem_url = f"{self.BASE_URL}/record/HIDDEN/{item['user_id']}/{day}"
-            else:
-                problem_url = item["problem_url"]
-            card_sent = 1
-            if (
-                not force_no_card
-                # Hidden (contest/homework) problems are invisible to the
-                # bot: never broadcast, never counted.
-                and not item.get("hidden")
-                and "Accepted" in item["status"]
-                and item["ts"] >= self._started_ts
-                and not self._earlier_ac_exists(
-                    item["user_id"], problem_url, item["ts"]
-                )
-            ):
-                card_sent = 0
             cursor = self._db.execute(
                 "INSERT OR IGNORE INTO records("
-                "rid, user_id, user_name, status, problem_url, problem_title,"
-                " hidden, language, difficulty, avatar_url, submitted_at, ts, card_sent"
-                ") VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                "rid, user_id, user_name, status, domain_id, doc_id,"
+                " problem_url, problem_title, hidden, tid, contest_title,"
+                " contest_key, language, difficulty, time_ms, memory_kb, tags,"
+                " n_accept, avatar_url, submitted_at, ts, card_sent"
+                ") VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 (
                     item["id"],
                     item["user_id"],
                     item["oj_user"],
                     item["status"],
-                    problem_url,
+                    item.get("domain_id", "system"),
+                    int(item.get("doc_id") or 0),
+                    item["problem_url"],
                     item["problem"],
                     1 if item.get("hidden") else 0,
+                    item.get("tid", ""),
+                    item.get("contest_title", ""),
+                    item.get("contest_key", ""),
                     item["language"],
                     str(item.get("difficulty", "") or ""),
+                    str(item.get("time_ms", "") or ""),
+                    str(item.get("memory_kb", "") or ""),
+                    str(item.get("tags", "") or ""),
+                    int(item.get("n_accept") or 0),
                     item.get("avatar_url", ""),
                     item["submitted_at"],
                     item["ts"],
-                    card_sent,
+                    int(item.get("_card_sent", 1)),
                 ),
             )
-            if not cursor.rowcount:
-                continue
-            new_count += 1
-            self._db.execute(
-                "INSERT INTO users(user_id, display_name, last_ts) VALUES(?,?,?) "
-                "ON CONFLICT(user_id) DO UPDATE SET "
-                "display_name = CASE WHEN excluded.last_ts >= last_ts "
-                "THEN excluded.display_name ELSE display_name END, "
-                "last_ts = MAX(last_ts, excluded.last_ts)",
-                (item["user_id"], item["oj_user"], item["ts"]),
-            )
+            if cursor.rowcount:
+                new_count += 1
         return new_count
 
     def _person_id(self, user_id: str) -> str:
@@ -464,49 +436,162 @@ class SwpuAcmBroadcast(star.Star):
         return uid
 
     def _display_name_for(self, user_id: str) -> str:
+        """Preferred display name: admin remap, else the latest known uname."""
         uid = self._person_id(user_id)
         remapped = self._state.get("display_names", {}).get(uid)
         if remapped:
             return str(remapped)
-        row = self._db.execute(
-            "SELECT display_name FROM users WHERE user_id = ?", (uid,)
-        ).fetchone()
-        return str(row["display_name"]) if row else uid
+        return self._cached_uname(uid)
 
-    def _stats_from_db(
+    async def _stats_from_db(
         self, since_ts: int | None = None, until_ts: int | None = None
     ) -> dict[str, int]:
-        """Per-user new-problem counts in [since_ts, until_ts), keyed by name.
+        """Per-person new-problem counts in [since_ts, until_ts).
 
-        A problem counts only when its first-ever AC (full history) falls
-        inside the window, so re-solving a problem first AC'd earlier —
-        even before the counting window — never double-counts. Hidden
-        (contest/homework) problems are excluded entirely: the bot treats
-        them as invisible. Accounts merged via /合并账号 share one person
-        id, so every problem counts once per person (union of their
-        accounts, first-AC attribution preserved). Without arguments this
-        covers the whole counting window since counting_since; pass
-        explicit bounds for per-day leaderboards.
+        First-AC attribution, account merges and name resolution all happen
+        against MongoDB — the database is the single source of truth.
+        Contest submissions (tid set) and hidden problems never count,
+        matching the old public-feed semantics.
         """
         if since_ts is None:
             since_ts = self._stats_cutoff_epoch()
         if until_ts is None:
             until_ts = 2**62
-        rows = self._db.execute(
-            "SELECT person_id, COUNT(*) AS cnt FROM ("
-            "SELECT COALESCE(um.main_id, r.user_id) AS person_id, "
-            "r.problem_url, MIN(r.ts) AS first_ts "
-            "FROM records r LEFT JOIN user_merges um ON um.alt_id = r.user_id "
-            "WHERE r.status LIKE '%Accepted%' AND r.hidden = 0 "
-            "GROUP BY person_id, r.problem_url) "
-            "WHERE first_ts >= ? AND first_ts < ? GROUP BY person_id",
-            (since_ts, until_ts),
-        ).fetchall()
+        merges = self._person_merges()
+        counts = await asyncio.to_thread(
+            self._db_stats_counts, since_ts, until_ts, merges
+        )
         stats: dict[str, int] = {}
-        for row in rows:
-            name = self._display_name_for(row["person_id"])
-            stats[name] = stats.get(name, 0) + row["cnt"]
+        for uid, count in counts.items():
+            remap = self._state.get("display_names", {}).get(uid)
+            name = str(remap) if remap else self._cached_uname(uid)
+            stats[name] = stats.get(name, 0) + count
         return stats
+
+    def _person_merges(self) -> dict[str, str]:
+        """Flat alt->main merge map (main thread; the SQLite store)."""
+        if self._db is None:
+            return {}
+        return {
+            str(row["alt_id"]): str(row["main_id"])
+            for row in self._db.execute("SELECT alt_id, main_id FROM user_merges")
+        }
+
+    def _resolve_person(self, uid: str, merges: dict[str, str]) -> str:
+        seen: set[str] = set()
+        while uid not in seen:
+            seen.add(uid)
+            nxt = merges.get(uid)
+            if not nxt:
+                break
+            uid = nxt
+        return uid
+
+    def _cached_uname(self, uid: str) -> str:
+        try:
+            info = self._user_cache.get(int(uid))
+        except (TypeError, ValueError):
+            info = None
+        return str(info["uname"]) if info else str(uid)
+
+    def _db_stats_counts(
+        self, since_ts: int, until_ts: int, merges: dict[str, str]
+    ) -> dict[str, int]:
+        """Worker thread: {person_id: first-AC-in-window problem count}."""
+        db = self._mongo()
+        hidden = self._db_hidden_pids(db)
+        pipeline = [
+            {"$match": {"status": 1, "tid": None, "uid": {"$nin": [0, 1, 3]}}},
+            {
+                "$group": {
+                    "_id": {"u": "$uid", "d": "$domainId", "p": "$pid"},
+                    "first": {"$min": "$_id"},
+                }
+            },
+            {
+                "$project": {
+                    "_id": 0, "u": "$_id.u", "d": "$_id.d", "p": "$_id.p", "first": 1,
+                }
+            },
+        ]
+        counts: dict[str, int] = {}
+        for row in db.record.aggregate(pipeline):
+            if row["p"] in hidden.get(row["d"], ()):
+                continue
+            _, first_ts = self._record_clock(row["first"])
+            if first_ts < since_ts or first_ts >= until_ts:
+                continue
+            person = self._resolve_person(str(row["u"]), merges)
+            counts[person] = counts.get(person, 0) + 1
+        # Warm the uname cache so the caller can resolve names even before
+        # the first poll has mapped any users (fresh deploy, early boards).
+        try:
+            self._db_user_docs(db, [int(uid) for uid in counts])
+        except (TypeError, ValueError):
+            pass
+        return counts
+
+    def _db_hidden_pids(self, db) -> dict[str, set[int]]:
+        """Worker thread: hidden problem docIds per domain (10-min cache)."""
+        if (
+            self._hidden_pids_at is not None
+            and (datetime.now() - self._hidden_pids_at).total_seconds() < 600
+            and self._hidden_pids_cache
+        ):
+            return self._hidden_pids_cache
+        cache: dict[str, set[int]] = {}
+        for domain in self.WATCH_DOMAINS:
+            pids = set()
+            for pdoc in db.document.find(
+                {"domainId": domain, "docType": 10, "hidden": True},
+                {"docId": 1},
+            ):
+                try:
+                    pids.add(int(pdoc["docId"]))
+                except (TypeError, ValueError):
+                    continue
+            cache[domain] = pids
+        self._hidden_pids_cache = cache
+        self._hidden_pids_at = datetime.now()
+        return cache
+
+    async def _user_ac_count(self, user_id: str) -> int:
+        """Distinct problems this person first-AC'd since counting_since."""
+        merges = self._person_merges()
+        person = self._resolve_person(str(user_id), merges)
+        return await asyncio.to_thread(self._db_user_ac_count, person, merges)
+
+    def _db_user_ac_count(self, person: str, merges: dict[str, str]) -> int:
+        db = self._mongo()
+        hidden = self._db_hidden_pids(db)
+        cutoff = self._stats_cutoff_epoch()
+        uids = {person}
+        uids.update(alt for alt, main in merges.items() if main == person)
+        count = 0
+        for row in db.record.aggregate(
+            [
+                {
+                    "$match": {
+                        "status": 1,
+                        "tid": None,
+                        "uid": {"$in": [int(u) for u in uids]},
+                    }
+                },
+                {
+                    "$group": {
+                        "_id": {"d": "$domainId", "p": "$pid"},
+                        "first": {"$min": "$_id"},
+                    }
+                },
+                {"$project": {"_id": 0, "d": "$_id.d", "p": "$_id.p", "first": 1}},
+            ]
+        ):
+            if row["p"] in hidden.get(row["d"], ()):
+                continue
+            _, first_ts = self._record_clock(row["first"])
+            if first_ts >= cutoff:
+                count += 1
+        return count
 
     @staticmethod
     def _day_epoch(day: str) -> int:
@@ -517,105 +602,12 @@ class SwpuAcmBroadcast(star.Star):
             .timestamp()
         )
 
-    def _user_ac_count(self, user_id: str) -> int:
-        row = self._db.execute(
-            "SELECT COUNT(*) AS cnt FROM ("
-            "SELECT COALESCE(um.main_id, r.user_id) AS person_id, "
-            "r.problem_url, MIN(r.ts) AS first_ts "
-            "FROM records r LEFT JOIN user_merges um ON um.alt_id = r.user_id "
-            "WHERE r.status LIKE '%Accepted%' AND r.hidden = 0 "
-            "GROUP BY person_id, r.problem_url) "
-            "WHERE person_id = ? AND first_ts >= ?",
-            (self._person_id(user_id), self._stats_cutoff_epoch()),
-        ).fetchone()
-        return int(row["cnt"]) if row else 0
-
-    def _refresh_contest_rankings(self, now_ts: int | None = None) -> None:
-        """Store leaderboard snapshots for configured contest time windows.
-
-        The public record feed does not expose a stable problem identifier for
-        hidden contest problems. Rankings therefore use accepted submission
-        counts, including hidden records, instead of claiming a solved-problem
-        count. The time window is start-inclusive and end-exclusive.
-
-        Args:
-            now_ts: Optional current timestamp for the snapshot. Primarily used
-                by tests; defaults to the current China Standard Time.
-        """
-        if self._db is None:
-            return
-        current_ts = now_ts or int(datetime.now(ZoneInfo("Asia/Shanghai")).timestamp())
-        contests: list[dict[str, object]] = []
-        for contest in self.CONTEST_RANKINGS:
-            start = contest["start"]
-            end = contest["end"]
-            assert isinstance(start, datetime) and isinstance(end, datetime)
-            start_ts = int(start.timestamp())
-            end_ts = int(end.timestamp())
-            if current_ts < start_ts:
-                status = "upcoming"
-                query_end = start_ts
-            elif current_ts < end_ts:
-                status = "ongoing"
-                query_end = current_ts
-            else:
-                status = "ended"
-                query_end = end_ts
-            rows = self._db.execute(
-                "SELECT COALESCE(um.main_id, r.user_id) AS person_id, "
-                "COUNT(*) AS ac_count, MIN(r.ts) AS first_ac_ts "
-                "FROM records r LEFT JOIN user_merges um ON um.alt_id = r.user_id "
-                "WHERE r.status LIKE '%Accepted%' AND r.ts >= ? AND r.ts < ? "
-                "GROUP BY person_id "
-                "ORDER BY ac_count DESC, first_ac_ts ASC, person_id ASC",
-                (start_ts, query_end),
-            ).fetchall()
-            contests.append(
-                {
-                    "id": str(contest["id"]),
-                    "name": str(contest["name"]),
-                    "start": start.strftime("%Y-%m-%d %H:%M"),
-                    "end": end.strftime("%Y-%m-%d %H:%M"),
-                    "status": status,
-                    "ranking": [
-                        {
-                            "user": self._display_name_for(str(row["person_id"])),
-                            "ac": int(row["ac_count"]),
-                        }
-                        for row in rows
-                    ],
-                }
-            )
-        self._state["contest_rankings"] = contests
-        self._save_state()
-
     # ------------------------------------------------------------------
-    # Contest broadcasts: scoreboard diff -> contest card queue.
+    # Contests, zero-config. Submissions carrying ``tid`` render as pastel
+    # contest cards; dedup for them counts prior ACs of the same problem
+    # inside the same contest only, so practice ACs never mute a contest
+    # achievement and vice versa.
     # ------------------------------------------------------------------
-
-    def _active_broadcast_contests(self, now: datetime) -> list[dict]:
-        """Contests currently running that have an anonymous scoreboard."""
-        active: list[dict] = []
-        for contest in self.CONTEST_RANKINGS:
-            start = contest["start"]
-            end = contest["end"]
-            oj_id = str(contest.get("oj_id", "") or "")
-            if not oj_id:
-                continue
-            assert isinstance(start, datetime) and isinstance(end, datetime)
-            if start <= now < end:
-                active.append(contest)
-        return active
-
-    @staticmethod
-    def _elapsed_seconds(value: str) -> int:
-        total = 0
-        for part in str(value).strip().split(":"):
-            try:
-                total = total * 60 + int(part)
-            except ValueError:
-                return 0
-        return total
 
     @staticmethod
     def _format_elapsed(seconds: int) -> str:
@@ -626,559 +618,252 @@ class SwpuAcmBroadcast(star.Star):
         return f"0:{minutes:02d}"
 
     @staticmethod
-    def _parse_contest_scoreboard(soup) -> tuple[list[dict], list[dict]]:
-        """Parse a Hydro contest scoreboard page (anonymous view).
+    def _bson_ts(value: object) -> int:
+        try:
+            return int(value.timestamp())
+        except (AttributeError, ValueError, OSError):
+            return 0
 
-        Returns (problems, entries). A problem cell counts as solved only
-        when its span carries a non-empty data-tooltip (HH:MM:SS elapsed
-        time); empty tooltips and CSS colors are ignored on purpose.
-        """
-        problems: list[dict] = []
-        for cell in soup.select("thead th.col--problem"):
-            link = cell.select_one('a[href^="/p/"]')
-            if link is None:
-                continue
-            letter = (
-                link.get_text(" ", strip=True).replace("\n", " ").strip().split(" ")[0]
+    def _db_contest_docs(self, db, tids: list[str]) -> dict[str, dict]:
+        """Worker thread: contest metadata by tid hex (negative-cached)."""
+        result: dict[str, dict] = {}
+        missing = [t for t in tids if t not in self._contest_cache]
+        if missing:
+            found = {}
+            for tdoc in db.document.find(
+                {"docType": 30, "_id": {"$in": [ObjectId(t) for t in missing]}},
+                {"title": 1, "pids": 1, "beginAt": 1, "endAt": 1, "domainId": 1},
+            ):
+                found[str(tdoc["_id"])] = {
+                    "title": str(tdoc.get("title") or ""),
+                    "pids": list(tdoc.get("pids") or []),
+                    "domainId": str(tdoc.get("domainId") or "system"),
+                    "begin_ts": self._bson_ts(tdoc.get("beginAt")),
+                    "end_ts": self._bson_ts(tdoc.get("endAt")),
+                }
+            for t in missing:
+                self._contest_cache[t] = found.get(t) or {"missing": True}
+        for t in tids:
+            result[t] = self._contest_cache[t]
+        return result
+
+    def _db_dedup_suppressed(self, candidates: list[dict]) -> set[str]:
+        """Worker thread: rids whose (uid, domain, pid, tid) has an earlier
+        AC — one batched query against the source of truth."""
+        if not candidates:
+            return set()
+        db = self._mongo()
+        ors = []
+        for cand in candidates:
+            ors.append(
+                {
+                    "uid": cand["uid"],
+                    "domainId": cand["domain_id"],
+                    "pid": cand["doc_id"],
+                    "tid": ObjectId(cand["tid"]) if cand["tid"] else None,
+                }
             )
-            if not letter:
-                continue
-            problems.append(
-                {"key": letter, "title": str(link.get("data-tooltip", "")).strip()}
+        seen: dict[tuple, list] = {}
+        for doc in db.record.find(
+            {"$or": ors, "status": 1},
+            {"uid": 1, "domainId": 1, "pid": 1, "tid": 1, "_id": 1},
+        ):
+            key = (
+                doc.get("uid"),
+                str(doc.get("domainId")),
+                doc.get("pid"),
+                str(doc.get("tid") or ""),
             )
-        entries: list[dict] = []
-        for row in soup.select("tbody tr"):
-            user_link = row.select_one('td.col--user a[href^="/user/"]')
-            rank_cell = row.select_one("td.col--rank")
-            if user_link is None or rank_cell is None:
-                continue
-            uid = str(user_link.get("href", "")).rstrip("/").rsplit("/", 1)[-1]
-            if not uid:
-                continue
-            avatar = row.select_one("td.col--user img.user-profile-avatar")
-            avatar_url = str(avatar.get("src", "")).strip() if avatar else ""
+            seen.setdefault(key, []).append(doc["_id"])
+        suppressed: set[str] = set()
+        for cand in candidates:
+            key = (cand["uid"], cand["domain_id"], cand["doc_id"], cand["tid"])
+            for other_id in seen.get(key, ()):
+                if str(other_id) < cand["rid"]:
+                    suppressed.add(cand["rid"])
+                    break
+        return suppressed
+
+    def _db_contest_card_stats(
+        self, domain: str, tid_hex: str, uid: int, doc_id: int, rid_hex: str
+    ) -> tuple[int, int, int, int]:
+        """Worker thread: solve order, user solved, participants, rank."""
+        db = self._mongo()
+        tid = ObjectId(tid_hex)
+        solve_order = 1 + db.record.count_documents(
+            {
+                "domainId": domain,
+                "tid": tid,
+                "pid": doc_id,
+                "status": 1,
+                "_id": {"$lt": ObjectId(rid_hex)},
+            }
+        )
+        solved_rows = list(
+            db.record.aggregate(
+                [
+                    {"$match": {"domainId": domain, "tid": tid, "status": 1}},
+                    {"$group": {"_id": {"u": "$uid", "p": "$pid"}}},
+                    {"$group": {"_id": "$_id.u", "solved": {"$sum": 1}}},
+                ]
+            )
+        )
+        per_user = {int(row["_id"]): int(row["solved"]) for row in solved_rows}
+        user_solved = per_user.get(uid, 0)
+        rank = 1 + sum(1 for n in per_user.values() if n > user_solved)
+        return solve_order, user_solved, len(per_user), rank
+
+    def _db_contest_standings(self, domain: str, tid_hex: str, limit: int = 100):
+        """Worker thread: [(uid, solved_count)] ordered by AC count."""
+        db = self._mongo()
+        rows = list(
+            db.record.aggregate(
+                [
+                    {
+                        "$match": {
+                            "domainId": domain,
+                            "tid": ObjectId(tid_hex),
+                            "status": 1,
+                        }
+                    },
+                    {
+                        "$group": {
+                            "_id": {"u": "$uid", "p": "$pid"},
+                            "first": {"$min": "$_id"},
+                        }
+                    },
+                    {
+                        "$group": {
+                            "_id": "$_id.u",
+                            "solved": {"$sum": 1},
+                            "first": {"$min": "$first"},
+                        }
+                    },
+                    {"$sort": {"solved": -1, "first": 1}},
+                    {"$limit": limit},
+                ]
+            )
+        )
+        return [(int(row["_id"]), int(row["solved"])) for row in rows]
+
+    def _db_ongoing_contests(self) -> list[dict]:
+        db = self._mongo()
+        now = datetime.now(timezone.utc)
+        contests = []
+        for tdoc in db.document.find(
+            {"docType": 30, "beginAt": {"$lte": now}, "endAt": {"$gt": now}},
+            {"title": 1, "pids": 1, "domainId": 1},
+        ):
+            contests.append(
+                {
+                    "tid": str(tdoc["_id"]),
+                    "title": str(tdoc.get("title") or ""),
+                    "domain": str(tdoc.get("domainId") or "system"),
+                    "problems": len(tdoc.get("pids") or []),
+                }
+            )
+        return contests
+
+    def _db_ended_contests(self, since: datetime) -> list[dict]:
+        db = self._mongo()
+        now = datetime.now(timezone.utc)
+        contests = []
+        for tdoc in db.document.find(
+            {"docType": 30, "endAt": {"$gte": since, "$lt": now}},
+            {"title": 1, "domainId": 1},
+        ):
+            contests.append(
+                {
+                    "tid": str(tdoc["_id"]),
+                    "title": str(tdoc.get("title") or ""),
+                    "domain": str(tdoc.get("domainId") or "system"),
+                }
+            )
+        return contests
+
+    def _contest_url(self, domain: str, tid_hex: str) -> str:
+        if domain == "system":
+            return f"{self.BASE_URL}/contest/{tid_hex}"
+        return f"{self.BASE_URL}/d/{domain}/contest/{tid_hex}"
+
+    async def _broadcast_contest_ac(self, row: sqlite3.Row) -> bool:
+        """Send one contest-AC card (pastel layout) for a queued row."""
+        domain = str(row["domain_id"] or "system")
+        tid_hex = str(row["tid"])
+        tdoc = self._contest_cache.get(tid_hex)
+        if tdoc is None:
+            fetched = await asyncio.to_thread(
+                self._db_contest_docs, self._mongo(), [tid_hex]
+            )
+            tdoc = fetched.get(tid_hex) or {"missing": True}
+        if tdoc.get("missing"):
+            return True  # contest deleted since; drop the card silently
+        try:
+            solve_order, user_solved, participants, rank = await asyncio.to_thread(
+                self._db_contest_card_stats,
+                domain,
+                tid_hex,
+                int(row["user_id"]),
+                int(row["doc_id"]),
+                str(row["rid"]),
+            )
+        except Exception:
+            self.logger.exception("Contest card stats failed; using placeholders")
+            solve_order, user_solved, participants, rank = 1, 0, 0, 1
+        begin_ts = int(tdoc.get("begin_ts") or 0)
+        elapsed = int(row["ts"]) - begin_ts if begin_ts else 0
+        bindings = self._state.get("bindings", {})
+        raw_name = str(row["user_name"]).strip().casefold()
+        item = {
+            "contest_name": tdoc.get("title") or "比赛",
+            "contest_url": self._contest_url(domain, tid_hex),
+            "user": self._display_name_for(str(row["user_id"])),
+            "oj_user": str(row["user_name"]),
+            "qq": next(
+                (
+                    qq
+                    for qq, name in bindings.items()
+                    if str(name).strip().casefold() == raw_name
+                ),
+                "未绑定",
+            ),
+            "avatar_url": str(row["avatar_url"]),
+            "problem_key": str(row["contest_key"] or "?"),
+            "problem_title": str(row["problem_title"] or ""),
+            "solve_at": str(row["submitted_at"]),
+            "solve_display": self._format_elapsed(elapsed) if elapsed > 0 else "0:00",
+            "solved_count": user_solved,
+            "total_problems": len(tdoc.get("pids") or []),
+            "ac_clock": str(row["submitted_at"]).split(" ", 1)[-1][:5],
+            "contest_rank": str(rank or 1),
+            "solve_order": solve_order or 1,
+        }
+        avatar_key = str(row["user_id"])
+        avatar_data = self._avatar_cache.get(avatar_key, b"") if avatar_key else b""
+        if avatar_key and not avatar_data:
+            avatar_url = str(item.get("avatar_url", "")).strip()
             if avatar_url.startswith("//"):
                 avatar_url = f"https:{avatar_url}"
             elif avatar_url.startswith("/"):
-                # Site-hosted default avatars are root-relative paths; this
-                # is a staticmethod, so reference the class constant here.
-                avatar_url = f"{SwpuAcmBroadcast.BASE_URL}{avatar_url}"
-            rank_text = rank_cell.get_text(" ", strip=True)
-            solved = 0
-            total_time = ""
-            solved_cell = row.select_one("td.col--solved")
-            if solved_cell is not None:
-                solved_text = solved_cell.get_text(" ", strip=True)
-                match = re.search(r"\d+", solved_text)
-                if match:
-                    solved = int(match.group(0))
-                time_match = re.search(r"\d+:\d{2}(?::\d{2})?", solved_text)
-                if time_match:
-                    total_time = time_match.group(0)
-            solves: dict[str, tuple[str, int]] = {}
-            for problem, cell in zip(problems, row.select("td.col--problem")):
-                tip_node = cell.select_one("[data-tooltip]")
-                tooltip = (
-                    str(tip_node.get("data-tooltip", "") or "").strip()
-                    if tip_node is not None
-                    else ""
-                )
-                if not tooltip:
-                    continue
-                solves[problem["key"]] = (tooltip, SwpuAcmBroadcast._elapsed_seconds(tooltip))
-            entries.append(
-                {
-                    "uid": uid,
-                    "name": user_link.get_text(" ", strip=True),
-                    "avatar_url": avatar_url,
-                    "rank": rank_text,
-                    "solved": solved,
-                    "total_time": total_time,
-                    "solves": solves,
-                }
-            )
-        return problems, entries
-
-    def _upsert_contest_solves(
-        self, contest: dict, problems: list[dict], entries: list[dict]
-    ) -> int:
-        """Insert newly solved (contest, user, problem) rows.
-
-        The first sync of a contest is a silent baseline: solves that
-        happened before the bot started watching are recorded with
-        card_sent = 1, so history never floods the group. Only solves first
-        seen after the baseline get queued for broadcast.
-        """
-        contest_id = str(contest["id"])
-        baseline_key = f"contest_baseline_done_{contest_id}"
-        baseline = self._db_get_meta(baseline_key) != "1"
-        now_ts = int(datetime.now(ZoneInfo("Asia/Shanghai")).timestamp())
-        fresh_by_problem: dict[str, list[tuple[dict, dict, str, int]]] = {}
-        for entry in entries:
-            for problem in problems:
-                solved = entry["solves"].get(problem["key"])
-                if solved is None:
-                    continue
-                known = self._db.execute(
-                    "SELECT 1 FROM contest_solves WHERE contest_id = ? "
-                    "AND uid = ? AND problem_key = ?",
-                    (contest_id, entry["uid"], problem["key"]),
-                ).fetchone()
-                if known is not None:
-                    continue
-                fresh_by_problem.setdefault(
-                    problem["key"], []
-                ).append((entry, problem, solved[0], solved[1]))
-        inserted = 0
-        # The problem count never changes mid-contest; keep it next to the
-        # other contest meta so cards can render a progress bar.
-        self._db_set_meta(
-            f"contest_total_problems_{contest_id}", str(len(problems))
-        )
-        # Participant count feeds the daily report's "opened" denominator.
-        self._db_set_meta(f"contest_participants_{contest_id}", str(len(entries)))
-        for problem_key, newcomers in fresh_by_problem.items():
-            known_count = int(
-                self._db.execute(
-                    "SELECT COUNT(*) AS n FROM contest_solves "
-                    "WHERE contest_id = ? AND problem_key = ?",
-                    (contest_id, problem_key),
-                ).fetchone()["n"]
-            )
-            newcomers.sort(key=lambda item: item[3])
-            for offset, (entry, problem, solve_at, solve_seconds) in enumerate(
-                newcomers, 1
-            ):
-                self._db.execute(
-                    "INSERT OR IGNORE INTO contest_solves ("
-                    "contest_id, uid, user_name, avatar_url, problem_key, "
-                    "problem_title, solve_at, solve_seconds, solved_count, "
-                    "contest_rank, solve_order, first_seen_ts, card_sent"
-                    ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                    (
-                        contest_id,
-                        entry["uid"],
-                        entry["name"],
-                        entry["avatar_url"],
-                        problem["key"],
-                        problem["title"],
-                        solve_at,
-                        solve_seconds,
-                        entry["solved"],
-                        entry["rank"],
-                        known_count + offset,
-                        now_ts,
-                        1 if baseline else 0,
-                    ),
-                )
-                inserted += 1
-        if baseline:
-            self._db_set_meta(baseline_key, "1")
-            self.logger.info(
-                "Contest baseline recorded for %s: %d pre-existing solve(s)",
-                contest["name"],
-                inserted,
-            )
-        return inserted
-
-    async def _poll_contest_broadcasts(self) -> None:
-        """Detect newly solved contest problems and queue them for broadcast.
-
-        Contest submissions never appear in the public /record feed, so the
-        anonymous scoreboard is the only data source. Each running contest
-        is fetched once per poll cycle; failures are logged and retried on
-        the next cycle.
-        """
-        if self._db is None:
-            return
-        now = datetime.now(ZoneInfo("Asia/Shanghai"))
-        contests = self._active_broadcast_contests(now)
-        if not contests:
-            return
-        timeout = aiohttp.ClientTimeout(total=30)
-        async with aiohttp.ClientSession(timeout=timeout) as session:
-            for contest in contests:
+                avatar_url = f"{self.BASE_URL}{avatar_url}"
+            if avatar_url:
                 try:
-                    url = f"{self.BASE_URL}/contest/{contest['oj_id']}/scoreboard"
-                    async with session.get(url) as response:
-                        response.raise_for_status()
-                        html = await response.text()
-                    problems, entries = self._parse_contest_scoreboard(
-                        BeautifulSoup(html, "html.parser")
-                    )
-                    if not problems:
-                        self.logger.warning(
-                            "Contest scoreboard parse found no problems for %s; "
-                            "page layout change?",
-                            contest["name"],
-                        )
-                        continue
-                    # Read the baseline flag before the sync marks it, so the
-                    # "new solve" log never fires for the silent baseline round.
-                    was_baseline = (
-                        self._db_get_meta(
-                            f"contest_baseline_done_{contest['id']}"
-                        )
-                        != "1"
-                    )
-                    inserted = self._upsert_contest_solves(contest, problems, entries)
-                    if inserted and not was_baseline:
-                        self.logger.info(
-                            "Contest %s: %d new solve(s) detected",
-                            contest["name"],
-                            inserted,
-                        )
+                    timeout = aiohttp.ClientTimeout(total=15)
+                    async with aiohttp.ClientSession(timeout=timeout) as session:
+                        async with session.get(avatar_url) as response:
+                            if response.status == 200:
+                                avatar_data = await response.content.read(1_000_000)
                 except asyncio.CancelledError:
                     raise
                 except Exception:
-                    self.logger.exception("Contest scoreboard sync failed")
-        await self._drain_contest_cards()
-
-    def _contests_in_report_window(self, now: datetime) -> list[dict]:
-        """Contests whose daily midnight report window covers ``now``.
-
-        Date-based on purpose and inclusive of the end date, so a contest
-        closing at midnight still gets its final wrap-up report that day.
-        """
-        if now.tzinfo is None:
-            now = now.replace(tzinfo=ZoneInfo("Asia/Shanghai"))
-        active: list[dict] = []
-        for contest in self.CONTEST_RANKINGS:
-            start = contest["start"]
-            end = contest["end"]
-            oj_id = str(contest.get("oj_id", "") or "")
-            if not oj_id:
-                continue
-            assert isinstance(start, datetime) and isinstance(end, datetime)
-            end_local = end.astimezone(ZoneInfo("Asia/Shanghai"))
-            if start <= now and now.date() <= end_local.date():
-                active.append(contest)
-        return active
-
-    async def _maybe_send_contest_daily_report(self) -> None:
-        """Publish each in-window contest's daily report once per day.
-
-        The report goes out on the first poll after midnight, right after
-        the scoreboard sync, so the numbers are fresh. The per-contest
-        meta guard survives restarts: a report is never duplicated, and
-        one missed to downtime is sent on the first poll afterwards.
-        """
-        if self._db is None:
-            return
-        now = datetime.now(ZoneInfo("Asia/Shanghai"))
-        today = now.strftime("%Y-%m-%d")
-        for contest in self._contests_in_report_window(now):
-            guard_key = f"contest_report_day_{contest['id']}"
-            if self._db_get_meta(guard_key) == today:
-                continue
-            message = self._build_contest_daily_report(contest, now)
-            if message:
-                await self.context.send_message(
-                    self.GROUP_SESSION,
-                    MessageChain().message(message),
-                )
-                self.logger.info(
-                    "Contest daily report sent for %s", contest["name"]
-                )
-            self._db_set_meta(guard_key, today)
-
-    def _build_contest_daily_report(self, contest: dict, now: datetime) -> str:
-        """Compose the daily contest report text from contest_solves."""
-        contest_id = str(contest["id"])
-        start = contest["start"]
-        assert isinstance(start, datetime)
-        # Rows only store the elapsed solve time; wall-clock AC time is
-        # contest start + elapsed, so a day window maps to elapsed bounds.
-        start_ts = int(start.timestamp())
-        today_start = self._day_epoch(now.strftime("%Y-%m-%d"))
-        lo = today_start - 86400 - start_ts
-        hi = today_start - start_ts
-        row = self._db.execute(
-            "SELECT COUNT(*) AS total, COUNT(DISTINCT uid) AS people, "
-            "COUNT(DISTINCT problem_key) AS problems "
-            "FROM contest_solves WHERE contest_id = ?",
-            (contest_id,),
-        ).fetchone()
-        total = int(row["total"])
-        solved_people = int(row["people"])
-        solved_problems = int(row["problems"])
-        row = self._db.execute(
-            "SELECT COUNT(*) AS cnt, COUNT(DISTINCT uid) AS people "
-            "FROM contest_solves WHERE contest_id = ? "
-            "AND solve_seconds >= ? AND solve_seconds < ?",
-            (contest_id, lo, hi),
-        ).fetchone()
-        yesterday_new = int(row["cnt"])
-        yesterday_people = int(row["people"])
-        try:
-            total_problems = int(
-                self._db_get_meta(f"contest_total_problems_{contest_id}") or 0
-            )
-            participants = int(
-                self._db_get_meta(f"contest_participants_{contest_id}") or 0
-            )
-        except (TypeError, ValueError):
-            total_problems = 0
-            participants = 0
-        lines = [f"🏆 {contest['name']} · 每日战报"]
-        if yesterday_new:
-            lines.append(f"昨日新解出 {yesterday_new} 题 · {yesterday_people} 人有产出")
-        else:
-            lines.append("昨日暂无新解出")
-        cumulative = f"开赛至今累计解出 {total} 题"
-        if total_problems:
-            cumulative += f"（{total_problems} 题中已攻破 {solved_problems} 题）"
-        lines.append(cumulative)
-        if not solved_people:
-            lines.append("暂无人开张，等你来解出第一题！")
-            return "\n".join(lines)
-        leader = self._db.execute(
-            "SELECT uid, user_name, COUNT(*) AS cnt FROM contest_solves "
-            "WHERE contest_id = ? GROUP BY uid "
-            "ORDER BY cnt DESC, MIN(solve_seconds) ASC, uid ASC LIMIT 1",
-            (contest_id,),
-        ).fetchone()
-        people = (
-            f"{solved_people} / {participants} 人已开张"
-            if participants
-            else f"{solved_people} 人已开张"
-        )
-        if leader is not None:
-            name = self._display_contest_name(
-                str(leader["uid"]), str(leader["user_name"])
-            )
-            people += f" · 当前领跑：{name}（{int(leader['cnt'])} 题）"
-        lines.append(people)
-        return "\n".join(lines)
-
-    async def _fetch_contest_scoreboard(
-        self, contest: dict
-    ) -> tuple[list[dict], list[dict]] | None:
-        """Fetch and parse the live contest scoreboard, or None on failure."""
-        timeout = aiohttp.ClientTimeout(total=30)
-        try:
-            async with aiohttp.ClientSession(timeout=timeout) as session:
-                url = f"{self.BASE_URL}/contest/{contest['oj_id']}/scoreboard"
-                async with session.get(url) as response:
-                    response.raise_for_status()
-                    html = await response.text()
-        except Exception:
-            self.logger.exception("Contest scoreboard fetch failed")
-            return None
-        return self._parse_contest_scoreboard(BeautifulSoup(html, "html.parser"))
-
-    async def _send_contest_ranking(
-        self, contest: dict, now: datetime
-    ) -> None:
-        """Post the live contest ranking as a plain-text message."""
-        scoreboard = await self._fetch_contest_scoreboard(contest)
-        if scoreboard is None:
-            await self.context.send_message(
-                self.GROUP_SESSION,
-                MessageChain().message(
-                    f"🏆 {contest['name']}\n暂时无法获取比赛排名，稍后再试。"
-                ),
-            )
-            return
-        problems, entries = scoreboard
-        solved_users = [e for e in entries if e["solved"] > 0]
-        unsolved = len(entries) - len(solved_users)
-        remaining = contest["end"] - now
-        if remaining.total_seconds() >= 86400:
-            left_note = (
-                f"还剩 {remaining.days} 天 {remaining.seconds // 3600} 小时"
-            )
-        elif remaining.total_seconds() >= 3600:
-            left_note = (
-                f"还剩 {remaining.seconds // 3600} 小时 "
-                f"{(remaining.seconds // 60) % 60} 分"
-            )
-        else:
-            left_note = f"还剩 {remaining.seconds // 60} 分钟"
-        lines = [
-            f"🏆 {contest['name']} · 实时排名",
-            f"共 {len(problems)} 题 · {len(entries)} 人参赛 · {left_note}",
-            "",
-        ]
-        if solved_users:
-            for entry in solved_users:
-                name = self._display_contest_name(entry["uid"], entry["name"])
-                total_note = (
-                    f"（用时 {entry['total_time']}）" if entry["total_time"] else ""
-                )
-                lines.append(
-                    f"{entry['rank']}. {name} —— {entry['solved']} 题{total_note}"
-                )
-            if unsolved:
-                lines.append("")
-                lines.append(f"另有 {unsolved} 人暂未解出")
-        else:
-            lines.append("暂无人解出题目，等你来开张！")
-        await self.context.send_message(
-            self.GROUP_SESSION,
-            MessageChain().message("\n".join(lines)),
-        )
-
-    async def _drain_contest_cards(self) -> None:
-        """Broadcast queued contest cards, oldest solve first."""
-        if self._db is None:
-            return
-        rows = self._db.execute(
-            "SELECT * FROM contest_solves WHERE card_sent = 0 "
-            "ORDER BY first_seen_ts ASC, solve_seconds ASC, uid ASC, problem_key ASC "
-            "LIMIT ?",
-            (self.CARD_DRAIN_LIMIT,),
-        ).fetchall()
-        contests_by_id = {
-            str(contest["id"]): contest for contest in self.CONTEST_RANKINGS
-        }
-        for row in rows:
-            contest = contests_by_id.get(row["contest_id"])
-            if contest is None:
-                # Unknown contest id (config removed): drop the card silently.
-                self._db.execute(
-                    "UPDATE contest_solves SET card_sent = 1 "
-                    "WHERE contest_id = ? AND uid = ? AND problem_key = ?",
-                    (row["contest_id"], row["uid"], row["problem_key"]),
-                )
-                continue
-            sent = await self._broadcast_contest_card(contest, row)
-            if sent:
-                self._db.execute(
-                    "UPDATE contest_solves SET card_sent = 1 "
-                    "WHERE contest_id = ? AND uid = ? AND problem_key = ?",
-                    (row["contest_id"], row["uid"], row["problem_key"]),
-                )
-
-    def _display_contest_name(self, uid: str, raw_name: str) -> str:
-        """Preferred display name for a contest participant (merged or set)."""
-        display = self._display_name_for(uid)
-        if not display or display == uid:
-            return raw_name
-        return display
-
-    def _contest_card_item(self, contest: dict, row: sqlite3.Row) -> dict:
-        bindings = self._state.get("bindings", {})
-        raw_name = str(row["user_name"]).strip()
-        bound_qq = next(
-            (
-                qq
-                for qq, name in bindings.items()
-                if str(name).strip().casefold() == raw_name.casefold()
-            ),
-            "未绑定",
-        )
-        display = self._display_contest_name(str(row["uid"]), raw_name)
-        try:
-            total_problems = int(
-                self._db_get_meta(
-                    f"contest_total_problems_{contest['id']}"
-                )
-                or 0
-            )
-        except (TypeError, ValueError):
-            total_problems = 0
-        # Wall-clock AC time = contest start + elapsed solve time.
-        ac_clock = ""
-        start = contest.get("start")
-        if isinstance(start, datetime) and int(row["solve_seconds"]) > 0:
-            ac_dt = start.astimezone(ZoneInfo("Asia/Shanghai")) + timedelta(
-                seconds=int(row["solve_seconds"])
-            )
-            ac_clock = ac_dt.strftime("%m-%d %H:%M")
-        return {
-            "contest_name": str(contest["name"]),
-            "contest_url": f"{self.BASE_URL}/contest/{contest['oj_id']}",
-            "user": display,
-            "oj_user": raw_name,
-            "qq": bound_qq,
-            "avatar_url": str(row["avatar_url"]),
-            "problem_key": str(row["problem_key"]),
-            "problem_title": str(row["problem_title"]),
-            "solve_at": str(row["solve_at"]),
-            "solve_display": self._format_elapsed(int(row["solve_seconds"])),
-            "solved_count": int(row["solved_count"]),
-            "total_problems": total_problems,
-            "ac_clock": ac_clock,
-            "contest_rank": str(row["contest_rank"]),
-            "solve_order": int(row["solve_order"]),
-        }
-
-    async def _broadcast_contest_card(
-        self, contest: dict, row: sqlite3.Row
-    ) -> bool:
-        item = self._contest_card_item(contest, row)
-        avatar_key = str(row["uid"])
-        avatar_data = self._avatar_cache.get(avatar_key, b"") if avatar_key else b""
-        if avatar_key and not avatar_data:
-            # Primary: the scoreboard avatar URL (usually the QQ CDN, which
-            # is flaky from the HK host). Fallback: scrape the OJ profile
-            # page like the regular AC card. Successful bytes are cached so
-            # later cards for the same user never re-download.
-            avatar_url = str(item.get("avatar_url", "")).strip()
-            try:
-                timeout = aiohttp.ClientTimeout(total=15)
-                async with aiohttp.ClientSession(timeout=timeout) as session:
-                    if avatar_url:
-                        try:
-                            async with session.get(avatar_url) as response:
-                                if response.status == 200:
-                                    avatar_data = await response.content.read(
-                                        1_000_000
-                                    )
-                        except asyncio.CancelledError:
-                            raise
-                        except Exception:
-                            pass  # CDN hiccup; try the OJ profile below
-                    if not avatar_data:
-                        profile_url = (
-                            f"{self.BASE_URL}/user/{quote(avatar_key, safe='')}"
-                        )
-                        async with session.get(profile_url) as response:
-                            if response.status == 200:
-                                profile_soup = BeautifulSoup(
-                                    await response.text(), "html.parser"
-                                )
-                                avatar = profile_soup.select_one(
-                                    "img.large.user-profile-avatar, "
-                                    "img.user-profile-avatar"
-                                )
-                                fallback_url = (
-                                    str(avatar.get("src", "")).strip()
-                                    if avatar
-                                    else ""
-                                )
-                                if fallback_url.startswith("//"):
-                                    fallback_url = f"https:{fallback_url}"
-                                elif fallback_url.startswith("/"):
-                                    fallback_url = (
-                                        f"{self.BASE_URL}{fallback_url}"
-                                    )
-                                if fallback_url:
-                                    async with session.get(fallback_url) as response:
-                                        if response.status == 200:
-                                            avatar_data = (
-                                                await response.content.read(
-                                                    1_000_000
-                                                )
-                                            )
-            except Exception:
-                self.logger.info("Contest avatar unavailable; using initial fallback")
+                    self.logger.info("Contest avatar unavailable; using initial fallback")
+            self._avatar_cache[avatar_key] = avatar_data
         if avatar_data:
             item["avatar_data"] = avatar_data
-            self._avatar_cache[avatar_key] = avatar_data
-        ac_clock = item.get("ac_clock", "")
         fallback = (
             f"🏆 比赛播报 · {item['contest_name']}\n"
             f"用户：{item['user']}\n"
-            f"解出题目：{item['problem_key']} 「{item['problem_title']}」"
-            f"（第 {item['solve_order']} 个解出）\n"
-            + (
-                f"AC 于 {ac_clock} · 比赛用时 {item['solve_display']}"
-                if ac_clock
-                else f"用时：{item['solve_display']}"
-            )
-            + "\n"
+            f"解出题目：{item['problem_key']}（第 {item['solve_order']} 个解出）\n"
             f"本场已解 {item['solved_count']}"
             + (f"/{item['total_problems']}" if item.get("total_problems") else "")
             + f" 题 · 排名第 {item['contest_rank']}\n"
@@ -1203,11 +888,15 @@ class SwpuAcmBroadcast(star.Star):
                                 "Contest card delivery failed after retries"
                             )
                         else:
-                            self.logger.warning("Contest card delivery failed; retrying")
+                            self.logger.warning(
+                                "Contest card delivery failed; retrying"
+                            )
                     if attempt < 2:
                         await asyncio.sleep(2 * (attempt + 1))
         except Exception:
-            self.logger.exception("Contest card rendering failed; sending text fallback")
+            self.logger.exception(
+                "Contest card rendering failed; sending text fallback"
+            )
         for attempt in range(2):
             try:
                 sent = bool(
@@ -1227,11 +916,68 @@ class SwpuAcmBroadcast(star.Star):
                 await asyncio.sleep(2)
         return False
 
+    async def _contest_end_reports(self) -> None:
+        """Publish final standings once per ended contest."""
+        last_check = self._db_get_meta("contest_check_at")
+        now_ts = int(time.time())
+        if not last_check:
+            # First run: only report contests ending after this moment.
+            self._db_set_meta("contest_check_at", str(now_ts))
+            return
+        since = datetime.fromtimestamp(int(last_check), tz=timezone.utc)
+        ended = await asyncio.to_thread(self._db_ended_contests, since)
+        self._db_set_meta("contest_check_at", str(now_ts))
+        for contest in ended:
+            guard = f"contest_end_reported_{contest['tid']}"
+            if self._db_get_meta(guard) == "1":
+                continue
+            standings = await asyncio.to_thread(
+                self._db_contest_standings, contest["domain"], contest["tid"]
+            )
+            if not standings:
+                self._db_set_meta(guard, "1")
+                continue
+            user_docs = await asyncio.to_thread(
+                self._db_user_docs_by_ids, [uid for uid, _ in standings]
+            )
+            lines = [f"🏁 {contest['title']} 已结束 · 最终战报（按AC题数）", ""]
+            for index, (uid, solved) in enumerate(standings[:10], 1):
+                name = str(user_docs.get(uid, {}).get("uname", uid))
+                name = str(
+                    self._state.get("display_names", {}).get(str(uid), name)
+                )
+                lines.append(f"{index}. {name} —— {solved} 题")
+            lines.append("")
+            lines.append(
+                f"共 {len(standings)} 人有产出 · "
+                f"{self._contest_url(contest['domain'], contest['tid'])}"
+            )
+            try:
+                await self.context.send_message(
+                    self.GROUP_SESSION,
+                    MessageChain().message("\n".join(lines)),
+                )
+            except Exception:
+                self.logger.exception("Contest end report delivery failed")
+            self._db_set_meta(guard, "1")
+
+    def _db_fetch_by_rids(self, rids: list[str]) -> list[dict]:
+        db = self._mongo()
+        return list(
+            db.record.find(
+                {"_id": {"$in": [ObjectId(r) for r in rids]}},
+                self._RECORD_PROJECTION,
+            )
+        )
+
+    def _db_user_docs_by_ids(self, uids: list[int]) -> dict[int, dict]:
+        return self._db_user_docs(self._mongo(), uids)
+
     def _card_item_from_row(self, row: sqlite3.Row) -> dict:
         problem_url = row["problem_url"]
         if row["hidden"]:
-            # The stored URL is a synthetic dedupe key; the card should link
-            # to the real (login-gated) record page instead.
+            # The stored URL is a dedupe key; the card should link to the
+            # real (login-gated) record page instead.
             problem_url = f"{self.BASE_URL}/record/{row['rid']}"
         return {
             "id": row["rid"],
@@ -1241,14 +987,15 @@ class SwpuAcmBroadcast(star.Star):
             "hidden": bool(row["hidden"]),
             "user": self._display_name_for(row["user_id"]),
             "oj_user": row["user_name"],
-            # Cards show the canonical person (main account) so a merged
-            # alt account broadcasts under its owner's name.
             "user_id": self._person_id(row["user_id"]),
             "avatar_url": row["avatar_url"],
             "qq": "未绑定",
             "difficulty": str(row["difficulty"] or "") or "暂未标注",
             "language": row["language"],
             "submitted_at": row["submitted_at"],
+            "time_ms": str(row["time_ms"] or ""),
+            "tags": str(row["tags"] or ""),
+            "n_accept": int(row["n_accept"] or 0),
         }
 
     async def initialize(self) -> None:
@@ -1260,6 +1007,11 @@ class SwpuAcmBroadcast(star.Star):
                 "SWPU ACM broadcast: OJ database unreachable — check mongo_uri.txt"
             )
         self._task = asyncio.create_task(self._worker())
+        self._task.add_done_callback(
+            lambda task: self.logger.warning(
+                "SWPU worker task done: %r", task.exception() or "clean"
+            )
+        )
         self.logger.info("SWPU ACM broadcast started for QQ group 879670443")
 
     async def terminate(self) -> None:
@@ -1278,18 +1030,29 @@ class SwpuAcmBroadcast(star.Star):
         # Let the OneBot reverse WebSocket finish connecting before the first poll.
         await asyncio.sleep(30)
         try:
-            await self._maybe_run_initial_import()
-        except Exception:
-            self.logger.exception("Failed to import OJ records")
-        while True:
-            try:
-                await self._maybe_send_ranking()
-                await self._poll_once()
-            except asyncio.CancelledError:
-                raise
-            except Exception:
-                self.logger.exception("SWPU OJ polling failed")
-            await asyncio.sleep(self.POLL_SECONDS)
+            while True:
+                try:
+                    await self._maybe_send_ranking()
+                    # Any step that wedges (hung Mongo call, exotic sqlite
+                    # state) degrades to one error line per cycle instead of a
+                    # silently dead worker; the watermark keeps the backlog
+                    # safe until the next healthy cycle.
+                    try:
+                        await asyncio.wait_for(self._poll_once(), timeout=120)
+                    except asyncio.TimeoutError:
+                        self.logger.error(
+                            "SWPU poll timed out after 120s; skipping cycle"
+                        )
+                except asyncio.CancelledError:
+                    raise
+                except Exception:
+                    self.logger.exception("SWPU OJ polling failed")
+                await asyncio.sleep(self.POLL_SECONDS)
+        except asyncio.CancelledError:
+            self.logger.warning("SWPU worker CANCELLED")
+            raise
+        finally:
+            self.logger.warning("SWPU worker exited (finally)")
 
     # ------------------------------------------------------------------
     # Direct read-only MongoDB access layer (runs inside worker threads).
@@ -1381,6 +1144,8 @@ class SwpuAcmBroadcast(star.Star):
         "status": 1,
         "lang": 1,
         "tid": 1,
+        "time": 1,
+        "memory": 1,
     }
 
     def _db_user_docs(self, db, uids) -> dict[int, dict]:
@@ -1424,7 +1189,15 @@ class SwpuAcmBroadcast(star.Star):
                 int(p["docId"]): p
                 for p in db.document.find(
                     {"domainId": domain, "docType": 10, "docId": {"$in": doc_ids}},
-                    {"docId": 1, "pid": 1, "title": 1, "hidden": 1, "difficulty": 1},
+                    {
+                        "docId": 1,
+                        "pid": 1,
+                        "title": 1,
+                        "hidden": 1,
+                        "difficulty": 1,
+                        "tag": 1,
+                        "nAccept": 1,
+                    },
                 )
             }
             for doc_id in doc_ids:
@@ -1444,27 +1217,35 @@ class SwpuAcmBroadcast(star.Star):
             key: self._problem_cache[key] for key in wanted if key in self._problem_cache
         }
 
-    def _db_fetch_increment(self, after_hex: str, watching: list[str]):
-        """Worker thread: fresh records past the watermark + status rechecks."""
+    def _db_fetch_increment(self, after_hex: str, recent_after_hex: str):
+        """Worker thread: records past the watermark + the recent window."""
         db = self._mongo()
-        query: dict = {}
-        if after_hex:
-            query["_id"] = {"$gt": ObjectId(after_hex)}
-        new_docs = list(
-            db.record.find(query, self._RECORD_PROJECTION).sort("_id", 1).limit(400)
+        query = {"_id": {"$gt": ObjectId(after_hex)}} if after_hex else {}
+        new_docs: list[dict] = list(
+            db.record.find(query, self._RECORD_PROJECTION)
+            .sort("_id", 1)
+            .limit(400)
         )
-        watch_docs: list[dict] = []
-        if watching:
-            watch_docs = list(
+        recent_docs: list[dict] = []
+        if recent_after_hex:
+            recent_docs = list(
                 db.record.find(
-                    {"_id": {"$in": [ObjectId(rid) for rid in watching]}},
+                    {"_id": {"$gte": ObjectId(recent_after_hex)}},
                     self._RECORD_PROJECTION,
                 )
+                .sort("_id", 1)
+                .limit(400)
             )
-        return new_docs, watch_docs
+        return new_docs, recent_docs
 
     def _db_map_docs(self, docs: list[dict]) -> list[dict]:
-        """Worker thread: enrich record documents into ingest items."""
+        """Worker thread: enrich record documents into ingest items.
+
+        Hidden problems without a contest tid stay fully invisible (no
+        card, no count). Contest submissions (tid set) become contest
+        cards even while the problem is hidden — the card shows the
+        contest letter instead of the title.
+        """
         if not docs:
             return []
         db = self._mongo()
@@ -1472,6 +1253,12 @@ class SwpuAcmBroadcast(star.Star):
         problem_docs = self._db_problem_docs(
             db,
             [(str(doc.get("domainId") or "system"), doc.get("pid")) for doc in docs],
+        )
+        contest_tids = sorted(
+            {str(doc.get("tid")) for doc in docs if doc.get("tid")}
+        )
+        contests = (
+            self._db_contest_docs(db, contest_tids) if contest_tids else {}
         )
         items: list[dict] = []
         for doc in docs:
@@ -1484,33 +1271,71 @@ class SwpuAcmBroadcast(star.Star):
             domain = str(doc.get("domainId") or "system")
             if domain not in self.WATCH_DOMAINS:
                 continue
-            if doc.get("tid"):
-                # Contest submissions never entered the old public-feed
-                # statistics either; keep that parity until a contest
-                # feature is configured for the new site.
+            tid_hex = str(doc.get("tid")) if doc.get("tid") else ""
+            contest = contests.get(tid_hex) or {}
+            if tid_hex and contest.get("missing"):
+                # The contest was deleted after the submission.
+                continue
+            pdoc = problem_docs.get((domain, int(doc.get("pid") or 0)))
+            hidden = bool(
+                pdoc is None or pdoc.get("missing") or pdoc.get("hidden")
+            )
+            if hidden and not tid_hex:
+                # Hidden practice problem: never broadcast, never count.
                 continue
             rid = str(doc["_id"])
             submitted_dt, ts = self._record_clock(doc["_id"])
             udoc = user_docs.get(uid) or {"uname": str(uid), "avatar": ""}
-            pdoc = problem_docs.get((domain, int(doc.get("pid") or 0)))
-            hidden = bool(
-                pdoc is None or pdoc.get("hidden") or not pdoc.get("title")
-            )
+            contest_title, contest_key = "", ""
+            if tid_hex:
+                contest_title = contest.get("title") or ""
+                pids = []
+                for pid in contest.get("pids", []):
+                    try:
+                        pids.append(int(pid))
+                    except (TypeError, ValueError):
+                        continue
+                try:
+                    contest_key = chr(
+                        ord("A") + pids.index(int(doc.get("pid") or 0))
+                    )
+                except (ValueError, IndexError):
+                    contest_key = str(doc.get("pid") or "")
             if hidden:
-                problem = "隐藏题目 题目信息未公开"
+                display_title = (
+                    "比赛题目（未公开）" if tid_hex else "隐藏题目 题目信息未公开"
+                )
+            else:
+                display_title = str(pdoc.get("title") or "").strip()
+            if tid_hex:
+                label = contest_key or str(doc.get("pid") or "")
+                problem = f"{label}. {display_title}"
                 problem_url = f"{self.BASE_URL}/record/{rid}"
                 difficulty = ""
             else:
-                problem = (
-                    f"{self._problem_display_key(pdoc)}. "
-                    f"{str(pdoc.get('title') or '').strip()}"
-                )
+                problem = f"{self._problem_display_key(pdoc)}. {display_title}"
                 problem_url = self._problem_url(pdoc)
                 diff = pdoc.get("difficulty") or 0
                 try:
                     difficulty = str(int(diff)) if diff else ""
                 except (TypeError, ValueError):
                     difficulty = ""
+            try:
+                time_ms = str(round(float(doc.get("time") or 0), 1))
+            except (TypeError, ValueError):
+                time_ms = ""
+            try:
+                memory_kb = str(int(doc.get("memory") or 0))
+            except (TypeError, ValueError):
+                memory_kb = ""
+            tags = ""
+            n_accept = 0
+            if pdoc is not None and not pdoc.get("missing") and not hidden:
+                tags = " / ".join(str(t) for t in (pdoc.get("tag") or [])[:3])
+                try:
+                    n_accept = int(pdoc.get("nAccept") or 0)
+                except (TypeError, ValueError):
+                    n_accept = 0
             items.append(
                 {
                     "id": rid,
@@ -1531,6 +1356,15 @@ class SwpuAcmBroadcast(star.Star):
                     ),
                     "submitted_at": submitted_dt.strftime("%Y-%m-%d %H:%M:%S"),
                     "ts": ts,
+                    "domain_id": domain,
+                    "doc_id": int(doc.get("pid") or 0),
+                    "tid": tid_hex,
+                    "contest_title": contest_title,
+                    "contest_key": contest_key,
+                    "time_ms": time_ms,
+                    "memory_kb": memory_kb,
+                    "tags": tags,
+                    "n_accept": n_accept,
                 }
             )
         return items
@@ -1690,129 +1524,172 @@ class SwpuAcmBroadcast(star.Star):
             }
         ]
 
-    async def _maybe_run_initial_import(self) -> None:
-        """One-time full sync of every OJ record into the local store.
-
-        The new OJ is young, so the old "counting window import" and the
-        "full history backfill" collapse into a single full-table pass: rows
-        older than the process start land with card_sent=1 (silent history
-        that widens the earlier-AC dedup view), while anything newer flows
-        through the normal card decision. Idempotent by record id: a failed
-        import simply retries on the next poll.
-        """
-        if self._db is None:
-            return
-        if self._db_get_meta("import_done") == "1":
-            return
-        async with self._stats_lock:
-            if self._db_get_meta("import_done") == "1":
-                return
-            docs, _pending_watch = await asyncio.to_thread(
-                self._db_fetch_increment, "", []
-            )
-            items = await asyncio.to_thread(self._db_map_docs, docs)
-            imported = self._ingest_records(items)
-            if docs:
-                self._db_set_meta("mongo_last_id", str(docs[-1]["_id"]))
-            counting_since = str(
-                self._state.get("counting_since")
-                or datetime.now().strftime("%Y-%m-%d")
-            )
-            self._db_set_meta("import_done", "1")
-            self._db_set_meta("history_backfill_done", "1")
-            self._db_set_meta("import_scope", counting_since)
-            self._state["counting_since"] = counting_since
-            self._save_state()
-            self.logger.info(
-                "Local OJ records store ready: %s record(s) synced, %s new row(s) stored",
-                len(docs),
-                imported,
-            )
-
     async def _poll_new_records(self) -> None:
-        """Watermark poll: fetch fresh records and re-check unfinished ones.
+        """Watermark poll + recent-window status sync, MongoDB as authority.
 
-        New records arrive with a submission-time ObjectId, so a single
-        indexed ``_id > watermark`` query is the whole fetch. Records still
-        in a non-final status (queued / compiling / judging — remote judges
-        can take minutes) are re-checked every cycle until they settle; an
-        AC transition re-runs the card decision exactly like a fresh
-        ingest would.
+        Query 1 ingests records past the watermark. Query 2 re-reads the
+        last RECENT_WINDOW_SECONDS so slow verdicts and in-place rejudges
+        converge;         an AC transition re-runs the card decision with the
+        earlier-AC lookup made directly against the source database.
         """
         if self._db is None:
-            return
+            return 0
         last_hex = self._db_get_meta("mongo_last_id")
-        watching = self._watching_rids()
-        new_docs, watch_docs = await asyncio.to_thread(
-            self._db_fetch_increment, last_hex, watching
+        recent_after = ObjectId.from_datetime(
+            datetime.now(timezone.utc)
+            - timedelta(seconds=self.RECENT_WINDOW_SECONDS)
+        )
+        new_docs, recent_docs = await asyncio.to_thread(
+            self._db_fetch_increment, last_hex, str(recent_after)
         )
         items = await asyncio.to_thread(self._db_map_docs, new_docs)
-        if items:
-            self._ingest_records(items)
+        await self._decide_and_store(items)
         if new_docs:
             self._db_set_meta("mongo_last_id", str(new_docs[-1]["_id"]))
-        await self._apply_judgement_updates(watch_docs)
+        await self._sync_recent(recent_docs)
+        self._purge_old_rows()
+        return len(new_docs)
 
-    def _watching_rids(self) -> list[str]:
-        """Rids of recent submissions still waiting for a verdict."""
-        if self._db is None:
-            return []
-        horizon = int(datetime.now().timestamp()) - self.WATCHING_WINDOW_SECONDS
-        placeholders = ",".join("?" for _ in self.NON_FINAL_TEXTS)
-        rows = self._db.execute(
-            f"SELECT rid FROM records WHERE status IN ({placeholders}) "
-            "AND ts > ? ORDER BY ts ASC LIMIT 200",
-            (*self.NON_FINAL_TEXTS, horizon),
-        ).fetchall()
-        return [str(row["rid"]) for row in rows]
-
-    async def _apply_judgement_updates(self, watch_docs: list[dict]) -> None:
-        """Mirror verdict transitions of watched records into the store."""
-        if not watch_docs or self._db is None:
+    async def _decide_and_store(self, items: list[dict]) -> None:
+        """Card decision for freshly mapped records, then insert."""
+        if not items or self._db is None:
             return
-        for doc in watch_docs:
+        candidates = [
+            item
+            for item in items
+            if item["status"] == "Accepted"
+            and item["ts"] >= self._started_ts
+            and (item.get("tid") or not item.get("hidden"))
+        ]
+        suppressed = await asyncio.to_thread(
+            self._db_dedup_suppressed,
+            [self._candidate_key(item) for item in candidates],
+        )
+        for item in items:
+            item["_card_sent"] = (
+                0
+                if item in candidates and item["id"] not in suppressed
+                else 1
+            )
+        self._ingest_records(items)
+        queued = sum(1 for item in items if item.get("_card_sent") == 0)
+        if queued:
+            self.logger.info("%s new AC card(s) queued", queued)
+
+    def _candidate_key(self, item: dict) -> dict:
+        return {
+            "uid": int(item["user_id"]),
+            "domain_id": item.get("domain_id", "system"),
+            "doc_id": int(item.get("doc_id") or 0),
+            "tid": item.get("tid", ""),
+            "rid": item["id"],
+        }
+
+    async def _sync_recent(self, recent_docs: list[dict]) -> None:
+        """Converge local row statuses with the recent Mongo window."""
+        if not recent_docs or self._db is None:
+            return
+        transitions: list[sqlite3.Row] = []
+        for doc in recent_docs:
             rid = str(doc["_id"])
             status_text = self._status_text(doc.get("status"))
             row = self._db.execute(
-                "SELECT status, hidden, user_id, problem_url, ts, card_sent "
-                "FROM records WHERE rid = ?",
-                (rid,),
+                "SELECT * FROM records WHERE rid = ?", (rid,)
             ).fetchone()
             if row is None or row["status"] == status_text:
                 continue
             self._db.execute(
                 "UPDATE records SET status = ? WHERE rid = ?", (status_text, rid)
             )
-            if int(doc.get("status") or 0) != 1:
+            if int(doc.get("status") or 0) == 1:
+                transitions.append(row)
+        await self._queue_verdict_cards(transitions)
+
+    async def _queue_verdict_cards(self, rows: list[sqlite3.Row]) -> None:
+        """Run the card decision for rows whose verdict just became AC."""
+        if not rows or self._db is None:
+            return
+        candidates: list[dict] = []
+        kept: list[sqlite3.Row] = []
+        for row in rows:
+            if row["hidden"] and not row["tid"]:
                 continue
-            if row["hidden"] or int(row["card_sent"]) != 1:
+            if int(row["card_sent"]) != 1 or int(row["ts"]) < self._started_ts:
                 continue
-            if int(row["ts"]) < self._started_ts:
-                continue
-            if self._earlier_ac_exists(
-                str(row["user_id"]), str(row["problem_url"]), int(row["ts"])
-            ):
+            candidates.append(
+                {
+                    "uid": int(row["user_id"]),
+                    "domain_id": str(row["domain_id"] or "system"),
+                    "doc_id": int(row["doc_id"] or 0),
+                    "tid": str(row["tid"] or ""),
+                    "rid": str(row["rid"]),
+                }
+            )
+            kept.append(row)
+        if not candidates:
+            return
+        suppressed = await asyncio.to_thread(self._db_dedup_suppressed, candidates)
+        for cand, row in zip(candidates, kept):
+            if cand["rid"] in suppressed:
                 continue
             self._db.execute(
-                "UPDATE records SET card_sent = 0 WHERE rid = ?", (rid,)
+                "UPDATE records SET card_sent = 0 WHERE rid = ?", (cand["rid"],)
             )
-            self.logger.info("Watched record %s turned Accepted; card queued", rid)
+            self.logger.info(
+                "Watched record %s turned Accepted; card queued", cand["rid"]
+            )
+
+    def _purge_old_rows(self) -> None:
+        """Drop delivered, fully-judged rows beyond the reconcile horizon."""
+        if self._db is None:
+            return
+        horizon = int(datetime.now().timestamp()) - self.PURGE_HORIZON_SECONDS
+        placeholders = ",".join("?" for _ in self.NON_FINAL_TEXTS)
+        self._db.execute(
+            f"DELETE FROM records WHERE card_sent = 1 AND ts < ? "
+            f"AND status NOT IN ({placeholders})",
+            (horizon, *self.NON_FINAL_TEXTS),
+        )
+
+    async def _maybe_stale_sweep(self) -> None:
+        """Hourly: re-check stuck verdicts and publish contest end reports."""
+        now = time.time()
+        if now - self._stale_sweep_at < self.STALE_SWEEP_SECONDS:
+            return
+        self._stale_sweep_at = now
+        if self._db is None:
+            return
+        placeholders = ",".join("?" for _ in self.NON_FINAL_TEXTS)
+        rows = self._db.execute(
+            f"SELECT * FROM records WHERE status IN ({placeholders}) LIMIT 200",
+            tuple(self.NON_FINAL_TEXTS),
+        ).fetchall()
+        if rows:
+            docs = await asyncio.to_thread(
+                self._db_fetch_by_rids, [str(row["rid"]) for row in rows]
+            )
+            await self._sync_recent(docs)
+        await self._contest_end_reports()
 
     async def _drain_pending_cards(self) -> None:
-        """Broadcast queued AC cards, oldest first.
+        """Broadcast queued cards, oldest first.
 
-        hidden = 0 re-enforces the invisible rule at drain time, so a hidden
-        row can never send a card even if it somehow reached the queue.
+        Contest rows (tid set) use the pastel contest card; everything
+        else the neon AC card. Delivery failures stay queued.
         """
         if self._db is None:
             return
         rows = self._db.execute(
-            "SELECT * FROM records WHERE card_sent = 0 AND hidden = 0 "
+            "SELECT * FROM records WHERE card_sent = 0 "
             "ORDER BY ts ASC, rid ASC LIMIT ?",
             (self.CARD_DRAIN_LIMIT,),
         ).fetchall()
         for row in rows:
-            sent = await self._broadcast_ac(self._card_item_from_row(row))
+            sent = (
+                await self._broadcast_contest_ac(row)
+                if row["tid"]
+                else await self._broadcast_ac(self._card_item_from_row(row))
+            )
             if sent:
                 self._db.execute(
                     "UPDATE records SET card_sent = 1 WHERE rid = ?", (row["rid"],)
@@ -1923,19 +1800,30 @@ class SwpuAcmBroadcast(star.Star):
         return stats
 
     async def _poll_once(self) -> None:
-        await self._maybe_run_initial_import()
-        # Pre-warm the rank cache in the background so AC cards never wait
-        # on a ranking query.
+        # Step timings double as a stall localizer: if a cycle ever hangs,
+        # the last heartbeat shows exactly which step never returned.
+        started = time.time()
         if (
             self._rank_cache_at is None
             or (datetime.now() - self._rank_cache_at).total_seconds() > 300
         ) and (self._rank_refresh_task is None or self._rank_refresh_task.done()):
             self._rank_refresh_task = asyncio.create_task(self._refresh_rank_cache())
-        await self._poll_new_records()
+        new_count = await self._poll_new_records()
+        t_poll = time.time()
         await self._drain_pending_cards()
-        await self._poll_contest_broadcasts()
-        await self._maybe_send_contest_daily_report()
-        self._refresh_contest_rankings()
+        t_drain = time.time()
+        await self._maybe_stale_sweep()
+        t_sweep = time.time()
+        self._poll_count += 1
+        if new_count or self._poll_count % 20 == 0:
+            self.logger.info(
+                "poll #%d ok: new=%d poll=%.2fs drain=%.2fs sweep=%.2fs",
+                self._poll_count,
+                new_count,
+                t_poll - started,
+                t_drain - t_poll,
+                t_sweep - t_drain,
+            )
 
     async def _broadcast_ac(self, item: dict) -> bool:
         bindings = self._state.get("bindings", {})
@@ -1954,7 +1842,7 @@ class SwpuAcmBroadcast(star.Star):
         item["qq"] = bound_qq
         item["rank"] = await self._fetch_user_rank(item.get("user_id") or item["user"])
         item["difficulty"] = str(item.get("difficulty") or "") or "暂未标注"
-        total_count = self._user_ac_count(item["user_id"])
+        total_count = await self._user_ac_count(item["user_id"])
         item["total_count"] = total_count
         item["count_index"] = total_count
         avatar_key = str(item.get("user_id") or item.get("oj_user") or "").strip()
@@ -2053,11 +1941,6 @@ class SwpuAcmBroadcast(star.Star):
         today = now.strftime("%Y-%m-%d")
         if self._state.get("ranking_sent_day") == today:
             return
-        # While any contest is inside its daily-report window the regular
-        # midnight leaderboards stay silent; ranking_sent_day is left
-        # unmarked so they resume automatically once every contest is over.
-        if self._contests_in_report_window(now):
-            return
         await self._send_ranking(mark_sent=True)
         yesterday = (now.date().fromordinal(now.date().toordinal() - 1)).strftime(
             "%Y-%m-%d"
@@ -2067,7 +1950,7 @@ class SwpuAcmBroadcast(star.Star):
     async def _send_daily_ranking(self, target_day: str, until_note: str) -> None:
         """Publish the per-day AC leaderboard for a YYYY-MM-DD day."""
         day_start = self._day_epoch(target_day)
-        users = self._stats_from_db(day_start, day_start + 86400)
+        users = await self._stats_from_db(day_start, day_start + 86400)
         header = f"📊 {target_day} AC 榜单{until_note}"
         if not users:
             await self.context.send_message(
@@ -2094,7 +1977,7 @@ class SwpuAcmBroadcast(star.Star):
     ) -> None:
         today = datetime.now().strftime("%Y-%m-%d")
         counting_since = self._state.get("counting_since") or target_day or today
-        users = self._stats_from_db()
+        users = await self._stats_from_db()
         if not users:
             await self.context.send_message(
                 self.GROUP_SESSION,
@@ -2322,7 +2205,13 @@ class SwpuAcmBroadcast(star.Star):
             "#f0f1ff",
             True,
         )
-        text((300, 468), "这道题已经被成功提交，继续保持节奏吧", 21, "#a6a8c8", False)
+        subtitle_parts = []
+        if str(item.get("tags") or "").strip():
+            subtitle_parts.append(f"标签 {item.get('tags')}")
+        if int(item.get("n_accept") or 0) > 0:
+            subtitle_parts.append(f"全站第 {item.get('n_accept')} 人通过")
+        subtitle = " · ".join(subtitle_parts) or "这道题已经被成功提交，继续保持节奏吧"
+        text((300, 468), fit(subtitle, self._font(21), 530), 21, "#a6a8c8", False)
         x = 300
         x = chip(
             x,
@@ -2340,6 +2229,15 @@ class SwpuAcmBroadcast(star.Star):
             "#aaa8ff",
             "#1a2144",
         )
+        if str(item.get("time_ms") or ""):
+            x = chip(
+                x,
+                505,
+                f"{item.get('time_ms')} ms",
+                "#b3822f",
+                "#e6c069",
+                "#2b2416",
+            )
         chip(
             x,
             505,
@@ -2606,14 +2504,12 @@ class SwpuAcmBroadcast(star.Star):
     @filter.command("oj排名")
     async def manual_ranking(self, event: AstrMessageEvent):
         """手动发送累计 AC 排名。"""
-        await self._maybe_run_initial_import()
         await self._send_ranking()
         yield event.plain_result("已发送累计 AC 排名。")
 
     @filter.command("今日榜单")
     async def today_ranking(self, event: AstrMessageEvent):
         """查看今天 0 点至今的 AC 榜单。"""
-        await self._maybe_run_initial_import()
         today = datetime.now().strftime("%Y-%m-%d")
         now = datetime.now().strftime("%H:%M")
         await self._send_daily_ranking(today, f"（截至 {now}）")
@@ -2621,20 +2517,43 @@ class SwpuAcmBroadcast(star.Star):
 
     @filter.command("比赛排名")
     async def contest_ranking(self, event: AstrMessageEvent):
-        """查看当前比赛的实时排名。"""
-        now = datetime.now(ZoneInfo("Asia/Shanghai"))
-        active: list[dict] = []
-        for contest in self.CONTEST_RANKINGS:
-            start = contest["start"]
-            end = contest["end"]
-            assert isinstance(start, datetime) and isinstance(end, datetime)
-            if start <= now < end:
-                active.append(contest)
-        if not active:
+        """查看进行中比赛的实时排名（按AC题数）。"""
+        try:
+            contests = await asyncio.to_thread(self._db_ongoing_contests)
+        except Exception:
+            self.logger.exception("Ongoing contest lookup failed")
+            yield event.plain_result("暂时无法读取比赛信息，请稍后再试。")
+            return
+        if not contests:
             yield event.plain_result("当前没有进行中的比赛。")
             return
-        for contest in active:
-            await self._send_contest_ranking(contest, now)
+        for contest in contests[:3]:
+            standings = await asyncio.to_thread(
+                self._db_contest_standings, contest["domain"], contest["tid"], 10
+            )
+            user_docs = await asyncio.to_thread(
+                self._db_user_docs_by_ids, [uid for uid, _ in standings]
+            )
+            lines = [
+                f"🏆 {contest['title']} · 实时排名（按AC题数，非正式计分板）",
+                f"共 {contest['problems']} 题 · {len(standings)} 人已有产出",
+                "",
+            ]
+            for index, (uid, solved) in enumerate(standings, 1):
+                name = str(user_docs.get(uid, {}).get("uname", uid))
+                name = str(
+                    self._state.get("display_names", {}).get(str(uid), name)
+                )
+                lines.append(f"{index}. {name} —— {solved} 题")
+            if not standings:
+                lines.append("暂无人解出题目，等你来开张！")
+            try:
+                await self.context.send_message(
+                    self.GROUP_SESSION,
+                    MessageChain().message("\n".join(lines)),
+                )
+            except Exception:
+                self.logger.exception("Contest ranking delivery failed")
         yield event.plain_result("已发送比赛排名。")
 
     @filter.command("oj题目")
@@ -2657,7 +2576,7 @@ class SwpuAcmBroadcast(star.Star):
                     "SELECT COUNT(*) AS n FROM records WHERE card_sent = 0"
                 ).fetchone()["n"]
             )
-            stats = self._stats_from_db()
+            stats = await self._stats_from_db()
         counting_since = self._state.get("counting_since") or "未记录"
         db_ok = True
         try:
@@ -2667,10 +2586,10 @@ class SwpuAcmBroadcast(star.Star):
         yield event.plain_result(
             f"SWPUOJ 播报正常运行\n数据源：OJ 数据库直连（{'正常' if db_ok else '异常'}）\n"
             f"检查间隔：{self.POLL_SECONDS} 秒\n"
-            f"本地记录库：{total_records} 条提交\n"
+            f"状态缓存：{total_records} 条记录（近 48 小时）\n"
             f"累计通过：{sum(stats.values())} 题 / {len(stats)} 人（自 {counting_since}）\n"
-            f"待发 AC 卡片：{pending_cards} 张\n"
-            "每日 00:00 自动公布累计做题榜单与昨日 AC 榜单"
+            f"待发卡片：{pending_cards} 张\n"
+            "比赛提交实时播报 · 每日 00:00 自动公布累计榜与昨日榜"
         )
 
     @filter.command("oj帮助")
@@ -2889,26 +2808,14 @@ class SwpuAcmBroadcast(star.Star):
         return set(self.DEFAULT_MERGE_ADMINS)
 
     def _account_name(self, user_id: str) -> str:
-        """Raw account display name (no merge resolution), for admin listings."""
-        row = self._db.execute(
-            "SELECT display_name FROM users WHERE user_id = ?", (user_id,)
-        ).fetchone()
-        return str(row["display_name"]) if row else str(user_id)
+        """Raw account display name (no merge resolution), for listings."""
+        return self._cached_uname(self._person_id(str(user_id)))
 
     async def _resolve_account_id(self, token: str) -> str:
         """Resolve an OJ username or numeric UID to its user_id."""
         token = token.strip()
         if not token:
             return ""
-        row = self._db.execute(
-            "SELECT user_id FROM users WHERE user_id = ?", (token,)
-        ).fetchone()
-        if row is None:
-            row = self._db.execute(
-                "SELECT user_id FROM users WHERE display_name = ?", (token,)
-            ).fetchone()
-        if row:
-            return str(row["user_id"])
         matches = await self._find_user_profiles(token)
         if matches and len(matches) == 1:
             return str(matches[0].get("user_id") or "")
@@ -2966,7 +2873,7 @@ class SwpuAcmBroadcast(star.Star):
             "ON CONFLICT(alt_id) DO UPDATE SET main_id = excluded.main_id",
             (alt_id, root_id),
         )
-        total = self._user_ac_count(alt_id)
+        total = await self._user_ac_count(alt_id)
         yield event.plain_result(
             f"合并成功：{alt_name}（小号）已并入 {self._account_name(root_id)}。\n"
             f"按人去重后该用户累计 {total} 题（每人每题只计一次）。"
