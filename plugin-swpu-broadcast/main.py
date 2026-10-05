@@ -37,7 +37,7 @@ class SwpuAcmBroadcast(star.Star):
 
     STATE_SCHEMA_VERSION = 1
 
-    GROUP_SESSION = "qq-onebot:GroupMessage:879670443"
+    GROUP_SESSION = "qq-onebot:GroupMessage:1128735782"
     BASE_URL = "https://swpuacm.xyz"
     # Poll the OJ's MongoDB directly through a read-only account: no web
     # scraping, no login sessions, and the public site keeps its
@@ -1012,7 +1012,7 @@ class SwpuAcmBroadcast(star.Star):
                 "SWPU worker task done: %r", task.exception() or "clean"
             )
         )
-        self.logger.info("SWPU ACM broadcast started for QQ group 879670443")
+        self.logger.info("SWPU ACM broadcast started for QQ group 1128735782")
 
     async def terminate(self) -> None:
         if self._task:
