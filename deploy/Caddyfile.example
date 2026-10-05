@@ -67,7 +67,7 @@ swpuacm.xyz, www.swpuacm.xyz {
 
   # SWPU ACM custom static files (UI-rebuild-proof dir; revert: remove this handle)
   @custom {
-    path /home.html /favicon.png /logo.png /favicon-16x16.png /favicon-32x32.png /apple-touch-icon-180x180.png /android-chrome-192x192.png /swpu-display.woff2 /swpu-mono.woff2 /og-cover.png
+    path /home.html /favicon.png /logo.png /favicon-16x16.png /favicon-32x32.png /apple-touch-icon-180x180.png /android-chrome-192x192.png /swpu-display.woff2 /swpu-mono.woff2 /og-cover.png /qq-training-group.png
   }
   handle @custom {
     root * /root/.hydro/custom

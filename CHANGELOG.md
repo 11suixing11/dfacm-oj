@@ -1,5 +1,20 @@
 # Changelog
 
+## v1.19.1 - 2026-10-05
+
+The training group QR lived only inside QQ. It now ships with the landing
+page, so any visitor can join straight from the homepage.
+
+### Added
+
+- **`oj 训练群` join card on the landing page's call-to-action section**: a
+  cropped, palette-quantised QR tile (`landing/assets/qq-training-group.png`,
+  640px, ~55KB, decodes to `https://qm.qq.com/q/8mG7ByDyCc`) beside the group
+  name, a one-line feature blurb (AC 播报 / 每日榜单 / 比赛战报 / 答疑互助)
+  and the group number 1128735782. The QR itself is a link, so on phones a
+  tap opens the qm.qq.com join page directly; on desktops it scans normally.
+  Display font re-subsetted (624 → 634 CJK glyphs) for the new blurb text.
+
 ## v1.19.0 - 2026-10-05
 
 The site's role is settled: a teaching/training tool, while rated contests stay

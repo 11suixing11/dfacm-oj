@@ -328,6 +328,17 @@ section{position:relative}
 #go .hitokoto{margin-top:64px;font-size:14.5px;color:var(--txt-3)}
 #go .hitokoto p{transition:opacity .6s}
 #go .hitokoto .src{margin-top:6px;font-family:var(--font-b);font-size:12px;letter-spacing:.06em;color:var(--txt-3)}
+/* 加群卡：二维码 + 群信息（手机端整卡可点，桌面扫码） */
+#go .join{margin-top:54px;display:inline-flex;align-items:center;gap:24px;padding:18px 28px 18px 18px;border:1px solid var(--line);border-radius:var(--rad);background:var(--panel);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);box-shadow:0 16px 44px rgba(15,34,64,.08)}
+#go .join-qr{display:block;width:126px;height:126px;flex-shrink:0;background:#fff;border:1px solid var(--line);border-radius:14px;padding:6px;transition:transform .35s var(--ease),box-shadow .35s var(--ease)}
+#go .join-qr:hover{transform:translateY(-2px);box-shadow:0 12px 30px rgba(42,92,170,.30)}
+#go .join-qr img{width:100%;height:100%;display:block;border-radius:9px}
+#go .join-txt{text-align:left}
+#go .join-txt h3{font-family:var(--font-d);font-weight:400;font-size:22px;letter-spacing:.03em}
+#go .join-txt>p{margin-top:5px;font-size:13.5px;color:var(--txt-2)}
+#go .join-num{display:block;margin-top:12px;font-family:var(--font-m);font-size:13px;letter-spacing:.1em;color:var(--txt-3)}
+#go .join-num b{color:var(--gold-hi);font-weight:600}
+#go .join-hint{display:block;margin-top:2px;font-size:12px;color:var(--txt-3)}
 
 /* ---------- 页脚 ---------- */
 footer{border-top:1px solid var(--line);background:var(--deep);padding:64px 0 40px}
@@ -436,6 +447,9 @@ h1{font-size:clamp(42px,5.5vw,72px)}
   .route-card{padding:22px}.rc-top{gap:10px}.rc-top h3{font-size:24px}
   .rc-top .rc-n{display:none}.rc-note{width:100%}
   #go{padding-block:56px}footer{padding-block:40px 28px}
+  #go .join{flex-direction:column;gap:14px;padding:24px 22px 26px;text-align:center}
+  #go .join-qr{width:148px;height:148px}
+  #go .join-txt{text-align:center}
   .ft-grid{gap:32px}.ft-bottom{margin-top:32px;font-size:11px;letter-spacing:.04em}
 }
 @media(max-width:380px){.hero-cta .btn{padding-inline:18px}.term pre{font-size:11.5px;padding-inline:16px}.rc-list{grid-template-columns:1fr}.term .bar{padding-inline:12px}.term .bar i{display:none}}
@@ -720,6 +734,17 @@ int main() {
     <div class="hero-cta ">
       <a class="btn btn-p" href="/reg">免费注册，开始训练 <svg aria-hidden="true"><use href="#i-arrow"/></svg></a>
       <a class="btn btn-g" href="/p">先去题库逛逛</a>
+    </div>
+    <div class="join">
+      <a class="join-qr" href="https://qm.qq.com/q/8mG7ByDyCc" target="_blank" rel="noopener">
+        <img src="/qq-training-group.png" alt="oj 训练群 QQ 群二维码" width="640" height="640" loading="lazy" decoding="async">
+      </a>
+      <div class="join-txt">
+        <h3>oj 训练群</h3>
+        <p>AC 实时播报 · 每日榜单 · 比赛战报 · 答疑互助</p>
+        <span class="join-num">群号 <b>1128735782</b></span>
+        <span class="join-hint">手机点二维码，直达加群页</span>
+      </div>
     </div>
     <div class="hitokoto ">
       <p id="hito-text">「山顶的风景，留给写完最后一行代码的人。」</p>
