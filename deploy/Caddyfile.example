@@ -13,7 +13,7 @@
   }
 }
 
-dfacm.website, www.dfacm.website {
+dfacm.website, www.dfacm.website, swpuacm.xyz, www.swpuacm.xyz {
   encode zstd gzip
 
   # Security headers, split by framing policy: the in-place auth modal embeds

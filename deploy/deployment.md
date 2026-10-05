@@ -41,7 +41,7 @@ server:
   url: https://dfacm.website/
 ```
 
-`server.url` 必须保留结尾 `/`，它会被找回密码、OAuth 和站内绝对链接复用。保存系统配置后重启 `hydrooj`，再按下面的 Caddy、DNS、GitHub OAuth 和 Cloudflare 步骤切换域名。
+`server.url` 必须保留结尾 `/`，它会被找回密码、OAuth 和站内绝对链接复用。`dfacm.website` 是主域名；`swpuacm.xyz`、`www.swpuacm.xyz` 与 `www.dfacm.website` 作为同站入口保留，但公开页面统一显示 d&f算法网与主域名。保存系统配置后重启 `hydrooj`，再按下面的 Caddy、DNS、GitHub OAuth 和 Cloudflare 步骤切换域名。
 
 ## 2. 门面资源（UI 重建免疫）
 
@@ -334,7 +334,7 @@ curl -sSI https://<域名>/home.html | grep -i cache-control
 ### 新域名切换步骤（沿用 2026-10-04 的原站流程）
 
 1. 源站先上第 6 节的 Caddy 配置并 reload（直连行为等价，可先于 NS 迁移执行）。
-2. CF 添加站点 `dfacm.website`（Free plan），核对自动导入的 `A @`/`A www` 与源 IP 一致，全部开橙云。
+2. CF 添加站点 `dfacm.website`（Free plan），核对自动导入的 `A @`/`A www` 与源 IP 一致，全部开橙云；`swpuacm.xyz` 及其 `www` 记录继续指向同一站点。
 3. 阿里云域名控制台把 DNS 服务器改为 CF 分配的两个 NS（站点未启用 DNSSEC，无需预处理）。
 4. CF 「Check nameservers now」等待激活；旧 zone TTL 600s，一般 1 小时内。
 5. 激活后按 Dashboard 检查单逐项配置。

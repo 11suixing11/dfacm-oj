@@ -6,7 +6,7 @@
 
 **品牌寓意**：每个人都能在算法竞赛这条路上找到属于自己的 final。
 
-**平台域名**：[dfacm.website](https://dfacm.website)（代码已切换；线上 DNS、服务器与 OAuth 配置仍需部署）
+**平台域名**：[dfacm.website](https://dfacm.website)（主域名）；[swpuacm.xyz](https://swpuacm.xyz) 作为兼容入口保留。
 
 ![门面首页](docs/img/01-hero.png)
 
