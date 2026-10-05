@@ -1,6 +1,6 @@
 name: swpu_acm_broadcast
 author: Codex
-description: SWPU ACM 全站 AC 提交与当日活跃用户排名播报（swpuacm.xyz 数据库直连轮询版）
+description: d&f算法网全站 AC 提交与当日活跃用户排名播报（dfacm.website 数据库直连轮询版）
 version: 2.1.0
 support_platforms:
   - aiocqhttp

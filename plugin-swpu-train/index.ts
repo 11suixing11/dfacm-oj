@@ -1,4 +1,4 @@
-/* swpu-train — 个人训练工作台 + 错题复习（SWPU ACM 定制插件）
+/* swpu-train — 个人训练工作台 + 错题复习（d&f算法网定制插件；目录名保留 swpu 以兼容现网）
  * GET  /workbench            训练工作台页面（当前路线 / 下一题 / 本周进度 / 最近未通过）
  * GET  /workbench/data       工作台 JSON 数据
  * GET  /mistakes             错题本页面

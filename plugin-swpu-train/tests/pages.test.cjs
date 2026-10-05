@@ -29,6 +29,17 @@ test('pages only call their own registered JSON endpoints', () => {
         for (const match of html.matchAll(/fetch\('([^']+)'/g)) {
             assert.match(match[1], /^\/(workbench\/data|mistakes\/(data|update|remove|sync))/, `${page} fetches ${match[1]}`);
         }
-        assert.doesNotMatch(html, /https?:\/\/(?!swpuacm\.xyz)/, 'no external fetch or asset origins');
+        assert.doesNotMatch(html, /https?:\/\/(?!dfacm\.website)/, 'no external fetch or asset origins');
+        assert.doesNotMatch(html, /https?:\/\/swpuacm\.xyz/, 'former public domain must not leak into training pages');
+    }
+});
+
+test('training pages carry the d&f identity and final meaning', () => {
+    for (const page of ['workbench.html', 'mistakes.html']) {
+        const html = fs.readFileSync(path.join(__dirname, '..', page), 'utf8');
+        assert.match(html, /<title>[^<]*d&amp;f算法网<\/title>/);
+        assert.match(html, /<b>d&amp;f算法网<\/b>/);
+        assert.match(html, /每个人都能在算法竞赛这条路上找到属于自己的 final/);
+        assert.doesNotMatch(html, /DFACM OJ|SWPU ACM|西南石油大学|swpuacm\.xyz/);
     }
 });

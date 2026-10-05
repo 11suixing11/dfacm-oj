@@ -1,11 +1,13 @@
 # plugin-swpu-broadcast (swpu_acm_broadcast v2.1.0)
 
-AstrBot 插件：QQ 群自动播报 [SWPU OJ](https://swpuacm.xyz)（Hydro v5）的 AC 提交，附带每日榜单、比赛实时播报、账号绑定、签到、账号合并等群功能。
+AstrBot 插件：QQ 群自动播报 [d&f算法网](https://dfacm.website)（Hydro v5）的 AC 提交，附带每日榜单、比赛实时播报、账号绑定、签到、账号合并等群功能。
+
+品牌寓意：每个人都能在算法竞赛这条路上找到属于自己的 final。
 
 ## 架构（v2.1.0：MongoDB 为唯一真相）
 
 ```
-OJ 服务器 (swpuacm.xyz)
+OJ 服务器 (dfacm.website)
   └─ MongoDB (hydro 库)  ← 只读账号 bot_ro（UFW 仅放行 bot 服务器 IP）
         ↑ 每 15 秒两条查询：
         │   ① _id > 水位 的增量（新提交）

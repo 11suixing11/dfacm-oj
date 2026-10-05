@@ -49,6 +49,34 @@ assert.ok(html.includes('>29</span>'), '29 judge languages');
     assert.ok(!html.includes('最快一次评测'), 'the fastest-run cell was removed — do not reintroduce an unattributable headline stat');
 });
 
+test('landing identity is independent from the former campus brand', () => {
+    assert.match(html, /d(?:&|&amp;)f算法网/, 'public brand name missing');
+    assert.ok(html.includes('每个人都能在算法竞赛这条路上找到属于自己的 final'), 'brand meaning copy missing');
+    assert.ok(html.includes('https://dfacm.website/'), 'canonical domain missing');
+    assert.ok(html.includes('dfacm.website'), 'copyable domain missing');
+    assert.ok(!html.includes('西南石油大学'), 'former campus name leaked into the landing page');
+    assert.ok(!html.includes('DFACM OJ'), 'former public brand leaked into the landing page');
+    assert.ok(!html.includes('SWPU ACM'), 'former public brand leaked into the landing page');
+    assert.ok(!html.includes('swpuacm.xyz'), 'former public domain leaked into the landing page');
+});
+
+test('QQ training-group entry is visible in the hero', () => {
+    const heroStart = html.indexOf('<section id="hero"');
+    const heroEnd = html.indexOf('</section>', heroStart);
+    const hero = html.slice(heroStart, heroEnd);
+    const goStart = html.indexOf('<section id="go"');
+    const goEnd = html.indexOf('</section>', goStart);
+    const go = html.slice(goStart, goEnd);
+
+    assert.ok(heroStart >= 0, 'hero section missing');
+    assert.ok(hero.includes('<div class="join" aria-label="加入 OJ 训练群">'), 'join card must be in the hero');
+    assert.equal((html.match(/class="join"/g) || []).length, 1, 'join card must not be duplicated');
+    assert.ok(hero.includes('href="https://qm.qq.com/q/8mG7ByDyCc"'), 'QQ join link missing from hero');
+    assert.ok(hero.includes('src="/qq-training-group.png"'), 'QR image must use the shipped asset');
+    assert.ok(hero.includes('群号 <b>1128735782</b>'), 'training group number missing');
+    assert.equal(go.includes('class="join"'), false, 'CTA section must not keep a duplicate join card');
+});
+
 // The 蓝桥杯 card's four "stages" are DAG nodes inside ONE training, so Hydro
 // has no per-stage URL. They were four differently-named anchors all pointing
 // at the same training, which promised stage-specific destinations and then
@@ -104,7 +132,7 @@ function textNode(text) {
     return { tagName: '', textContent: String(text) };
 }
 
-const GUEST_HELP = '第一次来？<a href="#start">查看新生入门指引</a><span>已有账号 <a href="/reg?tab=pwd">登录</a></span>';
+const GUEST_HELP = '第一次来？<a href="#start">查看入门指引</a><span>已有账号 <a href="/reg?tab=pwd">登录</a></span>';
 
 const REJECT = Symbol('network down');
 const settle = async () => {

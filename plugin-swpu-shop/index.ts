@@ -1,4 +1,4 @@
-/* swpu-shop — 积分商店（SWPU ACM 定制插件）
+/* swpu-shop — 积分商店（d&f算法网定制插件；目录名保留 swpu 以兼容现网）
  * GET  /shop            商店页：上架徽章列表（游客可看）
  * POST /shop/redeem     {badgeId} 花积分兑换徽章（badge-for-hydrooj 持有链路）
  * GET  /shop/history    我的积分流水（分页 20/页，时间正序累计余额）
@@ -333,7 +333,7 @@ export async function apply(ctx: Context) {
         shop: 'Points Shop',
         shop_manage: 'Points Shop Management',
     });
-    ctx.addScript('swpuShopBackfill', 'SWPU 积分商店：回填历史 AC 记录的积分', Schema.object({
+    ctx.addScript('swpuShopBackfill', 'd&f算法网积分商店：回填历史 AC 记录的积分', Schema.object({
         domainId: Schema.string().default(''),
     }), runBackfill);
     // 多 pm2 实例只跑一份（照抄 swpu-ops 守卫），错误隔离：计分失败只记日志。

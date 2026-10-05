@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SWPU OJ anonymous smoke battery. Runs ON THE SERVER by deploy/deploy.sh
+# d&f算法网 anonymous smoke battery. Runs ON THE SERVER by deploy/deploy.sh
 # after every restart. Loopback discipline: always curl --resolve (SNI-less
 # `curl -k -H Host` against 127.0.0.1 cannot complete TLS and dies with 000).
 # Anonymous surface only: no credentials in this script. Count-agnostic —
@@ -7,7 +7,7 @@
 # Exit 0 = all green, 1 = at least one check failed.
 set -uo pipefail
 
-HOST="${SMOKE_HOST:-swpuacm.xyz}"
+HOST="${SMOKE_HOST:-dfacm.website}"
 IP="${SMOKE_IP:-127.0.0.1}"
 req() { curl -sk --resolve "$HOST:443:$IP" "$@"; }
 code() { req -o /dev/null -w '%{http_code}' "$1"; }
@@ -17,7 +17,7 @@ check() { if [ "$1" -eq 0 ]; then echo "PASS $2"; else echo "FAIL $2"; fails=$((
 
 # --- pages ---
 if [ "$(code "https://$HOST/")" = "200" ]; then check 0 "GET / = 200"; else check 1 "GET / = 200"; fi
-req "https://$HOST/" | grep -aF 'swpuacm.xyz' >/dev/null; check $? "landing is the branded facade"
+req "https://$HOST/" | grep -aF 'dfacm.website' >/dev/null; check $? "landing is the branded facade"
 if [ "$(code "https://$HOST/reg")" = "200" ]; then check 0 "GET /reg = 200"; else check 1 "GET /reg = 200"; fi
 req "https://$HOST/reg" | grep -aF 'tab-reg' >/dev/null; check $? "auth page renders the branded card"
 req "https://$HOST/reg" | grep -aF '__SWPU_BOOT.oauth=[{' >/dev/null; check $? "oauth providers injected (github button)"

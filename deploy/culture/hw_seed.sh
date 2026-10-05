@@ -1,6 +1,6 @@
 #!/bin/bash
-# SWPU OJ culture seed v1 (2026-10-05)
-# Adds: discussion nodes (SWPU category) + 4 pinned posts + about page rewrite
+# d&f算法网 culture seed v1 (2026-10-05)
+# Adds: discussion nodes (d&f算法网 category) + 4 pinned posts + about page rewrite
 #       + training section titles + first weekly contest + footer links
 # Usage: bash hw_seed.sh prep   (read-only checks + login test)
 #        bash hw_seed.sh run    (full seed)
@@ -12,8 +12,8 @@ TS=$(date +%Y%m%d-%H%M%S)
 B=/root/backups/culture-seed-$TS
 URI=$(node -e "process.stdout.write(require('/root/.hydro/config.json').uri)")
 HO=/usr/local/share/.config/yarn/global/node_modules/hydrooj
-H=https://swpuacm.xyz
-R="--resolve swpuacm.xyz:443:127.0.0.1"
+H=https://dfacm.website
+R="--resolve dfacm.website:443:127.0.0.1"
 JAR=/tmp/hw_jar.txt
 BOOL=${BOOL:-true}
 
@@ -74,7 +74,7 @@ sudo_up
 echo "== 1. discussion.nodes setting =="
 curl -sk $R -b $JAR -c $JAR -o /dev/null -w "manage/setting nodes -> %{http_code}\n" \
   --data-urlencode "discussion.nodes@$S/hw_nodes.yaml" $H/manage/setting
-mongosh "$URI" --quiet --eval 'var v=db.getCollection("system").findOne({_id:"discussion.nodes"}).value; print("stored nodes has SWPU category: " + (String(v).indexOf("SWPU")>=0))'
+mongosh "$URI" --quiet --eval 'var v=db.getCollection("system").findOne({_id:"discussion.nodes"}).value; print("stored nodes has d&f算法网 category: " + (String(v).indexOf("d&f算法网")>=0))'
 
 echo "== 2. init discussion nodes (flush+re-add; posts=0 so safe) =="
 curl -sk $R -b $JAR -c $JAR -o /dev/null -w "domain/dashboard init -> %{http_code}\n" \
@@ -89,7 +89,7 @@ curl -sk $R -b $JAR -o /tmp/hw_contest_resp.txt -D /tmp/hw_contest_hdr.txt -w "c
   --data-urlencode "beginAtDate=2026-10-11" \
   --data-urlencode "beginAtTime=19:00" \
   -d "duration=3" \
-  --data-urlencode "title=海拔周赛 R0 · 新生热身专场" \
+  --data-urlencode "title=海拔周赛 R0 · 入门热身专场" \
   --data-urlencode "content@$S/hw_contest.md" \
   -d "rule=acm" \
   -d "pids=3677,3676,3712,3717,3736" \
@@ -127,7 +127,7 @@ DID_ASK=$(create_post "%E9%97%AE%E7%AD%94" "提问的智慧：怎么问，别人
 DID_ZHOUSAI=$(create_post "%E5%85%AC%E5%91%8A" "周赛怎么打：赛前 · 赛中 · 赛后" hw_post_zhousai.md "$BOOL" "")
 [ -n "$DID_ZHOUSAI" ] || fail "zhousai post failed"
 sed -i "s/__DID_CHUTI__/$DID_CHUTI/g; s/__DID_ASK__/$DID_ASK/g; s/__DID_ZHOUSAI__/$DID_ZHOUSAI/g" "$S/hw_post_xuzhi.md"
-DID_XUZHI=$(create_post "%E5%85%AC%E5%91%8A" "ACM 新生入门须知" hw_post_xuzhi.md "$BOOL" "$BOOL")
+DID_XUZHI=$(create_post "%E5%85%AC%E5%91%8A" "ACM 入门须知" hw_post_xuzhi.md "$BOOL" "$BOOL")
 [ -n "$DID_XUZHI" ] || fail "xuzhi post failed"
 
 cat > /tmp/hw_ids.env <<EOL

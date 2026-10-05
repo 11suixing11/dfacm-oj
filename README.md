@@ -1,10 +1,12 @@
-# SWPU OJ — 西南石油大学 ACM 在线训练站
+# d&f算法网 — 独立在线评测与训练平台
 
 [![CI](https://github.com/11suixing11/swpu-oj/actions/workflows/ci.yml/badge.svg)](https://github.com/11suixing11/swpu-oj/actions/workflows/ci.yml)
 
-> 基于 [Hydro OJ](https://hydro.ac) v5.0.7 的院校级定制层：品牌门面首页、一站式认证页、训练工作台 / 积分商店 / QQ 群播报、排名自动化与一键部署。
+> 基于 [Hydro OJ](https://hydro.ac) v5.0.7 的独立平台定制层：品牌门面首页、一站式认证页、训练工作台 / 积分商店 / QQ 群播报、排名自动化与一键部署。
 
-**线上实例**：[swpuacm.xyz](https://swpuacm.xyz)
+**品牌寓意**：每个人都能在算法竞赛这条路上找到属于自己的 final。
+
+**平台域名**：[dfacm.website](https://dfacm.website)（代码已切换；线上 DNS、服务器与 OAuth 配置仍需部署）
 
 ![门面首页](docs/img/01-hero.png)
 
@@ -14,7 +16,7 @@ OJ 内核使用开源的 Hydro，本仓库收录的是我们围绕它做的**全
 
 | 模块 | 说明 |
 |---|---|
-| [`landing/`](landing/) | 门面首页：单文件 HTML/CSS/JS，零框架。「向山顶，提交你的答案」——新生入门指引、滚动海拔标尺、训练路线海拔剖面图、主动点击的评测流程演示、登录态感知（SSR 同源探测 + bfcache 回滚）、白天/夜间双主题、品牌图标与 OG 图 |
+| [`landing/`](landing/) | 门面首页：单文件 HTML/CSS/JS，零框架。「找到属于自己的 final」——入门指引、滚动海拔标尺、训练路线海拔剖面图、主动点击的评测流程演示、登录态感知（SSR 同源探测 + bfcache 回滚）、白天/夜间双主题、品牌图标与 OG 图 |
 | [`plugin-swpu-regcode/`](plugin-swpu-regcode/) | 一站式认证页 `/reg`：注册账号 / 验证码免密登录 / 密码登录三个标签页 + GitHub OAuth 入口，全站唯一登录界面（裸 `/login`、`/register` 被 Caddy 原地重写为品牌页，站内登录弹窗替换为内嵌 overlay，`return` 参数登录后跳回原页）。验证码 `crypto.randomInt` 生成、盐化摘要存储、`findOneAndDelete` 原子消费、purpose 与收件地址绑定、真实 IP 限速、5 分钟 TTL |
 | [`plugin-swpu-ops/`](plugin-swpu-ops/) | 管理员报表与排名自动化：训练周报 / 判题健康摘要两个只读脚本；RP 准实时重算（判题结束 30 秒防抖，不再等到凌晨）+ 每小时全域清扫 + 评测服务号状态自洁（防幽灵排名）+ 成员自动加域与每小时对账（任何注册路径漏网 ≤1 小时自愈上榜）。无公共 HTTP 路由 |
 | [`plugin-swpu-train/`](plugin-swpu-train/) | 个人训练工作台 `/workbench` + 错题本 `/mistakes`：当前路线与下一题、本周进度、最近未通过；判题结束自动收集未 AC 题，记录错误原因、复盘笔记与补题状态 |
@@ -86,7 +88,7 @@ bash deploy/deploy.sh --stage-only   # 只上传并对账，不动线上任何�
 
 ## 安全与验证
 
-本地查看前端：在仓库根目录运行 `node scripts/preview.cjs`，打开 `http://127.0.0.1:4173/`。注册页为 `/reg`（`?tab=login` 验证码登录、`?tab=pwd` 密码登录）；预览不连接后端，不发送邮件或创建账户。改动与部署说明见 [新生前端体验优化](docs/frontend-update.md)。
+本地查看前端：在仓库根目录运行 `node scripts/preview.cjs`，打开 `http://127.0.0.1:4173/`。注册页为 `/reg`（`?tab=login` 验证码登录、`?tab=pwd` 密码登录）；预览不连接后端，不发送邮件或创建账户。改动与部署说明见 [d&f算法网前端体验优化](docs/frontend-update.md)。
 
 - 验证码用 `crypto.randomInt` 生成、绑定 purpose（注册/登录互斥）、失败次数 MongoDB 原子自增、显式检查 TTL；登录码只发往账号已绑定的邮箱。
 - 所有改状态的 POST（注册完成、验证码登录、错题本、商店兑换与管理页定价）都携带会话级 CSRF token（`timingSafeEqual` 比较）；发码接口刻意豁免——首次访客尚无可保护的会话。
@@ -103,4 +105,4 @@ bash deploy/deploy.sh --stage-only   # 只上传并对账，不动线上任何�
 - 字体：[ZCOOL QingKe HuangYou](https://fonts.google.com/specimen/ZCOOL+QingKeHuangYou)、[JetBrains Mono](https://www.jetbrains.com/lp/mono/)（均为 OFL 许可，子集化方法见 `landing/FONTS-LICENSE.md`）
 - 本仓库代码以 [MIT](LICENSE) 许可发布，供院校社团学习交流
 
-> 西南石油大学 ACM 集训队 · 山高处见 — See you at the summit
+> d&f算法网社区 · 每个人都能在算法竞赛这条路上找到属于自己的 final。

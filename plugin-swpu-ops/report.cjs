@@ -165,7 +165,7 @@ function weeklyCsv(report) {
 function weeklyMarkdown(report, options) {
   const t = report.totals;
   const lines = [
-    '# SWPU 训练周报', '',
+    '# d&f算法网训练周报', '',
     `域：${md(options.domainId)}；小组：${md(options.group || '全部有提交的用户')}。`,
     `提交时间：${options.since.toISOString()} ≤ t < ${options.until.toISOString()}；活跃天数按 ${options.timeZone}。`, '',
     `统计 ${t.users} 人，活跃 ${t.activeUsers} 人，提交 ${t.submissions} 次，新增 AC ${t.newAcProblems} 个「用户 × 题目」组合。`, '',
@@ -180,7 +180,7 @@ function weeklyMarkdown(report, options) {
 }
 function healthMarkdown(data, options) {
   const lines = [
-    '# SWPU 判题健康摘要', '', `域：${md(options.domainId)}；快照：${data.generatedAt}。`,
+    '# d&f算法网判题健康摘要', '', `域：${md(options.domainId)}；快照：${data.generatedAt}。`,
     `近期提交窗口：[${options.since.toISOString()}, ${options.until.toISOString()})。`, '',
     '## 未领取任务队列', '', '| 类型 | 数量 | 最早任务创建时间 |', '| --- | --- | --- |',
     ...data.queue.map((row) => `| ${md(row.type)} | ${row.count} | ${row.oldestAt || '-'} |`), '',

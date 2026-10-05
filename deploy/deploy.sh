@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# SWPU OJ deployment orchestrator. Run from the LOCAL checkout (Git Bash on
+# d&f算法网 deployment orchestrator. Run from the LOCAL checkout (Git Bash on
 # Windows works) against the live server.
 #
 # Origin: the 2026-10-04 audit found the live process still serving pre-merge
@@ -54,7 +54,7 @@ REMOTE_ADDONS=/root/.hydro/addons
 REMOTE_CUSTOM=/root/.hydro/custom
 REMOTE_DEPLOY=/root/swpu-theme-deploy
 WAIT_SECONDS="${WAIT_SECONDS:-75}"
-SMOKE_HOST="${SMOKE_HOST:-swpuacm.xyz}"
+SMOKE_HOST="${SMOKE_HOST:-dfacm.website}"
 STAGE_ONLY=0
 SYNC_ONLY=0
 MANIFEST="$(mktemp)"
@@ -82,7 +82,7 @@ Environment overrides:
   SSH_STRICT_HOST_KEY_CHECKING  default accept-new
   WAIT_SECONDS readiness budget, default 75
   REMOTE_TIMEOUT per-step ssh timeout in seconds, default 180
-  SMOKE_HOST   site hostname for probes, default swpuacm.xyz
+  SMOKE_HOST   site hostname for probes, default dfacm.website
 EOF
     exit 64
 }

@@ -33,12 +33,12 @@ from astrbot.core.utils.astrbot_path import (
 
 
 class SwpuAcmBroadcast(star.Star):
-    """Broadcast new SWPU ACM AC submissions and cumulative ranking."""
+    """Broadcast new d&f算法网 AC submissions and cumulative ranking."""
 
     STATE_SCHEMA_VERSION = 1
 
     GROUP_SESSION = "qq-onebot:GroupMessage:1128735782"
-    BASE_URL = "https://swpuacm.xyz"
+    BASE_URL = "https://dfacm.website"
     # Poll the OJ's MongoDB directly through a read-only account: no web
     # scraping, no login sessions, and the public site keeps its
     # records-behind-login policy. Credentials come from mongo_uri.txt next
@@ -248,7 +248,7 @@ class SwpuAcmBroadcast(star.Star):
             schema_version = 0
         if schema_version > self.STATE_SCHEMA_VERSION:
             self.logger.warning(
-                "SWPU state schema %s is newer than supported schema %s",
+                "d&f算法网 broadcast state schema %s is newer than supported schema %s",
                 schema_version,
                 self.STATE_SCHEMA_VERSION,
             )
@@ -1001,18 +1001,18 @@ class SwpuAcmBroadcast(star.Star):
     async def initialize(self) -> None:
         try:
             await asyncio.wait_for(asyncio.to_thread(self._db_ping), timeout=8)
-            self.logger.info("SWPU ACM broadcast: OJ database connection OK")
+            self.logger.info("d&f算法网 broadcast: OJ database connection OK")
         except Exception:
             self.logger.error(
-                "SWPU ACM broadcast: OJ database unreachable — check mongo_uri.txt"
+                "d&f算法网 broadcast: OJ database unreachable — check mongo_uri.txt"
             )
         self._task = asyncio.create_task(self._worker())
         self._task.add_done_callback(
             lambda task: self.logger.warning(
-                "SWPU worker task done: %r", task.exception() or "clean"
+                "d&f算法网 worker task done: %r", task.exception() or "clean"
             )
         )
-        self.logger.info("SWPU ACM broadcast started for QQ group 1128735782")
+        self.logger.info("d&f算法网 broadcast started for QQ group 1128735782")
 
     async def terminate(self) -> None:
         if self._task:
@@ -1041,18 +1041,18 @@ class SwpuAcmBroadcast(star.Star):
                         await asyncio.wait_for(self._poll_once(), timeout=120)
                     except asyncio.TimeoutError:
                         self.logger.error(
-                            "SWPU poll timed out after 120s; skipping cycle"
+                            "d&f算法网 poll timed out after 120s; skipping cycle"
                         )
                 except asyncio.CancelledError:
                     raise
                 except Exception:
-                    self.logger.exception("SWPU OJ polling failed")
+                    self.logger.exception("d&f算法网 polling failed")
                 await asyncio.sleep(self.POLL_SECONDS)
         except asyncio.CancelledError:
-            self.logger.warning("SWPU worker CANCELLED")
+            self.logger.warning("d&f算法网 worker CANCELLED")
             raise
         finally:
-            self.logger.warning("SWPU worker exited (finally)")
+            self.logger.warning("d&f算法网 worker exited (finally)")
 
     # ------------------------------------------------------------------
     # Direct read-only MongoDB access layer (runs inside worker threads).
@@ -1961,7 +1961,7 @@ class SwpuAcmBroadcast(star.Star):
         ranking = sorted(users.items(), key=lambda item: (-item[1], item[0]))
         lines = [
             header,
-            "按 SWPUOJ 首次通过统计：重做已通过的题不重复计数",
+            "按 d&f算法网首次通过统计：重做已通过的题不重复计数",
             "",
         ]
         lines.extend(
@@ -1992,7 +1992,7 @@ class SwpuAcmBroadcast(star.Star):
         ranking = sorted(users.items(), key=lambda item: (-item[1], item[0]))
         lines = [
             f"📊 累计 AC 排名（自 {counting_since}）",
-            "按 SWPUOJ 首次通过统计：重做已通过的题不重复计数",
+            "按 d&f算法网首次通过统计：重做已通过的题不重复计数",
             "",
         ]
         lines.extend(
@@ -2094,7 +2094,7 @@ class SwpuAcmBroadcast(star.Star):
 
         # Brand header.
         text((80, 67), "< />", 40, "#32efb3", True)
-        text((180, 56), "SWPU_ACM", 35, "#f0f3ff", True)
+        text((180, 56), "d&f算法网", 35, "#f0f3ff", True)
         text((183, 101), "ONLINE JUDGE", 18, "#8f93c7", False)
         text((665, 64), "用代码书写更好的自己", 17, "#7b7fae", False)
 
@@ -2271,7 +2271,7 @@ class SwpuAcmBroadcast(star.Star):
         draw.line((274, 592, 274, 628), fill="#555b88", width=2)
         link = str(item.get("problem_url", "")).replace("https://", "")
         text((308, 603), fit(link, self._font(22), 550), 22, "#9b8bff", False)
-        text((82, 625), "当天自动播报  ·  SWPU Online Judge", 16, "#777da9", False)
+        text((82, 625), "当天自动播报  ·  d&f算法网", 16, "#777da9", False)
         text((960, 603), "CODE  /  THINK  /  SOLVE", 14, "#555b82", True)
         text((1008, 625), "A BRIGHTER YOU", 14, "#555b82", True)
 
@@ -2351,7 +2351,7 @@ class SwpuAcmBroadcast(star.Star):
 
         # Brand header (shifted right to dodge the pastel sparkle in the art).
         text((170, 62), "</>", 36, "#7d6bf5", True)
-        text((240, 52), "SWPU_ACM", 30, "#3d4265", True)
+        text((240, 52), "d&f算法网", 30, "#3d4265", True)
         text((243, 92), "ONLINE JUDGE", 15, "#8b8fb5", False)
         text((430, 62), "Write Code · Build Tomorrow!", 17, "#6f7296", False)
         draw.rounded_rectangle(
@@ -2487,7 +2487,7 @@ class SwpuAcmBroadcast(star.Star):
 
         # Footer (kept clear of the 680px canvas bottom; text ink extends
         # below the anchor, so everything sits at least 8px above the edge).
-        text((82, 608), "比赛期间自动播报  ·  SWPU Online Judge", 13, "#9a9ec6", False)
+        text((82, 608), "比赛期间自动播报  ·  d&f算法网", 13, "#9a9ec6", False)
         draw.line((70, 632, 1130, 632), fill="#c5bfe8", width=2)
         text((82, 642), "↗", 26, "#7a4dd8", True)
         text((128, 646), "查看比赛", 20, "#2f3350", True)
@@ -2558,7 +2558,7 @@ class SwpuAcmBroadcast(star.Star):
 
     @filter.command("oj题目")
     async def problem_lookup(self, event: AstrMessageEvent, problem_id: str = ""):
-        """查询 SWPUOJ 题目信息。"""
+        """查询 d&f算法网题目信息。"""
         yield event.plain_result(await self._fetch_problem(problem_id))
 
     @filter.command("oj状态")
@@ -2584,7 +2584,7 @@ class SwpuAcmBroadcast(star.Star):
         except Exception:
             db_ok = False
         yield event.plain_result(
-            f"SWPUOJ 播报正常运行\n数据源：OJ 数据库直连（{'正常' if db_ok else '异常'}）\n"
+            f"d&f算法网播报正常运行\n数据源：OJ 数据库直连（{'正常' if db_ok else '异常'}）\n"
             f"检查间隔：{self.POLL_SECONDS} 秒\n"
             f"状态缓存：{total_records} 条记录（近 48 小时）\n"
             f"累计通过：{sum(stats.values())} 题 / {len(stats)} 人（自 {counting_since}）\n"
@@ -2596,16 +2596,16 @@ class SwpuAcmBroadcast(star.Star):
     async def plugin_help(self, event: AstrMessageEvent):
         """显示 OJ 相关命令。"""
         yield event.plain_result(
-            "SWPU_ACM 命令\n/oj题目 题号：查询题目\n/oj排名：发送累计 AC 排名\n/今日榜单：查看今天 AC 榜单\n/比赛排名：查看当前比赛实时排名\n/oj状态：查看播报状态\n/绑定 SWPUOJ用户名：开始账号绑定\n/绑定确认：验证个人简介中的验证码\n/解绑：解除当前 QQ 绑定\n/我的排名：查询当前排名\n/最近提交：查询最近提交\n/我的做题统计：查询累计统计\n/合并账号 小号 主号：合并同一人的多个OJ账号（管理员）\n/解除合并 小号：解除账号合并（管理员）\n/合并列表：查看账号合并关系（管理员）\n/oj帮助：显示本帮助"
+            "d&f算法网命令\n/oj题目 题号：查询题目\n/oj排名：发送累计 AC 排名\n/今日榜单：查看今天 AC 榜单\n/比赛排名：查看当前比赛实时排名\n/oj状态：查看播报状态\n/绑定 用户名：开始账号绑定\n/绑定确认：验证个人简介中的验证码\n/解绑：解除当前 QQ 绑定\n/我的排名：查询当前排名\n/最近提交：查询最近提交\n/我的做题统计：查询累计统计\n/合并账号 小号 主号：合并同一人的多个 OJ 账号（管理员）\n/解除合并 小号：解除多个 OJ 账号合并（管理员）\n/合并列表：查看账号合并关系（管理员）\n/oj帮助：显示本帮助"
         )
 
     @filter.command("指令")
     async def command_list(self, event: AstrMessageEvent):
         """Show the public command list."""
         yield event.plain_result(
-            "SWPU_ACM Bot 指令\n"
+            "d&f算法网 Bot 指令\n"
             "/指令：查看全部指令\n"
-            "/绑定 SWPUOJ用户名：绑定账号\n"
+            "/绑定 用户名：绑定账号\n"
             "/绑定确认：确认验证码\n"
             "/解绑：解除绑定\n"
             "/签到：每日签到\n"
@@ -2624,17 +2624,17 @@ class SwpuAcmBroadcast(star.Star):
     async def my_rank(self, event: AstrMessageEvent):
         bound = await self._get_bound_user(event.get_sender_id())
         if not bound:
-            yield event.plain_result("你还没有绑定 SWPUOJ 账号，请先发送 /绑定 用户名")
+            yield event.plain_result("你还没有绑定 d&f算法网账号，请先发送 /绑定 用户名")
             return
         username, _ = bound
         rank = await self._fetch_user_rank(username)
-        yield event.plain_result(f"SWPUOJ 用户：{username}\n当前排名：{rank}")
+        yield event.plain_result(f"d&f算法网用户：{username}\n当前排名：{rank}")
 
     @filter.command("最近提交")
     async def recent_submissions(self, event: AstrMessageEvent):
         bound = await self._get_bound_user(event.get_sender_id())
         if not bound:
-            yield event.plain_result("你还没有绑定 SWPUOJ 账号，请先发送 /绑定 用户名")
+            yield event.plain_result("你还没有绑定 d&f算法网账号，请先发送 /绑定 用户名")
             return
         username, user_id = bound
         records = await self._fetch_user_records(user_id)
@@ -2652,7 +2652,7 @@ class SwpuAcmBroadcast(star.Star):
     async def my_stats(self, event: AstrMessageEvent):
         bound = await self._get_bound_user(event.get_sender_id())
         if not bound:
-            yield event.plain_result("你还没有绑定 SWPUOJ 账号，请先发送 /绑定 用户名")
+            yield event.plain_result("你还没有绑定 d&f算法网账号，请先发送 /绑定 用户名")
             return
         username, user_id = bound
         try:
@@ -2670,16 +2670,16 @@ class SwpuAcmBroadcast(star.Star):
         rp = f"\nRP：{stats['rp']}" if stats["rp"] else ""
         rank = f"（第 {stats['rank']} 名）" if stats["rank"] else ""
         yield event.plain_result(
-            f"SWPUOJ 用户：{username}\n历史独立通过：{solved_count} 题{rp}{rank}"
+            f"d&f算法网用户：{username}\n历史独立通过：{solved_count} 题{rp}{rank}"
         )
 
     @filter.command("签到")
     async def daily_checkin(self, event: AstrMessageEvent):
-        """Daily check-in for bound SWPUOJ users."""
+        """Daily check-in for bound d&f算法网 users."""
         qq = event.get_sender_id()
         bound = await self._get_bound_user(qq)
         if not bound:
-            yield event.plain_result("请先绑定 SWPUOJ 账号，再使用 /签到")
+            yield event.plain_result("请先绑定 d&f算法网账号，再使用 /签到")
             return
         today = datetime.now().strftime("%Y-%m-%d")
         checkins = self._state.setdefault("checkins", {})
@@ -2706,7 +2706,7 @@ class SwpuAcmBroadcast(star.Star):
 
     @filter.regex(r"^\s*绑定(?!\W*确认)")
     async def bind_swpuoj(self, event: AstrMessageEvent):
-        """Start a SWPUOJ account ownership verification.
+        """Start a d&f算法网 account ownership verification.
 
         宽松匹配「绑定<任意分隔>用户名」：/绑定AiraKeq、/绑定：AiraKeq、
         /绑定 AiraKeq 等，只要带 / 前缀都能正确取到用户名。
@@ -2717,22 +2717,22 @@ class SwpuAcmBroadcast(star.Star):
         username = m.group(1) if m else ""
         if not username:
             yield event.plain_result(
-                "用法：/绑定 SWPUOJ用户名（“绑定”和用户名之间空格、冒号或直接连写都行），也可用数字 UID：/绑定 2358"
+                "用法：/绑定 用户名（“绑定”和用户名之间空格、冒号或直接连写都行），也可用数字 UID：/绑定 2358"
             )
             return
         qq = event.get_sender_id()
-        code = f"SWPU-BOT-{secrets.randbelow(900000) + 100000}"
+        code = f"DFACM-BOT-{secrets.randbelow(900000) + 100000}"
         matches = await self._find_user_profiles(username)
         if not matches:
             yield event.plain_result(
-                "没有找到这个 SWPUOJ 用户。请检查："
+                "没有找到这个 d&f算法网用户。请检查："
                 "①要写 OJ 上注册时的完整用户名（不是昵称或QQ号）；"
                 "②也可以用数字 UID 绑定：/绑定 2358（登录 OJ 进入个人主页，地址栏 /user/ 后面的数字）"
             )
             return
         if len(matches) > 1:
             yield event.plain_result(
-                "匹配到多个 SWPUOJ 用户，请改用 UID 绑定，例如：/绑定 2358"
+                "匹配到多个 d&f算法网用户，请改用 UID 绑定，例如：/绑定 2358"
             )
             return
         profile = matches[0]
@@ -2746,25 +2746,25 @@ class SwpuAcmBroadcast(star.Star):
         }
         self._save_state()
         yield event.plain_result(
-            f"请把验证码 {code} 临时写入 SWPUOJ 个人简介，然后发送 /绑定确认。验证码 10 分钟内有效。"
+            f"请把验证码 {code} 临时写入 d&f算法网个人简介，然后发送 /绑定确认。验证码 10 分钟内有效。"
         )
 
     @filter.regex(r"^\s*绑定\W*确认")
     async def confirm_swpuoj(self, event: AstrMessageEvent):
-        """Confirm SWPUOJ account ownership using the profile code."""
+        """Confirm d&f算法网 account ownership using the profile code."""
         if not event.is_at_or_wake_command:
             return
         qq = event.get_sender_id()
         pending = self._state.setdefault("pending_bindings", {}).get(qq)
         if not pending:
             yield event.plain_result(
-                "当前没有待确认的绑定，请先发送 /绑定 SWPUOJ用户名。"
+                "当前没有待确认的绑定，请先发送 /绑定 用户名。"
             )
             return
         if datetime.now().timestamp() > float(pending.get("expires_at", 0)):
             self._state["pending_bindings"].pop(qq, None)
             self._save_state()
-            yield event.plain_result("验证码已过期，请重新发送 /绑定 SWPUOJ用户名。")
+            yield event.plain_result("验证码已过期，请重新发送 /绑定 用户名。")
             return
         try:
             bio = await asyncio.to_thread(self._db_user_bio, str(pending["user_id"]))
@@ -2773,7 +2773,7 @@ class SwpuAcmBroadcast(star.Star):
             bio = ""
         if str(pending["code"]) not in bio:
             yield event.plain_result(
-                "还没有在 SWPUOJ 个人简介中找到验证码，请确认保存后再试。"
+                "还没有在 d&f算法网个人简介中找到验证码，请确认保存后再试。"
             )
             return
         bindings = self._state.setdefault("bindings", {})
@@ -2789,7 +2789,7 @@ class SwpuAcmBroadcast(star.Star):
 
     @filter.command("解绑")
     async def unbind_swpuoj(self, event: AstrMessageEvent):
-        """Remove the current QQ to SWPUOJ binding."""
+        """Remove the current QQ to d&f算法网 binding."""
         qq = event.get_sender_id()
         existed = self._state.setdefault("bindings", {}).pop(qq, None)
         self._state.setdefault("binding_profiles", {}).pop(qq, None)
@@ -2840,7 +2840,7 @@ class SwpuAcmBroadcast(star.Star):
         main_id = await self._resolve_account_id(main)
         if not alt_id or not main_id:
             yield event.plain_result(
-                "没有找到对应 SWPUOJ 账号（或匹配到多个），"
+                "没有找到对应 d&f算法网账号（或匹配到多个），"
                 "请改用数字 UID：OJ 个人主页地址栏 /user/ 后面的数字。"
             )
             return
@@ -2892,7 +2892,7 @@ class SwpuAcmBroadcast(star.Star):
             return
         alt_id = await self._resolve_account_id(alt)
         if not alt_id:
-            yield event.plain_result("没有找到对应 SWPUOJ 账号，请改用数字 UID 重试。")
+            yield event.plain_result("没有找到对应 d&f算法网账号，请改用数字 UID 重试。")
             return
         row = self._db.execute(
             "SELECT main_id FROM user_merges WHERE alt_id = ?", (alt_id,)

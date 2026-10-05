@@ -33,6 +33,16 @@ LANG=zh . <(curl https://hydro.ac/setup.sh)
 - 判题机配置 `~/.hydro/judge.yaml`，`pm2 start hydrojudge`。
 - 建议把本仓库克隆到 `/root/swpu-oj`，后续脚本都从这里运行。当前这台机器以 `/root/swpu-theme-deploy/` 存放可重放资产（`deploy/`、`theme/`），文档里的 `/root/swpu-oj` 路径在此机器上对应它。
 
+新站上线前，把 Hydro 的公开身份切换到独立品牌（不要继续使用旧学校站点配置）：
+
+```yaml
+server:
+  name: 'd&f算法网'
+  url: https://dfacm.website/
+```
+
+`server.url` 必须保留结尾 `/`，它会被找回密码、OAuth 和站内绝对链接复用。保存系统配置后重启 `hydrooj`，再按下面的 Caddy、DNS、GitHub OAuth 和 Cloudflare 步骤切换域名。
+
 ## 2. 门面资源（UI 重建免疫）
 
 Hydro 重装或升级会重建 `/root/.hydro/static/`。门面资源放在独立目录，由 Caddy 优先服务：
@@ -257,7 +267,7 @@ curl -sSI https://<域名>/ | grep -Ei 'strict-transport|x-content-type|referrer
 - [ ] 两步验证 / 通行密钥账号能通过常显原生入口完成登录；iframe 内的原生入口、OAuth、找回密码都在顶层打开。
 - [ ] 登录后 `/workbench` 与 `/mistakes` 返回 200 且出现在导航中；未登录访问被重定向到登录页。
 - [ ] 提交一份固定错误输出（WA）判题结束后，该题出现在 `/mistakes`；补题 AC 后自动标记已补题。
-- [ ] 找回密码邮件里的链接是绝对地址（`server.url` 必须是完整的 `https://域名/`，当前为 `https://swpuacm.xyz/`，**保留结尾 `/`**）。
+- [ ] 找回密码邮件里的链接是绝对地址（`server.url` 必须是完整的 `https://域名/`，新站应为 `https://dfacm.website/`，**保留结尾 `/`**）。
 - [ ] 注册接口日志里的 `request.ip` 不再是 127.0.0.1（真实 IP 链路见第 6 节）。
 
 ## 11. 第三方登录（GitHub）
@@ -265,8 +275,8 @@ curl -sSI https://<域名>/ | grep -Ei 'strict-transport|x-content-type|referrer
 官方 `@hydrooj/login-with-github` 已安装。启用步骤：
 
 1. 用 GitHub 账号在 https://github.com/settings/developers 新建 OAuth App（New OAuth App）：
-   - Homepage URL 填 `https://swpuacm.xyz`
-   - Authorization callback URL 填 `https://swpuacm.xyz/oauth/github/callback`
+   - Homepage URL 填 `https://dfacm.website`
+   - Authorization callback URL 填 `https://dfacm.website/oauth/github/callback`
    - 这里的 GitHub callback **末尾不要加 `/`**；它与 Hydro 配置里的 `server.url` 不同，后者必须保留结尾 `/`。GitHub 会严格匹配 callback，保存后点击绿色的 `Update application`。
 2. 把得到的 Client ID 和 Client Secret 写入系统设置（`/manage/config`）：
    ```yaml
@@ -276,7 +286,7 @@ curl -sSI https://<域名>/ | grep -Ei 'strict-transport|x-content-type|referrer
    ```
    （或 `db.system` 的 `config` 文档追加同名键后 `pm2 restart hydrooj`。）
 3. 重启后品牌 `/reg` 页与原地登录弹层会自动出现「使用 GitHub 登录」按钮（按钮由服务端 `loginMethods` 注入，未配置时自动隐藏）。
-4. 已于 2026-10-03 配置完成并验证：按钮出现、`/oauth/github/login` 302 到 GitHub 授权页。凭据只存服务器 `db.system` 的 `config` 文档，**不得写入本仓库**（secret-scan 也会拦截）。
+4. 原站于 2026-10-03 配置完成并验证：按钮出现、`/oauth/github/login` 302 到 GitHub 授权页。新域名上线后需重新验证授权与回调。凭据只存服务器 `db.system` 的 `config` 文档，**不得写入本仓库**（secret-scan 也会拦截）。
 
 ## 12. 角色分组
 
@@ -321,17 +331,17 @@ curl -sSI https://<域名>/home.html | grep -i cache-control
 - DNS 记录里的 HTTPS/SVCB 类型不用手动维护：CF 会为橙云主机自动发布自己的 HTTPS 记录（alpn h3,h2）。
 - 免费 plan 上传体上限 100MB：给题目传超大测试数据若被 413，临时把 A 记录切灰云或直接走 SSH 上传。
 
-### 变更步骤（2026-10-04 执行顺序）
+### 新域名切换步骤（沿用 2026-10-04 的原站流程）
 
 1. 源站先上第 6 节的 Caddy 配置并 reload（直连行为等价，可先于 NS 迁移执行）。
-2. CF 添加站点 `swpuacm.xyz`（Free plan），核对自动导入的 `A @`/`A www` 与源 IP 一致，全部开橙云。
+2. CF 添加站点 `dfacm.website`（Free plan），核对自动导入的 `A @`/`A www` 与源 IP 一致，全部开橙云。
 3. 阿里云域名控制台把 DNS 服务器改为 CF 分配的两个 NS（站点未启用 DNSSEC，无需预处理）。
 4. CF 「Check nameservers now」等待激活；旧 zone TTL 600s，一般 1 小时内。
 5. 激活后按 Dashboard 检查单逐项配置。
 
 ### 验证
 
-- `curl -sI https://swpuacm.xyz/ | grep -iE 'server|cf-ray'` → `server: cloudflare`。
+- `curl -sI https://dfacm.website/ | grep -iE 'server|cf-ray'` → `server: cloudflare`。
 - 服务器 `tail -f /data/access.log`：`remote_ip` 变为 CF 边缘段 IP，`client_ip` 保持访客 IP。
 - `bash deploy/smoke.sh` 仍全部通过（注意它默认 `SMOKE_IP=127.0.0.1`，永远直测源站、**绕过 CF**——它验证回源链路，不能证明 CF 生效）。
 - 门面、`/p`、`/login`、提交一次代码看评测状态推送（websocket）。

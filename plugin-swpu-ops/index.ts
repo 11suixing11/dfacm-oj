@@ -18,11 +18,11 @@ export async function apply(ctx: Context) {
         until: Schema.string().default(''),
         timeZone: Schema.union(['Asia/Shanghai', 'UTC']).default('Asia/Shanghai'),
     };
-    ctx.addScript('swpuWeeklyReport', 'SWPU 训练周报：导出 CSV 与 Markdown', Schema.object({
+    ctx.addScript('swpuWeeklyReport', 'd&f算法网训练周报：导出 CSV 与 Markdown', Schema.object({
         ...windowFields,
         group: Schema.string().default(''),
     }), ops.weeklyReport);
-    ctx.addScript('swpuHealthSummary', 'SWPU 判题健康摘要（只读）', Schema.object({
+    ctx.addScript('swpuHealthSummary', 'd&f算法网判题健康摘要（只读）', Schema.object({
         ...windowFields,
         staleMinutes: Schema.number().default(10),
     }), ops.healthSummary);
@@ -50,7 +50,7 @@ export async function apply(ctx: Context) {
     }
     const sanitize = createSanitize(statusColl, serviceUids, { dryRun });
     const manualSweep = createRpSweep({ sanitize, reconcile });
-    ctx.addScript('swpuRpSweep', 'SWPU RP 立即全域重算（清服务号残留 + 补齐域 join + 全域重算）', Schema.object({}),
+    ctx.addScript('swpuRpSweep', 'd&f算法网 RP 立即全域重算（清服务号残留 + 补齐域 join + 全域重算）', Schema.object({}),
         async () => ({ recalculated: await manualSweep.runOnce('manual'), failures: [...manualSweep.failures] }));
     // The v1.12.0 auto-join only covers /reg/complete. GitHub (and any OAuth)
     // first logins funnel into Hydro core's UserRegisterWithCodeHandler, which

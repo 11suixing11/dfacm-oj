@@ -1,4 +1,4 @@
-/* swpu-regcode — 数字验证码注册/登录（SWPU ACM 定制插件）
+/* swpu-regcode — 数字验证码注册/登录（d&f算法网定制插件；目录名保留 swpu 以兼容现网）
  * GET  /reg            注册+验证码登录双标签页（读取同目录 reg.html）
  * POST /reg/code       {mail, purpose}  发送 6 位验证码（purpose: reg|login）
  * POST /reg/complete   {mail, code, uname, password}   注册并登录
@@ -141,11 +141,11 @@ async function authAudit(handler: Handler, type: string, uid: number) {
 
 function mailHtml(title: string, code: string, note: string) {
     return `<div style="font-family:system-ui,-apple-system,'PingFang SC','Microsoft YaHei',sans-serif;max-width:520px;margin:0 auto;padding:32px 24px;background:#0a1322;color:#e8edf5;border-radius:16px">
-<div style="font-size:12px;letter-spacing:4px;color:#c9a227;margin-bottom:12px">SWPU ACM · TRAINING GROUND</div>
+<div style="font-size:12px;letter-spacing:4px;color:#c9a227;margin-bottom:12px">d&amp;f算法网 · ONLINE JUDGE</div>
 <h2 style="font-size:20px;margin:0 0 18px;color:#e8edf5">${title}</h2>
 <div style="font-size:38px;font-weight:700;letter-spacing:12px;color:#e9c455;font-family:Consolas,monospace;margin:18px 0">${code}</div>
 <p style="color:#a7b4c7;font-size:14px;margin:6px 0">${note}</p>
-<p style="color:#66748c;font-size:12px;margin-top:24px">向山顶，提交你的答案 —— swpuacm.xyz</p>
+<p style="color:#66748c;font-size:12px;margin-top:24px">每个人都能在算法竞赛这条路上找到属于自己的 final。 —— dfacm.website</p>
 </div>`;
 }
 
@@ -220,11 +220,11 @@ class RegCodeHandler extends Handler {
         const { code } = issued;
         try {
             if (mode === 'reg') {
-                await sendMail(recipient, '【SWPU OJ】注册验证码',
+                await sendMail(recipient, '【d&f算法网】注册验证码',
                     `您的验证码是 ${code}，5 分钟内有效。如非本人操作请忽略本邮件。`,
                     mailHtml('你的注册验证码', code, '验证码 5 分钟内有效。如非本人操作，请忽略本邮件。'));
             } else {
-                await sendMail(recipient, '【SWPU OJ】登录验证码',
+                await sendMail(recipient, '【d&f算法网】登录验证码',
                     `您的登录验证码是 ${code}，5 分钟内有效。如非本人操作请忽略本邮件并建议修改密码。`,
                     mailHtml('你的登录验证码', code, '验证码 5 分钟内有效。如非本人操作，请忽略本邮件并建议尽快修改密码。'));
             }

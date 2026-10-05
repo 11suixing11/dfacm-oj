@@ -118,9 +118,9 @@ class Handler {
                 return user(50, { mail, uname })._id;
             },
         },
-        async sendMail(to, subject, text) {
+        async sendMail(to, subject, text, html) {
             if (state.sendMailError) throw state.sendMailError;
-            mails.push({ to, subject, code: text.match(/\b\d{6}\b/)[0] });
+            mails.push({ to, subject, text, html, code: text.match(/\b\d{6}\b/)[0] });
         },
     };
     const loaded = new Module(pluginPath, module);
@@ -166,6 +166,27 @@ test('registration page uses Hydro addHeader to disable caching', async () => {
     const f = await fixture(); const h = f.handler('/reg'); await h.get();
     assert.equal(h.response.headers['Cache-Control'], 'no-store');
     assert.match(h.response.type, /text\/html/);
+});
+
+test('registration page and verification mail carry the d&f identity and final meaning', async () => {
+    const f = await fixture();
+    const page = f.handler('/reg'); await page.get();
+    const body = String(page.response.body);
+    assert.match(body, /<title>注册 \/ 登录 · d&amp;f算法网<\/title>/);
+    assert.match(body, /欢迎来到 d&amp;f算法网。每个人都能在算法竞赛这条路上找到属于自己的 final。/);
+    assert.doesNotMatch(body, /DFACM OJ|SWPU ACM|西南石油大学|swpuacm\.xyz/);
+
+    await f.issue('new@example.com', 'reg');
+    assert.equal(f.mails[0].subject, '【d&f算法网】注册验证码');
+    assert.match(f.mails[0].html, /d&amp;f算法网 · ONLINE JUDGE/);
+    assert.match(f.mails[0].html, /每个人都能在算法竞赛这条路上找到属于自己的 final/);
+    assert.doesNotMatch(f.mails[0].html, /DFACM OJ|SWPU ACM|西南石油大学|swpuacm\.xyz/);
+
+    const login = await fixture(); login.user();
+    await login.issue('a.b@school.example', 'login');
+    assert.equal(login.mails[0].subject, '【d&f算法网】登录验证码');
+    assert.match(login.mails[0].html, /d&amp;f算法网 · ONLINE JUDGE/);
+    assert.match(login.mails[0].html, /每个人都能在算法竞赛这条路上找到属于自己的 final/);
 });
 
 test('registration page boots the initial tab from merged query args', async () => {

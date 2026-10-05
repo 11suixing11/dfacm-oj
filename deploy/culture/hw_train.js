@@ -1,4 +1,4 @@
-// SWPU OJ training plan: mountain-flavored section titles + senior-tone descriptions
+// d&f算法网 training plan: mountain-flavored section titles + community-tone descriptions
 // Idempotent: safe to re-run (titles/content are plain $set).
 const ybtId = ObjectId('6abf5251aaa235606eedfb84');
 const lqId = ObjectId('6abf552caaa235606eedfbee');
@@ -18,7 +18,7 @@ const lqTitles = {
     3: '第3关 冲顶路段 · 算法提高（113题）',
     4: '第4关 峰顶实录 · 历届真题（34题）',
 };
-const ybtContent = '从山脚到雪线的 8 段路线，共 396 题，全部来自《信息学奥赛一本通》基础篇：从 Hello,World! 一路刷到动态规划与数据结构，一章一章往上爬。每题配完整测试数据与标程题解——卡住了就翻题解，翻完合上自己再写一遍。建议节奏：每天 5~10 题，别攒到周末爆肝。入门先读讨论区置顶《ACM 新生入门须知》。';
+const ybtContent = '从山脚到雪线的 8 段路线，共 396 题，全部来自《信息学奥赛一本通》基础篇：从 Hello,World! 一路刷到动态规划与数据结构，一章一章往上爬。每题配完整测试数据与标程题解——卡住了就翻题解，翻完合上自己再写一遍。建议节奏：每天 5~10 题，别攒到周末爆肝。入门先读讨论区置顶《ACM 入门须知》。';
 const lqContent = '备赛蓝桥杯的正式路线：基础训练 15 题热身 → 算法训练 92 题打地基 → 算法提高 113 题上强度 → 历届真题 34 题实战演练。四关按顺序解锁，别跳关（笑）。全部题目带完整测试数据，提交即评测——省赛前把三、四关过完，心里就有底了。';
 
 function upd(id, titles, content) {

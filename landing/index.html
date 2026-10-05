@@ -3,23 +3,23 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>SWPU ACM · 向山顶，提交你的答案</title>
-<meta name="description" content="西南石油大学 ACM 集训队在线训练场：4,200+ 道精选题目、全天候自动评测、逐章解锁的成长路线。从第一行 C++ 开始，走到赛场去。">
+<title>d&amp;f算法网 · 向山顶，提交你的答案</title>
+<meta name="description" content="d&amp;f算法网在线评测平台：4,200+ 道精选题目、全天候自动评测、逐章解锁的成长路线。从第一行 C++ 开始，走到赛场去。每个人都能在算法竞赛这条路上找到属于自己的 final。">
 <meta name="theme-color" content="#f4f7fb" id="meta-theme">
-<link rel="canonical" href="https://swpuacm.xyz/">
-<meta property="og:site_name" content="SWPU ACM">
+<link rel="canonical" href="https://dfacm.website/">
+<meta property="og:site_name" content="d&amp;f算法网">
 <meta property="og:locale" content="zh_CN">
-<meta property="og:title" content="SWPU ACM · 向山顶，提交你的答案">
-<meta property="og:description" content="西南石油大学 ACM 集训队在线训练场 — 4,295 道精选题目 · 全天候评测 · 逐章解锁训练路线。">
-<meta property="og:url" content="https://swpuacm.xyz/">
+<meta property="og:title" content="d&amp;f算法网 · 向山顶，提交你的答案">
+<meta property="og:description" content="d&amp;f算法网在线评测平台 — 4,295 道精选题目 · 全天候评测 · 逐章解锁训练路线。每个人都能在算法竞赛这条路上找到属于自己的 final。">
+<meta property="og:url" content="https://dfacm.website/">
 <meta property="og:type" content="website">
-<meta property="og:image" content="https://swpuacm.xyz/og-cover.png">
+<meta property="og:image" content="https://dfacm.website/og-cover.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="SWPU ACM · 向山顶，提交你的答案">
-<meta name="twitter:description" content="西南石油大学 ACM 集训队在线训练场 · 4,295 道精选题目 · 全天候评测 · 逐章解锁训练路线。">
-<meta name="twitter:image" content="https://swpuacm.xyz/og-cover.png">
+<meta name="twitter:title" content="d&amp;f算法网 · 向山顶，提交你的答案">
+<meta name="twitter:description" content="d&amp;f算法网在线评测平台 · 4,295 道精选题目 · 全天候评测 · 逐章解锁训练路线。每个人都能在算法竞赛这条路上找到属于自己的 final。">
+<meta name="twitter:image" content="https://dfacm.website/og-cover.png">
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
 <link rel="icon" type="image/png" href="/favicon.png">
@@ -29,7 +29,7 @@
 <script>/* 主题记忆：夜间爱好者不闪白 */try{if(localStorage.getItem('swpu-theme')==='dark')document.documentElement.classList.add('dark')}catch(e){}</script>
 <style>
 /* ============================================================
-   SWPU ACM — Training Ground
+   d&f算法网 — Online Judge
    原创设计 · 单文件 · 无框架
    ============================================================ */
 @font-face{
@@ -50,7 +50,7 @@
   --line-strong:rgba(15,34,64,.20);
   --txt:#1a2940;
   --txt-2:#44577a;
-  --txt-3:#5f7396;
+  --txt-3:#586d90;
   --blue:#2a5caa;           /* 品牌蓝 */
   --blue-hi:#2a5caa;
   --gold:#b8901f;           /* 队徽金（浅底加深保对比） */
@@ -143,7 +143,7 @@ html.booted #rail{opacity:1}
 .brand{display:flex;align-items:center;gap:12px;flex-shrink:0}
 .brand svg{width:34px;height:34px;flex-shrink:0}
 .brand .bt{line-height:1.15}
-.brand .bt b{display:block;font-family:var(--font-d);font-weight:400;font-size:17px;letter-spacing:.08em}
+.brand .bt b{display:block;font-family:var(--font-d);font-weight:400;font-size:17px;letter-spacing:0}
 .brand .bt span{display:block;font-family:var(--font-m);font-size:11px;letter-spacing:.14em;color:var(--txt-3)}
 #nav .links{display:flex;gap:6px;margin-left:auto}
 #nav .links a{position:relative;padding:9px 15px;font-size:14.5px;color:var(--txt-2);border-radius:10px;transition:color .3s,background .3s}
@@ -160,7 +160,7 @@ html.booted #rail{opacity:1}
 #burger[aria-expanded="true"] i:nth-child(1){transform:translateY(6px) rotate(45deg)}
 #burger[aria-expanded="true"] i:nth-child(2){opacity:0}
 #burger[aria-expanded="true"] i:nth-child(3){transform:translateY(-6px) rotate(-45deg)}
-#mmenu{position:fixed;inset:70px 0 0 0;z-index:90;background:var(--mmenu-bg);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);display:flex;flex-direction:column;justify-content:center;padding:0 8vw;gap:4px;opacity:0;visibility:hidden;transition:opacity .4s ease,visibility .4s}
+#mmenu{position:fixed;inset:70px 0 0 0;z-index:90;background:var(--mmenu-bg);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);display:flex;flex-direction:column;justify-content:flex-start;overflow-y:auto;overscroll-behavior:contain;padding:clamp(24px,8vh,72px) 8vw 40px;gap:4px;opacity:0;visibility:hidden;transition:opacity .4s ease,visibility .4s}
 #mmenu.open{opacity:1;visibility:visible}
 #mmenu a{font-family:var(--font-d);font-size:clamp(26px,7vw,34px);padding:10px 0;color:var(--txt);display:flex;align-items:baseline;gap:14px;border-bottom:1px solid var(--line);transform:translateY(14px);opacity:0;transition:transform .5s var(--ease),opacity .5s}
 #mmenu.open a{transform:none;opacity:1}
@@ -201,9 +201,11 @@ html.booted .msum{animation:summit 2.2s var(--ease) .9s forwards}
 @keyframes summit{from{stroke-dashoffset:520}to{stroke-dashoffset:0}}
 #hero .inner{position:relative;z-index:2;flex:1;display:flex;flex-direction:column;justify-content:center;padding-top:120px;padding-bottom:150px}
 .hero-grid{display:grid;grid-template-columns:minmax(0,7fr) minmax(0,5fr);gap:clamp(36px,5vw,72px);align-items:center}
-h1{font-family:var(--font-d);font-weight:400;font-size:clamp(42px,6.4vw,84px);line-height:1.16;letter-spacing:.015em}
+h1{font-family:var(--font-d);font-weight:400;font-size:72px;line-height:1.16;letter-spacing:0}
 h1 .sum{color:var(--gold-hi);position:relative;white-space:nowrap}
 h1 .sum svg{position:absolute;top:-.28em;right:-.62em;width:.5em;height:.5em;color:var(--gold-hi);opacity:.9}
+.hero-tagline{margin-top:12px;font-family:var(--font-b);font-size:24px;line-height:1.5;letter-spacing:0;color:var(--txt-2)}
+.hero-tagline .sum{color:var(--gold-hi);font-family:var(--font-m);letter-spacing:0}
 .hero-lead{max-width:34em;margin-top:26px;color:var(--txt-2);font-size:clamp(15px,1.35vw,17.5px)}
 .hero-lead b{color:var(--txt);font-weight:600}
 .hero-cta{display:flex;flex-wrap:wrap;gap:16px;margin-top:38px}
@@ -328,17 +330,17 @@ section{position:relative}
 #go .hitokoto{margin-top:64px;font-size:14.5px;color:var(--txt-3)}
 #go .hitokoto p{transition:opacity .6s}
 #go .hitokoto .src{margin-top:6px;font-family:var(--font-b);font-size:12px;letter-spacing:.06em;color:var(--txt-3)}
-/* 加群卡：二维码 + 群信息（手机端整卡可点，桌面扫码） */
-#go .join{margin-top:54px;display:inline-flex;align-items:center;gap:24px;padding:18px 28px 18px 18px;border:1px solid var(--line);border-radius:var(--rad);background:var(--panel);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);box-shadow:0 16px 44px rgba(15,34,64,.08)}
-#go .join-qr{display:block;width:126px;height:126px;flex-shrink:0;background:#fff;border:1px solid var(--line);border-radius:14px;padding:6px;transition:transform .35s var(--ease),box-shadow .35s var(--ease)}
-#go .join-qr:hover{transform:translateY(-2px);box-shadow:0 12px 30px rgba(42,92,170,.30)}
-#go .join-qr img{width:100%;height:100%;display:block;border-radius:9px}
-#go .join-txt{text-align:left}
-#go .join-txt h3{font-family:var(--font-d);font-weight:400;font-size:22px;letter-spacing:.03em}
-#go .join-txt>p{margin-top:5px;font-size:13.5px;color:var(--txt-2)}
-#go .join-num{display:block;margin-top:12px;font-family:var(--font-m);font-size:13px;letter-spacing:.1em;color:var(--txt-3)}
-#go .join-num b{color:var(--gold-hi);font-weight:600}
-#go .join-hint{display:block;margin-top:2px;font-size:12px;color:var(--txt-3)}
+/* 加群卡：首屏直接展示二维码与群信息 */
+#hero .join{margin-top:26px;display:flex;align-items:center;gap:16px;width:min(100%,480px);padding:12px 18px 12px 12px;border:1px solid var(--line);border-radius:var(--rad);background:var(--panel);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);box-shadow:0 16px 44px rgba(15,34,64,.08)}
+#hero .join-qr{display:block;width:112px;height:112px;flex-shrink:0;background:#fff;border:1px solid var(--line);border-radius:14px;padding:6px;transition:transform .35s var(--ease),box-shadow .35s var(--ease)}
+#hero .join-qr:hover{transform:translateY(-2px);box-shadow:0 12px 30px rgba(42,92,170,.30)}
+#hero .join-qr img{width:100%;height:100%;display:block;border-radius:9px}
+#hero .join-txt{text-align:left;min-width:0}
+#hero .join-txt h3{font-family:var(--font-d);font-weight:400;font-size:22px;letter-spacing:.03em}
+#hero .join-txt>p{margin-top:5px;font-size:13.5px;line-height:1.6;color:var(--txt-2)}
+#hero .join-num{display:block;margin-top:10px;font-family:var(--font-m);font-size:13px;letter-spacing:.1em;color:var(--txt-3)}
+#hero .join-num b{color:var(--gold-hi);font-weight:600}
+#hero .join-hint{display:block;margin-top:2px;font-size:12px;color:var(--txt-3)}
 
 /* ---------- 页脚 ---------- */
 footer{border-top:1px solid var(--line);background:var(--deep);padding:64px 0 40px}
@@ -360,7 +362,7 @@ footer{border-top:1px solid var(--line);background:var(--deep);padding:64px 0 40
 
 /* 小屏细节 */
 @media(max-width:640px){
-  h1{font-size:clamp(38px,11.4vw,52px)}
+  h1{font-size:48px}
   .sec-head h2{font-size:clamp(27px,7.4vw,36px)}
   .term pre{font-size:11.4px;min-height:210px}
   #hero .inner{padding-top:104px}
@@ -375,28 +377,28 @@ footer{border-top:1px solid var(--line);background:var(--deep);padding:64px 0 40
 html.dark{color-scheme:dark}
 html{scroll-padding-top:90px}
 #hero{min-height:auto}
-#hero .inner{width:100%;padding-top:144px;padding-bottom:56px}
+#hero .inner{width:100%;padding-top:116px;padding-bottom:40px}
 .hero-grid{grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:56px}
-h1{font-size:clamp(42px,5.5vw,72px)}
+h1{font-size:72px}
 .hero-lead{max-width:34em;font-size:16px;line-height:1.9}
 .hero-cta{margin-top:28px;gap:12px}
 .hero-help{font-size:13px;color:var(--txt-3);margin-top:20px;display:flex;flex-wrap:wrap;gap:6px 16px}
 .hero-help a{color:var(--txt-2);text-decoration:underline;text-underline-offset:4px}
 .hero-help a:hover{color:var(--gold-hi)}
-.stats{margin-top:52px;padding-bottom:0}
+.stats{margin-top:36px;padding-bottom:0}
 .stats .cell{padding:24px 24px 0}
 .stats .lab{font-family:var(--font-b);font-size:12px;letter-spacing:.06em}
 .btn{min-height:48px;justify-content:center;border-radius:12px}
 .btn-p{background:var(--blue);box-shadow:none}
 .btn-p:hover{background:#3568b3;box-shadow:none}
-.term{border-radius:16px;background:#0d182a;box-shadow:none;backdrop-filter:none;--line:rgba(198,216,240,.10);--line-strong:rgba(198,216,240,.18);--txt-2:#a7b4c7;--txt-3:#7d90ac}
+.term{border-radius:16px;background:#0d182a;box-shadow:none;backdrop-filter:none;--line:rgba(198,216,240,.10);--line-strong:rgba(198,216,240,.18);--txt-2:#a7b4c7;--txt-3:#7d90ac;--term-text:#e8edf5}
 .term .bar .live{font-family:var(--font-b);font-size:12px;letter-spacing:0;white-space:nowrap}
 .term .bar .tt{font-size:11px;letter-spacing:0}
 .term pre{padding:22px;font-size:13px;white-space:pre;word-break:normal;overflow:auto;min-height:234px}
 .term .stat{padding:14px 18px;gap:8px}
 .term .stat .msg{font-family:var(--font-b);font-size:12px;letter-spacing:0}
-.judge-replay{width:100%;min-height:44px;background:#13223a;border:0;border-top:1px solid var(--line);color:var(--txt-2);font:inherit;font-size:13px;cursor:pointer}
-.judge-replay:hover{background:#1b2d48;color:var(--txt)}
+.judge-replay{width:100%;min-height:44px;background:#13223a;border:0;border-top:1px solid var(--line);color:var(--term-text);font:inherit;font-size:13px;cursor:pointer}
+.judge-replay:hover{background:#1b2d48;color:var(--term-text)}
 .judge-replay:disabled{cursor:wait;color:var(--txt-3)}
 .judge-replay[hidden]{display:none}
 #belt{padding:12px 0}
@@ -431,15 +433,27 @@ h1{font-size:clamp(42px,5.5vw,72px)}
 .copy-chip{min-height:44px}
 #toast{max-width:calc(100vw - 32px);border-radius:12px;text-align:center}
 @media(max-width:1020px){
+  h1{font-size:56px}
   .hero-grid{grid-template-columns:1fr 1fr;gap:28px}
   .start-layout{grid-template-columns:1fr;gap:24px}
   #nav .wrap{gap:12px}#nav .links a{padding-inline:10px}
 }
 @media(max-width:760px){
+  h1{font-size:48px}
   #hero .inner{padding-top:108px;padding-bottom:32px}
-  .hero-grid{grid-template-columns:1fr;gap:32px}
+  .hero-grid{grid-template-columns:1fr;gap:24px}
+  .hero-tagline{font-size:20px;margin-top:8px}
   .hero-lead{font-size:15px}.term{max-width:none;width:100%}
-  .stats{margin-top:32px}.stats .cell{padding:20px 14px 4px}
+  #hero .sky .contour{right:-260px;opacity:.22}
+  #hero .join{flex-direction:row;align-items:center;gap:12px;padding:12px;width:100%}
+  #hero .join-qr{width:88px;height:88px;padding:5px;border-radius:12px}
+  #hero .join-qr img{border-radius:7px}
+  #hero .join-txt{text-align:left}
+  #hero .join-txt h3{font-size:20px}
+  #hero .join-txt>p{font-size:12.5px;line-height:1.5}
+  #hero .join-num{margin-top:7px;font-size:12px}
+  #hero .join-hint{font-size:11px}
+  .stats{margin-top:28px}.stats .row{grid-template-columns:repeat(3,1fr)}.stats .cell{padding:18px 8px 4px;border-left:1px solid var(--line);border-top:0!important;margin-top:0!important}.stats .cell:first-child{padding-left:0;border-left:none}.stats .num{font-size:clamp(25px,9vw,34px)}.stats .lab{font-size:11px;letter-spacing:0;white-space:nowrap}
   .stats .cell:first-child{padding-left:0}
   .start-section{padding-block:32px}.start-steps{grid-template-columns:1fr;gap:12px}
   .start-steps p{margin-top:0}.start-intro h2{font-size:21px}
@@ -447,12 +461,13 @@ h1{font-size:clamp(42px,5.5vw,72px)}
   .route-card{padding:22px}.rc-top{gap:10px}.rc-top h3{font-size:24px}
   .rc-top .rc-n{display:none}.rc-note{width:100%}
   #go{padding-block:56px}footer{padding-block:40px 28px}
-  #go .join{flex-direction:column;gap:14px;padding:24px 22px 26px;text-align:center}
-  #go .join-qr{width:148px;height:148px}
-  #go .join-txt{text-align:center}
+  .join{flex-direction:row;gap:12px;padding:12px;text-align:left}
+  #hero .join{width:100%;padding:12px}
+  #hero .join-qr{width:88px;height:88px}
+  #hero .join-txt{text-align:left}
   .ft-grid{gap:32px}.ft-bottom{margin-top:32px;font-size:11px;letter-spacing:.04em}
 }
-@media(max-width:380px){.hero-cta .btn{padding-inline:18px}.term pre{font-size:11.5px;padding-inline:16px}.rc-list{grid-template-columns:1fr}.term .bar{padding-inline:12px}.term .bar i{display:none}}
+@media(max-width:380px){h1{font-size:42px}.hero-cta .btn{padding-inline:18px}.hero-lead{line-height:1.75}.join-txt h3{font-size:18px!important}.join-txt>p{font-size:11.5px!important}.join-qr{width:80px!important;height:80px!important}.term pre{font-size:11.5px;padding-inline:16px;white-space:pre-wrap;overflow:hidden;overflow-wrap:anywhere}.rc-list{grid-template-columns:1fr}.term .bar{padding-inline:12px}.term .bar i{display:none}}
 @media(prefers-reduced-motion:reduce){
   html{scroll-behavior:auto}*,*::before,*::after{animation:none!important;transition:none!important}
   .msum{stroke-dashoffset:0}
@@ -503,9 +518,9 @@ h1{font-size:clamp(42px,5.5vw,72px)}
 <!-- 导航 -->
 <header id="nav">
   <div class="wrap">
-    <a class="brand" href="/" aria-label="SWPU ACM 首页">
+    <a class="brand" href="/" aria-label="d&amp;f算法网首页">
       <svg aria-hidden="true"><use href="#emblem"/></svg>
-      <span class="bt"><b>SWPU ACM</b><span>TRAINING GROUND</span></span>
+      <span class="bt"><b>d&amp;f算法网</b><span>ONLINE JUDGE</span></span>
     </a>
     <nav class="links" aria-label="站内导航">
       <a href="/p">题库</a>
@@ -581,13 +596,25 @@ h1{font-size:clamp(42px,5.5vw,72px)}
   <div class="inner wrap">
     <div class="hero-grid">
       <div>
-        <h1>向<span class="sum">山顶<svg aria-hidden="true"><use href="#i-summit"/></svg></span>，<br>提交你的答案。</h1>
-        <p class="hero-lead ">这里是西南石油大学 ACM 集训队的在线训练场：<b>4,295 道精选题目</b>、全天候自动评测、逐章解锁的登山路。从第一行 C++ 开始，一直走到赛场去。</p>
+        <h1>d&amp;f算法网</h1>
+        <p class="hero-tagline">找到属于自己的 <span class="sum">final</span>。</p>
+        <p class="hero-lead ">这里是 d&amp;f算法网的在线训练场：<b>4,295 道精选题目</b>、全天候自动评测、逐章解锁的登山路。从第一行 C++ 开始，一直走到赛场去。每个人都能在算法竞赛这条路上找到属于自己的 final。</p>
         <div class="hero-cta ">
           <a class="btn btn-p" href="/training/6abf5251aaa235606eedfb84">开始登顶训练 <svg aria-hidden="true"><use href="#i-arrow"/></svg></a>
           <a class="btn btn-g" href="/p">浏览题库</a>
         </div>
-        <p class="hero-help">第一次来？<a href="#start">查看新生入门指引</a><span>已有账号 <a href="/reg?tab=pwd">登录</a></span></p>
+        <div class="join" aria-label="加入 OJ 训练群">
+          <a class="join-qr" href="https://qm.qq.com/q/8mG7ByDyCc" target="_blank" rel="noopener">
+            <img src="/qq-training-group.png" alt="oj 训练群 QQ 群二维码" width="640" height="640" loading="eager" decoding="async">
+          </a>
+          <div class="join-txt">
+            <h3>oj 训练群</h3>
+            <p>AC 实时播报 · 每日榜单 · 比赛战报 · 答疑互助</p>
+            <span class="join-num">群号 <b>1128735782</b></span>
+            <span class="join-hint">手机点二维码，直达加群页</span>
+          </div>
+        </div>
+        <p class="hero-help">第一次来？<a href="#start">查看入门指引</a><span>已有账号 <a href="/reg?tab=pwd">登录</a></span></p>
       </div>
       <div class="term " aria-label="判题演示">
         <div class="bar"><i></i><i></i><i></i><span class="tt">judge · A+B Problem · #1000</span><span class="live">评测演示</span></div>
@@ -642,7 +669,7 @@ int main() {
       <div>
         <h2 id="routes-t">每一章，都是下一段<em>海拔</em>。</h2>
       </div>
-      <p class="lead ">两条官方路线把知识点拆成一关一关的山门——前面的章节不通过，后面的山门不开。题号就是海拔：从 1000 号的山脚，一路爬到 1396 号的垭口。</p>
+      <p class="lead ">两条主线把知识点拆成一关一关的山门——前面的章节不通过，后面的山门不开。题号就是海拔：从 1000 号的山脚，一路爬到 1396 号的垭口。</p>
     </div>
 
     <article class="route-card ">
@@ -735,20 +762,9 @@ int main() {
       <a class="btn btn-p" href="/reg">免费注册，开始训练 <svg aria-hidden="true"><use href="#i-arrow"/></svg></a>
       <a class="btn btn-g" href="/p">先去题库逛逛</a>
     </div>
-    <div class="join">
-      <a class="join-qr" href="https://qm.qq.com/q/8mG7ByDyCc" target="_blank" rel="noopener">
-        <img src="/qq-training-group.png" alt="oj 训练群 QQ 群二维码" width="640" height="640" loading="lazy" decoding="async">
-      </a>
-      <div class="join-txt">
-        <h3>oj 训练群</h3>
-        <p>AC 实时播报 · 每日榜单 · 比赛战报 · 答疑互助</p>
-        <span class="join-num">群号 <b>1128735782</b></span>
-        <span class="join-hint">手机点二维码，直达加群页</span>
-      </div>
-    </div>
     <div class="hitokoto ">
       <p id="hito-text">「山顶的风景，留给写完最后一行代码的人。」</p>
-      <div class="src" id="hito-src">—— SWPU ACM</div>
+      <div class="src" id="hito-src">—— d&amp;f算法网</div>
     </div>
   </div>
 </section>
@@ -761,10 +777,10 @@ int main() {
       <div class="ft-brand">
         <a class="brand" href="/" aria-label="回到顶部">
           <svg aria-hidden="true"><use href="#emblem"/></svg>
-          <span class="bt"><b>SWPU ACM</b><span>TRAINING GROUND</span></span>
+          <span class="bt"><b>d&amp;f算法网</b><span>ONLINE JUDGE</span></span>
         </a>
-        <p>西南石油大学 ACM 集训队在线训练站。为每一个热爱算法的人亮着灯——不管你是大一新生，还是备赛老将。新生答疑 QQ 群：879670443。</p>
-        <button class="copy-chip" id="copy-domain" type="button">swpuacm.xyz <svg aria-hidden="true"><use href="#i-copy"/></svg></button>
+        <p>面向所有热爱算法的人开放的在线评测平台。为每一次提交亮着灯——不管你刚开始学习，还是正在备赛。每个人都能在算法竞赛这条路上找到属于自己的 final。训练交流群：1128735782。</p>
+        <button class="copy-chip" id="copy-domain" type="button">dfacm.website <svg aria-hidden="true"><use href="#i-copy"/></svg></button>
       </div>
       <nav class="ft-col" aria-label="训练">
         <h4>训练</h4>
@@ -775,7 +791,7 @@ int main() {
       </nav>
       <nav class="ft-col" aria-label="社区">
         <h4>社区</h4>
-        <a href="/discuss/6ac380a38b364d5443b9edc5">新生入门须知</a>
+        <a href="/discuss/6ac380a38b364d5443b9edc5">入门须知</a>
         <a href="/discuss/node/%E4%BA%91%E5%89%AA%E5%88%87%E6%9D%BF">云剪切板</a>
         <a href="/discuss">讨论区</a>
         <a href="/reg?tab=pwd">登录</a>
@@ -792,7 +808,7 @@ int main() {
       </nav>
     </div>
     <div class="ft-bottom">
-      <span>© 2026 SWPU ACM · POWERED BY HYDRO</span>
+      <span>© 2026 d&amp;f算法网 · POWERED BY HYDRO</span>
       <span>山高处见 · SEE YOU AT THE SUMMIT</span>
     </div>
   </div>
@@ -936,7 +952,7 @@ int main() {
   var toastEl=doc.getElementById('toast'),tt;
   function toast(msg){toastEl.textContent=msg;toastEl.classList.add('show');clearTimeout(tt);tt=setTimeout(function(){toastEl.classList.remove('show')},2200)}
   doc.getElementById('copy-domain').addEventListener('click',function(){
-    var txt='swpuacm.xyz';
+    var txt='dfacm.website';
     (navigator.clipboard?navigator.clipboard.writeText(txt):Promise.reject()).then(function(){toast('域名已复制，去分享吧')})
       .catch(function(){var i=doc.createElement('input');i.value=txt;doc.body.appendChild(i);i.select();
         try{if(!doc.execCommand('copy'))throw new Error('copy failed');toast('域名已复制，去分享吧')}catch(e){toast('复制失败，手打一下吧')}

@@ -3,8 +3,8 @@
 set -u
 S=/root/culture-seed
 URI=$(node -e "process.stdout.write(require('/root/.hydro/config.json').uri)")
-H=https://swpuacm.xyz
-R="--resolve swpuacm.xyz:443:127.0.0.1"
+H=https://dfacm.website
+R="--resolve dfacm.website:443:127.0.0.1"
 JAR=/tmp/xcpc_jar.txt
 fail(){ echo "!! FAIL: $1"; exit 1; }
 
