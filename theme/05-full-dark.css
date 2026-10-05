@@ -1,5 +1,5 @@
 
-/* ==== SWPU ACM full-dark overlay v4 (content pages dark brand; append after v1-v3) ==== */
+/* ==== DFACM legacy full-dark overlay v4 (content pages dark brand; append after v1-v3) ==== */
 html, body, .slideout-panel { background: #0a1322 !important; }
 .slideout-panel { color: #e8edf5 !important; }
 .main .row, .main .columns, .nav--placeholder { background: transparent !important; }
@@ -98,5 +98,4 @@ html, body, .slideout-panel { background: #0a1322 !important; }
   color: #66748c !important;
   border-top: 1px solid rgba(198,216,240,.08) !important;
 }
-/* ==== end SWPU ACM full-dark overlay v4 ==== */
-
+/* ==== end DFACM legacy full-dark overlay v4 ==== */

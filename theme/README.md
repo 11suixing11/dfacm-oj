@@ -1,4 +1,6 @@
-# Hydro 主题方案
+# d&f算法网 Hydro 主题方案
+
+> 说明：安装脚本现在写入 `DFACM` 标记，同时识别旧的 `SWPU ACM` 标记并在升级时清理；旧标记不是对外品牌。插件目录、环境变量和服务端路径同样保留旧标识，以保证现网升级可回放。
 
 ## 推荐方案：Hydro 原生双主题（默认 light）+ 品牌薄层
 
@@ -44,7 +46,7 @@ Hydro 的 `ui-default` 自带完整、持续维护的 Light / Dark 两套主题�
 ## 验证
 
 ```bash
-grep -c "SWPU ACM brand overlay" /root/.hydro/static/theme-4.58.5.css
+grep -c "DFACM brand overlay" /root/.hydro/static/theme-4.58.5.css
 grep -c "theme--light" /root/.hydro/static/theme-4.58.5.css
 grep -c "theme--dark" /root/.hydro/static/theme-4.58.5.css
 ```
@@ -63,8 +65,8 @@ grep -c "theme--dark" /root/.hydro/static/theme-4.58.5.css
 bash deploy/install-theme.sh
 ```
 
-- 默认只追加 `00-brand.css`，通过 `==== SWPU ACM` 标记做幂等。
-- 每次执行会先删掉 CSS 中第一处 `==== SWPU ACM` 之后的内容，再追加当前品牌层，保证重复执行和旧主题残留不会叠加。
+- 默认只追加 `00-brand.css`，通过 `==== DFACM` 标记做幂等。
+- 每次执行会先删掉 CSS 中第一处 `==== DFACM` 或旧的 `==== SWPU ACM` 标记之后的内容，再追加当前品牌层，保证重复执行和旧主题残留不会叠加。
 - 同时把 static 和源包的 `service-worker.js` 换成 kill-switch：清空旧 CacheStorage 后注销自身，避免 webpack 注入的旧主题 CSS 覆盖品牌层。
 - 主题版本号自动探测：脚本取 `~/.hydro/static/theme-*.css` 中版本最高的一个，UI 升级换文件名也不会把品牌层打到不存在的旧路径；需要手动指定时设 `THEME_VERSION=<版本>`，也可分别覆盖 `STATIC_THEME` / `SOURCE_THEME` / `STATIC_SW` / `SOURCE_SW`。
 - 四个目标都必须存在且可读写；任一缺失会在修改文件之前以 66 退出。首次及重复部署都会创建不重名备份，安装后验证品牌标记与 Service Worker 内容。

@@ -12,7 +12,16 @@ function setSystem(id, value) {
 
 function cleanText(value) {
     if (typeof value !== 'string') return value;
-    return value
+    const compatibilityUrls = [];
+    const protectedValue = value.replace(
+        /(?:https?:\/\/)?(?:www\.)?swpuacm\.xyz(?:[/?#][^\s"'<>)]*)?/gi,
+        (match) => {
+            const token = `__DFACM_COMPAT_URL_${compatibilityUrls.length}__`;
+            compatibilityUrls.push([token, match]);
+            return token;
+        },
+    );
+    const cleaned = protectedValue
         .replace(/西南石油大学\s*ACM\s*团队/g, `${NAME}社区`)
         .replace(/西南石油大学本科生/g, '社区成员')
         .replace(/西南石油大学/g, NAME)
@@ -24,6 +33,10 @@ function cleanText(value) {
         .replace(/新生答疑 QQ 群：?879670443/g, '训练交流群：1128735782')
         .replace(/新一届队员/g, '社区成员')
         .replace(/队员/g, '社区成员');
+    return compatibilityUrls.reduce(
+        (result, [token, original]) => result.replace(token, original),
+        cleaned,
+    );
 }
 
 setSystem('server.name', NAME);

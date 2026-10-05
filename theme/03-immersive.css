@@ -1,4 +1,4 @@
-/* ==== SWPU ACM immersive auth overlay v3 (login/register/lostpass dark brand; safe to re-append) ==== */
+/* ==== DFACM legacy immersive auth overlay v3 (login/register/lostpass dark brand; safe to re-append) ==== */
 body:has(.immersive--content) .slideout-panel {
   background: radial-gradient(1100px 600px at 50% -120px, rgba(42,92,170,.25), transparent 60%), #070d18 !important;
 }
@@ -41,4 +41,4 @@ body:has(.immersive--content) .header--mobile {
 body:has(.immersive--content) .page-loader {
   background: #070d18 !important;
 }
-/* ==== end SWPU ACM immersive auth overlay v3 ==== */
+/* ==== end DFACM legacy immersive auth overlay v3 ==== */

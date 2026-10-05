@@ -1,4 +1,4 @@
-/* ==== SWPU ACM immersive overlay v3.1 (submit buttons brand pill) ==== */
+/* ==== DFACM legacy immersive overlay v3.1 (submit buttons brand pill) ==== */
 body:has(.immersive--content) .immersive--content input[type="submit"],
 body:has(.immersive--content) .immersive--content .button.inverse,
 body:has(.immersive--content) .immersive--content a.button.primary {
@@ -11,4 +11,4 @@ body:has(.immersive--content) .immersive--content a.button.primary {
   cursor: pointer;
   font-size: 15px !important;
 }
-/* ==== end SWPU ACM immersive overlay v3.1 ==== */
+/* ==== end DFACM legacy immersive overlay v3.1 ==== */

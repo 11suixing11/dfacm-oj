@@ -362,7 +362,7 @@ export async function apply(ctx: Context) {
     const isPositive = (value: unknown) => Number.isSafeInteger(Number(value)) && Number(value) > 0 && Number(value) <= 100000;
     ctx.effect(() => SystemSetting(
         Setting('setting_swpu_regcode', 'limit.regcode_send_ip', DEFAULTS.sendIpHourly, 'number',
-            '验证码发送：每 IP 每小时上限', '校园网共用出口默认 200；邮箱仍每 60 秒最多一次。', 0, isPositive),
+            '验证码发送：每 IP 每小时上限', '共享出口默认 200；邮箱仍每 60 秒最多一次。', 0, isPositive),
         Setting('setting_swpu_regcode', 'limit.regcode_send_global', DEFAULTS.sendGlobalHourly, 'number',
             '验证码发送：全站每小时上限', '请按发件邮箱额度调整，默认 500。', 0, isPositive),
         Setting('setting_swpu_regcode', 'limit.regcode_verify_ip', DEFAULTS.verifyIpMinute, 'number',

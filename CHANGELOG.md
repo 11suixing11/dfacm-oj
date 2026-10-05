@@ -1,5 +1,29 @@
 # Changelog
 
+## v1.20.0 - 2026-10-05
+
+The public identity is now **d&f算法网**, an independent algorithm-training
+community. The brand meaning is simple: everyone can find their own final on
+the road of algorithm competition.
+
+### Changed
+
+- The primary site is `dfacm.website`; `swpuacm.xyz` and both `www` hosts stay
+  as compatible entry points, while public canonical and Open Graph metadata
+  use the primary domain.
+- Public about, onboarding, training and contest copy no longer describes a
+  university-owned or school-selection platform. The site now presents open
+  training routes, weekly/monthly events and topic challenges.
+- The GitHub repository is published as `dfacm-oj`, with an independent
+  description and homepage.
+
+### Compatibility
+
+- Runtime addon directories, Mongo collection prefixes, environment variables
+  and deployment paths that begin with `swpu` remain internal compatibility
+  identifiers. Renaming those would break existing installations and data;
+  they do not define the public brand.
+
 ## v1.19.1 - 2026-10-05
 
 The training group QR lived only inside QQ. It now ships with the landing
@@ -17,9 +41,9 @@ page, so any visitor can join straight from the homepage.
 
 ## v1.19.0 - 2026-10-05
 
-The site's role is settled: a teaching/training tool, while rated contests stay
-on CF/牛客/洛谷 and only school selection contests run here. This release adds
-the second rung of the ladder - an untimed, self-paced ICPC track in the
+The site's role is settled: an independent teaching/training tool, with public
+weekly/monthly events and topic challenges alongside an untimed, self-paced
+ICPC track in the
 Luogu/Nowcoder "不限时训练" tradition.
 
 ### Added
@@ -52,17 +76,16 @@ Luogu/Nowcoder "不限时训练" tradition.
 
 The site had polish but no pulse: every problem was imported, the discussion
 area was empty, and /wiki/about was stock legal boilerplate. This release
-seeds the "flesh and blood" ported from the team's previous OJ
-(acm.mangata.ltd - the same lab's own heritage), plus landing links that make
-that culture reachable from the front page.
+seeds the independent community's guides, discussion structure and training
+culture, plus landing links that make that material reachable from the front
+page.
 
 ### Added
 
 - **Culture seed runbook (`deploy/culture/`)**. One-time seeding through the
-  service-account session: a `SWPU` discussion-node category (公告 / 云剪切板 /
-  闲聊), four pinned posts authored as the site owner (the freshman guide
-  ported from the old site's 新生入门须知, the problem-authoring tutorial with
-  the config.yaml / SPJ / interactive examples, a weekly-race walkthrough
+  service-account session: a `d&f算法网` discussion-node category (公告 / 云剪切板 /
+  闲聊), four pinned posts authored as the site owner (the algorithm
+  onboarding guide, the problem-authoring tutorial with the config.yaml / SPJ / interactive examples, a weekly-race walkthrough
   covering post-contest solution culture, and a how-to-ask guide), an
   /wiki/about rewrite keeping the stock privacy/tos sections,
   mountain-flavored training chapter titles (大本营 → 登顶眺望) with

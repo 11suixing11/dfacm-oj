@@ -1,4 +1,4 @@
-# plugin-swpu-broadcast (swpu_acm_broadcast v2.1.0)
+# d&f算法网 QQ 播报插件（内部标识：swpu_acm_broadcast v2.1.0）
 
 AstrBot 插件：QQ 群自动播报 [d&f算法网](https://dfacm.website)（Hydro v5）的 AC 提交，附带每日榜单、比赛实时播报、账号绑定、签到、账号合并等群功能。
 

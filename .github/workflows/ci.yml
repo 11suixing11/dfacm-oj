@@ -58,7 +58,7 @@ jobs:
           grep -q "pageshow" landing/index.html
           grep -q "no-store" landing/index.html
           grep -q "swpu-theme" deploy/update-footer-toggle-sync.js
-          grep -q "SWPU ACM brand overlay" theme/00-brand.css
+          grep -q "DFACM brand overlay" theme/00-brand.css
           grep -q "theme--light" theme/00-brand.css
           grep -q "theme--dark" theme/00-brand.css
           grep -q "#panel" theme/00-brand.css
@@ -220,4 +220,4 @@ jobs:
       - name: Run shop plugin tests
         run: node --test plugin-swpu-shop/tests/*.test.cjs
       - name: Run deployment script tests
-        run: node --test scripts/deployment.test.mjs scripts/landing.test.cjs
+        run: node --test scripts/deployment.test.mjs scripts/landing.test.cjs scripts/repository.test.cjs

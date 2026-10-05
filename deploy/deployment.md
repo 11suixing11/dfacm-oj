@@ -68,7 +68,7 @@ Hydro `ui-default` 自带持续维护的 Light / Dark 双主题，站点默认 l
 bash /root/swpu-oj/deploy/install-theme.sh
 ```
 
-脚本会先剥掉两处 CSS 里所有 `==== SWPU ACM` 旧 overlay，再追加 `00-brand.css`，并把两处 `service-worker.js` 换成自注销清缓存版本。这样 UI 重建、重复执行和旧主题残留都不会覆盖最新品牌层。
+脚本会先剥掉两处 CSS 里所有 `==== DFACM` 或旧的 `==== SWPU ACM` overlay，再追加 `00-brand.css`，并把两处 `service-worker.js` 换成自注销清缓存版本。这样 UI 重建、重复执行和旧主题残留都不会覆盖最新品牌层。
 
 运行前会检查四个目标是否存在且可读写；路径或版本不对时以非零状态退出，不会跳过后报告成功。完成后校验资源，**校验失败会自动回滚本次已改动的全部文件**。默认主题用 `deploy/set-theme-light.js` 设置，它支持空页脚配置并保留用户主题选择。
 
@@ -246,7 +246,7 @@ curl -sSI https://<域名>/ | grep -Ei 'strict-transport|x-content-type|referrer
 ## 9. UI 重建后的重放清单
 
 - [ ] `bash deploy/install-theme.sh` 重新追加 00 品牌薄层（脚本会先剥掉旧 overlay；版本变化时先设置 `THEME_VERSION`）。
-- [ ] 确认 static 与源包两处都能 `grep -c "SWPU ACM brand overlay"`。
+- [ ] 确认 static 与源包两处都能 `grep -c "DFACM brand overlay"`。
 - [ ] 确认 `/service-worker.js` 是 kill-switch（`grep -q unregister`）。
 - [ ] 门面、字体、图标在 `custom/`，**无需重放**。
 - [ ] 如果 Hydro 头部引用 static 下的默认 favicon，确认 `@custom` 路径列表覆盖同名文件。
@@ -427,7 +427,7 @@ bash /opt/swpu-oj/scripts/check-deployment.sh \
 
 ## 20. 文化基建种子（讨论区 / 关于页 / 题单 / 首场比赛）
 
-把老站（acm.mangata.ltd，同一实验室的前代 OJ）沉淀的"血肉"迁到本站：队史与制度文化、讨论区置顶帖、出题流水线、比赛文化。种子文件在 `deploy/culture/`（hw_seed.sh + 帖子 / 关于页 / 节点 YAML / 题单脚本），**一次性**运行：
+把独立社区的入门指南、讨论结构、出题流水线和比赛文化写入本站。种子文件在 `deploy/culture/`（hw_seed.sh + 帖子 / 关于页 / 节点 YAML / 题单脚本），**一次性**运行：
 
 ```sh
 scp -r deploy/culture root@SERVER:/root/culture-seed
@@ -437,12 +437,12 @@ ssh root@SERVER 'bash /root/culture-seed/hw_seed.sh run'    # 正式执行
 
 种子动作（全部经服务号 hydsvc-0074 会话 + sudo，curl `--resolve` 直连源站）：
 
-1. **讨论节点**：`discussion.nodes` 系统设置加 `SWPU` 分类（公告 / 云剪切板 / 闲聊），POST `/domain/dashboard` `operation=init_discussion_node` 重建节点（16→19）。
-2. **四篇置顶帖**（docType 21，全 pin；作者事后改写为 bot爱摸鱼 uid2）：新生入门须知（highlight，老站搬运改写）、出题规范与数据制作教程（highlight，config.yaml / SPJ / 交互题 / 对拍）、周赛怎么打（赛前赛中赛后 + 赛后题解文化）、提问的智慧（问答节点）。
-3. **关于页**：`ui-default.about` 的 about/contact 两节换成本队介绍与联系方式（2017 成立、国奖 50 余项、答疑群 879670443），privacy/tos 原文保留（python 定位 `\n# privacy` 拼接后半段）。
+1. **讨论节点**：`discussion.nodes` 系统设置加入 `d&f算法网` 分类（公告 / 云剪切板 / 闲聊），POST `/domain/dashboard` `operation=init_discussion_node` 重建节点（16→19）。
+2. **四篇置顶帖**（docType 21，全 pin；作者事后改写为 bot爱摸鱼 uid2）：算法入门须知（highlight）、出题规范与数据制作教程（highlight，config.yaml / SPJ / 交互题 / 对拍）、周赛怎么打（赛前赛中赛后 + 赛后题解文化）、提问的智慧（问答节点）。
+3. **关于页**：`ui-default.about` 的 about/contact 两节换成独立社区介绍与训练联系方式，privacy/tos 原文保留（python 定位 `\n# privacy` 拼接后半段）。
 4. **题单**：两个训练计划 dag[].title 登山化（一本通：大本营→林间小径→…→登顶眺望；蓝桥杯：热身步道→半山营地→冲顶路段→峰顶实录），content 描述改学长口吻（`mongosh hw_train.js`，幂等）。
-5. **首场比赛**：海拔周赛 R0 · 新生热身专场——ACM 赛制、rated=false、allowViewCode=true、5 道 d1-d2 热身题（pids `3677,3676,3712,3717,3736`），赛后开放代码互看。
-6. **页脚**：`ui-default.footer_extra_html` 追加「新生指南 / 云剪切板」两行链接。
+5. **首场比赛**：海拔周赛 R0 · 入门热身专场——ACM 赛制、rated=false、allowViewCode=true、5 道 d1-d2 热身题（pids `3677,3676,3712,3717,3736`），赛后开放代码互看。
+6. **页脚**：`ui-default.footer_extra_html` 追加「入门指南 / 云剪切板」两行链接。
 
 坑与边界（重要）：
 

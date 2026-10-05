@@ -1,4 +1,4 @@
-# swpu-ops — 管理员训练周报、判题健康摘要与 RP 自动重算
+# d&f算法网运维插件（内部 addon 标识：swpu-ops）
 
 这是 Hydro **5.0.7** 的小型后台 addon。注册两个只读管理员报表脚本、一个立即全域重算 RP 的管理脚本，以及一组可关闭的 RP 自动重算机制（事件驱动的准实时重算 + 每小时清扫 + 服务号状态自洁）；不添加前端页面、公共 HTTP 接口或迁移逻辑。
 
@@ -40,7 +40,7 @@ RP 的本地成功/失败记录各保留最近 100 条，成功记录包含耗�
 ```bash
 hydrooj cli script swpuWeeklyReport '{}'
 
-hydrooj cli script swpuWeeklyReport '{"domainId":"system","since":"2026-09-21","until":"2026-09-28","group":"2026级新生"}'
+hydrooj cli script swpuWeeklyReport '{"domainId":"system","since":"2026-09-21","until":"2026-09-28","group":"入门训练组"}'
 
 hydrooj cli script swpuHealthSummary '{"domainId":"system","staleMinutes":10}'
 

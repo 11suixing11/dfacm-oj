@@ -1,5 +1,5 @@
-/* ==== SWPU ACM brand overlay (d&f算法网, light & dark) ==== */
-/* 对外品牌：d&f算法网；保留 SWPU ACM 标记以兼容现有部署脚本的幂等替换。 */
+/* ==== DFACM brand overlay (d&f算法网, light & dark) ==== */
+/* 对外品牌：d&f算法网；安装脚本同时识别旧 SWPU ACM 标记以兼容现网升级。 */
 /* Requires Hydro ui-default theme classes: .theme--light / .theme--dark on <html>.
    Sections: shared base -> dark specifics -> light specifics. */
 
@@ -365,4 +365,4 @@
   .theme--dark a,
   .theme--light a { transition: none; }
 }
-/* ==== end SWPU ACM brand overlay (d&f算法网) ==== */
+/* ==== end DFACM brand overlay (d&f算法网) ==== */

@@ -1,4 +1,4 @@
-# swpu-regcode — 数字验证码注册插件
+# d&f算法网认证插件（内部 addon 标识：swpu-regcode）
 
 Hydro v5 的原生注册流程是「邮箱 → 点邮件里的链接 → 设账密」。本插件提供验证码注册、验证码免密登录与密码登录三个标签页，登录后按安全的站内来源返回；第二因素通过常显的原生登录入口完成。验证码存储与消费独立到 `codes.ts`，登录策略独立到 `auth.ts`，真实客户端 IP 解析独立到 `logic.ts`。
 
@@ -49,7 +49,7 @@ pm2 restart hydrooj
 
 | 设置键 | 默认值 | 说明 |
 |---|---|---|
-| `limit.regcode_send_ip` | `200` | 每 IP 每小时发码上限，适配校园网共享出口 |
+| `limit.regcode_send_ip` | `200` | 每 IP 每小时发码上限，适配共享出口 |
 | `limit.regcode_send_global` | `500` | 全站每小时发码上限，按 SMTP 额度调整 |
 | `limit.regcode_verify_ip` | `60` | 每 IP 每分钟校验请求上限 |
 | `limit.regcode_verify_account` | `10` | 每邮箱每分钟校验请求上限 |

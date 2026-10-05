@@ -364,7 +364,7 @@ test('first and repeated theme installs preserve upstream CSS and unique backups
   assert.equal(first.status, 0, first.stdout + first.stderr);
   const firstCss = fs.readFileSync(fixture.files.STATIC_THEME, 'utf8');
   assert.ok(firstCss.startsWith('body{color:blue}\n'));
-  assert.equal([...firstCss.matchAll(/\/\* ==== SWPU ACM brand overlay/g)].length, 1);
+  assert.equal([...firstCss.matchAll(/\/\* ==== DFACM brand overlay/g)].length, 1);
   const second = run('../deploy/install-theme.sh', [], fixture.overrides);
   assert.equal(second.status, 0, second.stdout + second.stderr);
   assert.equal(fs.readFileSync(fixture.files.STATIC_THEME, 'utf8'), firstCss);
@@ -377,6 +377,21 @@ test('first and repeated theme installs preserve upstream CSS and unique backups
     assert.ok(backups.some((name) => fs.readFileSync(path.join(fixture.backupDir, name), 'utf8') === (key.endsWith('THEME') ? 'body{color:blue}' : 'originalWorker()')));
   }
   assert.equal(fs.readFileSync(fixture.files.STATIC_SW, 'utf8'), fs.readFileSync(path.join(repo, 'deploy/service-worker-killswitch.js'), 'utf8'));
+});
+
+test('theme deployment migrates the historical brand marker', () => {
+  const fixture = themeFixture();
+  const legacy = 'body{color:blue}\n/* ==== SWPU ACM brand overlay (legacy) ==== */\nold overlay\n';
+  fs.writeFileSync(fixture.files.STATIC_THEME, legacy);
+  fs.writeFileSync(fixture.files.SOURCE_THEME, legacy);
+  const result = run('../deploy/install-theme.sh', [], fixture.overrides);
+  assert.equal(result.status, 0, result.stdout + result.stderr);
+  for (const filename of [fixture.files.STATIC_THEME, fixture.files.SOURCE_THEME]) {
+    const css = fs.readFileSync(filename, 'utf8');
+    assert.equal(css.includes('SWPU ACM brand overlay'), false);
+    assert.equal([...css.matchAll(/\/\* ==== DFACM brand overlay/g)].length, 1);
+    assert.equal(css.startsWith('body{color:blue}\n'), true);
+  }
 });
 
 test('old theme backups are pruned to the retention limit', () => {
@@ -628,5 +643,5 @@ test('smoke battery locks the boot injection, auth gates and security headers', 
   for (const [pattern, why] of patterns) assert.match(source, pattern, why);
   // The overlay gate needs the brand marker twice (start + end comment) in
   // the served css; anything else means the brand layer was lost.
-  assert.match(source, /SWPU ACM brand overlay/);
+  assert.match(source, /DFACM brand overlay/);
 });

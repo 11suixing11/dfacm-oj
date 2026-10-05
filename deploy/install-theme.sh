@@ -46,8 +46,8 @@ STATIC_THEME="${STATIC_THEME:-${STATIC_DIR}/theme-${THEME_VERSION}.css}"
 SOURCE_THEME="${SOURCE_THEME:-/usr/local/share/.config/yarn/global/node_modules/@hydrooj/ui-default/public/theme-${THEME_VERSION}.css}"
 STATIC_SW="${STATIC_SW:-${STATIC_DIR}/service-worker.js}"
 SOURCE_SW="${SOURCE_SW:-/usr/local/share/.config/yarn/global/node_modules/@hydrooj/ui-default/public/service-worker.js}"
-BRAND_MARKER="SWPU ACM brand overlay"
-LEGACY_MARKER="SWPU ACM legacy overlay set"
+BRAND_MARKER="DFACM brand overlay"
+LEGACY_MARKER="DFACM legacy overlay set"
 
 # Validate every required target before touching any file. Version drift must
 # fail deployment, rather than silently skipping all work with exit code 0.
@@ -185,7 +185,7 @@ backup_file() {
 apply_theme() {
     local target="$1" staged line
     staged="$(mktemp "$target.tmp.XXXXXX")"
-    line="$(grep -n -m1 -E '==== SWPU ACM' "$target" | head -1 | cut -d: -f1 || true)"
+    line="$(grep -n -m1 -E '==== (DFACM|SWPU ACM)' "$target" | head -1 | cut -d: -f1 || true)"
     if [ -n "$line" ]; then
         head -n $((line - 1)) "$target" > "$staged"
         printf 'stripped previous overlays: %s\n' "$target"

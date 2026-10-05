@@ -1,6 +1,6 @@
 # d&f算法网 — 独立在线评测与训练平台
 
-[![CI](https://github.com/11suixing11/swpu-oj/actions/workflows/ci.yml/badge.svg)](https://github.com/11suixing11/swpu-oj/actions/workflows/ci.yml)
+[![CI](https://github.com/11suixing11/dfacm-oj/actions/workflows/ci.yml/badge.svg)](https://github.com/11suixing11/dfacm-oj/actions/workflows/ci.yml)
 
 > 基于 [Hydro OJ](https://hydro.ac) v5.0.7 的独立平台定制层：品牌门面首页、一站式认证页、训练工作台 / 积分商店 / QQ 群播报、排名自动化与一键部署。
 
@@ -103,6 +103,6 @@ bash deploy/deploy.sh --stage-only   # 只上传并对账，不动线上任何�
 - 徽章能力：[badge-for-hydrooj](https://github.com/Godtokoo666/badge-for-hydrooj)（商店只复用其模型，不 fork、不修改）
 - QQ 播报框架：[AstrBot](https://github.com/AstrBotDevs/AstrBot)
 - 字体：[ZCOOL QingKe HuangYou](https://fonts.google.com/specimen/ZCOOL+QingKeHuangYou)、[JetBrains Mono](https://www.jetbrains.com/lp/mono/)（均为 OFL 许可，子集化方法见 `landing/FONTS-LICENSE.md`）
-- 本仓库代码以 [MIT](LICENSE) 许可发布，供院校社团学习交流
+- 本仓库代码以 [MIT](LICENSE) 许可发布，供算法学习社区交流
 
 > d&f算法网社区 · 每个人都能在算法竞赛这条路上找到属于自己的 final。

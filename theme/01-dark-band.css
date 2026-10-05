@@ -1,4 +1,4 @@
-/* ==== SWPU ACM dark-band theme overlay (appended, safe on upgrades) ==== */
+/* ==== DFACM legacy dark-band theme overlay (appended, safe on upgrades) ==== */
 .nav {
   background: #101d32 !important;
   border-bottom: 1px solid #c9a227 !important;
@@ -44,4 +44,4 @@ table th a, .table th a {
 .button.primary:hover, .btn-primary:hover {
   background: #1e4488 !important;
 }
-/* ==== end SWPU ACM dark-band theme overlay ==== */
+/* ==== end DFACM legacy dark-band theme overlay ==== */

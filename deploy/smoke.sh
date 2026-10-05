@@ -52,7 +52,7 @@ hdr "https://$HOST/home.html" 'cache-control: no-cache'; check $? "landing no-ca
 css="$(req "https://$HOST/p" | grep -aoE 'theme-[0-9.]+\.css' | head -1)"
 if [ -n "$css" ]; then
     hdr "https://$HOST/$css" 'cache-control: max-age=600'; check $? "theme css max-age=600"
-    if [ "$(req "https://$HOST/$css" | grep -acF 'SWPU ACM brand overlay')" = "2" ]; then check 0 "brand overlay present in served css"; else check 1 "brand overlay present in served css"; fi
+    if [ "$(req "https://$HOST/$css" | grep -acF 'DFACM brand overlay')" = "2" ]; then check 0 "brand overlay present in served css"; else check 1 "brand overlay present in served css"; fi
 else
     check 1 "theme css discoverable from /p"
 fi
