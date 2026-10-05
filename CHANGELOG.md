@@ -1,5 +1,38 @@
 # Changelog
 
+## v1.19.0 - 2026-10-05
+
+The site's role is settled: a teaching/training tool, while rated contests stay
+on CF/牛客/洛谷 and only school selection contests run here. This release adds
+the second rung of the ladder - an untimed, self-paced ICPC track in the
+Luogu/Nowcoder "不限时训练" tradition.
+
+### Added
+
+- **`【进阶】XCPC 专题训练 108 题` training plan** (tid
+  6ac38fb88b364d5443b9ee22). Nine chapters with a rising difficulty arc
+  (d2 → d8): a mandatory four-chapter spine (warm-up → search → basic data
+  structures → graphs), four parallel topic tracks (advanced data structures /
+  DP / math / strings) unlocking after the spine, and a final "冲顶突击"
+  graduation chapter gated on all four tracks. Within every chapter problems
+  ramp from its floor to its ceiling (stratified sampling), the warm-up
+  chapters reserve slots for Chinese remote-judged problems as an on-ramp, and
+  no problem already in the ybtbas/lanqiao plans is reused. Selection
+  pipeline and review list: `scripts/xcpc_select.cjs` +
+  `deploy/culture/selection.md`; replay and API notes: deployment.md §21.
+
+### Notes
+
+- Training create API confirmed: `POST /training/create` takes
+  title/content/dag(JSON string)/pin(**UnsignedInt**)/description; the dag node
+  unlock is all-or-nothing (`requireNids` chapters must be fully AC'd), so
+  mandatory-chain chapters must not contain mis-difficulty'd outliers - the
+  selection script carries a manual BLACKLIST (network-flow and ZJOI-level
+  problems the heuristics had misplaced).
+- The problem `data` array entries are objects (`{name, etag, size}`), not
+  strings - counting test pairs requires `e.name`; a naive String() count
+  reports zero pairs for everything.
+
 ## v1.18.0 - 2026-10-05
 
 The site had polish but no pulse: every problem was imported, the discussion

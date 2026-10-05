@@ -446,3 +446,20 @@ ssh root@SERVER 'bash /root/culture-seed/hw_seed.sh run'    # 正式执行
 回滚：每次运行前备份在 `/root/backups/culture-seed-<ts>/`（about / nodes / footer 原值 + trainings / node docs JSON）；恢复 = 原值 POST 回 `/manage/setting`（或 db.system 直写）+ 删除新增的 docType 21/30 文档。
 
 2026-10-05 执行记录：帖子 did——入门须知 `6ac380a38b364d5443b9edc5`、出题规范 `6ac380a38b364d5443b9edbf`、提问的智慧 `6ac380a38b364d5443b9edc1`、周赛怎么打 `6ac380a38b364d5443b9edc3`；比赛 tid `6ac380a38b364d5443b9edbe`（2026-10-11 19:00 CST 开赛）；备份 `/root/backups/culture-seed-20261005-184850/`。
+
+## 21. XCPC 专题进阶训练计划（由浅入深主线）
+
+队内日常刷题在外部平台（CF/洛谷/牛客），本站定位"教学/训练工具"：`【进阶】XCPC 专题训练 108 题`（tid `6ac38fb88b364d5443b9ee22`，2026-10-05 创建，作者 bot爱摸鱼）是继一本通 396 新手村之后的第二级台阶——自定节奏、不限时的专题进阶路线。
+
+**结构**（DAG）：第 1-4 章顺序链（热身路段·综合基础 → 密林寻径·搜索 → 行囊整理·基础数据结构 → 冰川横渡·图论）；第 5-8 章为并列专题支线（崖壁栈道·进阶数据结构 / 岩壁攀登·动态规划 / 星空导航·数学 / 密码石壁·字符串，均完成第 4 章后解锁）；第 9 章「冲顶突击·综合挑战」为毕业关，需 5-8 章全部完成。难度台阶 d2→d8 逐章抬升，章内分层抽样爬坡。
+
+**选题管线**（可复用于扩章/换题）：
+
+1. 导出题库 slim 目录：mongosh 投影 docType 10 的 `data` 数组——注意 **data 元素是对象 `{_id,name,size,etag}`，配对测试点要数 `e.name`**（按字符串统计会全为 0），外加 docId/title/difficulty/tag/hidden/config（含 `remote_judge` 判定）；
+2. `node scripts/xcpc_select.cjs <catalog.json.gz> <outdir>`：过滤规则=system 域 + 非 hidden +（本地题 in/out 配对 ≥4 或 remote 在线判）+ 排除两个既有计划的 docId 段（3676-4325）+ 人工黑名单（`BLACKLIST`：网络流/ZJOI 级别等被启发式难度误标、不该卡在必经链上的题）；每章按难度窗分层配额抽取、章内升序；热身章给中文远程题（深基 srqc）留 4 个缓冲位；
+3. 产出 `dag.json` + `selection.md`（人工审核清单，已归档 `deploy/culture/selection.md`）；
+4. `bash deploy/culture/xcpc_create.sh` 建计划（POST `/training/create`）。
+
+**训练计划 API 实锤**（`hydrooj/src/handler/training.ts` 的 `TrainingEditHandler.post`）：表单字段 `title` / `content`（计划页正文）/ `dag`（**JSON 字符串** `[{_id,title,requireNids,pids:[数字]}]`）/ `pin`（**UnsignedInt**，0/1，非布尔）/ `description`（列表页导语）。tid 缺省=创建，带 tid POST `/training/:tid/edit`=编辑。**解锁语义**（`model/training.ts isDone/isInvalid`）：`requireNids` 指向的章节**全部题目 AC** 才解锁本章——全完成制、无比例，所以必经链上的章节别放真 d8+ 的题。
+
+**调整方式**：换题/改章节名=计划页「编辑」或 mongosh 直改 docType 40 的 dag（无需重启）；创建者会话是服务号，新建计划后记得把 owner 3→2（xcpc_create.sh 已含此步）。
