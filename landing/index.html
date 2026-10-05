@@ -716,7 +716,7 @@ int main() {
   <div class="halo" aria-hidden="true"></div>
   <div class="wrap">
     <h2 id="go-t">第一道题，<em>永远是 A+B</em>。</h2>
-    <p class="sub ">注册一个账号，从题号 1000 开始你的海拔。剩下的路，交给每一次 Accepted。</p>
+    <p class="sub ">注册一个账号，从题号 1000 开始你的海拔。剩下的路，交给每一次 Accepted。(๑•̀ㅂ•́)و</p>
     <div class="hero-cta ">
       <a class="btn btn-p" href="/reg">免费注册，开始训练 <svg aria-hidden="true"><use href="#i-arrow"/></svg></a>
       <a class="btn btn-g" href="/p">先去题库逛逛</a>
@@ -738,7 +738,7 @@ int main() {
           <svg aria-hidden="true"><use href="#emblem"/></svg>
           <span class="bt"><b>SWPU ACM</b><span>TRAINING GROUND</span></span>
         </a>
-        <p>西南石油大学 ACM 集训队在线训练站。为每一个热爱算法的人亮着灯——不管你是大一新生，还是备赛老将。</p>
+        <p>西南石油大学 ACM 集训队在线训练站。为每一个热爱算法的人亮着灯——不管你是大一新生，还是备赛老将。新生答疑 QQ 群：879670443。</p>
         <button class="copy-chip" id="copy-domain" type="button">swpuacm.xyz <svg aria-hidden="true"><use href="#i-copy"/></svg></button>
       </div>
       <nav class="ft-col" aria-label="训练">
@@ -750,12 +750,16 @@ int main() {
       </nav>
       <nav class="ft-col" aria-label="社区">
         <h4>社区</h4>
+        <a href="/discuss/6ac380a38b364d5443b9edc5">新生入门须知</a>
+        <a href="/discuss/node/%E4%BA%91%E5%89%AA%E5%88%87%E6%9D%BF">云剪切板</a>
         <a href="/discuss">讨论区</a>
         <a href="/reg?tab=pwd">登录</a>
         <a href="/reg">注册</a>
       </nav>
       <nav class="ft-col" aria-label="外部链接">
         <h4>山外</h4>
+        <a href="https://www.bilibili.com/video/BV1WR4y1J7xg" target="_blank" rel="noopener">OJ 食用教程（B站）</a>
+        <a href="https://www.cnblogs.com/1024th/p/11623258.html" target="_blank" rel="noopener">LaTeX 公式手册</a>
         <a href="https://www.luogu.com.cn" target="_blank" rel="noopener">洛谷</a>
         <a href="https://codeforces.com" target="_blank" rel="noopener">Codeforces</a>
         <a href="https://atcoder.jp" target="_blank" rel="noopener">AtCoder</a>
@@ -848,28 +852,28 @@ int main() {
 
   /* ---------- 路线图布点 ---------- */
   var chapters=[
-    {n:'语言基础',c:50,al:'1000M'},{n:'分支循环',c:50,al:'1050M'},
-    {n:'枚举模拟',c:50,al:'1100M'},{n:'函数递归',c:48,al:'1150M'},
-    {n:'递归搜索',c:49,al:'1198M'},{n:'贪心分治',c:50,al:'1248M'},
-    {n:'动态规划',c:50,al:'1298M'},{n:'数据结构',c:49,al:'1348M'}];
+    {m:'大本营',n:'语言基础',c:50,al:'1000M'},{m:'林间小径',n:'分支循环',c:50,al:'1050M'},
+    {m:'溪谷穿行',n:'枚举模拟',c:50,al:'1100M'},{m:'岩壁初攀',n:'函数递归',c:48,al:'1150M'},
+    {m:'迷雾森林',n:'递归搜索',c:49,al:'1198M'},{m:'冰原跋涉',n:'贪心分治',c:50,al:'1248M'},
+    {m:'风雪冲刺',n:'动态规划',c:50,al:'1298M'},{m:'登顶眺望',n:'数据结构',c:49,al:'1348M'}];
   var xs=[60,171,282,393,504,615,726,837],ys=[250,228,206,184,162,140,118,96];
   var g=doc.getElementById('map-a-wps');
   var NS='http://www.w3.org/2000/svg';
   var url='/training/6abf5251aaa235606eedfb84';
   chapters.forEach(function(ch,i){
     var a=doc.createElementNS(NS,'a');a.setAttribute('class','wp');a.setAttribute('href',url);
-    a.setAttribute('aria-label','第'+(i+1)+'章 '+ch.n+'，'+ch.c+' 题');
+    a.setAttribute('aria-label','第'+(i+1)+'章 '+ch.m+'（'+ch.n+'），'+ch.c+' 题');
     var mk=function(tag,attrs,txt){var e=doc.createElementNS(NS,tag);for(var k in attrs)e.setAttribute(k,attrs[k]);if(txt)e.textContent=txt;a.appendChild(e);return e};
     mk('circle',{class:'dot',cx:xs[i],cy:ys[i],r:5});
     mk('text',{class:'al',x:xs[i],y:ys[i]-14,'text-anchor':'middle'},'CH.0'+(i+1)+' · '+ch.al);
-    mk('text',{class:'nm',x:xs[i],y:ys[i]+28,'text-anchor':'middle'},ch.n);
+    mk('text',{class:'nm',x:xs[i],y:ys[i]+28,'text-anchor':'middle'},ch.m);
     mk('text',{class:'ct',x:xs[i],y:ys[i]+44,'text-anchor':'middle'},ch.c+' 题');
     g.appendChild(a);
   });
   var listA=doc.getElementById('list-a');
   chapters.forEach(function(ch,i){
     var a=doc.createElement('a');a.href=url;
-    a.innerHTML='<span class="idx">CH.0'+(i+1)+' · '+ch.al+'</span><b>'+ch.n+'</b><small>'+ch.c+' 题 · 第'+(i+1)+'章</small>';
+    a.innerHTML='<span class="idx">CH.0'+(i+1)+' · '+ch.al+'</span><b>'+ch.m+'</b><small>'+ch.n+' · '+ch.c+' 题</small>';
     listA.appendChild(a);
   });
 

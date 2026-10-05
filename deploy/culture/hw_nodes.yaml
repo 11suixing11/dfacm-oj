@@ -1,0 +1,28 @@
+SWPU:
+  - name: 公告
+  - name: 云剪切板
+  - name: 闲聊
+探索:
+  - pic: qa
+    name: 问答
+  - pic: share
+    name: 分享
+  - pic: solution
+    name: 题解
+Hydro:
+  - pic: hydro
+    name: Hydro
+  - name: 团队
+  - name: 月赛
+  - pic: advice
+    name: 建议
+泛:
+  - name: 数学
+  - name: 编程
+  - name: C
+  - name: C++
+  - name: Java
+  - name: PHP
+  - name: Python
+  - name: Rust
+  - name: ACM

@@ -414,3 +414,35 @@ bash /opt/swpu-oj/scripts/check-deployment.sh \
 
 - 应用：`bash deploy/patch-rating-floor.sh`（幂等：带 `SWPU ACM patch: problem RP floor` 标记即跳过；hydrooj 升级会覆盖 rating.ts，重跑即可恢复）。rating.ts 是启动时编译的 TS，改完必须 `pm2 restart hydrooj`，再触发一次重算：`hydrooj cli script swpuRpSweep '{}'`（或等 swpu-ops 每小时清扫、重启后 3 分钟的首次清扫）。
 - 验证：只 AC 过一道简单题的成员出现在 `/ranking`（RP 1），个人页显示 `RP: 1 (No. N)`；零得分账号仍不上榜；已有 rp 的成员数值不变（保底只影响原本算成 0 的正原始分）。
+
+## 20. 文化基建种子（讨论区 / 关于页 / 题单 / 首场比赛）
+
+把老站（acm.mangata.ltd，同一实验室的前代 OJ）沉淀的"血肉"迁到本站：队史与制度文化、讨论区置顶帖、出题流水线、比赛文化。种子文件在 `deploy/culture/`（hw_seed.sh + 帖子 / 关于页 / 节点 YAML / 题单脚本），**一次性**运行：
+
+```sh
+scp -r deploy/culture root@SERVER:/root/culture-seed
+ssh root@SERVER 'bash /root/culture-seed/hw_seed.sh prep'   # 只读检查（Types.Boolean/凭据/登录/时区）
+ssh root@SERVER 'bash /root/culture-seed/hw_seed.sh run'    # 正式执行
+```
+
+种子动作（全部经服务号 hydsvc-0074 会话 + sudo，curl `--resolve` 直连源站）：
+
+1. **讨论节点**：`discussion.nodes` 系统设置加 `SWPU` 分类（公告 / 云剪切板 / 闲聊），POST `/domain/dashboard` `operation=init_discussion_node` 重建节点（16→19）。
+2. **四篇置顶帖**（docType 21，全 pin；作者事后改写为 bot爱摸鱼 uid2）：新生入门须知（highlight，老站搬运改写）、出题规范与数据制作教程（highlight，config.yaml / SPJ / 交互题 / 对拍）、周赛怎么打（赛前赛中赛后 + 赛后题解文化）、提问的智慧（问答节点）。
+3. **关于页**：`ui-default.about` 的 about/contact 两节换成本队介绍与联系方式（2017 成立、国奖 50 余项、答疑群 879670443），privacy/tos 原文保留（python 定位 `\n# privacy` 拼接后半段）。
+4. **题单**：两个训练计划 dag[].title 登山化（一本通：大本营→林间小径→…→登顶眺望；蓝桥杯：热身步道→半山营地→冲顶路段→峰顶实录），content 描述改学长口吻（`mongosh hw_train.js`，幂等）。
+5. **首场比赛**：海拔周赛 R0 · 新生热身专场——ACM 赛制、rated=false、allowViewCode=true、5 道 d1-d2 热身题（pids `3677,3676,3712,3717,3736`），赛后开放代码互看。
+6. **页脚**：`ui-default.footer_extra_html` 追加「新生指南 / 云剪切板」两行链接。
+
+坑与边界（重要）：
+
+- **sudo 流程**：`POST /user/sudo` 前必须先 GET 一次任意 `@requireSudo` 页面（如 `/manage/setting`）让服务端 session 写入 sudoArgs，直接 POST 密码是 403；激活后 1 小时有效。`POST /manage/setting` 返回 302 **不等于成功**——sudo 未激活时它 302 去 /user/sudo，必须用 DB 读值复核。
+- **设置更新免重启**：三个设置键全走 `POST /manage/setting`（表单键 = 设置键，如 `discussion.nodes=<YAML>`；点分键由框架解析成嵌套对象再落库），进程缓存即时生效，无需 pm2 restart。
+- **init_discussion_node 是全删重建**（`flushNodes` = deleteMulti docType 20）：帖子存在后**绝不能重跑**——帖子的 parentId 指向节点 ObjectId，重建后悬空（帖子无法访问）。以后加节点：直接向 db.document 插 TYPE_DISCUSSION_NODE(20) 文档（domainId + docId null + parentType null + title=节点名 + category），或走管理页，不再动 discussion.nodes 重放。
+- **Types.Boolean**（@hydrooj/framework/validator.ts）：非 `false/off/no/0` 即真，`true` / `on` 都行。
+- **服务号发帖要洗 author**：帖子以 hydsvc-0074 会话创建（owner=3），需 mongosh 把 document 的 owner/editor 与 discussion.history 的 uid 批量改成 uid2（uid3 的 /user/3 被 Caddy 404，展示作者名即露服务号）。
+- **种子非幂等**：重跑会重复建帖 / 建同名比赛，只应运行一次；内容微调走帖子编辑页 `/discuss/<did>/edit` 或比赛编辑页。
+
+回滚：每次运行前备份在 `/root/backups/culture-seed-<ts>/`（about / nodes / footer 原值 + trainings / node docs JSON）；恢复 = 原值 POST 回 `/manage/setting`（或 db.system 直写）+ 删除新增的 docType 21/30 文档。
+
+2026-10-05 执行记录：帖子 did——入门须知 `6ac380a38b364d5443b9edc5`、出题规范 `6ac380a38b364d5443b9edbf`、提问的智慧 `6ac380a38b364d5443b9edc1`、周赛怎么打 `6ac380a38b364d5443b9edc3`；比赛 tid `6ac380a38b364d5443b9edbe`（2026-10-11 19:00 CST 开赛）；备份 `/root/backups/culture-seed-20261005-184850/`。

@@ -1,5 +1,47 @@
 # Changelog
 
+## v1.18.0 - 2026-10-05
+
+The site had polish but no pulse: every problem was imported, the discussion
+area was empty, and /wiki/about was stock legal boilerplate. This release
+seeds the "flesh and blood" ported from the team's previous OJ
+(acm.mangata.ltd - the same lab's own heritage), plus landing links that make
+that culture reachable from the front page.
+
+### Added
+
+- **Culture seed runbook (`deploy/culture/`)**. One-time seeding through the
+  service-account session: a `SWPU` discussion-node category (公告 / 云剪切板 /
+  闲聊), four pinned posts authored as the site owner (the freshman guide
+  ported from the old site's 新生入门须知, the problem-authoring tutorial with
+  the config.yaml / SPJ / interactive examples, a weekly-race walkthrough
+  covering post-contest solution culture, and a how-to-ask guide), an
+  /wiki/about rewrite keeping the stock privacy/tos sections,
+  mountain-flavored training chapter titles (大本营 → 登顶眺望) with
+  senior-tone plan descriptions, the site's first contest (海拔周赛 R0, ACM
+  rule, five warm-up problems, allowViewCode for post-contest learning), and
+  footer links to the guide and the paste node. Replay, gotchas and the
+  executed ids: deployment.md §20.
+
+- **Landing community links and route-map identity**. The footer community
+  column now leads with the freshman guide and the paste node; the 山外 column
+  gains the bilibili usage tutorial and the LaTeX cheat sheet; the brand blurb
+  carries the QQ group and the closing CTA a kaomoji. The training route map's
+  waypoints are renamed to the mountain identities (大本营 … 登顶眺望) to match
+  the training-plan chapters, keeping the topic name in the mobile list and
+  aria labels. Display font re-subset (624 CJK).
+
+### Notes
+
+- Hydro's sudo flow requires touching a `@requireSudo` page before POSTing
+  the password (the session must first receive sudoArgs); a 302 from
+  `POST /manage/setting` is not evidence of success - verify the stored value.
+  All three settings updates go through the manage API and take effect
+  without a restart.
+- `operation=init_discussion_node` flushes every discussion node before
+  re-adding them; never re-run it once posts exist (post parentId would
+  dangle). Future node additions must insert node documents directly.
+
 ## v1.17.0 - 2026-10-05
 
 Ranking fixes: members who had solved exactly one easy problem were invisible
