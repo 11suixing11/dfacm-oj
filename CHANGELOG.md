@@ -1,5 +1,55 @@
 # Changelog
 
+## v1.21.0 - 2026-10-07
+
+Full-library taxonomy pass: dedup, statement rebuild, samples, math repair,
+eight topic training routes, and an editorial pipeline with verified
+solutions.
+
+### Removed
+
+- **46 duplicate problem copies** (45 Codeforces problems that were imported
+  once per contest round with 95-100% identical statements + data, plus
+  蓝桥杯「矩阵乘方」 which existed twice). Keeper choice: the copy with the most
+  test data; every deleted copy had zero submissions and zero references.
+  System domain: 4,295 → 4,249 problems. Backup:
+  `taxonomy-dedup-backup-20261007.json` (server) + `del46.js` (repo).
+
+### Fixed
+
+- **All 253 蓝桥杯 statements rebuilt** from the original Word sources:
+  183 corrupted sample blocks, 29 missing samples and 4 lost-image problems
+  repaired in one pass; 237 body figures extracted from the docx media and
+  re-attached via `ProblemModel.addAdditionalFile` (including formula images
+  and the 夺宝奇兵 map that lived in a junk header paragraph).
+- **152 of 196 LOJ statements** freed of the KaTeX disease (raw MathML trees
+  scraped into content); TeX recovered from the `katex-mathml` annotation,
+  with a suffix rule for fraction/limit reordering. 43 remain (MathJax CHTML,
+  need hand-written TeX maps) plus 1 structural edge case.
+- **15 深基 remote problems** (4806-4909): computed sample outputs, each
+  proven by an AC submission through the srqc relay before publishing; the
+  site A+B (docId 1) restated with real judge data. While the hydroac relay
+  is down the records wait at status 0 - a server cron applies them
+  automatically when they turn AC.
+- The 蓝桥杯 plan lost one duplicate chapter entry (254 → 253) and all public
+  counts were refreshed (4,249).
+
+### Added
+
+- **8 topic training routes** (搜索与剪枝 / 动态规划 / 图论 / 数据结构 /
+  数学 / 字符串 / 贪心与构造 / 二分与枚举优化), 256 problems total, 5
+  difficulty-banded chapters each, chained unlock; drawn exclusively from
+  verified-healthy CF problems outside every existing plan. Landing page
+  gained a topic grid (8 cards + wide XCPC entry), the stats cell now counts
+  11 training routes, display font re-subset (640 CJK).
+- **Editorial pipeline** (`scripts/taxonomy/`): batch JSON → judge-verified AC
+  → `SolutionModel.add` → verification records deleted and problem counters
+  restored. 45 editorials published in this pass (蓝桥杯 batches 01-03c,
+  including four deep-dive fixes: the 2n-queen same-cell rule, the
+  tortoise-and-hare timing check, the C*++ join tokenization, Hankson
+  32-bit divisor enumeration, cubic-root dedup and subset-order bits); the
+  remaining plan problems continue through the same pipeline.
+
 ## v1.20.0 - 2026-10-05
 
 The public identity is now **d&f算法网**, an independent algorithm-training
