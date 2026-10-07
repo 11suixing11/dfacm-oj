@@ -289,6 +289,13 @@ section{position:relative}
 .rc-link svg{width:14px;height:14px;transition:transform .35s var(--ease)}
 .rc-link:hover svg{transform:translateX(5px)}
 .rc-note{font-family:var(--font-m);font-size:10.5px;letter-spacing:.2em;color:var(--txt-3)}
+/* 专题训练营：算法专题路线网格 */
+.topic-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:14px;margin-top:22px}
+.topic-card{border:1px solid var(--line);border-radius:14px;padding:16px 18px;transition:border-color .3s,background .3s,transform .3s var(--ease)}
+.topic-card:hover{border-color:var(--gold);transform:translateY(-2px)}
+.topic-card b{display:block;font-size:15.5px;font-weight:600;letter-spacing:.02em}
+.topic-card small{display:block;font-family:var(--font-m);font-size:10px;letter-spacing:.12em;color:var(--txt-3);margin-top:6px}
+.topic-card--wide{grid-column:1/-1;text-align:center;background:linear-gradient(135deg,rgba(42,92,170,.10),rgba(201,162,39,.08))}
 /* 移动端章节列表（SVG 路线图的兜底） */
 .rc-list{display:none;grid-template-columns:1fr 1fr;gap:12px;margin:26px 0 6px}
 .rc-list a{border:1px solid var(--line);border-radius:14px;padding:14px 16px;transition:border-color .3s,background .3s}
@@ -636,7 +643,7 @@ int main() {
     <div class="stats ">
       <div class="row">
         <div class="cell"><div class="num"><span>4,249</span><i>+</i></div><div class="lab">精选题目</div></div>
-        <div class="cell"><div class="num"><span>12</span></div><div class="lab">训练章节</div></div>
+        <div class="cell"><div class="num"><span>11</span></div><div class="lab">训练路线</div></div>
         <div class="cell"><div class="num"><span>29</span></div><div class="lab">判题语言</div></div>
       </div>
     </div>
@@ -715,6 +722,19 @@ int main() {
         <span class="rc-note">253 PROBLEMS · 4 STAGES · LANQIAO CUP</span>
       </div>
     </article>
+
+    <!-- 专题训练营：8 个算法专题 + 进阶综合，按难度分章解锁 -->
+    <div class="topic-grid" aria-label="算法专题训练路线">
+      <a class="topic-card" href="/training/6ac63618a1cd796076ca5dae"><b>搜索与剪枝</b><small>32 题 · 5 章</small></a>
+      <a class="topic-card" href="/training/6ac63618a1cd796076ca5daf"><b>动态规划</b><small>32 题 · 5 章</small></a>
+      <a class="topic-card" href="/training/6ac63618a1cd796076ca5db0"><b>图论</b><small>32 题 · 5 章</small></a>
+      <a class="topic-card" href="/training/6ac63618a1cd796076ca5db1"><b>数据结构</b><small>32 题 · 5 章</small></a>
+      <a class="topic-card" href="/training/6ac63618a1cd796076ca5db2"><b>数学</b><small>32 题 · 5 章</small></a>
+      <a class="topic-card" href="/training/6ac63618a1cd796076ca5db3"><b>字符串</b><small>32 题 · 5 章</small></a>
+      <a class="topic-card" href="/training/6ac63618a1cd796076ca5db4"><b>贪心与构造</b><small>32 题 · 5 章</small></a>
+      <a class="topic-card" href="/training/6ac63619a1cd796076ca5db5"><b>二分与枚举优化</b><small>32 题 · 5 章</small></a>
+      <a class="topic-card topic-card--wide" href="/training/6ac38fb88b364d5443b9ee22"><b>【进阶】XCPC 专题训练 108 题</b><small>九章冲顶 · 专题混合</small></a>
+    </div>
   </div>
 </section>
 

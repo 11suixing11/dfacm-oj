@@ -87,8 +87,9 @@ test('stage tiles that share one training must not be anchors', () => {
     assert.equal(mini[0].includes('<a '), false, 'a stage tile became a link again — it has no distinct destination');
     assert.equal([...mini[0].matchAll(/class="stage"/g)].length, 4);
     assert.equal(/aria-label="蓝桥杯路线包含 4 个递进章节"/.test(mini[0]), true);
-    // The card keeps exactly one real affordance into the route.
-    const card = html.slice(html.indexOf('蓝桥杯真题'), html.indexOf('蓝桥杯真题') + 2000);
+    // The card keeps exactly one real affordance into the route (bounded by its own </article>).
+    const start = html.indexOf('蓝桥杯真题');
+    const card = html.slice(start, html.indexOf('</article>', start) + 10);
     assert.equal([...card.matchAll(/href="\/training\//g)].length, 1);
     assert.ok(!html.includes('.mini a:hover'), 'non-clickable tiles must not keep a hover affordance');
     assert.ok(html.includes('.mini .stage::before'), 'stage timeline dot styling must follow the element rename');
@@ -271,16 +272,18 @@ test('HTML entities in a username are decoded once, not double-escaped', async (
     assert.ok(!help.includes('&amp;amp;'), 'must not double-escape');
 });
 
-// Two routes exist, so both ids must stay internally consistent.
+// Eleven routes exist (2 route cards + 8 topic cards + 1 wide XCPC card); ids must stay consistent.
 test('each training route id is used consistently across markup and script', () => {
     const byId = new Map();
     for (const m of html.matchAll(/\/training\/([0-9a-f]{24})/g)) {
         byId.set(m[1], (byId.get(m[1]) || 0) + 1);
     }
-    assert.equal(byId.size, 2, `expected exactly two routes, got ${[...byId.keys()].join(', ')}`);
+    assert.equal(byId.size, 11, `expected eleven routes, got ${[...byId.keys()].join(', ')}`);
     const [entry, contest] = [...byId.keys()].sort((a, b) => byId.get(b) - byId.get(a));
     assert.ok(byId.get(entry) >= 4, 'the entry route is linked from several places');
     assert.equal(byId.get(contest), 1, 'the contest route has a single entry link');
+    assert.equal((html.match(/class="topic-card"/g) || []).length, 9, '8 topic cards + 1 wide XCPC card');
+    assert.equal([...byId.values()].filter(v => v === 1).length, 10, 'topic/contest cards each link exactly once');
     assert.ok(html.includes(`var ROUTE_URL='/training/${entry}'`), 'the script constant must match the entry route');
     assert.ok(html.includes(`var url='/training/${entry}'`), 'the route map must match the entry route');
 });
