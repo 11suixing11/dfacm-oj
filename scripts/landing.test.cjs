@@ -282,7 +282,7 @@ test('each training route id is used consistently across markup and script', () 
     const [entry, contest] = [...byId.keys()].sort((a, b) => byId.get(b) - byId.get(a));
     assert.ok(byId.get(entry) >= 4, 'the entry route is linked from several places');
     assert.equal(byId.get(contest), 1, 'the contest route has a single entry link');
-    assert.equal((html.match(/class="topic-card"/g) || []).length, 9, '8 topic cards + 1 wide XCPC card');
+    assert.equal((html.match(/class="topic-card[ "]/g) || []).length, 9, '8 topic cards + 1 wide XCPC card');
     assert.equal([...byId.values()].filter(v => v === 1).length, 10, 'topic/contest cards each link exactly once');
     assert.ok(html.includes(`var ROUTE_URL='/training/${entry}'`), 'the script constant must match the entry route');
     assert.ok(html.includes(`var url='/training/${entry}'`), 'the route map must match the entry route');
