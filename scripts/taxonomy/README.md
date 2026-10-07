@@ -37,12 +37,40 @@ Adds real samples to the 15 no-input 深基 remote problems (4806-4909) whose
 statements shipped without sample blocks. The answers are computed, then
 *proven* by submitting the generating program to the srqc remote judge
 (`lang=cc.cc17o2` - bare `cc` is rejected by the domain language whitelist)
-and requiring AC before the `## 样例` block is written. Modes:
-`verify` (submit + poll), `applyonly` (server cron: confirm AC, write content),
-`cleanup` (delete the verification records). While the hydroac relay
-(`ws.hydrooj.com`) was down the batch stayed at status 0; the server cron
-`/root/srq15-auto.sh` applies + cleans automatically once all 16 records
-turn AC.
+and requiring AC before the `## 样例` block is written.
+
+Subcommands, run in this order:
+
+| command | effect |
+|---|---|
+| `reset` | delete judge-account records on the 15 targets, recompute `nSubmit`/`nAccept` from the surviving real records |
+| `verify` | submit all 15 programs, poll, write `/root/srq15-state.json`, require 15/15 AC |
+| `apply` | stage every new body, flush the backup, *then* write; refuses to run unless all 15 are AC |
+| `cleanup` | delete the verification records and restore the counters |
+| `report` | per-problem sample / counter state |
+| `rollback` | exact inverse of `apply` |
+
+**Do not schedule this.** The 2026-10-07 version shipped with an `applyonly`
+cron mode that only *polled* the records submitted while the hydroac relay was
+down; those records park at a non-final status forever, so the cron aborted on
+every tick for ten hours while the relay was already healthy again. It polls,
+it does not retry - run `verify` by hand instead.
+
+Three defects in that version, all fixed here and worth remembering:
+
+- `cleanup` deleted `document.status` rows with `{docId: {$in: ids}}`. That
+  filter also matches **real users'** AC markers, and RP reads that collection,
+  so their rating drops until they re-submit. Always scope by the judge uid.
+- `db.getCollection()` is a mongosh helper; in the Node driver it throws, so
+  cleanup would have failed even after all 15 came back AC.
+- `apply` wrote the database rows before writing the backup file, so a failure
+  in between leaves the library ahead of its backup. `rollback` exists for that
+  case, but the ordering bug is fixed at the source.
+
+Answers are re-derived by the judge, never trusted from arithmetic: 4818
+【定期存款】 came back `Read 12166.5, expect 12000` because 五年定存 is **simple**
+interest (`10000*(1+0.04*5)`), not `10000*1.04^5`. The statement's own wording
+("到期后将连本带利再存一年") applies to 小A's yearly rollover only.
 
 ## loj153.cjs
 

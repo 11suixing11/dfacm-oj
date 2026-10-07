@@ -1,5 +1,43 @@
 # Changelog
 
+## v1.22.0 - 2026-10-08
+
+Library health report plus the 深基 sample batch that the 10-07 relay outage
+left parked.
+
+### Fixed
+
+- **The 15 深基 sample blocks are live.** The 2026-10-07 batch submitted its
+  verification programs while the `ws.hydrooj.com` relay was down and then
+  installed a cron that only *polled* those records - they park at a
+  non-final status forever, so `applyonly` aborted on every tick for ten hours
+  even after the relay recovered (it is healthy again; verified end to end).
+  The cron is removed and `taxonomy/srq15.cjs` re-submits instead.
+- **4818【定期存款】 sample corrected** to `11876.9 12000`. The 10-07 answer
+  assumed compound interest for both savers; the remote judge rejects it with
+  `Read 12166.5, expect 12000` because 五年定存 is *simple* interest
+  (`10000*(1+0.04*5)`). Only 小A's yearly rollover compounds.
+- **Submission counters de-inflated** on the 15 targets - they had been
+  counting the service account's verification runs (4818 read 9/2 against
+  zero real submissions).
+- `cleanup` no longer deletes `document.status` rows by `docId` alone; that
+  filter also matched real users' AC markers and silently dropped their RP.
+  Also replaced `db.getCollection()` (a mongosh helper that throws in the Node
+  driver) and moved the backup write ahead of the database write.
+
+### Added
+
+- **`docs/audit-2026-10-08.md`** — full-library health report. All 4,249
+  problem pages fetched and inspected plus a Mongo pass. Headline: the 蓝桥杯
+  and 一本通 rebuilds are clean (633 problems, zero dead figures, zero math
+  leaks), and the remaining defects are concentrated in the not-yet-localised
+  Codeforces batch. Top items are 1,658 dead figure references left over from
+  the hustoj import and 722 problems whose `html:"true"` flag bypasses the
+  KaTeX pipeline. Editorial coverage is 496/1013. The report also lists four
+  hypotheses the audit itself disproved, so they are not re-investigated.
+- Replayable audit scripts under `scripts/taxonomy/` and their artifacts
+  (`/root/audit-*.json` on the server).
+
 ## v1.21.0 - 2026-10-07
 
 Full-library taxonomy pass: dedup, statement rebuild, samples, math repair,
@@ -28,9 +66,8 @@ solutions.
   need hand-written TeX maps) plus 1 structural edge case.
 - **15 深基 remote problems** (4806-4909): computed sample outputs, each
   proven by an AC submission through the srqc relay before publishing; the
-  site A+B (docId 1) restated with real judge data. While the hydroac relay
-  is down the records wait at status 0 - a server cron applies them
-  automatically when they turn AC.
+  site A+B (docId 1) restated with real judge data. The hydroac relay was down
+  at the time, so this half shipped incomplete and was finished in v1.22.0.
 - The 蓝桥杯 plan lost one duplicate chapter entry (254 → 253) and all public
   counts were refreshed (4,249).
 
