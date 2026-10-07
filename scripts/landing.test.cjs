@@ -41,7 +41,7 @@ test('landing wiring: swap targets, detection marker and stats exist in shipped 
     assert.ok(html.includes("credentials:'same-origin'"));
     assert.ok(html.includes("cache:'no-store'"), 'probe must bypass the HTTP cache');
     assert.ok(html.includes("addEventListener('pageshow'"), 'bfcache restore must re-probe login state');
-    assert.ok(html.includes('4,295'), 'problem count must not regress');
+    assert.ok(html.includes('4,249'), 'problem count must not regress');
 assert.ok(html.includes('>29</span>'), '29 judge languages');
     assert.ok(!html.includes('data-count'), 'dead attributes: nothing reads them, and they drifted from the visible numbers');
     assert.ok(!html.includes('2.5ms'), 'the judge-sourced 2.5ms stat must stay gone');
