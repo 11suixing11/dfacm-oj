@@ -1,0 +1,12 @@
+[
+  {
+    "docId": 4143,
+    "t": "先卡范围：设 n 有 k 位，每位数字的五次方最大 9^5=59049，k 位相加不超过 59049k，所以 6 位以内必然有界，从 100 枚举到 59049*6 就能覆盖所有可能。逐个判断——把 x 每一位 d 取出算 d^5 累加，若和恰等于 x 则输出；x 从小到大枚举，天然有序。**下界必须从 100 起**：1 的五次方数就是 1，满足定义但评测不收（答案从 4150 开始），同理小于 100 的数一律跳过。",
+    "c": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    // 6 位数以内；下界取 100，1 虽然也满足定义但不在答案范围内\n    const int LIMIT = 59049 * 6;\n    for (int x = 100; x <= LIMIT; x++) {\n        int t = x, sum = 0;\n        while (t) {\n            int d = t % 10;\n            sum += d * d * d * d * d;\n            t /= 10;\n        }\n        if (sum == x) cout << x << \"\\n\";\n    }\n    return 0;\n}"
+  },
+  {
+    "docId": 4145,
+    "t": "把 n 当字符串读入，对每个数位独立求可达集合：can[d] 表示数字 d 经若干次变换能变成哪些数字。初值 can[d]=true（0 次变换）。规则可以级联（a->b 且 b->c 则 a 能到 c），所以要反复扫描规则表做松弛，类似 Bellman-Ford，最多 10 轮（每轮至少新增一个数字）。各位互不影响，最终答案是各位可选数字个数的**乘积**。⚠️ **必须用高精度**：n 可达 30 位，答案可远超 64 位（例如测试点 5 的答案是 3427648537559040...，已超 long long），用 vector<int> 按 10 进制存位、乘法时逐位乘并进位。",
+    "c": "#include <bits/stdc++.h>\nusing namespace std;\n\n// 高精度：按 10 进制低位在前存位\nvector<int> mul(vector<int> a, int b) {\n    vector<int> res(a.size(), 0);\n    long long carry = 0;\n    for (size_t i = 0; i < a.size(); i++) {\n        long long cur = (long long)a[i] * b + carry;\n        res[i] = cur % 10;\n        carry = cur / 10;\n    }\n    while (carry) { res.push_back(carry % 10); carry /= 10; }\n    return res;\n}\n\nint main() {\n    string n;\n    int k;\n    cin >> n >> k;\n    vector<pair<int, int>> rules(k);\n    for (auto &r : rules) cin >> r.first >> r.second;\n\n    bool can[10];\n    for (int d = 0; d < 10; d++) can[d] = true;      // 0 次变换\n\n    for (int round = 0; round < 10; round++) {        // 规则可级联，反复松弛\n        bool changed = false;\n        for (auto &r : rules) {\n            if (can[r.first] && !can[r.second]) {\n                can[r.second] = true;\n                changed = true;\n            }\n        }\n        if (!changed) break;\n    }\n\n    int cnt = 0;\n    for (int d = 0; d < 10; d++) if (can[d]) cnt++;\n\n    vector<int> ans(1, 1);\n    for (char ch : n) ans = mul(ans, cnt);\n\n    for (int i = (int)ans.size() - 1; i >= 0; i--) cout << ans[i];\n    cout << \"\\n\";\n    return 0;\n}"
+  }
+]

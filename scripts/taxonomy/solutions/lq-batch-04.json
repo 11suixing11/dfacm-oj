@@ -1,0 +1,27 @@
+[
+  {
+    "docId": 4143,
+    "t": "先把范围卡死：设 n 有 k 位，则每位数字的五次方最大 9^5=59049，k 位相加不超过 59049k，所以答案一定落在 [1, 59049k] 里；从 1 枚举到 6*59049=354294 就够了（k>=6 时界更大，但更大位数不可能成为解，因为 k*59049 已经远大于枚举上界对应的位数）。逐个判断：把 x 的每一位 d 取出算 d^5 累加，若和恰等于 x 则输出。按 x 从小到大枚举，天然有序。",
+    "c": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    // 6 位数以内：59049 * 6\n    const int LIMIT = 59049 * 6;\n    for (int x = 1; x <= LIMIT; x++) {\n        int t = x, sum = 0;\n        while (t) {\n            int d = t % 10;\n            sum += d * d * d * d * d;\n            t /= 10;\n        }\n        if (sum == x) cout << x << \"\\n\";\n    }\n    return 0;\n}"
+  },
+  {
+    "docId": 4144,
+    "t": "直接模拟。维护长度 N 的数组，按顺序读入 M 次交换，每次把第 x 个与第 y 个元素互换（x、y 从 1 开始，所以代码里用 a[x-1] 与 a[y-1]）。x==y 时交换不改变任何东西，无需特判——swap 一个元素与自身是安全的。最后每个元素单独一行输出。",
+    "c": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    int n, m;\n    cin >> n >> m;\n    vector<int> a(n);\n    for (int i = 0; i < n; i++) cin >> a[i];\n    for (int i = 0; i < m; i++) {\n        int x, y;\n        cin >> x >> y;\n        swap(a[x - 1], a[y - 1]);\n    }\n    for (int i = 0; i < n; i++) cout << a[i] << \"\\n\";\n    return 0;\n}"
+  },
+  {
+    "docId": 4140,
+    "t": "用 set<string> 去重：把整行句子读进来，用 stringstream 按空格切分，逐个单词插入 set，最后输出 set 的大小。set 自带去重，插入重复单词不会改变大小。",
+    "c": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    string line;\n    getline(cin, line);\n    set<string> words;\n    stringstream ss(line);\n    string w;\n    while (ss >> w) words.insert(w);\n    cout << words.size() << \"\\n\";\n    return 0;\n}"
+  },
+  {
+    "docId": 4145,
+    "t": "把 n 当成字符串读入，对每一位独立地做可达性扩展：维护一个布尔数组 can[10]，can[d] 表示数字 d 经过若干次变换能否得到 d 本身——具体地，can[d] 初值全为真（0 次变换），对于每条规则 a->b，把 can[b] 置真（因为 a 本来可达，于是 b 也可达），规则可以级联，所以要反复扫描规则列表直到没有新的置位，用类似 Bellman-Ford 的松弛：最多跑 10 轮，每轮对每条规则若 can[a] 则 can[b]=true。注意 0 也要参与统计（0 可以变成别的数字，别的数字也可以变成 0）。逐位统计 can[d] 为真的 d 的个数再相乘，因为各位互不影响，答案是各位可选个数的乘积。",
+    "c": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    string n;\n    int k;\n    cin >> n >> k;\n    vector<pair<int, int>> rules(k);\n    for (auto &r : rules) cin >> r.first >> r.second;\n\n    bool can[10];\n    for (int d = 0; d < 10; d++) can[d] = true;   // 0 次变换\n\n    // 规则可级联：反复松弛，最多 10 轮（每次至少新增一个数字）\n    for (int round = 0; round < 10; round++) {\n        bool changed = false;\n        for (auto &r : rules) {\n            if (can[r.first] && !can[r.second]) {\n                can[r.second] = true;\n                changed = true;\n            }\n        }\n        if (!changed) break;\n    }\n\n    int cnt = 0;\n    for (int d = 0; d < 10; d++) if (can[d]) cnt++;\n\n    long long ans = 1;\n    for (char ch : n) ans *= cnt;\n    cout << ans << \"\\n\";\n    return 0;\n}"
+  },
+  {
+    "docId": 4314,
+    "t": "先构造 (2n-1)×(2n-1) 的字符矩阵并全部填 '.'。令 center = n-1（0 下标），从中心字母 'A'+n-1 出发，沿八个方向各放一条从中心向外的射线：对方向 (dx,dy) ∈ {(-1,-1),(-1,0),(-1,1),(0,-1),(0,1),(1,-1),(1,0),(1,1)}，令字母 = 'A'+n-1，从中心格 (center,center) 开始，先写中心，再反复 r+=dx, c+=dy 并把字母减一，直到出界或字母小于 'A'。这样八个方向的字母都从中心向外递减。剩下的格子保持 '.' 不动。",
+    "c": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    int n;\n    cin >> n;\n    int size = 2 * n - 1;\n    vector<string> g(size, string(size, '.'));\n    int center = n - 1;\n\n    const int dx[8] = {-1, -1, -1, 0, 0, 1, 1, 1};\n    const int dy[8] = {-1, 0, 1, -1, 1, -1, 0, 1};\n\n    for (int k = 0; k < 8; k++) {\n        int r = center, c = center;\n        int letter = n - 1;                       // 0 = 'A'\n        while (true) {\n            if (r >= 0 && r < size && c >= 0 && c < size) {\n                g[r][c] = char('A' + letter);\n            } else {\n                break;\n            }\n            r += dx[k];\n            c += dy[k];\n            letter--;\n            if (letter < 0) break;\n        }\n    }\n\n    for (const string &row : g) cout << row << \"\\n\";\n    return 0;\n}"
+  }
+]
