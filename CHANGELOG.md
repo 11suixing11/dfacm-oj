@@ -28,15 +28,23 @@ left parked.
 ### Added
 
 - **`docs/audit-2026-10-08.md`** — full-library health report. All 4,249
-  problem pages fetched and inspected plus a Mongo pass. Headline: the 蓝桥杯
-  and 一本通 rebuilds are clean (633 problems, zero dead figures, zero math
-  leaks), and the remaining defects are concentrated in the not-yet-localised
-  Codeforces batch. Top items are 1,658 dead figure references left over from
-  the hustoj import and 722 problems whose `html:"true"` flag bypasses the
-  KaTeX pipeline. Editorial coverage is 496/1013. The report also lists four
-  hypotheses the audit itself disproved, so they are not re-investigated.
-- Replayable audit scripts under `scripts/taxonomy/` and their artifacts
-  (`/root/audit-*.json` on the server).
+  problem pages fetched (4,205 successfully; the site answers 403 under burst)
+  plus a Mongo pass. Headline: the 蓝桥杯 and 一本通 rebuilds are clean
+  (633 problems, zero dead figures, zero math leaks), and the remaining defects
+  are concentrated in the not-yet-localised Codeforces batch. Top items are
+  1,625 dead figure references left over from the hustoj import and 722
+  problems whose `html:"true"` flag bypasses the KaTeX pipeline. Editorial
+  coverage is 496/1013.
+- **`scripts/taxonomy/audit/`** — 15 replayable audit scripts with a README
+  covering how to run them and two rules the audit paid for: prefer Mongo over
+  HTTP (a page-fetch scan silently misses pages behind the 403 guard), and
+  enumerate every variant of a structure before calling it missing.
+- The report's own numbers were corrected after a Mongo-side recount: dead
+  figures 1,658 → **1,625** (the extra 33 were third-party image hosts, a
+  different problem with a different fix), and missing samples 18 → **5**
+  (the check missed the 样例说明 style, where a sample is a prose derivation
+  rather than an input/output pair). All 5 remaining are outside the training
+  plans.
 
 ## v1.21.0 - 2026-10-07
 
