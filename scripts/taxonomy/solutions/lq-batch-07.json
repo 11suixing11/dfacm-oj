@@ -1,0 +1,42 @@
+[
+  {
+    "docId": 4209,
+    "t": "埃氏筛求 n 以内所有素数之和。n 最大 200 万，标记数组开 n+1。遍历 i 从 2 到 n，若 i 未被标记则为素数、累加进和，并把 i 的倍数（从 i*i 起）标记掉。求和用 long long——200 万以内的素数之和约 1.4×10^11，超出 int。",
+    "c": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    int n;\n    cin >> n;\n    vector<char> isComposite(n + 1, 0);\n    long long sum = 0;\n    for (int i = 2; i <= n; i++) {\n        if (isComposite[i]) continue;\n        sum += i;\n        for (long long j = (long long)i * i; j <= n; j += i) isComposite[j] = 1;\n    }\n    cout << sum << endl;\n    return 0;\n}"
+  },
+  {
+    "docId": 4217,
+    "t": "试除法分解质因数：从 2 开始试到 √n，每找到一个因数就整除一次并记录。⚠️ **输出要去重**：题目要的是「所有质因子」，重复的同一质因子只输出一次（实测 n=12 输出 `2 3`，不是 `2 2 3`），所以每除尽后直接跳到下一个 d。剩下的 x > 1 是一个大于 √n 的质因子，补在末尾。",
+    "c": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    int n;\n    cin >> n;\n    vector<int> fac;\n    int x = n;\n    for (int d = 2; (long long)d * d <= x; d++) {\n        if (x % d == 0) {\n            fac.push_back(d);\n            while (x % d == 0) x /= d;   // 除尽，保证质因子不重复输出\n        }\n    }\n    if (x > 1) fac.push_back(x);\n    for (size_t i = 0; i < fac.size(); i++) {\n        if (i) cout << \" \";\n        cout << fac[i];\n    }\n    cout << endl;\n    return 0;\n}"
+  },
+  {
+    "docId": 4235,
+    "t": "陶陶伸手能达到 h 厘米，踩上 30 厘米的板凳后能达到 h+30，所以**只要苹果高度 ≤ h+30 就能摘到**（题目保证每个苹果高度都 > h）。读入 n 个高度和一个 h，数一遍满足条件的个数即可。",
+    "c": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    int n, h;\n    cin >> n >> h;\n    vector<int> a(n);\n    for (int &x : a) cin >> x;\n    cin >> h;\n    int cnt = 0;\n    for (int x : a) if (x <= h + 30) cnt++;\n    cout << cnt << endl;\n    return 0;\n}"
+  },
+  {
+    "docId": 4161,
+    "t": "求最大连续子段和，子段必须非空。Kadane 算法一遍扫完：维护 `cur` 表示「以当前位置结尾的最大子段和」，`cur = max(a[i], cur + a[i])`（要么把 a[i] 接在前面的子段后，要么自己另起一段），`best` 记录全程最大值。全部为负数时答案就是最大的那个负数——这正是「非空」约束的作用，初始化时 `cur = best = a[0]` 而非 0。",
+    "c": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    int n;\n    cin >> n;\n    int cur = 0, best = 0;\n    bool first = true;\n    for (int i = 0; i < n; i++) {\n        int x;\n        cin >> x;\n        if (first) { cur = best = x; first = false; }\n        else { cur = max(x, cur + x); best = max(best, cur); }\n    }\n    cout << best << endl;\n    return 0;\n}"
+  },
+  {
+    "docId": 4096,
+    "t": "两个包装规格 a、b **由输入给出**（不是硬编码的 4 和 7），求最大的、无法用若干个 a 包和若干个 b 包凑出的整数。当 gcd(a,b)=1 时经典结论是最大不能表示的数为 `a*b - a - b`（Frobenius 数）；三组数据（10 13→107、30 41→1159、257 191→48639）都与该公式精确吻合。不放心时也可以用 DP 兜底：`dp[0]=true`，`dp[i] = (i>=a && dp[i-a]) || (i>=b && dp[i-b])`，在 0..a*b 范围内找最后一个 `dp[i]==false` 的 i。",
+    "c": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    int a, b;\n    cin >> a >> b;\n    // 两个规格互质时，最大不能凑出的数就是 a*b-a-b\n    cout << a * b - a - b << endl;\n    return 0;\n}"
+  },
+  {
+    "docId": 4171,
+    "t": "把 1~9 分成三组组成三个三位数，且三数成 1:2:3 的比例。设最小的数为 x，另两个是 2x、3x，那么 x 必须在 [100, 333] 内（保证 3x 仍是三位数），且 x、2x、3x 的十进制数字合起来恰好是 1~9 各一次、不含 0。枚举 x 从 100 到 333，用位掩码判重：把每个数字 d 映射成第 d-1 位，遇到重复位或数字 0 就否决，最后 `popcount(mask)==9` 即为合法解。",
+    "c": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    for (int x = 100; x <= 333; x++) {\n        int a = x, b = 2 * x, c = 3 * x;\n        if (c > 999) break;\n        int mask = 0;\n        bool ok = true;\n        for (int v : {a, b, c}) {\n            int t = v;\n            while (t) {\n                int d = t % 10;\n                if (d == 0) { ok = false; break; }\n                if (mask & (1 << (d - 1))) { ok = false; break; }\n                mask |= 1 << (d - 1);\n                t /= 10;\n            }\n            if (!ok) break;\n        }\n        if (ok && __builtin_popcount(mask) == 9) {\n            cout << a << \" \" << b << \" \" << c << endl;\n        }\n    }\n    return 0;\n}"
+  },
+  {
+    "docId": 4226,
+    "t": "输出是固定的 ASCII 排版，逐字节对齐即可：先打印标题行 `  Nine-by-nine Multiplication Table`，一条 38 个 `-`；然后是列标题行 `1`..`9`（每个数右对齐在 4 宽度、整行前缩进 2 空格）；再一条 38 个 `-`；接着 9 行数据，每行先写行号（左对齐占 2 宽，如 ` 1`），再依次把 1×i、i×… 的乘积右对齐在 4 宽度；最后再一条 38 个 `-`。注意**乘积不写乘号**（是 ` 1   1` 而不是 `1*1=1`），这点和常见的九九乘法表写法不同。",
+    "c": "#include <bits/stdc++.h>\n#include <iomanip>\nusing namespace std;\n\nint main() {\n    const string bar(38, '-');\n    cout << \"  Nine-by-nine Multiplication Table\" << endl;\n    cout << bar << endl;\n    cout << \"  \";\n    for (int j = 1; j <= 9; j++) cout << setw(4) << j;\n    cout << endl;\n    cout << bar << endl;\n    for (int i = 1; i <= 9; i++) {\n        cout << setw(2) << i;\n        for (int j = 1; j <= i; j++) cout << setw(4) << j * i;\n        cout << endl;\n    }\n    cout << bar << endl;\n    return 0;\n}"
+  },
+  {
+    "docId": 4188,
+    "t": "输入 n 分钟，输出天、小时、分三个数，**用空格分隔**（不是 `3天9小时20分`）。换算：天 = n / (60×24)，小时 = (n / 60) % 24，分 = n % 60，全部整数除法即可。",
+    "c": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    long long n;\n    cin >> n;\n    long long day = n / (60 * 24);\n    long long hour = (n / 60) % 24;\n    long long minute = n % 60;\n    cout << day << \" \" << hour << \" \" << minute << endl;\n    return 0;\n}"
+  }
+]

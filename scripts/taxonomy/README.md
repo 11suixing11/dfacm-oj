@@ -142,7 +142,36 @@ Continue with further batches by authoring more `lq-batch-NN.json` files and
 running `run-solutions.sh` against them. Coverage target: all problems inside
 training plans (蓝桥杯 253 → in progress; XCPC 108; the 8 topic plans 256).
 
-## Working a batch: four failures that each looked like a modelling bug
+## Working a batch: pre-flight locally, then judge
+
+`preflight.cjs <batch.json>` compiles every solution in a batch and runs it
+against that problem's real test files on the server, printing got vs expected
+per case. Nothing reaches the judge until it passes locally.
+
+```bash
+export PATH=/root/.nix-profile/bin:/usr/local/bin:/usr/bin:/bin
+export NODE_PATH=/usr/local/share/.config/yarn/global/node_modules
+node /root/preflight.cjs /root/lq-batch-07.json
+# then
+bash /root/run-solutions.sh /root/lq-batch-07.json
+```
+
+This is worth the extra step. Batch 07 went **8/8 on the first judge attempt**;
+without the pre-flight, three of those eight would have been submitted wrong on
+guessed output formats:
+
+- #4226 输出九九乘法表 expects a fixed ASCII table with a `Nine-by-nine
+  Multiplication Table` title, 38-char rules and right-aligned width-4 columns
+  printing bare products (` 1   1`, no `1*1=1`).
+- #4188 expects `3 9 20`, not `3天9小时20分`.
+- #4096 takes **two packaging sizes from the input** (`10 13`), not the 4 and 7
+  the statement mentions; the answer is the Frobenius number `a*b-a-b`.
+
+A judge round trip costs a compile plus a poll cycle and tells you only "too
+high" or "too low". The pre-flight tells you the exact expected bytes and turns
+the fix into a local edit.
+
+## Four failures that each looked like a modelling bug
 
 #4149 促销购物 took four attempts, and three of the four failures were in my
 head, not in the algorithm. Worth spelling out because each one cost a full
@@ -166,9 +195,10 @@ judge round trip:
 
 The general lesson: after a WA, read `testCases.message` for the read/expect
 pair, then **compile the candidate locally and run it against the real test
-files** (`run-local.cjs` does this) before resubmitting. Guessing at semantics
-from the diff alone cost two extra rounds here; seeing "got 1695 = list price"
-immediately said "no plan survived parsing".
+files** before resubmitting. Guessing at semantics from the diff alone cost two
+extra rounds here; seeing "got 1695 = list price" immediately said "no plan
+survived parsing". `preflight.cjs` now does that automatically for every entry in
+a batch, so this only has to be remembered once.
 
 Two more that a WA diff pinned down instantly:
 
