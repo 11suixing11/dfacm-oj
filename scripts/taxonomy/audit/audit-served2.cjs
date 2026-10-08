@@ -9,6 +9,25 @@ const HOST = 'dfacm.website';
 const BASE = 'http://127.0.0.1:8888';
 const stripTags = (h) => h.replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/&#92;/g, '\\').replace(/\s+/g, ' ');
 
+// Kept byte-identical to audit-served.cjs on purpose: the two passes share one
+// measurement definition, otherwise a page measured by pass one and pass two
+// would not be comparable.
+const CONTAINER_RE = /<div class="section__body typo richmedia"[^>]*>/;
+function statementOf(html) {
+  // Anchor on the class attribute, then walk to the tag's real `>`. Matching the
+  // literal `<div class="section__body typo richmedia">` fails because Hydro
+  // appends data-fragment-id after the class attribute.
+  const m = CONTAINER_RE.exec(html);
+  if (!m) return null;
+  const rest = html.slice(m.index + m[0].length);
+  const end = rest.search(/<div class="section side section--problem-sidebar"|<section class="section"|<div class="section__header"|<div id="problem-/);
+  return end > 0 ? rest.slice(0, end) : rest;
+}
+const statementOrNull = (html) => {
+  const s = statementOf(html);
+  return s === null ? null : s.replace(/<script[\s\S]*?<\/script>/g, ' ').replace(/<style[\s\S]*?<\/style>/g, ' ');
+};
+
 (async () => {
   const c = new MongoClient(uri);
   await c.connect();
@@ -39,16 +58,23 @@ const stripTags = (h) => h.replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').repl
     }
     if (!html) { still.push(pid); return; }
 
-    const m = html.match(/<div class="typo richmedia"[\s\S]*?<\/div>\s*(?:<div class="problem-actions|$)/);
-    const body = m ? m[0] : html;
+    // Same correction as audit-served.cjs: the container is
+    // `<div class="section__body typo richmedia">`, not `<div class="typo
+    // richmedia">` (which never matched and silently measured the whole page),
+    // and <script> must be dropped because window.UiContext embeds the statement
+    // as JSON. See the long comment in audit-served.cjs.
+    const body = statementOrNull(html);
+    if (body === null) { still.push(pid); return; }
     const vis = stripTags(body.replace(/<pre[\s\S]*?<\/pre>/g, ''));
     const dollars = (vis.match(/(?:^|\s)\$+\S?/g) || []).length;
     if (dollars) flag('S1_literal_dollar_visible', pid, `count=${dollars} "${vis.match(/.{0,40}\$.{0,40}/)[0].trim()}"`);
     if (/katex-error/.test(body)) flag('S2_katex_error', pid, 'katex-error');
-    if (/class="katex"/.test(body) && !/katex-display/.test(body)) flag('S2b_katex_unrendered', pid, 'class="katex"');
+    if (/class="katex"/.test(body)) flag('S2c_katex_rendered', pid, `spans=${(body.match(/class="katex"/g) || []).length}`);
     const tex = vis.match(/\\(frac|sum|sqrt|begin|mathbb|cdot|times|leq|geq|alpha|beta)\b/);
     if (tex) flag('S3_raw_tex_visible', pid, `"${vis.match(/.{0,40}\\[a-z]{2,}.{0,30}/)[0].trim()}"`);
     if (/&#92;/.test(body)) flag('S4_escaped_backslash', pid, '&#92;');
+    const escU = (body.match(/\\u[0-9a-fA-F]{4}/g) || []).length;
+    if (escU) flag('S4b_json_escape_visible', pid, `count=${escU}`);
     for (const im of body.matchAll(/<img[^>]+src="([^"]+)"/g)) {
       const src = im[1];
       if (/^(https?:\/\/)/.test(src)) { flag('S6_external_image', pid, src.slice(0, 110)); continue; }

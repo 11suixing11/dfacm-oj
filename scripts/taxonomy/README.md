@@ -72,6 +72,45 @@ Answers are re-derived by the judge, never trusted from arithmetic: 4818
 interest (`10000*(1+0.04*5)`), not `10000*1.04^5`. The statement's own wording
 ("到期后将连本带利再存一年") applies to 小A's yearly rollover only.
 
+## html:"true" math bypass (2026-10-08)
+
+`pdoc.html === "true"` makes Hydro emit content as raw HTML and skip the
+markdown-it + KaTeX pipeline, so `$..$` survives as literal text. Setting
+`html` to `''` routes it through the pipeline and the formulas render.
+
+The repair is usually just the flag: these statements are already stored in the
+target shape (`<h2>` headings, `<pre><code class="language-inputN">` sample
+blocks, `$..$` math), so `content` is not rewritten at all.
+
+**The real number is 292, not the 3547 that carry the flag.** 3255 of them
+contain no math whatsoever and are simply unaffected — the flag is a
+"not broken" rather than a "broken" thing. Of the 292, 290 need nothing but the
+flag; 2 (`#1353`, `#3518`) are scraped raw HTML and need a rewrite.
+
+| script | purpose |
+|---|---|
+| `htmltrue-scope.cjs` | classify every `html:"true"` problem: no math / fixable / needs rewrite |
+| `htmltrue-fix.cjs` | `plan` \| `apply` \| `verify` \| `revert` — flip the flag |
+| `render-measure.cjs` | ground truth: fetch the page and measure what a reader sees |
+| `fix-entities.cjs` | un-escape `&#44;` that sits **inside** `$..$` (3 problems, 20 expressions) |
+| `fix-trailing-comma.cjs` | drop a stray trailing comma inside `$..$` (3 CSP problems) |
+| `rollback-kerr.cjs` | re-measure everything flipped and roll back anything that now renders as `katex-error` |
+
+Three rules this pipeline enforces, each from something that went wrong:
+
+1. **Measure after flipping, and roll back regressions.** `html:""` fixed 241
+   problems but turned 6 others (`#3839` 阿克曼函数, `#3841` Hermite多项式,
+   `#3893` 棋盘问题, `#3955` 滑雪, `#4048` 鱼塘钓鱼, `#4065` 食物链) from
+   *harmless literal text* into *visible render errors*. A `katex-error` is
+   worse than a literal `$`, so `rollback-kerr.cjs` restores `html:"true"` for
+   any problem that regressed. Net result: 174 problems rendering, 0 errors.
+2. **Back up before the first write, never after.** Staged content and the
+   backup file are flushed first; if the backup exists the script refuses to
+   run.
+3. **Only un-escape entities inside math.** `&#44;` in prose is valid HTML and
+   the browser renders a comma correctly — rewriting it would be gratuitous.
+   Only the ones KaTeX cannot parse (inside a `$..$` span) are touched.
+
 ## loj153.cjs
 
 Batch-fixes the LOJ KaTeX disease (scraped pages contain raw

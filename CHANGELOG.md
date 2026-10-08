@@ -1,5 +1,72 @@
 # Changelog
 
+## v1.23.0 - 2026-10-08
+
+Math rendering repaired across 241 problems, and the audit's own measurement
+fixed after it produced three wrong numbers in a row.
+
+### Fixed
+
+- **The `html:"true"` math bypass is fixed on 241 problems.** `pdoc.html === "true"`
+  made Hydro emit content as raw HTML and skip the markdown-it + KaTeX pipeline,
+  so `$..$` printed literally. These statements are already stored in the target
+  shape, so the repair is the flag alone and `content` is untouched. Formulas
+  now render on 174 problems, up from 1.
+- **6 problems rolled back rather than left broken** (`#3839` 阿克曼函数,
+  `#3841` Hermite多项式, `#3893` 棋盘问题, `#3955` 滑雪, `#4048` 鱼塘钓鱼,
+  `#4065` 食物链). Flipping the flag fixed most formulas but turned these six
+  from *harmless literal text* into *visible `katex-error`*, which is worse.
+  `rollback-kerr.cjs` now re-measures and restores `html:"true"` for anything
+  that regressed; `katex-error` is back to 0.
+- Escaped commas inside `$..$` un-escaped on 3 CSP problems (20 expressions) —
+  markdown-it passes `&#44;` straight into KaTeX, which cannot parse it.
+- Stray trailing commas removed from 5 formulas (`$r _ { i } ,$` →
+  `$r _ { i } $`); a full-width Chinese comma had been folded into the span.
+  `#749` was deliberately excluded: its commas separate real constraints.
+
+### Corrected
+
+- **The math-bypass scope was 292 problems, not 722.** 3547 problems carry
+  `html:"true"`, but 3255 of them contain no math at all and are simply
+  unaffected. Of the 292, 290 need nothing but the flag and 2 are scraped raw
+  HTML needing a rewrite.
+- **Every "N literal `$` still visible" number in the previous report was
+  untrustworthy.** The measurement had three defects, each of which had to be
+  found separately: the container pattern was `<div class="typo richmedia">`
+  which never matches (the real one is `section__body typo richmedia`), so it
+  silently fell back to measuring the whole page; the corrected pattern still
+  failed because Hydro appends `data-fragment-id` after the class attribute; and
+  `<script>` was never dropped, so `window.UiContext` — which embeds the
+  statement as JSON — contributed 298 phantom `\uXXXX` escapes and a second copy
+  of the prose that no reader ever sees. The auditor now returns
+  `NO_STATEMENT_CONTAINER` instead of degrading silently, and counts rendered
+  formulas as well as broken ones. The Mongo-side figure counts (820 problems /
+  1,625 dead references) never depended on this path and are unaffected.
+
+### Added
+
+- **`scripts/taxonomy/htmltrue-*.cjs`, `fix-entities.cjs`,
+  `fix-trailing-comma.cjs`, `rollback-kerr.cjs`, `render-measure.cjs`** — the
+  repair pipeline, replayable end to end, documented in
+  `scripts/taxonomy/README.md`.
+- Backups on the server: `htmltrue-flag-20261008T082014.json` (247 entries),
+  `htmltrue-rollback-20261008T083303.json` (6),
+  `math-entities-20261008T082302.json`, `trailing-comma-20261008T082806.json`.
+
+### Investigated, not fixable here
+
+The dead figures from the hustoj import (1,625 references across 820 problems)
+cannot be recovered from this server: every hustoj host returns 500, the
+Codeforces statement pages return 403, `m1.codeforces.com` serves a JS
+anti-bot challenge, luogu 404s, the local import archives hold only site icons,
+none of the 76 in-plan problems has a same-titled twin with usable images, and
+the one endpoint still open — the Codeforces API — exposes seven metadata fields
+and no statement text. 64 of the 77 in-plan problems can still be mapped to
+their original contest id by title, so this is recoverable later given egress to
+Codeforces. Note that 32 of them lost *equations* rather than illustrations
+(hustoj rasterised LaTeX into `class="tex-formula"` PNGs), so they are
+incomplete rather than merely ugly.
+
 ## v1.22.0 - 2026-10-08
 
 Library health report plus the 深基 sample batch that the 10-07 relay outage
