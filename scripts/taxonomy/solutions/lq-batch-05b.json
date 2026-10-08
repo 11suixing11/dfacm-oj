@@ -1,0 +1,7 @@
+[
+  {
+    "docId": 4138,
+    "t": "题目给了函数骨架，照它实现：Add 把 b 的前 n 个元素接到 a 的前 m 个元素之后。输出长度有个细节——不是无脑用 `m1+n1`。看测试数据：当 `n1=0`（不做任何追加）时，期望输出的是**原数组 a 的全部 m 个元素**，而不是 0 个（case 7: m=n=m1=n1=2 时期望输出 `1, 2` 共 2 个；case 9: m1=2,n1=0 时期望输出 `1, 2, 3, 4` 共 4 个）。所以长度取 `max(m1 + n1, m)`。元素之间用逗号加空格隔开，最后一个元素后换行、无尾逗号。",
+    "c": "#include <bits/stdc++.h>\nusing namespace std;\n\nvoid Add(int a[], int m, int b[], int n) {\n    for (int i = 0; i < n; i++) a[m + i] = b[i];\n}\n\nint main() {\n    int m, n;\n    cin >> m >> n;\n    int *a = new int[m + n];\n    int *b = new int[n];\n    for (int i = 0; i < m; i++) cin >> a[i];\n    for (int i = 0; i < n; i++) cin >> b[i];\n    int m1, n1;\n    cin >> m1 >> n1;\n    Add(a, m1, b, n1);\n\n    // n1 == 0 时不做追加，但仍然输出原数组 a 的 m 个元素\n    int len = max(m1 + n1, m);\n    for (int i = 0; i < len; i++) {\n        if (i) cout << \", \";\n        cout << a[i];\n    }\n    cout << endl;\n    return 0;\n}"
+  }
+]
