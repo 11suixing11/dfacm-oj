@@ -141,3 +141,48 @@ published editorials:
 Continue with further batches by authoring more `lq-batch-NN.json` files and
 running `run-solutions.sh` against them. Coverage target: all problems inside
 training plans (蓝桥杯 253 → in progress; XCPC 108; the 8 topic plans 256).
+
+## Working a batch: four failures that each looked like a modelling bug
+
+#4149 促销购物 took four attempts, and three of the four failures were in my
+head, not in the algorithm. Worth spelling out because each one cost a full
+judge round trip:
+
+1. **The input format is not what the statement says.** The statement reads
+   "第一个整数 n，表示这种优惠方式由 n 种商品组成。后面 n 对整数 c 和 k". A
+   natural reading is "n pairs, then the price", and that is what I wrote. The
+   data is actually `n c₁ k₁ c₂ k₂ … cₙ kₙ p`. The two coincide on the first
+   plan of a case and diverge immediately after, so a single happy-path case
+   looks fine.
+2. **A plan may be bought more than once.** Modelling it as 0-1 knapsack gave
+   1631 where the judge wants 1563; the gap closes only when each plan can be
+   repeated up to 5 times.
+3. **A plan containing a product that is not on the shopping list is still
+   usable** -- take the part of it that applies and ignore the rest. Dropping
+   such plans wholesale made the answer collapse to "everything at list price",
+   which was exactly the first wrong answer I submitted.
+4. **A plan that appears useless can still be the cheapest route**, because
+   buying a plan that overshoots nothing lets other plans fit around it.
+
+The general lesson: after a WA, read `testCases.message` for the read/expect
+pair, then **compile the candidate locally and run it against the real test
+files** (`run-local.cjs` does this) before resubmitting. Guessing at semantics
+from the diff alone cost two extra rounds here; seeing "got 1695 = list price"
+immediately said "no plan survived parsing".
+
+Two more that a WA diff pinned down instantly:
+
+- #4143 五次方数: `1` satisfies the definition but the judge's answer set starts
+  at 4150, so the lower bound is 100 and up.
+- #4138: when `n1 == 0` nothing is appended, yet the judge still expects the
+  original `m` elements printed, so the length is `max(m1 + n1, m)` and there is
+  no trailing comma. The visible sample does not contain an `n1 == 0` case.
+
+## Problems whose test data is unjudgeable
+
+`#4142` 乘法运算 (蓝桥杯 plan): all four `.out` files contain `U+FFFD`. The
+vertical-multiplication layout wants a full-width multiplication sign and rule,
+and the import mangled them into replacement characters, so no program can
+match. It is the only such case among the 152 蓝桥杯 problems still lacking an
+editorial. Fix by rebuilding the expected outputs in plain ASCII.
+
