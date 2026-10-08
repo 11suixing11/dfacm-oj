@@ -1,5 +1,50 @@
 # Changelog
 
+## v1.24.0 - 2026-10-08
+
+Thirty verified 蓝桥杯 editorials added across two batches, and the pipeline
+that proves them was rebuilt so that batches stop costing judge round trips.
+
+### Added
+
+- **`scripts/taxonomy/preflight.cjs`** compiles every solution in a batch and
+  runs it against that problem's real test files before anything reaches the
+  judge, printing got vs expected per case. A judge round trip is a compile plus
+  a poll cycle and reports only "too high" or "too low"; this hands over the
+  exact expected bytes. Batch 07 (8 problems) and batch 08 (12 problems) both
+  passed on the first submission with zero rework, against roughly 60% before.
+- **20 editorials** in `scripts/taxonomy/solutions/lq-batch-07.json` and
+  `lq-batch-08.json`. 蓝桥杯 goes 106/253 to **126/253 (49.8%)**; the site total
+  goes 527 to **547**.
+- Documented in `scripts/taxonomy/README.md`: the pre-flight workflow, and the
+  five mismatches it caught that the statement did not describe —
+  `#4226` 九九乘法表 wants a fixed ASCII table with a title and bare products;
+  `#4188` wants `3 9 20` rather than `3天9小时20分`; `#4096` reads both
+  packaging sizes from the input and answers the Frobenius number; `#4184`
+  requires the coin-change loop order *and* counts the trivial single-part
+  split; `#4220` ends its first line with a trailing space.
+
+### Fixed
+
+- **The pre-flight reported failures that did not exist.** Node caps captured
+  stdout at 1MB, so `#4224`'s 1.9MB output died with `ENOBUFS` and surfaced as a
+  `RUNFAIL` indistinguishable from a wrong answer. `maxBuffer` is now 64MB and
+  the message separates `ENOBUFS` from a genuine timeout.
+- `#4224` timed out on its two large cases because the comparator called
+  `substr`, allocating once per comparison over 100000 rows; the birth-date key
+  is now extracted once at read time (about 100ms).
+- `#4184` counted ordered compositions because the DP loops were nested the
+  wrong way round — n=77 produced 7.7e22 instead of 10619863.
+- `#4185` prints 1-based indices and the absolute value; `#4220` repeats factors
+  and emits a trailing space.
+
+### Notes
+
+- `record.status` is a **numeric** enum. Checking for the strings
+  `"judged"`/`"ignored"` matches nothing and makes an idle queue look dirty; the
+  real test is that no status `0` (queued), `20` (compiling) or `21` (judging)
+  exists. All 179 records on the site are terminal.
+
 ## v1.23.0 - 2026-10-08
 
 Math rendering repaired across 241 problems, and the audit's own measurement

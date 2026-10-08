@@ -43,8 +43,17 @@ fs.mkdirSync(CACHE, { recursive: true });
       const input = read(n);
       const want = (read(n.replace('.in', '.out')) || '').trim();
       let got;
-      try { got = execFileSync(bin, { input, encoding: 'utf8', timeout: 15000 }).trim(); }
-      catch (err) { got = 'RUNFAIL ' + String(err.message).slice(0, 50); }
+      // maxBuffer matters: Node caps captured stdout at 1MB by default, and a
+      // problem like #4224 emits 100000 sorted lines (~1.9MB). Without this the
+      // run dies with ENOBUFS and reports a RUNFAIL that looks exactly like a
+      // wrong answer or a timeout, which sends you hunting a bug you don't have.
+      try { got = execFileSync(bin, { input, encoding: 'utf8', timeout: 15000, maxBuffer: 64 * 1024 * 1024 }).trim(); }
+      catch (err) {
+        const why = err.code === 'ENOBUFS' ? 'ENOBUFS (output over maxBuffer)'
+          : err.signal === 'SIGTERM' ? 'TIMEOUT over 15s'
+          : err.code || String(err.message).slice(0, 60);
+        got = `RUNFAIL ${why}`;
+      }
       totalCases++;
       if (got === want) ok++;
       else bad.push(`${n.replace('.in', '')}: got ${JSON.stringify(got.slice(0, 40))} want ${JSON.stringify(want.slice(0, 40))}`);

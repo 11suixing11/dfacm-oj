@@ -1,0 +1,62 @@
+[
+  {
+    "docId": 4166,
+    "t": "大数加法，位数可达 1000。用字符串模拟竖式加法：从低位到高位遍历（两个字符串都倒着取），逐位相加并处理进位，越界位当 0，最后把结果反转输出。",
+    "c": "#include <bits/stdc++.h>\nusing namespace std;\n\nstring addBig(const string &a, const string &b) {\n    string res;\n    int i = (int)a.size() - 1, j = (int)b.size() - 1, carry = 0;\n    while (i >= 0 || j >= 0 || carry) {\n        int s = carry;\n        if (i >= 0) s += a[i--] - '0';\n        if (j >= 0) s += b[j--] - '0';\n        res.push_back(char('0' + s % 10));\n        carry = s / 10;\n    }\n    while (res.size() > 1 && res.back() == '0') res.pop_back();\n    reverse(res.begin(), res.end());\n    return res;\n}\n\nint main() {\n    string a, b;\n    cin >> a >> b;\n    cout << addBig(a, b) << endl;\n    return 0;\n}"
+  },
+  {
+    "docId": 4241,
+    "t": "高精度加法，可能含负数。用字符串存数，先比较绝对值：同号直接相加、异号则大减小再按差的正负决定输出符号。逐位用竖式处理进位/借位即可。",
+    "c": "#include <bits/stdc++.h>\nusing namespace std;\n\nstring addAbs(const string &a, const string &b) {\n    string res;\n    int i = (int)a.size() - 1, j = (int)b.size() - 1, carry = 0;\n    while (i >= 0 || j >= 0 || carry) {\n        int s = carry;\n        if (i >= 0) s += a[i--] - '0';\n        if (j >= 0) s += b[j--] - '0';\n        res.push_back(char('0' + s % 10));\n        carry = s / 10;\n    }\n    while (res.size() > 1 && res.back() == '0') res.pop_back();\n    reverse(res.begin(), res.end());\n    return res;\n}\n\nstring subAbs(const string &a, const string &b) {   // 保证 a >= b\n    string res;\n    int i = (int)a.size() - 1, j = (int)b.size() - 1, borrow = 0;\n    while (i >= 0) {\n        int s = a[i--] - '0' - borrow;\n        if (j >= 0) s -= b[j--] - '0';\n        if (s < 0) { s += 10; borrow = 1; } else borrow = 0;\n        res.push_back(char('0' + s));\n    }\n    while (res.size() > 1 && res.back() == '0') res.pop_back();\n    reverse(res.begin(), res.end());\n    return res;\n}\n\nint main() {\n    string a, b;\n    cin >> a >> b;\n    bool na = a[0] == '-', nb = b[0] == '-';\n    if (na) a = a.substr(1);\n    if (nb) b = b.substr(1);\n    string res;\n    if (na == nb) {\n        res = addAbs(a, b);\n        if (na && res != \"0\") res = \"-\" + res;\n    } else if (a.size() > b.size() || (a.size() == b.size() && a >= b)) {\n        res = subAbs(a, b);\n        if (na && res != \"0\") res = \"-\" + res;\n    } else {\n        res = subAbs(b, a);\n        if (!na && res != \"0\") res = \"-\" + res;\n    }\n    cout << res << endl;\n    return 0;\n}"
+  },
+  {
+    "docId": 4240,
+    "t": "高精度乘法：把结果开成 a.size()+b.size() 的数组，对 a 的每一位去乘 b 的每一位并累加到对应位置（每位累加完所有乘积后统一进位），最后从高位到低位输出。同样先处理符号。",
+    "c": "#include <bits/stdc++.h>\nusing namespace std;\n\nstring mulAbs(const string &a, const string &b) {\n    vector<int> res(a.size() + b.size(), 0);\n    for (int i = (int)a.size() - 1, ia = 0; i >= 0; i--, ia++) {\n        for (int j = (int)b.size() - 1, jb = 0; j >= 0; j--, jb++) {\n            res[ia + jb] += (a[i] - '0') * (b[j] - '0');\n        }\n    }\n    for (int i = 0; i + 1 < (int)res.size(); i++) {\n        res[i + 1] += res[i] / 10;\n        res[i] %= 10;\n    }\n    string out;\n    for (int i = (int)res.size() - 1; i >= 0; i--) out.push_back(char('0' + res[i]));\n    while (out.size() > 1 && out[0] == '0') out.erase(out.begin());\n    return out;\n}\n\nint main() {\n    string a, b;\n    cin >> a >> b;\n    bool na = a[0] == '-', nb = b[0] == '-';\n    if (na) a = a.substr(1);\n    if (nb) b = b.substr(1);\n    string res = mulAbs(a, b);\n    if (na != nb && res != \"0\") res = \"-\" + res;\n    cout << res << endl;\n    return 0;\n}"
+  },
+  {
+    "docId": 4215,
+    "t": "解二元一次方程组 a·x + b·y = c，d·x + e·y = f。消元即可——D = a·e - b·d，x = (c·e - b·f)/D，y = (a·f - c·d)/D。参数范围不大但乘积可能溢出 int，用 long long 存参数和中间量；除法前先转 double 以免整数除法截断。",
+    "c": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    long long a, b, c, d, e, f;\n    cin >> a >> b >> c >> d >> e >> f;\n    long long D = a * e - b * d;\n    if (D == 0) { cout << \"no solution\" << endl; return 0; }\n    double x = (double)(c * e - b * f) / D;\n    double y = (double)(a * f - c * d) / D;\n    if (x == (long long)x) cout << (long long)x << \" \";\n    else cout << x << \" \";\n    if (y == (long long)y) cout << (long long)y << endl;\n    else cout << y << endl;\n    return 0;\n}"
+  },
+  {
+    "docId": 4185,
+    "t": "固定 3×4 数组，遍历找绝对值最大的元素。**并列时取行号小的，再并列取列号小的**——按行优先顺序遍历且相等时不更新即可（先遇到的天然行号最小）。⚠️ 两处格式细节：**下标从 1 开始**输出，且**输出的是绝对值本身**（原数组里存的是负数时也输出正数，如 `-97 3 2` 要写成 `97 3 2`）。",
+    "c": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    int a[3][4];\n    for (int i = 0; i < 3; i++)\n        for (int j = 0; j < 4; j++) cin >> a[i][j];\n    int best = a[0][0], bi = 0, bj = 0;\n    for (int i = 0; i < 3; i++) {\n        for (int j = 0; j < 4; j++) {\n            if (abs(a[i][j]) > abs(best)) { best = a[i][j]; bi = i; bj = j; }\n        }\n    }\n    cout << abs(best) << ' ' << bi + 1 << ' ' << bj + 1 << endl;  // 输出绝对值，下标从 1\n    return 0;\n}"
+  },
+  {
+    "docId": 4158,
+    "t": "统计字符串里的单词个数。单词由非空白字符连续构成，所以扫一遍字符串：维护一个 `inWord` 标志，遇到空白置 false，遇到非空白且此前为 false 时就是一个新单词的开头，计数加一。",
+    "c": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    string line;\n    getline(cin, line);\n    int cnt = 0;\n    bool inWord = false;\n    for (char ch : line) {\n        if (ch == ' ' || ch == '\\t') inWord = false;\n        else if (!inWord) { inWord = true; cnt++; }\n    }\n    cout << cnt << endl;\n    return 0;\n}"
+  },
+  {
+    "docId": 4156,
+    "t": "取前 10 名：把所有数据读进数组，从大到小排序后输出前 min(n,10) 个，每个之间一个空格。n 可能小于 10，此时输出全部。",
+    "c": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    int n;\n    cin >> n;\n    vector<int> a(n);\n    for (int &x : a) cin >> x;\n    sort(a.begin(), a.end(), greater<int>());\n    int k = min(n, 10);\n    for (int i = 0; i < k; i++) {\n        if (i) cout << \" \";\n        cout << a[i];\n    }\n    cout << endl;\n    return 0;\n}"
+  },
+  {
+    "docId": 4220,
+    "t": "质因数分解（与 #4217 不同：**这里要输出重复的质因子**），最后再输出质因数个数。从 2 试除，每除一次就记录一次并继续除同一个 d 直到不能再除；剩余 x > 1 也是质因子。⚠️ **第一行末尾有一个空格**（期望是 `3 3 29 43 ` 再换行），所以每个因子后面都跟一个空格。",
+    "c": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    int n;\n    cin >> n;\n    vector<int> fac;\n    int x = n;\n    for (int d = 2; (long long)d * d <= x; d++) {\n        while (x % d == 0) { fac.push_back(d); x /= d; }   // 不去重\n    }\n    if (x > 1) fac.push_back(x);\n    for (int f : fac) cout << f << ' ';                     // 末尾也有空格\n    cout << endl;\n    cout << fac.size() << endl;\n    return 0;\n}"
+  },
+  {
+    "docId": 4180,
+    "t": "排队打水最短总时间：把所有人按打水时间**从小到大**排序，再依次轮流分配到 r 个水龙头上（第 i 个人用 i % r 号龙头）。总时间 = Σ 每个人的「等待 + 自己的打水时间」，用 `finish[k]` 记录第 k 个龙头累计用时，累加 `finish[k]` 即可。装水时间短的人先开始能使总等待最短（交换论证：若 t_a > t_b 却 a 在 b 前，交换后总时间更小）。",
+    "c": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    int n, r;\n    cin >> n >> r;\n    vector<int> t(n);\n    for (int &x : t) cin >> x;\n    sort(t.begin(), t.end());\n    vector<long long> finish(r, 0);\n    long long total = 0;\n    for (int i = 0; i < n; i++) {\n        int k = i % r;\n        finish[k] += t[i];\n        total += finish[k];\n    }\n    cout << total << endl;\n    return 0;\n}"
+  },
+  {
+    "docId": 4178,
+    "t": "统计区间 [L,R] 内素数个数，R 最大到 2^31-1，直接筛到 R 会爆内存——但题目保证 R-L ≤ 10^6，所以用**分段筛**：先筛出 √R 以内的所有素数（√(2^31) ≈ 46341，数组开得下），再用它们去筛 [L,R] 区间内每个数的倍数。对每个素数 p，从 `max(p*p, ceil(L/p)*p)` 开始标记，因为小于 p*p 的 p 的倍数已被更小的素数筛掉。",
+    "c": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    long long L, R;\n    cin >> L >> R;\n    int limit = (int)sqrt((long double)R) + 1;\n    vector<char> small(limit + 1, 0);\n    vector<int> primes;\n    for (int i = 2; i <= limit; i++) {\n        if (small[i]) continue;\n        primes.push_back(i);\n        for (long long j = (long long)i * i; j <= limit; j += i) small[j] = 1;\n    }\n\n    long long len = R - L + 1;\n    vector<char> isPrime(len, 1);\n    if (L <= 0 && len > 0) isPrime[0] = 0;\n    if (L <= 1 && len > 1) isPrime[1] = 0;\n\n    for (int p : primes) {\n        long long start = max((long long)p * p, ((L + p - 1) / p) * (long long)p);\n        for (long long x = start; x <= R; x += p) isPrime[x - L] = 0;\n    }\n\n    long long cnt = 0;\n    for (long long i = 0; i < len; i++) if (isPrime[i]) cnt++;\n    cout << cnt << endl;\n    return 0;\n}"
+  },
+  {
+    "docId": 4224,
+    "t": "身份证按出生日期倒序排，日期相同则按号码排。18 位号码中出生日期是第 7~14 位（下标 6..13），格式 YYYYMMDD，所以**直接对那 8 位做字符串比较**即可——YYYYMMDD 的字典序与时间先后一致。⚠️ n 最大到 **10^5**（输入文件近 2MB），所以**不要在比较函数里 `substr`**：那会做 O(n log n) 次堆分配，大数据点直接超时。正确做法是读入时就把日期键切好存进结构体，比较时直接比字符串。读 n 之后要用 `cin.ignore()` 吃掉行尾换行。",
+    "c": "#include <bits/stdc++.h>\nusing namespace std;\n\nstruct Person {\n    string id;\n    string birth;   // 预先切好的 YYYYMMDD，避免在比较函数里 substr\n};\n\nint main() {\n    ios::sync_with_stdio(false);\n    cin.tie(nullptr);\n\n    int n;\n    cin >> n;\n    cin.ignore(numeric_limits<streamsize>::max(), '\\n');   // 吃掉 n 后面的换行\n\n    vector<Person> v(n);\n    for (int i = 0; i < n; i++) {\n        cin >> v[i].id;\n        v[i].birth = v[i].id.substr(6, 8);   // 只在这里切一次\n    }\n\n    sort(v.begin(), v.end(), [](const Person &a, const Person &b) {\n        if (a.birth != b.birth) return a.birth > b.birth;   // 日期倒序\n        return a.id > b.id;                                 // 同日按号码\n    });\n\n    string out;\n    out.reserve((size_t)n * 19);\n    for (const Person &p : v) { out += p.id; out += '\\n'; }\n    cout << out;\n    return 0;\n}"
+  },
+  {
+    "docId": 4184,
+    "t": "把 n 划分成若干个正整数之和的方案数，顺序不同算同一种。整数划分 DP 必须用**完全背包（硬币交换）写法**：外层枚举「份数 j」从 1 到 n，内层**正序**枚举「总和 i」从 j 到 n，有 `dp[i] += dp[i-j]`。⚠️ 循环顺序不能反——若外层枚举金额、内层枚举份数，算出来的是**有序组合数**（n=77 会得到 7.7×10^22 量级），而不是不区分顺序的划分。⚠️ **评测把「只有它自己」也算一种**：n=77 期望 10619863，而纯 ≥2 项的划分是 10619862，恰好差 1，所以**不要减 1**。n≤100 时 p(100)=190569292 仍超 int32，必须用 long long。",
+    "c": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    int n;\n    cin >> n;\n    vector<long long> dp(n + 1, 0);\n    dp[0] = 1;\n    // 完全背包写法：外层份数，内层正序枚举总额\n    for (int j = 1; j <= n; j++)\n        for (int i = j; i <= n; i++)\n            dp[i] += dp[i - j];\n    cout << dp[n] << endl;   // 不减 1：评测把只有自身那一种也算进去\n    return 0;\n}"
+  }
+]
