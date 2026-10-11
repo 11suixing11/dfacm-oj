@@ -8,7 +8,7 @@
   },
   "devDependencies": {
     "esbuild": "0.25.12",
-    "tsx": "4.19.2"
+    "tsx": "4.20.3"
   },
   "scripts": {
     "test": "tsx --test logic.test.ts codes.test.ts config.test.ts && node --test handlers.test.cjs frontend.test.cjs"

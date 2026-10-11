@@ -1,5 +1,16 @@
 # Changelog
 
+## v1.26.1 - 2026-10-12
+
+### Security
+
+- **Closed Dependabot alert #1** (medium, dev scope): `tsx` 4.19.2 pulled in a nested
+  `esbuild ~0.23.0` (vulnerable ≤0.24.2) inside `plugin-swpu-regcode/package-lock.json`.
+  Bumped the test runner to `tsx` 4.20.3, whose `esbuild ~0.25.0` dedupes with the
+  existing direct `esbuild 0.25.12` — the lock now carries exactly one esbuild, 0.25.12.
+  Test-runner usage (`tsx --test` on the TS suites) is unchanged; CI's fresh
+  `npm ci` + full test matrix is the verifier.
+
 ## v1.26.0 - 2026-10-12
 
 ### Fixed
