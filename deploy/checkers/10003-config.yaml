@@ -1,0 +1,4 @@
+time: 1s
+memory: 512mb
+checker_type: testlib
+checker: spj.cc

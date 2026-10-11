@@ -1,5 +1,81 @@
 # Changelog
 
+## v1.26.0 - 2026-10-12
+
+### Fixed
+
+- **`#4142` 乘法运算 was unjudgeable since the day it was imported.** All four expected
+  outputs contained `U+FFFD` where the original GBK statement had the full-width `×` and
+  rule lines, so no program could ever match (the only such problem in the library;
+  flagged in the 2026-10-08 audit §7.4b). Rebuilt as an ASCII column multiplication —
+  `*` for the multiplication sign, `---` separators — with every other byte of the
+  original layout preserved (widths, the one-column shift between partial products, the
+  zero-padded first partial). The `输出格式` section now spells out the exact rules, the
+  sample block shows the real judge bytes, and the original figure is kept with a note
+  that judging follows the ASCII sample. Verified end-to-end: the reference solution
+  compiled and run on the server reproduced the four expected outputs byte-for-byte,
+  then AC'd through the real judge (100/100, 12.45 ms); the test record was removed and
+  `nSubmit`/`nAccept` rolled back (a pre-existing stale `nAccept: 1` with zero AC
+  records was also zeroed). Backups: `/root/backups/p4142-pre-rebuild-*.json`,
+  `/root/backups/p4142-old-outs/`, rebuild artifacts in `/root/backups/p4142-rebuild/`.
+
+### Documented
+
+- **Belated record of the 2026-10-10 testdata additions** for `#4134` `#4225` `#4243`
+  `#4306` (1→4, 1→3, 1→3, 1→4 test points): applied on the server with backup
+  `/root/backups/testdata-add-2026-10-10T21-39-27-825Z.json` but never written into the
+  CHANGELOG — the same "applied but unrecorded" class that previously made the XCPC-16
+  repair look undeployed.
+- **The FPS `<spj>` sweep is closed.** The five remaining source packages (`ybt-entry`,
+  `ybt-bas`, `cf-2833`, `csp-2024-junior`, `csp-2024-senior`, plus `loj-small`) contain
+  **zero** `<spj>` blocks; `ybt-11.xml` had exactly one (#10003, fixed 2026-10-06 with a
+  testlib checker). No further silent-SPJ-loss problems are lurking in the FPS imports.
+- **`docs/server-root-inventory-2026-10-12.md`** — every working directory on the OJ
+  server and every folder in the local workspace classified as safe-to-delete or
+  must-keep, with sizes and reasons. Also records the verified fact that the repo
+  `landing/index.html` is byte-identical with production while the standalone
+  `Desktop/swpuoj/landing/index.html` is a three-weeks-stale pre-repo copy that must
+  not be mistaken for the source of truth.
+- **Archived into the repo**: the #10003 testlib checker source
+  (`deploy/checkers/10003-spj.cc` + its `config.yaml`) and the swpu-shop implementation
+  spec (`plugin-swpu-shop/SPEC.md`, facts current as of 2026-10-04) — both previously
+  existed only on the server / loose in the workspace.
+
+## v1.25.0 - 2026-10-11
+
+### Fixed
+
+- **Ten 一本通 problems shipped an unusable sample.** `#3692` `#3693` `#3694` `#3699`
+  `#3829` `#3830` `#3831` `#3832` `#3833` `#3916` had `（无）` in their sample **output**
+  block while the judge has a real expected answer, so a student had nothing to test
+  against and no way to tell a compile error from a wrong algorithm. Each sample output
+  now carries the judge's own bytes (`4 2`, `4 8`, `1 1`, `14`, the nine absolute primes,
+  `220 284`, the fifteen palindromic three-digit numbers, `3.1415905109`, the 哥德巴赫
+  list, `1.849016`).  **Statement-only change**: no `data[]` byte, no `html` flag and no
+  judge configuration was touched, so no restart was needed. Every one of the ten pages
+  was re-fetched from the live site afterwards and the rendered block checked.
+  Backup: `/root/backups/sample-fix-2026-10-10T21-08-45-219Z.json`.
+
+### Documented
+
+- **The XCPC 16-problem statement repair was never written down here**, and that gap
+  produced a false alarm on 2026-10-08: the audit saw the already-repaired pages, judged
+  the class harmless, and the next reader concluded the repair payload sitting outside
+  the repository had never been deployed. It had — `apply16.js` ran on 2026-10-05/06 and
+  left three backups (`xcpc-fix-backup-2026-10-05T16-48/16-58/17-03*.json`). The affected
+  docs are `2 3 5 631 632 642 645 646 681 688 696 753 776 798 805 827`; the payload is
+  `Desktop/swpuoj/xcpc-fix/fixed/*.txt` + `*.review.json` (`display:0 fails:0`), the apply
+  script backs up all 16 documents before writing, and `verify16.js` asserts the served
+  page (KaTeX rendered, no `&lt;span class=&quot;katex&quot;` remainder, no `<span class>`,
+  sample block present, no literal `$`, no `katex-error`, plus per-problem checks on
+  `#5` and `#696`). All 16 were re-verified live on 2026-10-11.
+- **`docs/plan-2026-10-11-A.md`** — the corrected construction order for the
+  judging-data direction, with three measurements in the 2026-10-08 audit revised:
+  the 「0-byte input」 class is 23 output-only problems (no input dimension exists, so
+  “add test points” is not available for them), `#917`/`#918`/`#986` have *empty*
+  sample blocks inside training tracks, and the single-testpoint class splits into 23
+  unfixable output-only problems and 18 that a new case would actually help.
+
 ## v1.24.0 - 2026-10-08
 
 Thirty verified 蓝桥杯 editorials added across two batches, and the pipeline
