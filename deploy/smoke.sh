@@ -34,7 +34,7 @@ if [ "$(code "https://$HOST/user/2")" = "200" ]; then check 0 "user profile rend
 if [ "$(code "https://$HOST/workbench")" = "302" ]; then check 0 "GET /workbench gated (302)"; else check 1 "GET /workbench gated (302)"; fi
 if [ "$(code "https://$HOST/mistakes")" = "302" ]; then check 0 "GET /mistakes gated (302)"; else check 1 "GET /mistakes gated (302)"; fi
 if [ "$(code "https://$HOST/shop")" = "200" ]; then check 0 "GET /shop = 200 (points shop, guest-visible)"; else check 1 "GET /shop = 200 (points shop, guest-visible)"; fi
-req "https://$HOST/shop" | grep -aF 'data-table' >/dev/null; check $? "shop page renders the badge table"
+req "https://$HOST/shop" | grep -aF 'swpu-shelf' >/dev/null; check $? "shop page renders the badge card shelf"
 if [ "$(code "https://$HOST/shop/history")" = "302" ]; then check 0 "GET /shop/history gated (302)"; else check 1 "GET /shop/history gated (302)"; fi
 if [ "$(code "https://$HOST/manage/shop")" = "302" ]; then check 0 "GET /manage/shop gated (302)"; else check 1 "GET /manage/shop gated (302)"; fi
 
