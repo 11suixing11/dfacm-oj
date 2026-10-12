@@ -549,6 +549,14 @@ test('points-shop plugin ships every documented file and its templates render th
   assert.match(addonExample, /swpu-shop/);
   const orchestrator = fs.readFileSync(path.join(repo, 'deploy', 'deploy.sh'), 'utf8');
   assert.match(orchestrator, /plugin-swpu-shop/, 'deploy.sh must ship the shop addon');
+  // Nav entries resolve their href via url(item.name), so every injectUI node
+  // name must be a registered route name — the 2026-10-13 bug shipped a menu
+  // item whose href was the literal string "Error: No route found for name: shop".
+  const indexSource = fs.readFileSync(path.join(repo, 'plugin-swpu-shop', 'index.ts'), 'utf8');
+  for (const nodeName of ['swpu_shop', 'swpu_shop_manage']) {
+    assert.match(indexSource, new RegExp(`ctx\\.Route\\('${nodeName}'`), `${nodeName} must be a registered route name`);
+    assert.match(indexSource, new RegExp(`injectUI\\('[^']+', '${nodeName}'`), `${nodeName} must be injected under its route name`);
+  }
 });
 
 test('light default initialization supports a new site and preserves user choices on rerun', () => {

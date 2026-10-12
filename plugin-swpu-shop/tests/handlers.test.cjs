@@ -196,15 +196,17 @@ test('routes, privileges, UI injections and i18n are registered', async () => {
     assert.equal(f.routes.get('/shop/redeem').priv, 4);
     assert.equal(f.routes.get('/shop/history').priv, 4);
     assert.equal(f.routes.get('/manage/shop').priv, 4096);
+    // 菜单入口的注入名必须是已注册路由名：ui-default 用 url(item.name) 生成
+    // href，名字对不上路由表时会渲染出字面量 "Error: No route found ..."。
     assert.deepEqual(f.nav.map((n) => [n.node, n.name, n.priv]), [
-        ['UserDropdown', 'shop', 4],
-        ['ControlPanel', 'shop_manage', 4096],
+        ['UserDropdown', 'swpu_shop', 4],
+        ['ControlPanel', 'swpu_shop_manage', 4096],
     ]);
     const zh = f.locales.find((l) => l.lang === 'zh');
     const en = f.locales.find((l) => l.lang === 'en');
-    assert.equal(zh.dict.shop, '积分商店');
-    assert.equal(zh.dict.shop_manage, '积分商店管理');
-    assert.equal(en.dict.shop, 'Points Shop');
+    assert.equal(zh.dict.swpu_shop, '积分商店');
+    assert.equal(zh.dict.swpu_shop_manage, '积分商店管理');
+    assert.equal(en.dict.swpu_shop, 'Points Shop');
     // unique idempotency index on the ledger is requested at startup
     const ledgerIndexes = f.indexes.filter(([coll]) => coll === f.ledger);
     assert.equal(ledgerIndexes.length, 1);

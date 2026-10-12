@@ -346,15 +346,18 @@ export async function apply(ctx: Context) {
     ctx.Route('swpu_shop_history', '/shop/history', ShopHistoryHandler, PRIV.PRIV_USER_PROFILE);
     ctx.Route('swpu_shop_manage', '/manage/shop', ShopManageHandler, PRIV.PRIV_MANAGE_ALL_DOMAIN);
     ctx.Route('swpu_shop_manage_save', '/manage/shop', ShopManageSaveHandler, PRIV.PRIV_MANAGE_ALL_DOMAIN);
-    ctx.injectUI('UserDropdown', 'shop', () => ({ icon: 'credit-card', displayName: 'shop' }), PRIV.PRIV_USER_PROFILE);
-    ctx.injectUI('ControlPanel', 'shop_manage', { family: '积分商店', icon: 'credit-card' }, PRIV.PRIV_MANAGE_ALL_DOMAIN);
+    // ui-default 渲染注入菜单项用的是 url(item.name)：注入名必须是已注册的
+    // 路由名（badge 插件同款惯例），否则菜单 href 会变成字面量
+    // "Error: No route found for name: shop"（2026-10-13 修复的老 bug）。
+    ctx.injectUI('UserDropdown', 'swpu_shop', () => ({ icon: 'credit-card', displayName: 'swpu_shop' }), PRIV.PRIV_USER_PROFILE);
+    ctx.injectUI('ControlPanel', 'swpu_shop_manage', { family: '积分商店', icon: 'credit-card' }, PRIV.PRIV_MANAGE_ALL_DOMAIN);
     ctx.i18n.load('zh', {
-        shop: '积分商店',
-        shop_manage: '积分商店管理',
+        swpu_shop: '积分商店',
+        swpu_shop_manage: '积分商店管理',
     });
     ctx.i18n.load('en', {
-        shop: 'Points Shop',
-        shop_manage: 'Points Shop Management',
+        swpu_shop: 'Points Shop',
+        swpu_shop_manage: 'Points Shop Management',
     });
     ctx.addScript('swpuShopBackfill', 'd&f算法网积分商店：回填历史 AC 记录的积分', Schema.object({
         domainId: Schema.string().default(''),

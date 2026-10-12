@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.30.1 - 2026-10-13
+
+### Fixed
+
+- **导航菜单「积分商店」点了打不开（10-04 上线以来的老 bug）。** ui-default 渲染 UserDropdown/ControlPanel 注入项时用 `url(item.name)` 按**路由名**解析 href；本插件的注入名写的是 `shop`/`shop_manage`，而路由名是 `swpu_shop`/`swpu_shop_manage`——解析不到时 Hydro 把错误串当 href 返回，登录用户下拉菜单里的链接成了字面量 `Error: No route found for name: shop`（控制面板的「积分商店管理」同病）。修法（badge 插件同款惯例）：injectUI 注入名对齐路由名，i18n 键同步改 `swpu_shop`/`swpu_shop_manage`；deployment.test.mjs 加 wiring 回归锁——每个注入名必须能匹配到一条 `ctx.Route('<同名>', ...)`。
+
 ## v1.30.0 - 2026-10-13
 
 ### Changed
