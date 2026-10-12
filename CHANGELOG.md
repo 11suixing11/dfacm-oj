@@ -1,5 +1,19 @@
 # Changelog
 
+## v1.29.0 - 2026-10-12
+
+### Changed
+
+- **学生账号全面无密码化（passwordless-first）**。学生侧不再有密码登录——`/reg` 重做为单一验证码流：输入邮箱 → 收码 → 已注册直接登录 / 未注册补一个用户名即完成注册（**不再设密码**）。后端三个改动支撑：
+  1. `/reg/code` 新增 `purpose=auto`（默认）：服务端按邮箱注册状态自动分流 reg/login，响应新增 `registered` 标志驱动前端状态机——前端不再需要预判用户走注册还是登录；显式 `reg`/`login` purpose 保留不变（向后兼容）。
+  2. `/reg/complete` 的 `password` 参数改为**可选**：缺省或长度不足时生成 32 字节随机 hex 作为账号口令散列（用户不可知、密码登录不可达）——邮箱验证码就是学生的唯一登录凭证。
+  3. `/reg` 页面的密码登录面板 (`?tab=pwd`) 由服务端 `PRIV_EDIT_SYSTEM` **权限门控**（boot 注入 `canPwd` 标志）：管理员可见 break-glass 密码面板（含 2FA/通行密钥入口与找回密码），学生静默降级到默认验证码流——原生 `POST /login` 引擎**保留不删**，仅 UI 层门控。
+- E2E 实弹验证全链路：auto 发码（未注册→registered:false）→ hash 换入已知码 → 无密码 complete（ok, redirect=/training）→ 账号 uid=20 + 双域 join + 64-hex 随机散列 → 60s 限速冷却 → auto 再发码（registered:true）→ 验证码登录（ok）→ 会话生效（302 偏好页）→ 全套清理。本地 63/63 测试全绿（25 handlers + 14 frontend + 24 logic/codes/config），CI 绿。
+
+### Added
+
+- **linux.do OAuth 第三方登录**（provider 插件已入库 `plugin-linuxdo-oauth/`）：走原生 OAuth 通道（`ctx.oauth.provide`），零引擎改动；配置 `linuxdo.client_id` / `linuxdo.client_secret` 两个系统设置键即可启用（站长在 linux.do 申请 Connect 应用后填入）。无需备案（区别于 QQ/微信）。
+
 ## v1.28.0 - 2026-10-12
 
 ### Fixed

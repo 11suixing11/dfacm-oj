@@ -113,8 +113,9 @@ class Handler {
             getMulti(filter) { return { project() { return this; }, limit() { return this; }, async next() {
                 return [...users.values()].find((u) => u.loginip === filter.loginip && u._id !== filter._id.$ne) || null;
             } }; },
-            async create(mail, uname) {
+            async create(mail, uname, password) {
                 if (state.createError) throw state.createError;
+                state.createdPassword = password;
                 return user(50, { mail, uname })._id;
             },
         },
@@ -172,8 +173,8 @@ test('registration page and verification mail carry the d&f identity and final m
     const f = await fixture();
     const page = f.handler('/reg'); await page.get();
     const body = String(page.response.body);
-    assert.match(body, /<title>注册 \/ 登录 · d&amp;f算法网<\/title>/);
-    assert.match(body, /欢迎来到 d&amp;f算法网。每个人都能在算法竞赛这条路上找到属于自己的 final。/);
+    assert.match(body, /<title>登录 \/ 注册 · d&amp;f算法网<\/title>/);
+    assert.match(body, /一个邮箱地址，收个验证码就能进——没有密码。/);
     assert.doesNotMatch(body, /DFACM OJ|SWPU ACM|西南石油大学|swpuacm\.xyz/);
 
     await f.issue('new@example.com', 'reg');
@@ -189,22 +190,64 @@ test('registration page and verification mail carry the d&f identity and final m
     assert.match(login.mails[0].html, /每个人都能在算法竞赛这条路上找到属于自己的 final/);
 });
 
-test('registration page boots the initial tab from merged query args', async () => {
+test('the break-glass password pane boots only for operators, never for students', async () => {
     const f = await fixture();
-    const pwd = f.handler('/reg', { tab: 'pwd' }); await pwd.get();
-    assert.match(String(pwd.response.body), /__SWPU_BOOT\.tab="pwd"/);
+    // Students: ?tab=pwd is silently ignored and the operator flag stays unset.
+    const guestPwd = f.handler('/reg', { tab: 'pwd' }); await guestPwd.get();
+    assert.equal(String(guestPwd.response.body).includes('__SWPU_BOOT.tab='), false);
+    assert.equal(String(guestPwd.response.body).includes('__SWPU_BOOT.canPwd='), false);
+    // Operators: the pane boots on request, with the flag driving footer links.
+    const admin = f.handler('/reg', { tab: 'pwd' });
+    admin.user = f.user(42, { priv: 1024 | 1 });
+    await admin.get();
+    assert.match(String(admin.response.body), /__SWPU_BOOT\.canPwd=true/);
+    assert.match(String(admin.response.body), /__SWPU_BOOT\.tab="pwd"/);
     // Bare /register rewrite arrives without a tab: page must stay unmodified.
     const bare = f.handler('/reg'); await bare.get();
     assert.equal(String(bare.response.body).includes('__SWPU_BOOT.tab='), false);
-    // Anything outside the tab whitelist is never injected.
-    const evil = f.handler('/reg', { tab: 'javascript:alert(1)' }); await evil.get();
+    // Anything outside the tab whitelist is never injected — even for operators.
+    const evil = f.handler('/reg', { tab: 'javascript:alert(1)' });
+    evil.user = f.user(42, { priv: 1024 | 1 });
+    await evil.get();
     assert.equal(String(evil.response.body).includes('__SWPU_BOOT.tab='), false);
     // The in-place auth modal requests the embedded variant.
-    const embed = f.handler('/reg', { tab: 'pwd', embed: '1' }); await embed.get();
+    const embed = f.handler('/reg', { tab: 'pwd', embed: '1' });
+    embed.user = f.user(42, { priv: 1024 | 1 });
+    await embed.get();
     assert.match(String(embed.response.body), /__SWPU_BOOT\.embed=true/);
     assert.match(String(embed.response.body), /a\.target='_top'/);
-    const plain = f.handler('/reg', { tab: 'pwd' }); await plain.get();
+    const plain = f.handler('/reg', { tab: 'pwd' });
+    plain.user = f.user(42, { priv: 1024 | 1 });
+    await plain.get();
     assert.equal(String(plain.response.body).includes('__SWPU_BOOT.embed='), false);
+});
+
+test('student accounts are passwordless: completion without a password creates an unguessable secret', async () => {
+    const f = await fixture();
+    await f.issue('new@school.example', 'auto');
+    assert.equal(f.mails[0].subject, '【d&f算法网】注册验证码');
+    const token = await f.csrf();
+    const h = f.handler('/reg/complete');
+    await h.post('system', 'new@school.example', f.mails[0].code, 'newuser', undefined, token);
+    assert.equal(h.response.body.ok, true);
+    assert.equal(f.users.get(50).mail, 'new@school.example');
+    assert.equal(typeof f.state.createdPassword, 'string');
+    // 32 random bytes, hex-encoded: nothing the student (or this transcript) knows.
+    assert.match(f.state.createdPassword, /^[0-9a-f]{64}$/);
+});
+
+test('auto purpose resolves the mode from the address state', async () => {
+    const unregistered = await fixture();
+    const sent = await unregistered.issue('new@school.example', 'auto');
+    assert.equal(sent.response.body.ok, true);
+    assert.equal(sent.response.body.registered, false);
+    assert.equal(unregistered.mails[0].subject, '【d&f算法网】注册验证码');
+
+    const registered = await fixture(); registered.user();
+    const login = await registered.issue('ab@school.example', 'auto');
+    assert.equal(login.response.body.ok, true);
+    assert.equal(login.response.body.registered, true);
+    assert.equal(registered.mails[0].subject, '【d&f算法网】登录验证码');
 });
 
 test('registration page renders third-party login methods from handler.loginMethods', async () => {

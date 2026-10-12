@@ -1,7 +1,7 @@
-/* swpu-regcode — 数字验证码注册/登录（d&f算法网定制插件；目录名保留 swpu 以兼容现网）
- * GET  /reg            注册+验证码登录双标签页（读取同目录 reg.html）
- * POST /reg/code       {mail, purpose}  发送 6 位验证码（purpose: reg|login）
- * POST /reg/complete   {mail, code, uname, password}   注册并登录
+/* swpu-regcode — 无密码验证码单流登录（d&f算法网定制插件；目录名保留 swpu 以兼容现网）
+ * GET  /reg            登录/注册单页（读取同目录 reg.html；学生=验证码流，管理员可 ?tab=pwd 进密码面板）
+ * POST /reg/code       {mail, purpose:reg|login|auto}  发送 6 位验证码（auto=按注册状态自动判 reg 或 login）
+ * POST /reg/complete   {mail, code, uname, [password]}  注册并登录（无密码=随机不可用散列）
  * POST /reg/login      {mail, code}     验证码免密登录
  */
 import fs from 'fs';
@@ -158,8 +158,15 @@ class RegPageHandler extends Handler {
         // minted into the session (a guest still gets one) and handed to the page
         // through the same boot payload as the tab.
         boot.push(`window.__SWPU_BOOT.csrf=${JSON.stringify(csrfToken(this))};`);
+        // Student accounts are passwordless: the break-glass password pane exists
+        // only for operators. The flag also drives the footer links that expose
+        // password login / password recovery, so they never render for students.
+        const canPwd = !!this.user?.hasPriv(PRIV.PRIV_EDIT_SYSTEM);
+        if (canPwd) boot.push('window.__SWPU_BOOT.canPwd=true;');
         const tab = String(this.args.tab ?? '');
-        if (TABS.includes(tab)) boot.push(`window.__SWPU_BOOT.tab=${JSON.stringify(tab)};`);
+        // A student asking for ?tab=pwd is silently routed to the default flow
+        // (the param carries no privilege and must not reveal the pane).
+        if (tab === 'pwd' ? canPwd : TABS.includes(tab)) boot.push(`window.__SWPU_BOOT.tab=${JSON.stringify(tab)};`);
         // The in-place auth modal embeds this page in a same-origin iframe.
         if (String(this.args.embed ?? '') === '1') boot.push('window.__SWPU_BOOT.embed=true;');
         const oauth = oauthEntries(this);
@@ -179,14 +186,20 @@ class RegCodeHandler extends Handler {
     @post('mail', Types.Email)
     @post('purpose', Types.String, true)
     async post(domainId: string, mail: string, purpose: string) {
-        if (purpose && purpose !== 'reg' && purpose !== 'login') {
+        if (purpose && purpose !== 'reg' && purpose !== 'login' && purpose !== 'auto') {
             fail(this, '验证码用途不合法。');
             return;
         }
-        const mode: CodePurpose = purpose === 'login' ? 'login' : 'reg';
-        if (mode === 'reg' && !checkRegistration(this)) return;
+        const raw = purpose || 'auto';
         await limitProbe(this, mail);
         const registered = await UserModel.getByEmail('system', mail);
+        // The unified page does not know the address state up front: 'auto'
+        // resolves server-side — an existing account gets a login code bound to
+        // its real mailbox, a new address gets a registration code.
+        const mode: CodePurpose = raw === 'auto'
+            ? (registered ? 'login' : 'reg')
+            : (raw === 'login' ? 'login' : 'reg');
+        if (mode === 'reg' && !checkRegistration(this)) return;
         if (mode === 'reg' && registered) {
             this.response.body = { ok: false, message: '该邮箱已注册过账号，请直接登录或找回密码。' };
             return;
@@ -238,7 +251,7 @@ class RegCodeHandler extends Handler {
             fail(this, '本次验证码已失效，请使用最新邮件中的验证码或重新获取。');
             return;
         }
-        this.response.body = { ok: true, message: '验证码已发送，请查收邮箱（5 分钟内有效）。' };
+        this.response.body = { ok: true, message: '验证码已发送，请查收邮箱（5 分钟内有效）。', registered: mode === 'login' };
     }
 }
 
@@ -266,9 +279,9 @@ class RegCompleteHandler extends Handler {
     @post('mail', Types.Email)
     @post('code', Types.String)
     @post('uname', Types.String)
-    @post('password', Types.Password)
+    @post('password', Types.Password, true)
     @post('csrf', Types.String, true)
-    async post(domainId: string, mail: string, code: string, uname: string, password: string, csrf?: string) {
+    async post(domainId: string, mail: string, code: string, uname: string, password: string | undefined, csrf?: string) {
         if (csrfRejected(this, csrf)) { fail(this, '会话已过期，请刷新页面后重试。'); return; }
         if (!checkRegistration(this)) return;
         const recipient = normalizeMail(mail);
@@ -291,7 +304,14 @@ class RegCompleteHandler extends Handler {
         if (!checked.ok) { fail(this, codeMessages[checked.reason]); return; }
         let uid: number;
         try {
-            uid = await UserModel.create(recipient, uname, password, undefined, getClientIp(this));
+            // Passwordless accounts: students never set a password. A random
+            // secret they never see keeps the stored hash format valid while
+            // making password login practically unreachable — the mailbox code
+            // is their only key.
+            const finalPassword = (typeof password === 'string' && password.length >= 6)
+                ? password
+                : randomBytes(32).toString('hex');
+            uid = await UserModel.create(recipient, uname, finalPassword, undefined, getClientIp(this));
         } catch (e) {
             if (e instanceof UserAlreadyExistError || (e as { code?: number }).code === 11000) {
                 fail(this, '用户名或邮箱已被占用，请修改后重新获取验证码。');

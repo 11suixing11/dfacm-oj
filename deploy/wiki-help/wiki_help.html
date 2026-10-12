@@ -19,22 +19,21 @@
 <!-- ==================== 一、注册与登录 ==================== -->
 <div class="section" data-heading-extract-to="#menu-item-wiki_help">
   <div class="section__header">
-    <h1 class="section__title" id="reg" data-heading>注册与登录（学生册 · 一）</h1>
+    <h1 class="section__title" id="reg" data-heading>登录与注册（学生册 · 一）</h1>
   </div>
   <div class="section__body typo">
-    <h2>三种登录方式（统一入口 /reg）</h2>
-    <p>点击任意页面的「登录/注册」，都会进入 <b>/reg</b> 一站式页面，含三个标签：</p>
-    <table>
-      <tr><th>方式</th><th>怎么用</th><th>说明</th></tr>
-      <tr><td>注册账号</td><td>输入邮箱 → 收 6 位数字验证码（5 分钟内有效，输错 5 次作废）→ 设置用户名和密码</td><td>单邮箱 60 秒只能发一次，同 IP 每小时最多 20 次；注册成功自动登录并跳转入门训练路线</td></tr>
-      <tr><td>验证码登录</td><td>输入已注册邮箱 + 验证码</td><td>免密快速登录，验证码与注册码互不通用</td></tr>
-      <tr><td>密码登录</td><td>用户名 + 密码</td><td>即 Hydro 原生 /login；支持「记住我」、两步验证（TOTP/通行密钥）</td></tr>
-    </table>
+    <h2>一个邮箱地址，验证码直达</h2>
+    <p>点击任意页面的「登录/注册」，都会进入 <b>/reg</b> 单页流程——<b>没有密码</b>，靠邮箱验证码直达：</p>
+    <ol>
+      <li>输入邮箱 → 点「获取验证码」→ 邮箱收到 6 位数字（5 分钟内有效，输错 5 次作废；单邮箱 60 秒 1 次，同 IP 每小时 20 次）。</li>
+      <li>输入验证码 → 系统自动判断：<b>已注册</b>则直接登录进入 <code>return</code> 页；<b>未注册</b>则出现用户名栏，填完即完成注册并自动登录、跳转入门路线。</li>
+      <li>也支持 <b>GitHub 登录</b>（登录页的 GitHub 按钮）：授权后若是新用户会进入补全用户名步骤。</li>
+    </ol>
     <ul>
+      <li>学生账号<b>没有密码</b>——邮箱验证码就是你的唯一登录凭证，请保管好注册邮箱。忘记密码不再适用（没有密码可忘）；换绑邮箱请联系管理员。</li>
       <li>用户名规则：3~31 个字符（或恰好 2 个汉字）；<b>注册后不能自行改名</b>，找管理员走用户管理页改名。</li>
-      <li>也支持 <b>GitHub 登录</b>（登录页的 GitHub 按钮）：授权后若是新用户会进入补全用户名/密码步骤。</li>
-      <li><b>忘记密码</b>：<a href="/lostpass">/lostpass</a> 输入注册邮箱，重置链接由站内 Gmail 通道发出（注意查收垃圾箱）。</li>
       <li>注册后你已自动加入 system 域与 poj 域（排名生效的前提）。</li>
+      <li>页脚有「使用文档」（本页）和「随机一题」快捷链接。</li>
     </ul>
   </div>
 </div>
@@ -403,9 +402,9 @@
     <h2>学生 / 前台</h2>
     <table>
       <tr><th>请求</th><th>接口</th><th>说明</th></tr>
-      <tr><td>POST</td><td><code>/login</code></td><td>uname/password/rememberme[/tfa]；错误 403、成功 302</td></tr>
-      <tr><td>POST</td><td><code>/reg/code</code></td><td>mail/purpose(reg|login)——发 6 位验证码（限速 60s/邮箱、20 次/时 IP）</td></tr>
-      <tr><td>POST</td><td><code>/reg/complete</code></td><td>mail/code/uname/password——验证码注册并自动登录</td></tr>
+      <tr><td>POST</td><td><code>/login</code></td><td>uname/password/rememberme[/tfa]；错误 403、成功 302（UI 已门控管理员，引擎保留）</td></tr>
+      <tr><td>POST</td><td><code>/reg/code</code></td><td>mail/purpose(auto|reg|login)——发 6 位验证码（auto 按注册状态分流；响应含 registered；限速 60s/邮箱、20 次/时 IP）</td></tr>
+      <tr><td>POST</td><td><code>/reg/complete</code></td><td>mail/code/uname[/password]——验证码注册并自动登录（无密码=账号不可用密码登录）</td></tr>
       <tr><td>POST</td><td><code>/reg/login</code></td><td>mail/code——验证码免密登录</td></tr>
       <tr><td>POST</td><td><code>/p/:pid/submit</code></td><td>lang/code[/tid]；multipart 文件字段名必须叫 <b>file</b>；302 → /record/:rid</td></tr>
       <tr><td>GET</td><td><code>/record/:rid</code></td><td>提交详情（实时 ws 刷新）</td></tr>

@@ -1,0 +1,9 @@
+{
+  "name": "plugin-linuxdo-oauth",
+  "version": "1.0.0",
+  "main": "index.ts",
+  "private": true,
+  "engines": {
+    "node": ">=22"
+  }
+}
