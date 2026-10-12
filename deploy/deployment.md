@@ -487,4 +487,4 @@ ssh root@SERVER 'bash /root/culture-seed/hw_seed.sh run'    # 正式执行
 1. **权限门控**：管理员册七节 + API 册「管理 / 后台」速查表包在 `{% if handler.user.hasPriv(PRIV.PRIV_EDIT_SYSTEM) %}` 内（上游 contest_problemlist.html 同款写法），游客只见占位节「管理员手册（仅管理员可见）」。实测：游客视角五个管理敏感标记全 0 命中，judge 管理员会话全可见。
 2. **入口落地**：footer_extra_html 经 `/manage/setting` API（sudo 会话，零重启）追加「使用文档」(/wiki/help) 与「随机一题」(/problem/random) 两行链接——此前帮助页在常规页面无任何入口。
 3. **冲突修正**：内存默认改 256MB（题目 config 为准，本站多数 512MB）；status 22 改「判题机已领取任务」；日志噪音描述改「互联网扫描器探测」；删号清单补 swpuPointsLedger / swpuBadgePrice；删除「稀有徽章限时开放」推测文案。
-4. **插件剪枝**：hydrooj-countdown 已卸载（零路由、唯一功能被落地页遮蔽=纯冗余；tar 备份 /root/backups/hydrooj-countdown-removed-20261012.tgz，addon.json 17→16，repo 无引用）。realboard 保留——预留校内选拔赛现场投屏。
+4. **插件剪枝**：hydrooj-countdown 已卸载（零路由、唯一功能被落地页遮蔽=纯冗余；tar 备份 /root/backups/hydrooj-countdown-removed-20261012.tgz，addon.json 17→16，repo 无引用）。realboard 保留——预留现场赛（onsite）投屏场景。
