@@ -1,0 +1,678 @@
+{% extends "layout/wiki_base.html" %}
+{% block wiki_content %}
+{% set name = handler.domain.ui.name|default(model.system.get('server.name')) %}
+<!-- ==================== 导读 ==================== -->
+<div class="section" data-heading-extract-to="#menu-item-wiki_help">
+  <div class="section__header">
+    <h1 class="section__title" id="intro" data-heading>导读</h1>
+  </div>
+  <div class="section__body typo">
+    <p>本页是 <b>{{ name }}</b> 的完整使用文档，共三册：<a href="#reg">学生使用手册</a>（注册、做题、训练、比赛、工具）、<a href="#adm-accounts">管理员手册</a>（题库、比赛、配置、运维）、<a href="#api-arch">API 接口文档</a>（面向开发者，含全站 150 条路由表）。</p>
+    <ul>
+      <li>新生请按顺序读：<a href="#reg">注册与登录</a> → <a href="#submit">做题与判题</a> → <a href="#training">训练路线</a>。</li>
+      <li>答疑互助群：QQ <b>879670443</b>（提问前先看讨论区《提问的智慧》）；训练播报群：QQ <b>1128735782</b>（AC 实时播报、每日榜单、比赛战报）。</li>
+      <li>站内每一页右上角搜索框可搜题库；帮助页随时从页脚「帮助」进入。</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ==================== 一、注册与登录 ==================== -->
+<div class="section" data-heading-extract-to="#menu-item-wiki_help">
+  <div class="section__header">
+    <h1 class="section__title" id="reg" data-heading>注册与登录（学生册 · 一）</h1>
+  </div>
+  <div class="section__body typo">
+    <h2>三种登录方式（统一入口 /reg）</h2>
+    <p>点击任意页面的「登录/注册」，都会进入 <b>/reg</b> 一站式页面，含三个标签：</p>
+    <table>
+      <tr><th>方式</th><th>怎么用</th><th>说明</th></tr>
+      <tr><td>注册账号</td><td>输入邮箱 → 收 6 位数字验证码（5 分钟内有效，输错 5 次作废）→ 设置用户名和密码</td><td>单邮箱 60 秒只能发一次，同 IP 每小时最多 20 次；注册成功自动登录并跳转入门训练路线</td></tr>
+      <tr><td>验证码登录</td><td>输入已注册邮箱 + 验证码</td><td>免密快速登录，验证码与注册码互不通用</td></tr>
+      <tr><td>密码登录</td><td>用户名 + 密码</td><td>即 Hydro 原生 /login；支持「记住我」、两步验证（TOTP/通行密钥）</td></tr>
+    </table>
+    <ul>
+      <li>用户名规则：3~31 个字符（或恰好 2 个汉字）；<b>注册后不能自行改名</b>，找管理员走用户管理页改名。</li>
+      <li>也支持 <b>GitHub 登录</b>（登录页的 GitHub 按钮）：授权后若是新用户会进入补全用户名/密码步骤。</li>
+      <li><b>忘记密码</b>：<a href="/lostpass">/lostpass</a> 输入注册邮箱，重置链接由站内 Gmail 通道发出（注意查收垃圾箱）。</li>
+      <li>注册后你已自动加入 system 域与 poj 域（排名生效的前提）。</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ==================== 二、做题与判题 ==================== -->
+<div class="section" data-heading-extract-to="#menu-item-wiki_help">
+  <div class="section__header">
+    <h1 class="section__title" id="submit" data-heading>做题与判题（学生册 · 二）</h1>
+  </div>
+  <div class="section__body typo">
+    <h2>找题</h2>
+    <ul>
+      <li><a href="/p">题库</a>：支持搜索和筛选，例如 <code>?q=difficulty:1</code> 按难度 1~10 筛选，<code>?q=category:动态规划</code> 按算法标签筛选；首页还有「随机一题」。</li>
+      <li>题目页含题面、样例、提交记录与题解入口（<code>/p/题号/solution</code>，做完再看题解是好习惯）。</li>
+    </ul>
+    <h2>提交</h2>
+    <ul>
+      <li>在题目页选择语言提交。本站 system 域开放语言：<b>C (c)、C++17 (cc.cc17 / cc.cc17o2)、Python 3、Java</b>。</li>
+      <li>远程评测题（POJ 域、一本通 ybtbas、深入浅出 srqc 系列）可选语言以题目页下拉框为准：srqc 深基系列只认 <b>cc.cc17o2</b>；POJ 认 c / cc.cc98 / java。</li>
+      <li>提交后跳转到记录详情页，判题实时刷新（状态行旁的实时通道）；列表页同样实时。</li>
+    </ul>
+    <h2>判题状态一览（精确枚举）</h2>
+    <table>
+      <tr><th>状态码</th><th>含义</th><th>状态码</th><th>含义</th></tr>
+      <tr><td>0</td><td>等待中</td><td>7</td><td>编译错误（CE）</td></tr>
+      <tr><td>1</td><td>答案正确（AC）</td><td>8</td><td>系统错误（可申诉/重判）</td></tr>
+      <tr><td>2</td><td>答案错误（WA）</td><td>9</td><td>已取消</td></tr>
+      <tr><td>3</td><td>超出时间限制（TLE）</td><td>11</td><td>Hack 成功</td></tr>
+      <tr><td>4</td><td>超出内存限制（MLE）</td><td>20/21/22</td><td>判题中 / 编译中 / 已取到（远程题）</td></tr>
+      <tr><td>5</td><td>输出超出限制</td><td>31</td><td>格式错误（多/少空格换行等）</td></tr>
+      <tr><td>6</td><td>运行时错误（RE，崩溃/越界）</td><td>32/33</td><td>Hack 成功 / 失败</td></tr>
+    </table>
+    <ul>
+      <li>时间按 CPU 时间计；内存默认 512MB（题面特别指出的除外）。编译器版本与参数见 <a href="/status">状态页</a>。</li>
+      <li>远程题（POJ / ybtbas / srqc）由远端评测机判题，出结果稍慢，状态 22 表示已送达远端。</li>
+      <li>同一题重复 AC 不会重复计分/刷 RP；比赛中的提交与练习互不干扰。</li>
+    </ul>
+    <h2>输入输出约定</h2>
+    <p>除非题目特别说明，一律从标准输入读、往标准输出写；行尾多余空格一般不敏感，但行数与换行必须一致。样例块就是判题数据的第一组，<b>能过样例不等于 AC</b>——请自己构造边界数据。</p>
+  </div>
+</div>
+
+<!-- ==================== 三、训练路线 ==================== -->
+<div class="section" data-heading-extract-to="#menu-item-wiki_help">
+  <div class="section__header">
+    <h1 class="section__title" id="training" data-heading>训练路线（学生册 · 三）</h1>
+  </div>
+  <div class="section__body typo">
+    <h2>路线总览</h2>
+    <table>
+      <tr><th>路线</th><th>规模</th><th>适合阶段</th></tr>
+      <tr><td>【入门】一本通基础 396 题</td><td>8 章，难度 1→5</td><td>零基础第一站：语法 → 分支循环 → 函数递归 → 贪心 → 动规 → 数据结构</td></tr>
+      <tr><td>【蓝桥杯】真题训练 253 题</td><td>4 关，难度 3/5/6/7</td><td>备赛蓝桥杯：基础训练 → 算法训练 → 算法提高 → 历届真题</td></tr>
+      <tr><td>【进阶】XCPC 专题训练 108 题</td><td>9 章，难度 2→8</td><td>有基础后系统冲 ICPC/CCPC：前 4 章顺序解锁，5~8 章专题支线，第 9 章毕业关</td></tr>
+      <tr><td>八个算法专题（搜索/DP/图论/数据结构/数学/字符串/贪心构造/二分枚举）</td><td>每专题 32 题、5 章难度分带</td><td>针对弱项专项补强，可随时并行开刷</td></tr>
+    </table>
+    <h2>解锁规则（重要）</h2>
+    <ul>
+      <li>章节是<b>链式解锁</b>：前一章「全部题目 AC」才点亮下一章（XCPC 的 5~8 章为并列支线，第 9 章需支线全通）。</li>
+      <li>章内点开题目 → 提交 → AC，返回路线页即可看到进度；工作台（见下）能看全部路线的整体完成度。</li>
+      <li>推荐路径：一本通入门 → 蓝桥杯（按比赛日程取舍）→ XCPC + 专题查漏。</li>
+    </ul>
+    <p>入口：首页「训练路线」网格，或 <a href="/training">/training</a> 列表页。</p>
+  </div>
+</div>
+
+<!-- ==================== 四、比赛功能 ==================== -->
+<div class="section" data-heading-extract-to="#menu-item-wiki_help">
+  <div class="section__header">
+    <h1 class="section__title" id="contest" data-heading>比赛功能（学生册 · 四）</h1>
+  </div>
+  <div class="section__body typo">
+    <ul>
+      <li><a href="/contest">比赛列表</a>：周末常设「海拔周赛」等校内赛；重要比赛会提前在讨论区公告。</li>
+      <li><b>报名</b>：比赛详情页点「参加」（Attend）。未报名时无法在赛内提交。</li>
+      <li><b>赛内提交</b>：从比赛题目页提交会自动带上比赛标识（tid）；计分板实时更新。隐藏题在赛内以字母代号显示，不泄题面。</li>
+      <li><b>计分板</b>：ACM 赛制按题数与罚时排名；比赛页可勾选「仅显示自己」。</li>
+      <li><b>提前离场</b>：侧栏「提前结束」只结束<b>你自己</b>的比赛（此后不能再提交），不影响他人与榜单。</li>
+      <li>赛后：题目自动公开（autoHide 比赛）；QQ 群会收到比赛终榜战报。</li>
+      <li>Rating：校内 rated 赛的 Rating 变动显示在个人页（<code>/user/你的UID/rating</code>）与 <a href="/rating">/rating</a> 榜。</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ==================== 五、工作台与错题本 ==================== -->
+<div class="section" data-heading-extract-to="#menu-item-wiki_help">
+  <div class="section__header">
+    <h1 class="section__title" id="workbench" data-heading>工作台与错题本（学生册 · 五）</h1>
+  </div>
+  <div class="section__body typo">
+    <ul>
+      <li><b><a href="/workbench">训练工作台</a></b>：登录后自动汇总你在各条训练路线的章节进度、AC 率与最近提交，是每天打开的第一个页面。</li>
+      <li><b><a href="/mistakes">错题本</a></b>：每次 WA 会自动收录；补题 AC 后自动标记「已解决」，也可手动更新/移除。刷错题 &gt; 刷新题。</li>
+      <li>工作台与错题本仅登录用户可见（未登录访问会先跳登录）。</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ==================== 六、积分·商店·徽章 ==================== -->
+<div class="section" data-heading-extract-to="#menu-item-wiki_help">
+  <div class="section__header">
+    <h1 class="section__title" id="shop" data-heading>积分 · 商店 · 徽章（学生册 · 六）</h1>
+  </div>
+  <div class="section__body typo">
+    <ul>
+      <li><b>赚积分</b>：每道题<b>首次 AC</b> 按题目难度入账 1~10 分（难度 1 题=1 分，难度 10 题=10 分；远程题同算）。</li>
+      <li><b><a href="/shop">积分商店</a></b>：用积分兑换站内徽章，兑换即永久持有；<a href="/shop/history">积分流水</a>可查每一笔进出。</li>
+      <li><b><a href="/mybadge">我的徽章</a></b>：选择一枚「佩戴」后，你的提交记录旁会展示徽章。</li>
+      <li>徽章由管理员上架定价，稀有徽章限时开放，关注商店动态。</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ==================== 七、个人设置与排名 ==================== -->
+<div class="section" data-heading-extract-to="#menu-item-wiki_help">
+  <div class="section__header">
+    <h1 class="section__title" id="profile" data-heading>个人设置与排名（学生册 · 七）</h1>
+  </div>
+  <div class="section__body typo">
+    <h2>偏好设置（/home/settings）</h2>
+    <ul>
+      <li>显示名（列表里显示「显示名 (用户名)」）、QQ 号（自动取 QQ 头像）、性别、简介、学校学号。</li>
+      <li>安全页建议开启 <b>TOTP 两步验证</b>（支持验证器 App 与通行密钥）。</li>
+      <li><b>主题切换</b>：页脚「切换主题」一键在浅色/深色间切换；全站（含落地页）联动记忆你的选择；游客状态下不可切换。</li>
+    </ul>
+    <h2>RP 与排名</h2>
+    <ul>
+      <li><a href="/ranking">排行榜</a>按 RP 排序：你对每道题的贡献 = min(得分,100) × 难度 / 100，全站汇总后经对数压缩（题越多边际越小）；单道最简单题 AC 也有 1 点保底。</li>
+      <li>难度 1~10 由管理组标定，题目页可见；标签可按 <code>category:</code> 筛选。</li>
+      <li>榜单每页 100 人，自己的行会高亮并带「你」徽章；翻页外也有置顶行显示你的位置。</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ==================== 八、QQ 机器人 ==================== -->
+<div class="section" data-heading-extract-to="#menu-item-wiki_help">
+  <div class="section__header">
+    <h1 class="section__title" id="bot" data-heading>QQ 机器人指令（学生册 · 八）</h1>
+  </div>
+  <div class="section__body typo">
+    <p>训练群 <b>1128735782</b> 内的机器人实时播报：AC 卡片（含耗时与算法标签、「全站第 N 人通过」）、每日累计榜 + 昨日榜（每天 0 点）、比赛实时战报与终榜。可用指令：</p>
+    <table>
+      <tr><th>指令</th><th>作用</th></tr>
+      <tr><td><code>/绑定 用户名</code></td><td>把 QQ 与站内账号绑定（绑定后 AC 才会显示你的昵称/头像；换站内用户名需重新绑定）</td></tr>
+      <tr><td><code>/oj排名</code></td><td>查询累计 AC 排行榜</td></tr>
+      <tr><td><code>/今日榜单</code></td><td>今天的实时做题榜（截至发出时刻）</td></tr>
+      <tr><td><code>/最近提交</code></td><td>你（或指定绑定用户）的最近提交记录</td></tr>
+      <tr><td><code>/比赛排名</code></td><td>进行中/最近比赛的排名</td></tr>
+      <tr><td><code>/oj状态</code></td><td>机器人与数据源健康状态</td></tr>
+      <tr><td><code>/oj帮助</code></td><td>指令列表</td></tr>
+    </table>
+    <p>注：答疑群 879670443 同样可用这些指令（机器人还提供 AI 答疑）。隐藏题、比赛中的提交按规则过滤，不会泄题。</p>
+  </div>
+</div>
+
+<!-- ==================== 九、讨论区与求助 ==================== -->
+<div class="section" data-heading-extract-to="#menu-item-wiki_help">
+  <div class="section__header">
+    <h1 class="section__title" id="discuss" data-heading>讨论区与求助（学生册 · 九）</h1>
+  </div>
+  <div class="section__body typo">
+    <ul>
+      <li><a href="/discuss">讨论区</a>节点：<b>公告</b>（训练计划/比赛通知）、<b>云剪切板</b>（贴代码求拍砖）、<b>闲聊</b>、<b>问答</b>（技术求助）。</li>
+      <li>发帖前读置顶《ACM 新生入门须知》《提问的智慧》；问调试问题时给全：题号、代码、判题信息、你试过什么。</li>
+      <li>《出题规范与数据制作教程》面向想给站里供题的同学——欢迎投稿原创题。</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ==================== 十、Markdown 速查 ==================== -->
+<div class="section" data-heading-extract-to="#menu-item-wiki_help">
+  <div class="section__header">
+    <h1 class="section__title" id="markdown" data-heading>Markdown 速查（学生册 · 十）</h1>
+  </div>
+  <div class="section__body typo">
+    <p>题面、讨论区、个人简介、比赛说明都用 Markdown：</p>
+    <ul>
+      <li>标题 <code># 一级</code> ~ <code>#### 四级</code>；<b>加粗</b>、<i>斜体</i>、行内代码 <code>`code`</code>。</li>
+      <li>公式：<code>$...$</code> 行内、<code>$$...$$</code> 独立行（KaTeX，超长公式会被拆行显示）。</li>
+      <li>代码块：三反引号 + 语言名（c++/python/java…，代码高亮）。</li>
+      <li>列表 <code>-</code> / <code>1.</code>；引用 <code>&gt;</code>；链接 <code>[文字](地址)</code>；图片 <code>![描述](地址)</code>（讨论区可传附件）。</li>
+      <li>表格：<code>|列1|列2|</code> 换行后 <code>|---|---|</code> 再写数据行。</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- ==================== 管理员手册 ==================== -->
+<!-- ============================================================ -->
+
+<div class="section" data-heading-extract-to="#menu-item-wiki_help">
+  <div class="section__header">
+    <h1 class="section__title" id="adm-accounts" data-heading>账号与角色（管理员册 · 一）</h1>
+  </div>
+  <div class="section__body typo">
+    <h2>内置账号</h2>
+    <table>
+      <tr><th>UID</th><th>账号</th><th>性质</th></tr>
+      <tr><td>0</td><td>Guest</td><td>游客虚拟号（不可登录）</td></tr>
+      <tr><td>1</td><td>Hydro</td><td>系统号：全部题目/题解 owner 归属它，站内信/OAuth 系统操作以其名义</td></tr>
+      <tr><td>2</td><td>bot爱摸鱼</td><td>站长超管（priv=-1）；显示名 core</td></tr>
+      <tr><td>3</td><td>hydsvc-0074</td><td>评测服务号（priv=-1）：对外 404、不进榜单、AC 不计 RP（三层自洁已自动化）；<b>密码在 /root/.hydro/judge.yaml</b></td></tr>
+      <tr><td>其余</td><td>学生/教练</td><td>注册用户；显式角色 default，root 仅站长与系统号</td></tr>
+    </table>
+    <h2>常用操作</h2>
+    <ul>
+      <li><b>用户管理</b>：<a href="/manage/users">/manage/users</a>（搜索/编辑/重置密码/封禁）；单用户 <code>/manage/users/:uid</code> 的 <code>operation=edit</code> 可改 uname（自动清缓存，立即生效）——站内唯一改名通道。</li>
+      <li><b>域成员/角色</b>：<a href="/domain/user">/domain/user</a>（operation=set_users，uids+role）；角色定义在 <a href="/domain/role">/domain/role</a>（现有 default / acmer / teamleader）。</li>
+      <li><b>给用户设显式角色后</b>若显示「未加入域」，让成员点「我的域」或用 <code>/domain/join?target=system</code> 加入即可；新注册与 OAuth 注册已由钩子自动 join（system+poj 双域）。</li>
+      <li><b>删除测试账号全套</b>（务必全删再重启）：user + domain.user（双域）+ record + document.status + regcode（若是验证码注册）+ oauth（若是 GitHub）+ userBadge + swpu_train（错题本/工作台），然后 pm2 restart 清用户缓存。删除 document.status 必须带 uid 限定（历史事故：误删真实用户 AC 标记）。</li>
+    </ul>
+  </div>
+</div>
+
+<div class="section" data-heading-extract-to="#menu-item-wiki_help">
+  <div class="section__header">
+    <h1 class="section__title" id="adm-problem" data-heading>题库维护（管理员册 · 二）</h1>
+  </div>
+  <div class="section__body typo">
+    <h2>三条导题通道</h2>
+    <table>
+      <tr><th>通道</th><th>入口</th><th>注意事项</th></tr>
+      <tr><td>FPS 包（HUSTOJ 等来源）</td><td><code>POST /problem/import/fps</code>（multipart 字段 file）</td><td>zip 需先解出内层 XML（内置 zip 解析有 bug）；<b>不按标题查重</b>（重复导入会建空壳重复题）；<b>会丢 &lt;spj&gt;</b>——多解题需手工补 testlib checker；GBK 编码包可能塌字（#4142 事故）</td></tr>
+      <tr><td>hydro.ac 官方包</td><td><code>POST /problem/import/hydro</code>（file/keepUser/hidden）</td><td>ybtbas 480、srqc 114 即此通道；导入走 ws.hydrooj.com 中继，需网络通</td></tr>
+      <tr><td>quickimport</td><td><code>POST /problem/quickimport</code></td><td>从 hydro.ac 按目标域单题/批量拉取（hydroac-client 提供）</td></tr>
+    </table>
+    <h2>规则与铁律</h2>
+    <ul>
+      <li><b>owner 铁律</b>：批量导入一律用 uid3 服务号会话（或导入后把 owner 批量改回 1）——否则你的账号会焊进每道题的「上传者」公开字段。</li>
+      <li>补测试数据：HTTP 上传打不进（postUpload 分发问题），走 CLI：<code>ProblemModel.addTestdata(domainId, docId, 文件名, 内容)</code>，同名即替换。</li>
+      <li>多解题（答案不唯一）：上 testlib checker——testdata 放 <code>spj.cc</code> + config.yaml 写 <code>checker_type: testlib</code> / <code>checker: spj.cc</code>；部署前用 <code>@hydrooj/hydrojudge/vendor/testlib/testlib.h</code> 离线编译并做「正解 AC / 替代解 AC / 错解 WA」三态验证。已配 checker 的题：1259/1266/1341/1279/2836/3124/3183/4088 + #10003。</li>
+      <li>重判：<code>POST /record/:rid</code> 带 <code>operation=rejudge</code>（302 即成功）；批量重判远程题会被 hydroac 拦截（远端题不允许批量重判）。</li>
+      <li>题目字段：难度 1~10（`difficulty`）、算法标签（`tag` 数组，<code>category:</code> 可筛）；改题面/标题直写 DB 即时生效，无需重启。</li>
+      <li>判题数据结构：每题 data[] 内 .in/.out 成对 + config.yaml（time/memory/checker）；etag 是存储路径 base64，可据此直读数据文件对拍。</li>
+    </ul>
+  </div>
+</div>
+
+<div class="section" data-heading-extract-to="#menu-item-wiki_help">
+  <div class="section__header">
+    <h1 class="section__title" id="adm-training" data-heading>训练计划维护（管理员册 · 三）</h1>
+  </div>
+  <div class="section__body typo">
+    <ul>
+      <li><b>创建</b>：<code>POST /training/create</code>，字段 title / content（计划页正文）/ description（列表导语）/ pin（0 或 1，UnsignedInt）/ <b>dag</b>（JSON 字符串：<code>[{"_id":1,"title":"章名","requireNids":[],"pids":[3676,3677]}]</code>，pids 为数字数组）。</li>
+      <li><b>编辑</b>：<code>POST /training/:tid/edit</code> 同字段；删题/换题直接改 dag 并复测页面。</li>
+      <li><b>解锁语义是「全完成制」</b>：前置章节全 done 且本章 pids 全 AC 才算 done——链上别放太难/无数据的题（否则卡住整条路线）。</li>
+      <li>4931 同时属于两个计划是唯一例外；新建计划避免与其他计划大量重叠，学生进度页会重复计数。</li>
+      <li>计划页 200 校验：创建/编辑后 curl 一次 <code>/training/:tid</code>。</li>
+    </ul>
+  </div>
+</div>
+
+<div class="section" data-heading-extract-to="#menu-item-wiki_help">
+  <div class="section__header">
+    <h1 class="section__title" id="adm-contest" data-heading>比赛管理（管理员册 · 四）</h1>
+  </div>
+  <div class="section__body typo">
+    <h2>建赛（POST /contest/create，operation=update）</h2>
+    <p>字段：beginAtDate、beginAtTime、duration（小时）、title、content、rule（acm|oi）、pids（逗号分隔）、rated、autoHide、allowViewCode、allowPrint、keepScoreboardHidden、allowTeam。<b>必须带 operation=update</b>（v5 按 body.operation 映射 post&lt;Operation&gt; 方法，缺了就是 405）。</p>
+    <h2>赛中管理</h2>
+    <ul>
+      <li>报名：选手自行 Attend；<code>operation=early_end</code> 是<b>按用户</b>提前离场（只影响本人，不影响榜单）。</li>
+      <li>全局提前结束：编辑比赛缩短时长（或直接 DB 改 tdoc.endAt，带备份）。注意 postUpdate 会删 autoHide 的 unhide 定时任务——把已开赛比赛改到「立即结束」时不会重建，题目将保持隐藏，需手工处理。</li>
+      <li>现场投屏：<a href="/contest">realboard</a> 走 WebSocket <code>/realboard-conn</code>（onsite 工具，无普通 HTTP 页）。</li>
+      <li>Rating：比赛结束的自动计算是上游 stub；真出 Rating 用 <code>/manage/rating</code> 的 CSV 导入流程人工跑。</li>
+      <li>判题期间隐藏题以字母显示；比赛提交带 tid 与练习隔离（去重也互不干扰）。</li>
+    </ul>
+  </div>
+</div>
+
+<div class="section" data-heading-extract-to="#menu-item-wiki_help">
+  <div class="section__header">
+    <h1 class="section__title" id="adm-judge" data-heading>判题系统与排障（管理员册 · 五）</h1>
+  </div>
+  <div class="section__body typo">
+    <ul>
+      <li>链路：提交 → task 队列 → hydrojudge（pm2 独立进程）取任务 → 编译/沙箱评测 → 写回 record + document.status（RP 数据源）。</li>
+      <li>服务号与判题机文件通道：<code>/judge/files</code>（拉数据）、<code>/judge/upload</code>（回传）、WebSocket <code>/judge/conn</code>，全部需要 PRIV_JUDGE。</li>
+      <li><b>卡记录排查</b>：record 集合按 <b>pid（数字 docId）</b> 查（不是 docId 字段）；非终态（0/20/21/22）超 10 分钟即异常——远程题先查 ws.hydrooj.com 中继是否 200，再重投。</li>
+      <li><b>CLI 坑</b>：hydrooj cli execute 会带内嵌判题守护，可能抢任务并在 CLI 退出时把任务掐成僵尸——判题类操作前用 <code>OVERRIDE_CONFIG</code>（disable: true）关内嵌 judge；cli 里的顶层代码必须是顶层 await 语句。</li>
+      <li>判题后服务号的 AC 会写 psdoc——已由 swpu-ops 三层自洁自动清（hook 即时删 + 重算前清 + 每小时清扫），无需手工。</li>
+      <li>队列健康：<code>task</code> 集合应为空；pm2 logs hydrooj-error 尾部只有 CF 探测/游客 4xx 属正常。</li>
+    </ul>
+  </div>
+</div>
+
+<div class="section" data-heading-extract-to="#menu-item-wiki_help">
+  <div class="section__header">
+    <h1 class="section__title" id="adm-config" data-heading>配置管理（管理员册 · 六）</h1>
+  </div>
+  <div class="section__body typo">
+    <h2>两套存储，别混</h2>
+    <table>
+      <tr><th>入口</th><th>存储</th><th>特性/坑</th></tr>
+      <tr><td><code>POST /manage/setting</code></td><td>db.system per-key 文档</td><td>即时生效免重启；boolean 复选框提交值必须是字符串 'on'（发 'true' 会变成 false）；点分键自动嵌套</td></tr>
+      <tr><td><code>POST /manage/config</code></td><td>db.system _id='config' YAML</td><td><b>整体替换不合并</b>——改前先读原文增量拼好再全量回传；value 必须是 urlencoded 文本字段</td></tr>
+    </table>
+    <ul>
+      <li>两者都要 sudo：先 GET 一次目标页面（session 写 sudoArgs），再 <code>POST /user/sudo</code>{password}，1 小时内有效。</li>
+      <li>关键键：<code>server.url</code>（<b>必须带尾斜杠</b>，OAuth 回调裸拼接）、<code>server.name</code>、<code>smtp.*</code>（已配 Gmail；secure=true 配 465）、<code>hydrooj.langs</code>（语言表，judge/hydroac 启动时补 validAs，别乱删）、<code>server.showDefaultRole=true</code>（/domain/user 显示全部注册用户）。</li>
+      <li>域级语言白名单：<code>/domain/edit</code> 的 langs 字段（逗号分隔字符串）——system 域现收窄为 c/cc17/cc17o2/py3/java 五项；POJ 域 c/cc98/java。</li>
+      <li>直改 DB 的设置需要 pm2 restart 才生效（进程缓存）；设置 API 改的即时生效。</li>
+      <li>注册邮箱白名单插件已装（email-whitelist），如需收紧注册域名，在设置里加白名单域。</li>
+    </ul>
+  </div>
+</div>
+
+<div class="section" data-heading-extract-to="#menu-item-wiki_help">
+  <div class="section__header">
+    <h1 class="section__title" id="adm-deploy" data-heading>部署 · 备份 · 安全（管理员册 · 七）</h1>
+  </div>
+  <div class="section__body typo">
+    <ul>
+      <li><b>部署铁律</b>：仓库（github.com/11suixing11/dfacm-oj）跑 <code>deploy/deploy.sh</code>（同步→SHA 对账→唯一一次 pm2 restart→就绪探测→26 项冒烟）；<b>先传完全部文件再 restart</b>；restart 后等 <b>≥75 秒</b>再验收（30 秒内可能仍打到旧进程）。</li>
+      <li>冒烟：<code>deploy/smoke.sh</code>；体检：<code>deploy/check-deployment.sh</code>；主题重放：<code>deploy/install-theme.sh</code>（剥旧 overlay 再追加）。</li>
+      <li>上游补丁清单（升级会丢，重放即可）：排名模板补丁、rating floor、KaTeX 长度限制、训练 locale「未解锁」、theme 品牌层——全部在 repo deploy/ 有脚本。</li>
+      <li><b>备份双轨</b>：服务器每日 03:17（/root/backups，zip 保留 7 份；变更前 JSON 快照不自动清）；本机每日 09:07 拉取（Desktop\oj备份，14 天轮转+永久归档）。恢复演练：zip 内含 Mongo dump + 测试数据文件。</li>
+      <li><b>安全</b>：UFW 仅 22/80/443（443/udp 给 HTTP/3）；fail2ban 常年拦爆破；服务号 uid3 主页对外 404（Caddy 规则）；TOTP 建议站长开启。</li>
+      <li>机器人播报（167 服务器）：astrbot 插件 pymongo 只读直连本站 Mongo（bot_ro 专用只读账号，15 秒增量轮询 + 非终态近窗复查），不经 HTTP，不给站点加压。</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- ==================== API / 接口文档 ==================== -->
+<!-- ============================================================ -->
+
+<div class="section" data-heading-extract-to="#menu-item-wiki_help">
+  <div class="section__header">
+    <h1 class="section__title" id="api-arch" data-heading>架构与鉴权（API 册 · 一）</h1>
+  </div>
+  <div class="section__body typo">
+    <h2>请求链路</h2>
+    <p>浏览器 →（Cloudflare 可选）→ <b>Caddy :443</b>（TLS/HTTP3、缓存头、登录注册收敛改写、/user/3 封禁）→ <b>hydrooj</b>（127.0.0.1:8888，路由 → Handler → Model → MongoDB）→ <b>hydrojudge</b>（独立进程，经 <code>/judge/files</code>、<code>/judge/upload</code> 与 WebSocket <code>/judge/conn</code> 取任务回结果）；远程题走出站中继 <code>wss://ws.hydrooj.com</code>（ybtbas/srqc）与 POJ 直连。</p>
+    <h2>鉴权模型</h2>
+    <ul>
+      <li><b>会话</b>：登录后种 HttpOnly Cookie <code>sid</code> + <code>sid.sig</code>（JS 读不到，落地页登录态靠探测导航 DOM 判断）。</li>
+      <li><b>权限</b>：<code>PERM_*</code> 为域级可配置权限（角色矩阵），<code>PRIV_*</code> 为全局权限位（priv=-1 为超管）。全表「权限」列为路由声明值；未声明的按 Handler 内 checkPriv 运行时判定。</li>
+      <li><b>域前缀</b>：几乎所有路由同时可经 <code>/d/:domain</code> 访问（如 <code>/d/poj/p/P1000</code>、<code>/d/:domain/record-conn</code>）。</li>
+      <li><b>operation 分发</b>：POST 请求在 body 带 <code>operation=xxx</code> 时映射到 Handler 的 <code>postXxx</code> 方法（比赛建赛 405 问题的根因即漏带 operation）。</li>
+      <li><b>sudo</b>：敏感管理页要求 sudo 态——先 GET 一次目标页（写 sudoArgs）再 <code>POST /user/sudo</code>（password），1 小时有效。</li>
+      <li><b>WebSocket 网关</b>：<code>/websocket</code> 需要 <code>x-hydro-websocket-gateway</code> 头与 <code>system.websocket.secret</code> 比对；页面级 ws（record-conn 等）用会话 Cookie 鉴权。</li>
+      <li><b>服务号</b>：判题机账号（PRIV_JUDGE）走 /judge/* 三件套；对外一切身份页面均不可见。</li>
+    </ul>
+  </div>
+</div>
+
+<div class="section" data-heading-extract-to="#menu-item-wiki_help">
+  <div class="section__header">
+    <h1 class="section__title" id="api-quick" data-heading>常用接口速查（API 册 · 二）</h1>
+  </div>
+  <div class="section__body typo">
+    <h2>学生 / 前台</h2>
+    <table>
+      <tr><th>请求</th><th>接口</th><th>说明</th></tr>
+      <tr><td>POST</td><td><code>/login</code></td><td>uname/password/rememberme[/tfa]；错误 403、成功 302</td></tr>
+      <tr><td>POST</td><td><code>/reg/code</code></td><td>mail/purpose(reg|login)——发 6 位验证码（限速 60s/邮箱、20 次/时 IP）</td></tr>
+      <tr><td>POST</td><td><code>/reg/complete</code></td><td>mail/code/uname/password——验证码注册并自动登录</td></tr>
+      <tr><td>POST</td><td><code>/reg/login</code></td><td>mail/code——验证码免密登录</td></tr>
+      <tr><td>POST</td><td><code>/p/:pid/submit</code></td><td>lang/code[/tid]；multipart 文件字段名必须叫 <b>file</b>；302 → /record/:rid</td></tr>
+      <tr><td>GET</td><td><code>/record/:rid</code></td><td>提交详情（实时 ws 刷新）</td></tr>
+      <tr><td>GET</td><td><code>/ranking</code> · <code>/rating</code></td><td>RP 榜 / Rating 榜</td></tr>
+      <tr><td>GET</td><td><code>/workbench/data</code> · <code>/mistakes/data</code></td><td>工作台 / 错题本数据 JSON（需登录）</td></tr>
+      <tr><td>POST</td><td><code>/shop/redeem</code></td><td>积分兑换徽章</td></tr>
+    </table>
+    <h2>管理 / 后台</h2>
+    <table>
+      <tr><th>请求</th><th>接口</th><th>说明</th></tr>
+      <tr><td>POST</td><td><code>/contest/create</code></td><td>operation=update + 12 字段（见管理员册）</td></tr>
+      <tr><td>POST</td><td><code>/training/create</code></td><td>title/content/description/dag/pin</td></tr>
+      <tr><td>POST</td><td><code>/record/:rid</code></td><td>operation=rejudge 重判</td></tr>
+      <tr><td>POST</td><td><code>/manage/users/:uid</code></td><td>operation=edit（改名/改资料）</td></tr>
+      <tr><td>POST</td><td><code>/domain/user</code></td><td>operation=set_users，uids+role</td></tr>
+      <tr><td>POST</td><td><code>/domain/edit</code></td><td>name/bulletin/avatar/langs（域语言白名单）</td></tr>
+      <tr><td>POST</td><td><code>/manage/setting</code></td><td>设置键=值（boolean 用 'on'；sudo；即时生效）</td></tr>
+      <tr><td>POST</td><td><code>/manage/config</code></td><td>value=完整 YAML（整体替换！sudo）</td></tr>
+      <tr><td>POST</td><td><code>/problem/import/fps</code> · <code>/problem/import/hydro</code></td><td>导题（坑见管理员册）</td></tr>
+      <tr><td>POST</td><td><code>/discuss/:type/:name/create</code></td><td>title/content/pin/highlight</td></tr>
+    </table>
+    <h2>JSON API（可直接 GET）</h2>
+    <table>
+      <tr><th>接口</th><th>返回</th></tr>
+      <tr><td><code>/api/rating/stats</code></td><td>Rating 统计</td></tr>
+      <tr><td><code>/api/rating/user/:uid</code></td><td>单用户 Rating</td></tr>
+      <tr><td><code>/api/user/:uid/info</code></td><td>用户聚合信息</td></tr>
+    </table>
+  </div>
+</div>
+
+
+<div class="section" data-heading-extract-to="#menu-item-wiki_help">
+  <div class="section__header">
+    <h1 class="section__title" id="api-all" data-heading>全量 HTTP 路由表（API 册 · 三）</h1>
+  </div>
+  <div class="section__body typo">
+    <p>共 <b>150</b> 条，由已部署源码静态扫描生成。列：路径 / 方法（含 operation 子操作）/ 声明权限 / 处理器 / 说明。</p>
+    <h2>Hydro 核心（102）</h2>
+    <table><tr><th>路径</th><th>方法</th><th>权限</th><th>处理器</th><th>说明</th></tr>
+    <tr><td><code>/p/category/:category</code></td><td>GET</td><td></td><td>ProblemCategoryCompatHandler</td><td>旧版分类链接兼容</td></tr>
+    <tr><td><code>/contest/create</code></td><td>DELETE/GET；POST(op=Delete|Update)</td><td></td><td>ContestEditHandler</td><td>建赛（operation=update + 12 字段）</td></tr>
+    <tr><td><code>/contest</code></td><td>GET</td><td>PERM_VIEW_CONTEST</td><td>ContestListHandler</td><td>比赛列表</td></tr>
+    <tr><td><code>/contest/:tid</code></td><td>GET；POST(op=Attend|EarlyEnd|Subscribe)</td><td>PERM_VIEW_CONTEST</td><td>ContestDetailHandler</td><td>比赛详情 / 报名(attend) / 提前离场(early_end) / 删除(delete)</td></tr>
+    <tr><td><code>/contest/:tid/problems</code></td><td>GET；POST(op=Clarification)</td><td>PERM_VIEW_CONTEST</td><td>ContestProblemListHandler</td><td>赛内题单</td></tr>
+    <tr><td><code>/contest/:tid/edit</code></td><td>DELETE/GET；POST(op=Delete|Update)</td><td>PERM_VIEW_CONTEST</td><td>ContestEditHandler</td><td>编辑比赛（operation=update）</td></tr>
+    <tr><td><code>/contest/:tid/print</code></td><td>GET/POST；POST(op=AllocatePrintTask|GetPrintTask|Print|UpdatePrintTask)</td><td>PERM_VIEW_CONTEST</td><td>ContestPrintHandler</td><td>现场打印</td></tr>
+    <tr><td><code>/contest/:tid/api/printing/team</code></td><td>GET/POST；POST(op=AllocatePrintTask|GetPrintTask|Print|UpdatePrintTask)</td><td>PERM_VIEW_CONTEST</td><td>ContestPrintHandler</td><td>打印 API</td></tr>
+    <tr><td><code>/contest/:tid/management</code></td><td>DELETE/GET/POST/PUT；POST(op=DeleteFiles|SetScore|UploadFile)</td><td></td><td>ContestManagementHandler</td><td>比赛管理面板</td></tr>
+    <tr><td><code>/contest/:tid/clarification</code></td><td>GET；POST(op=Clarification)</td><td></td><td>ContestClarificationHandler</td><td>选手提问/答疑</td></tr>
+    <tr><td><code>/contest/:tid/code</code></td><td>GET</td><td>PERM_VIEW_CONTEST</td><td>ContestCodeHandler</td><td>代码互看（allowViewCode）</td></tr>
+    <tr><td><code>/contest/:tid/file/:type/:filename</code></td><td>GET</td><td>PERM_VIEW_CONTEST</td><td>ContestFileDownloadHandler</td><td>比赛附件下载</td></tr>
+    <tr><td><code>/contest/:tid/user</code></td><td>GET；POST(op=AddUser|Rank|RemoveUser|Resume)</td><td>PERM_VIEW_CONTEST</td><td>ContestUserHandler</td><td>比赛用户管理</td></tr>
+    <tr><td><code>/contest/:tid/balloon</code></td><td>GET；POST(op=Done|SetColor)</td><td>PERM_VIEW_CONTEST</td><td>ContestBalloonHandler</td><td>气球（现场赛）</td></tr>
+    <tr><td><code>/discuss</code></td><td>GET</td><td>PERM_VIEW_DISCUSSION</td><td>DiscussionMainHandler</td><td>讨论区</td></tr>
+    <tr><td><code>/discuss/:did</code></td><td>GET/POST；POST(op=DeleteReply|DeleteTailReply|EditReply|EditTailReply|Reaction|Reply|SetLock|Star|TailReply)</td><td></td><td>DiscussionDetailHandler</td><td>帖子详情</td></tr>
+    <tr><td><code>/discuss/:did/edit</code></td><td>DELETE/GET；POST(op=Delete|Update)</td><td></td><td>DiscussionEditHandler</td><td>编辑帖子</td></tr>
+    <tr><td><code>/discuss/:did/raw</code></td><td>GET</td><td></td><td>DiscussionRawHandler</td><td>帖子原文（编辑器用）</td></tr>
+    <tr><td><code>/discuss/:did/:drid/raw</code></td><td>GET</td><td></td><td>DiscussionRawHandler</td><td>回复原文</td></tr>
+    <tr><td><code>/discuss/:did/:drid/:drrid/raw</code></td><td>GET</td><td></td><td>DiscussionRawHandler</td><td>楼中楼原文</td></tr>
+    <tr><td><code>/discuss/:type/:name</code></td><td>GET</td><td></td><td>DiscussionNodeHandler</td><td>节点内列表</td></tr>
+    <tr><td><code>/discuss/:type/:name/create</code></td><td>GET/POST</td><td>PRIV_USER_PROFILE</td><td>DiscussionCreateHandler</td><td>发帖（title/content/pin/highlight）</td></tr>
+    <tr><td><code>/ranking</code></td><td>GET</td><td>PERM_VIEW_RANKING</td><td>DomainRankHandler</td><td>域 RP 排行榜</td></tr>
+    <tr><td><code>/domain/dashboard</code></td><td>DELETE/GET；POST(op=Delete|InitDiscussionNode)</td><td></td><td>DomainDashboardHandler</td><td>域仪表盘</td></tr>
+    <tr><td><code>/domain/edit</code></td><td>GET/POST</td><td></td><td>DomainEditHandler</td><td>域设置（name/bulletin/avatar/langs）</td></tr>
+    <tr><td><code>/domain/user</code></td><td>GET/POST；POST(op=Kick|SetUsers)</td><td></td><td>DomainUserHandler</td><td>域成员管理（operation=set_users）</td></tr>
+    <tr><td><code>/domain/permission</code></td><td>GET/POST</td><td></td><td>DomainPermissionHandler</td><td>域权限矩阵</td></tr>
+    <tr><td><code>/domain/role</code></td><td>GET；POST(op=Add|Delete)</td><td></td><td>DomainRoleHandler</td><td>角色定义</td></tr>
+    <tr><td><code>/domain/group</code></td><td>GET；POST(op=Del|Update)</td><td></td><td>DomainUserGroupHandler</td><td>小组管理</td></tr>
+    <tr><td><code>/domain/join_applications</code></td><td>GET/POST</td><td></td><td>DomainJoinApplicationsHandler</td><td>入域申请</td></tr>
+    <tr><td><code>/domain/join</code></td><td>GET/POST</td><td>PRIV_USER_PROFILE</td><td>DomainJoinHandler</td><td>加入域（target=system）</td></tr>
+    <tr><td><code>/domain/search</code></td><td>GET</td><td>PRIV_USER_PROFILE</td><td>DomainSearchHandler</td><td>域搜索</td></tr>
+    <tr><td><code>/</code></td><td>GET</td><td></td><td>HomeHandler</td><td>原生首页（本站被 Caddy 落地页遮蔽）</td></tr>
+    <tr><td><code>/home/security</code></td><td>DELETE/GET；POST(op=ChangeMail|ChangePassword|DeleteAllTokens|DeleteToken|DisableAuthn|DisableTfa|EnableAuthn|EnableTfa|LinkAccount|Register|UnlinkAccount)</td><td>PRIV_USER_PROFILE</td><td>HomeSecurityHandler</td><td>安全设置（TOTP/通行密钥）</td></tr>
+    <tr><td><code>/home/changeMail/:code</code></td><td>DELETE/GET</td><td>PRIV_USER_PROFILE</td><td>UserChangemailWithCodeHandler</td><td>邮箱变更确认</td></tr>
+    <tr><td><code>/home/settings/:category</code></td><td>GET/POST</td><td>PRIV_USER_PROFILE</td><td>HomeSettingsHandler</td><td>偏好设置（资料/显示名/主题）</td></tr>
+    <tr><td><code>/home/avatar</code></td><td>POST/PUT</td><td>PRIV_USER_PROFILE</td><td>HomeAvatarHandler</td><td>头像设置</td></tr>
+    <tr><td><code>/home/domain</code></td><td>GET；POST(op=Leave|Star)</td><td>PRIV_USER_PROFILE</td><td>HomeDomainHandler</td><td>我的域</td></tr>
+    <tr><td><code>/home/domain/create</code></td><td>GET/POST</td><td>PRIV_CREATE_DOMAIN</td><td>HomeDomainCreateHandler</td><td>创建域</td></tr>
+    <tr><td><code>/home/messages</code></td><td>DELETE/GET；POST(op=DeleteMessage|Send)</td><td>PRIV_USER_PROFILE</td><td>HomeMessagesHandler</td><td>站内信</td></tr>
+    <tr><td><code>/homework</code></td><td>GET</td><td>PERM_VIEW_HOMEWORK</td><td>HomeworkMainHandler</td><td>作业赛制（本站未启用）</td></tr>
+    <tr><td><code>/homework/create</code></td><td>DELETE/GET；POST(op=Delete|Update)</td><td></td><td>HomeworkEditHandler</td><td>建作业赛</td></tr>
+    <tr><td><code>/homework/:tid</code></td><td>GET；POST(op=Attend)</td><td>PERM_VIEW_HOMEWORK</td><td>HomeworkDetailHandler</td><td>作业详情</td></tr>
+    <tr><td><code>/homework/:tid/code</code></td><td>GET/POST</td><td>PERM_VIEW_HOMEWORK</td><td>ContestCodeHandler</td><td>作业代码</td></tr>
+    <tr><td><code>/homework/:tid/edit</code></td><td>DELETE/GET；POST(op=Delete|Update)</td><td></td><td>HomeworkEditHandler</td><td>编辑作业</td></tr>
+    <tr><td><code>/homework/:tid/file</code></td><td>DELETE/GET/POST/PUT；POST(op=DeleteFiles|UploadFile)</td><td>PERM_VIEW_HOMEWORK</td><td>HomeworkFilesHandler</td><td>作业附件</td></tr>
+    <tr><td><code>/homework/:tid/file/:type/:filename</code></td><td>GET/POST</td><td>PERM_VIEW_HOMEWORK</td><td>ContestFileDownloadHandler</td><td>作业附件下载</td></tr>
+    <tr><td><code>/problem/import/hydro</code></td><td>GET/POST</td><td>PERM_CREATE_PROBLEM</td><td>ProblemImportHydroHandler</td><td>hydro.ac 官方包导题</td></tr>
+    <tr><td><code>/judge/files</code></td><td>GET/POST</td><td>PRIV_JUDGE</td><td>JudgeFilesDownloadHandler</td><td>判题机拉取测试数据（PRIV_JUDGE）</td></tr>
+    <tr><td><code>/judge/upload</code></td><td>POST</td><td>PRIV_JUDGE</td><td>JudgeFileUpdateHandler</td><td>判题机回传文件（PRIV_JUDGE）</td></tr>
+    <tr><td><code>/manage</code></td><td>GET</td><td></td><td>SystemMainHandler</td><td>管理首页</td></tr>
+    <tr><td><code>/manage/dashboard</code></td><td>GET；POST(op=Restart)</td><td></td><td>SystemDashboardHandler</td><td>控制面板</td></tr>
+    <tr><td><code>/manage/script</code></td><td>GET/POST</td><td></td><td>SystemScriptHandler</td><td>CLI 脚本运行中心</td></tr>
+    <tr><td><code>/manage/setting</code></td><td>GET/POST</td><td></td><td>SystemSettingHandler</td><td>系统设置 per-key（boolean 用 'on'）</td></tr>
+    <tr><td><code>/manage/config</code></td><td>GET/POST</td><td></td><td>SystemConfigHandler</td><td>Config YAML（整体替换）</td></tr>
+    <tr><td><code>/manage/userimport</code></td><td>GET/POST</td><td></td><td>SystemUserImportHandler</td><td>批量导入用户</td></tr>
+    <tr><td><code>/manage/userpriv</code></td><td>GET/POST</td><td></td><td>SystemUserPrivHandler</td><td>全局权限位调整</td></tr>
+    <tr><td><code>/language/:lang</code></td><td>GET</td><td></td><td>SwitchLanguageHandler</td><td>切换语言</td></tr>
+    <tr><td><code>/file</code></td><td>DELETE/GET/POST/PUT；POST(op=DeleteFiles|UploadFile)</td><td></td><td>FilesHandler</td><td>用户文件列表/管理</td></tr>
+    <tr><td><code>/file/:uid/:filename</code></td><td>GET</td><td></td><td>FSDownloadHandler</td><td>用户文件下载</td></tr>
+    <tr><td><code>/storage</code></td><td>GET</td><td></td><td>StorageHandler</td><td>存储桶管理</td></tr>
+    <tr><td><code>/account/:uid</code></td><td>GET</td><td>PRIV_EDIT_SYSTEM</td><td>SwitchAccountHandler</td><td>管理员切换账号</td></tr>
+    <tr><td><code>/heap-snapshot</code></td><td>POST</td><td>PRIV_EDIT_SYSTEM</td><td>HeapSnapshotHandler</td><td>V8 堆快照</td></tr>
+    <tr><td><code>/p</code></td><td>DELETE/GET；POST(op=Copy|Delete|Hide|Unhide)</td><td>PERM_VIEW_PROBLEM</td><td>ProblemMainHandler</td><td>题库（搜索/难度/标签筛选）</td></tr>
+    <tr><td><code>/problem/random</code></td><td>GET</td><td>PERM_VIEW_PROBLEM</td><td>ProblemRandomHandler</td><td>随机一题</td></tr>
+    <tr><td><code>/p/:pid</code></td><td>DELETE/GET；POST(op=Delete|Rejudge|Star)</td><td></td><td>ProblemDetailHandler</td><td>题目页</td></tr>
+    <tr><td><code>/p/:pid/submit</code></td><td>GET/POST/PUT</td><td>PERM_SUBMIT_PROBLEM</td><td>ProblemSubmitHandler</td><td>提交（lang/code[/tid]）</td></tr>
+    <tr><td><code>/p/:pid/hack/:rid</code></td><td>GET/POST/PUT</td><td>PERM_SUBMIT_PROBLEM</td><td>ProblemHackHandler</td><td>Hack 提交</td></tr>
+    <tr><td><code>/p/:pid/edit</code></td><td>GET/POST</td><td></td><td>ProblemEditHandler</td><td>题面编辑</td></tr>
+    <tr><td><code>/p/:pid/config</code></td><td>GET</td><td></td><td>ProblemConfigHandler</td><td>判题配置（时间/内存/checker）</td></tr>
+    <tr><td><code>/p/:pid/files</code></td><td>GET/POST；POST(op=DeleteFiles|GenerateTestdata|GetLinks|RenameFiles|UploadFile)</td><td>PERM_VIEW_PROBLEM</td><td>ProblemFilesHandler</td><td>测试数据管理页</td></tr>
+    <tr><td><code>/p/:pid/file/:filename</code></td><td>GET</td><td></td><td>ProblemFileDownloadHandler</td><td>题目附件（302 签名 URL）</td></tr>
+    <tr><td><code>/p/:pid/solution</code></td><td>DELETE/GET；POST(op=DeleteReply|DeleteSolution|Downvote|EditReply|EditSolution|Reply|Submit|Upvote)</td><td>PERM_VIEW_PROBLEM</td><td>ProblemSolutionHandler</td><td>题解列表</td></tr>
+    <tr><td><code>/p/:pid/solution/:sid</code></td><td>DELETE/GET；POST(op=DeleteReply|DeleteSolution|Downvote|EditReply|EditSolution|Reply|Submit|Upvote)</td><td>PERM_VIEW_PROBLEM</td><td>ProblemSolutionHandler</td><td>题解详情</td></tr>
+    <tr><td><code>/p/:pid/solution/:psid/raw</code></td><td>GET</td><td>PERM_VIEW_PROBLEM</td><td>ProblemSolutionRawHandler</td><td>题解原文</td></tr>
+    <tr><td><code>/p/:pid/solution/:psid/:psrid/raw</code></td><td>GET</td><td>PERM_VIEW_PROBLEM</td><td>ProblemSolutionRawHandler</td><td>题解回复原文</td></tr>
+    <tr><td><code>/p/:pid/stat</code></td><td>GET</td><td>PERM_VIEW_PROBLEM</td><td>ProblemStatisticsHandler</td><td>题目提交统计</td></tr>
+    <tr><td><code>/problem/create</code></td><td>GET/POST</td><td>PERM_CREATE_PROBLEM</td><td>ProblemCreateHandler</td><td>创建题目</td></tr>
+    <tr><td><code>/record</code></td><td>GET</td><td></td><td>RecordListHandler</td><td>提交记录列表（?uidOrName 筛选；匿名登录墙）</td></tr>
+    <tr><td><code>/record/:rid</code></td><td>GET/POST；POST(op=Cancel|Judge|Rejudge)</td><td></td><td>RecordDetailHandler</td><td>记录详情 / 重判（operation=rejudge）</td></tr>
+    <tr><td><code>/status</code></td><td>GET</td><td></td><td>StatusHandler</td><td>实例状态页</td></tr>
+    <tr><td><code>/status/update</code></td><td>POST</td><td></td><td>StatusUpdateHandler</td><td>状态刷新</td></tr>
+    <tr><td><code>/training</code></td><td>DELETE/GET</td><td>PERM_VIEW_TRAINING</td><td>TrainingMainHandler</td><td>训练计划列表</td></tr>
+    <tr><td><code>/training/create</code></td><td>GET/POST</td><td></td><td>TrainingEditHandler</td><td>建训练计划（title/content/description/dag/pin）</td></tr>
+    <tr><td><code>/training/:tid</code></td><td>DELETE/GET；POST(op=Delete|Enroll)</td><td>PERM_VIEW_TRAINING</td><td>TrainingDetailHandler</td><td>计划详情（章节 DAG）</td></tr>
+    <tr><td><code>/training/:tid/edit</code></td><td>GET/POST</td><td></td><td>TrainingEditHandler</td><td>编辑计划</td></tr>
+    <tr><td><code>/training/:tid/file</code></td><td>DELETE/GET/POST/PUT；POST(op=DeleteFiles|UploadFile)</td><td>PERM_VIEW_TRAINING</td><td>TrainingFilesHandler</td><td>计划附件</td></tr>
+    <tr><td><code>/training/:tid/file/:filename</code></td><td>GET</td><td>PERM_VIEW_TRAINING</td><td>TrainingFileDownloadHandler</td><td>计划附件下载</td></tr>
+    <tr><td><code>/login</code></td><td>DELETE/GET/POST</td><td></td><td>UserLoginHandler</td><td>密码登录（uname/password；403/302）</td></tr>
+    <tr><td><code>/oauth/:type/login</code></td><td>GET</td><td></td><td>OauthHandler</td><td>OAuth 跳转（type=github）</td></tr>
+    <tr><td><code>/user/sudo</code></td><td>DELETE/GET/POST</td><td>PRIV_USER_PROFILE</td><td>UserSudoHandler</td><td>激活 sudo（password）</td></tr>
+    <tr><td><code>/user/tfa</code></td><td>GET</td><td></td><td>UserTFAHandler</td><td>两步验证</td></tr>
+    <tr><td><code>/user/webauthn</code></td><td>DELETE/GET/POST</td><td></td><td>UserWebauthnHandler</td><td>通行密钥</td></tr>
+    <tr><td><code>/oauth/:type/callback</code></td><td>GET</td><td></td><td>OauthCallbackHandler</td><td>OAuth 回调</td></tr>
+    <tr><td><code>/register</code></td><td>GET/POST</td><td>PRIV_REGISTER_USER</td><td>UserRegisterHandler</td><td>注册第一步（mail）</td></tr>
+    <tr><td><code>/register/:code</code></td><td>DELETE/GET/POST</td><td>PRIV_REGISTER_USER</td><td>UserRegisterWithCodeHandler</td><td>注册第二步（uname/password）</td></tr>
+    <tr><td><code>/logout</code></td><td>GET/POST</td><td>PRIV_USER_PROFILE</td><td>UserLogoutHandler</td><td>登出</td></tr>
+    <tr><td><code>/lostpass</code></td><td>GET/POST</td><td></td><td>UserLostPassHandler</td><td>忘记密码（mail；防枚举）</td></tr>
+    <tr><td><code>/lostpass/:code</code></td><td>DELETE/GET/POST</td><td></td><td>UserLostPassWithCodeHandler</td><td>重置密码</td></tr>
+    <tr><td><code>/user/delete</code></td><td>POST</td><td>PRIV_USER_PROFILE</td><td>UserDeleteHandler</td><td>注销账号</td></tr>
+    <tr><td><code>/user/:uid</code></td><td>GET</td><td></td><td>UserDetailHandler</td><td>用户主页</td></tr>
+    <tr><td><code>/contestmode</code></td><td>GET；POST(op=Reset)</td><td>PRIV_EDIT_SYSTEM</td><td>ContestModeHandler</td><td>比赛模式开关</td></tr>
+    </table>
+    <h2>官方 UI (ui-default)（9）</h2>
+    <table><tr><th>路径</th><th>方法</th><th>权限</th><th>处理器</th><th>说明</th></tr>
+    <tr><td><code>/manage/config/schema.json</code></td><td>GET</td><td>PRIV_EDIT_SYSTEM</td><td>SystemConfigSchemaHandler</td><td>配置 Schema JSON</td></tr>
+    <tr><td><code>/wiki/help</code></td><td>GET</td><td></td><td>WikiHelpHandler</td><td>本帮助页</td></tr>
+    <tr><td><code>/wiki/about</code></td><td>GET</td><td></td><td>WikiAboutHandler</td><td>关于页（实验室介绍）</td></tr>
+    <tr><td><code>/set_theme/:theme</code></td><td>GET</td><td></td><td>SetThemeHandler</td><td>切换主题（light/dark）</td></tr>
+    <tr><td><code>/legacy</code></td><td>GET</td><td></td><td>LegacyModeHandler</td><td>旧版兼容入口</td></tr>
+    <tr><td><code>/markdown</code></td><td>POST</td><td></td><td>MarkdownHandler</td><td>Markdown 渲染（预览）</td></tr>
+    <tr><td><code>/media</code></td><td>GET/POST</td><td></td><td>RichMediaHandler</td><td>媒体代理/上传</td></tr>
+    <tr><td><code>/lazy/:version/:name</code></td><td>GET/POST</td><td></td><td>UiConstantsHandler</td><td>版本化前端资源（7 天缓存）</td></tr>
+    <tr><td><code>/resource/:version/:name</code></td><td>GET/POST</td><td></td><td>UiConstantsHandler</td><td>版本化资源（7 天缓存）</td></tr>
+    </table>
+    <h2>官方插件 (fps-importer)（1）</h2>
+    <table><tr><th>路径</th><th>方法</th><th>权限</th><th>处理器</th><th>说明</th></tr>
+    <tr><td><code>/problem/import/fps</code></td><td>GET/POST</td><td>PERM_CREATE_PROBLEM</td><td>FpsProblemImportHandler</td><td>FPS 包导题（丢 spj/不查重/zip 坑）</td></tr>
+    </table>
+    <h2>自研插件 swpu-regcode（4）</h2>
+    <table><tr><th>路径</th><th>方法</th><th>权限</th><th>处理器</th><th>说明</th></tr>
+    <tr><td><code>/reg</code></td><td>GET</td><td></td><td>RegPageHandler</td><td>一站式注册/登录页（tab=reg|login|pwd&return=）</td></tr>
+    <tr><td><code>/reg/code</code></td><td>GET/POST</td><td></td><td>RegCodeHandler</td><td>发验证码（mail/purpose）</td></tr>
+    <tr><td><code>/reg/complete</code></td><td>GET/POST</td><td>PRIV_REGISTER_USER</td><td>RegCompleteHandler</td><td>验证码注册（mail/code/uname/password）</td></tr>
+    <tr><td><code>/reg/login</code></td><td>GET/POST</td><td></td><td>CodeLoginHandler</td><td>验证码免密登录（mail/code）</td></tr>
+    </table>
+    <h2>自研插件 swpu-train（7）</h2>
+    <table><tr><th>路径</th><th>方法</th><th>权限</th><th>处理器</th><th>说明</th></tr>
+    <tr><td><code>/workbench</code></td><td>GET</td><td>PRIV_USER_PROFILE</td><td>WorkbenchPageHandler</td><td>训练工作台页</td></tr>
+    <tr><td><code>/workbench/data</code></td><td>GET</td><td>PRIV_USER_PROFILE</td><td>WorkbenchDataHandler</td><td>工作台数据 JSON</td></tr>
+    <tr><td><code>/mistakes</code></td><td>GET</td><td>PRIV_USER_PROFILE</td><td>MistakesPageHandler</td><td>错题本页</td></tr>
+    <tr><td><code>/mistakes/data</code></td><td>GET</td><td>PRIV_USER_PROFILE</td><td>MistakesDataHandler</td><td>错题列表 JSON</td></tr>
+    <tr><td><code>/mistakes/update</code></td><td>POST</td><td>PRIV_USER_PROFILE</td><td>MistakesUpdateHandler</td><td>更新错题状态</td></tr>
+    <tr><td><code>/mistakes/remove</code></td><td>POST</td><td>PRIV_USER_PROFILE</td><td>MistakesRemoveHandler</td><td>移除错题</td></tr>
+    <tr><td><code>/mistakes/sync</code></td><td>POST</td><td>PRIV_USER_PROFILE</td><td>MistakesSyncHandler</td><td>从 record 同步错题</td></tr>
+    </table>
+    <h2>自研插件 swpu-shop（5）</h2>
+    <table><tr><th>路径</th><th>方法</th><th>权限</th><th>处理器</th><th>说明</th></tr>
+    <tr><td><code>/shop</code></td><td>GET</td><td></td><td>ShopPageHandler</td><td>积分商店页</td></tr>
+    <tr><td><code>/shop/redeem</code></td><td>GET/POST</td><td>PRIV_USER_PROFILE</td><td>ShopRedeemHandler</td><td>积分兑换徽章</td></tr>
+    <tr><td><code>/shop/history</code></td><td>GET</td><td>PRIV_USER_PROFILE</td><td>ShopHistoryHandler</td><td>积分流水 JSON</td></tr>
+    <tr><td><code>/manage/shop</code></td><td>GET</td><td>PRIV_MANAGE_ALL_DOMAIN</td><td>ShopManageHandler</td><td>商店管理/定价</td></tr>
+    <tr><td><code>/manage/shop</code></td><td>GET/POST</td><td>PRIV_MANAGE_ALL_DOMAIN</td><td>ShopManageSaveHandler</td><td>商店管理/定价</td></tr>
+    </table>
+    <h2>社区插件 user-management（2）</h2>
+    <table><tr><th>路径</th><th>方法</th><th>权限</th><th>处理器</th><th>说明</th></tr>
+    <tr><td><code>/manage/users</code></td><td>GET</td><td>PRIV_EDIT_SYSTEM</td><td>UserManageMainHandler</td><td>用户管理列表</td></tr>
+    <tr><td><code>/manage/users/:uid</code></td><td>GET/POST；POST(op=Ban|Edit|ResetPassword|SetPriv|Unban)</td><td>PRIV_EDIT_SYSTEM</td><td>UserManageDetailHandler</td><td>用户详情/编辑（operation=edit 改名）</td></tr>
+    </table>
+    <h2>社区插件 rating-system（8）</h2>
+    <table><tr><th>路径</th><th>方法</th><th>权限</th><th>处理器</th><th>说明</th></tr>
+    <tr><td><code>/rating</code></td><td>GET</td><td>PERM_VIEW_RANKING</td><td>RatingListHandler</td><td>Rating 榜</td></tr>
+    <tr><td><code>/user/:uid/rating</code></td><td>GET</td><td></td><td>UserRatingHandler</td><td>用户 Rating 页</td></tr>
+    <tr><td><code>/manage/rating</code></td><td>GET；POST(op=UpdateRating)</td><td>PRIV_EDIT_SYSTEM</td><td>RatingManageHandler</td><td>Rating 管理/CSV 导入</td></tr>
+    <tr><td><code>/manage/user-rating</code></td><td>GET/POST；POST(op=InitializeAll|InitializeUser|ModifyContest|RemoveContest)</td><td>PRIV_EDIT_SYSTEM</td><td>UserRatingManageHandler</td><td>用户 Rating 调整</td></tr>
+    <tr><td><code>/manage/rating/contest</code></td><td>GET；POST(op=ImportContest|RevertLast)</td><td>PRIV_EDIT_SYSTEM</td><td>ContestRatingComputeHandler</td><td>比赛 Rating 计算</td></tr>
+    <tr><td><code>/api/rating/stats</code></td><td>GET</td><td>PERM_VIEW_RANKING</td><td>RatingStatsHandler</td><td>Rating 统计 JSON</td></tr>
+    <tr><td><code>/api/rating/user/:uid</code></td><td>GET</td><td></td><td>RatingUserApiHandler</td><td>用户 Rating JSON</td></tr>
+    <tr><td><code>/api/user/:uid/info</code></td><td>GET</td><td></td><td>UserInfoApiHandler</td><td>用户聚合信息 JSON</td></tr>
+    </table>
+    <h2>社区插件 badge（5）</h2>
+    <table><tr><th>路径</th><th>方法</th><th>权限</th><th>处理器</th><th>说明</th></tr>
+    <tr><td><code>/manage/badge</code></td><td>GET</td><td>PRIV_MANAGE_ALL_DOMAIN</td><td>BadgeManageHandler</td><td>徽章管理</td></tr>
+    <tr><td><code>/badge/add</code></td><td>GET；POST(op=Add)</td><td>PRIV_MANAGE_ALL_DOMAIN</td><td>BadgeAddHandler</td><td>新建徽章</td></tr>
+    <tr><td><code>/badge/:id/edit</code></td><td>GET；POST(op=Delete|Update)</td><td>PRIV_MANAGE_ALL_DOMAIN</td><td>BadgeEditHandler</td><td>编辑徽章</td></tr>
+    <tr><td><code>/badge/:id</code></td><td>GET</td><td></td><td>BadgeDetailHandler</td><td>徽章详情</td></tr>
+    <tr><td><code>/mybadge</code></td><td>GET；POST(op=Enable|Reset)</td><td>PRIV_USER_PROFILE</td><td>UserBadgeManageHandler</td><td>我的徽章（持有/佩戴）</td></tr>
+    </table>
+    <h2>官方中继 hydroac-client（7）</h2>
+    <table><tr><th>路径</th><th>方法</th><th>权限</th><th>处理器</th><th>说明</th></tr>
+    <tr><td><code>/lsp-set</code></td><td>GET/POST</td><td>PRIV_EDIT_SYSTEM</td><td>t4</td><td>LSP 订阅主机设置（host）</td></tr>
+    <tr><td><code>/contest/:tid/hydroac-sim</code></td><td>GET/POST</td><td></td><td>Mm</td><td>比赛代码相似度榜</td></tr>
+    <tr><td><code>/hydroac/sim_code/:rid</code></td><td>GET/POST</td><td></td><td>i4</td><td>相似度代码查看</td></tr>
+    <tr><td><code>/manage/hydroac-sim</code></td><td>GET/POST</td><td>PRIV_EDIT_SYSTEM</td><td>ey</td><td>sim OAuth 管理</td></tr>
+    <tr><td><code>/manage/luogu-api</code></td><td>GET/POST</td><td>PRIV_EDIT_SYSTEM</td><td>e_</td><td>洛谷 API 中转配置</td></tr>
+    <tr><td><code>/problem/quickimport</code></td><td>GET/POST</td><td>PERM_CREATE_PROBLEM</td><td>rE</td><td>从 hydro.ac 快速拉题</td></tr>
+    <tr><td><code>/manage/official-addon</code></td><td>GET/POST</td><td>PRIV_EDIT_SYSTEM</td><td>oE</td><td>官方插件管理</td></tr>
+    </table>
+  </div>
+</div>
+
+
+<div class="section" data-heading-extract-to="#menu-item-wiki_help">
+  <div class="section__header">
+    <h1 class="section__title" id="api-ws" data-heading>WebSocket 与网关层（API 册 · 四）</h1>
+  </div>
+  <div class="section__body typo">
+    <h2>WebSocket 接口</h2>
+    <table>
+      <tr><th>路径</th><th>鉴权</th><th>说明</th></tr>
+      <tr><td><code>/websocket</code></td><td>网关令牌头</td><td>通用事件网关（多实例事件总线）</td></tr>
+      <tr><td><code>/record-conn</code>（域前缀可用）</td><td>会话</td><td>记录列表实时状态推送</td></tr>
+      <tr><td><code>/record-detail-conn</code></td><td>会话</td><td>单条记录详情实时流（判题输出）</td></tr>
+      <tr><td><code>/judge/conn</code></td><td>PRIV_JUDGE</td><td>判题机注册/心跳/取任务</td></tr>
+      <tr><td><code>/manage/check-conn</code></td><td>PRIV_EDIT_SYSTEM + sudo</td><td>控制面板健康检查实时流</td></tr>
+      <tr><td><code>/realboard-conn</code></td><td>现场赛权限</td><td>onsite 投屏榜单推送</td></tr>
+      <tr><td><code>wss://ws.hydrooj.com/websocket</code></td><td>—（出站）</td><td>hydroac 远程判题中继（ybtbas/srqc），断线自动重连</td></tr>
+      <tr><td><code>wss://lsp.hydrooj.com</code></td><td>—（出站）</td><td>在线 IDE 代码补全（lsp-set 配置）</td></tr>
+    </table>
+    <h2>Caddy 网关规则（对接口行为的影响）</h2>
+    <table>
+      <tr><th>规则</th><th>行为</th></tr>
+      <tr><td>域名</td><td>dfacm.website / www / swpuacm.xyz / www 同站（正式域名 dfacm.website）；HTTP→308→HTTPS；HTTP/3(QUIC) 已开放</td></tr>
+      <tr><td>登录收敛</td><td>GET /login（无 query）内部改写到 /reg?tab=pwd；POST /login 与带 query 的 GET 不受影响</td></tr>
+      <tr><td>注册收敛</td><td>GET /register（无 query）302 → /reg</td></tr>
+      <tr><td>服务号隐身</td><td>/user/3 → 404</td></tr>
+      <tr><td>落地页</td><td>/ → /home.html（custom 资产清单直出；原生首页被遮蔽，countdown 因此不可见）</td></tr>
+      <tr><td>缓存</td><td>静态资源 7 天；theme css 10 分钟；custom 资产 1 小时；home.html 不缓存；仅 2xx 打缓存头</td></tr>
+      <tr><td>真实 IP</td><td>trusted_proxies=Cloudflare 段 + XFF 钉扎（@fromcf/@direct 分流）</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="section" data-heading-extract-to="#menu-item-wiki_help">
+  <div class="section__header">
+    <h1 class="section__title" id="api-integration" data-heading>集成示例（API 册 · 五）</h1>
+  </div>
+  <div class="section__body typo">
+    <h2>HTTP 提交一条代码（判题机/管理会话）</h2>
+    <pre><code># 1. 登录拿会话（错误凭证返回 403，成功 302）
+curl -s -c /tmp/cj -X POST https://dfacm.website/login \
+  --data-urlencode "uname=用户名" --data-urlencode "password=密码"
+
+# 2. 提交（multipart 文件字段名必须是 file；code 用文本字段亦可）
+curl -s -b /tmp/cj -X POST https://dfacm.website/p/5/submit \
+  -F "lang=cc.cc17o2" -F "code=@sol.cpp"
+# 302 的 Location 即 /record/&lt;rid&gt;</code></pre>
+    <h2>重判一条记录</h2>
+    <pre><code>curl -s -b /tmp/cj -X POST https://dfacm.website/record/&lt;rid&gt; \
+  --data-urlencode "operation=rejudge"   # 302 即受理</code></pre>
+    <h2>机器人 / 外部系统接入建议</h2>
+    <ul>
+      <li>播报类集成<b>不走 HTTP</b>：QQ 机器人用只读 Mongo 账号直连（15 秒增量水位 + 非终态近窗复查），登录墙零改动、不给 Web 层加压。</li>
+      <li>需要 JSON 的轻量集成用 <code>/api/rating/*</code> 与 <code>/api/user/:uid/info</code>。</li>
+      <li>批量抓页面务必限速：突发并发会触发 403（审计实测 16 并发过半被拦，降到 4 并发正常）。</li>
+      <li>比赛直播/终榜语义：带 tid 的提交与练习去重隔离；隐藏题只出字母代号。</li>
+    </ul>
+    <p style="border-top:1px solid rgba(128,128,128,.25);margin-top:24px;padding-top:12px;color:#888;font-size:12px">
+      本文档 2026-10-12 编制；全量路由表由已部署源码静态扫描生成（150 条 HTTP + 8 条 WS）。文档修订：改仓库 deploy/wiki-help/wiki_help.html 后重放（见部署手册），或联系站长。</p>
+  </div>
+</div>
+{% endblock %}

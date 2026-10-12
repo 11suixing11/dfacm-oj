@@ -252,6 +252,7 @@ curl -sSI https://<域名>/ | grep -Ei 'strict-transport|x-content-type|referrer
 - [ ] 如果 Hydro 头部引用 static 下的默认 favicon，确认 `@custom` 路径列表覆盖同名文件。
 - [ ] `bash deploy/patch-ranking-template.sh` 重新打排名页模板补丁（own-row 去重 + 自己行高亮，上游升级会换掉整个模板文件），然后 `pm2 restart hydrooj`。
 - [ ] `bash deploy/patch-rating-floor.sh` 重打单题 RP 保底补丁（上游升级会覆盖 rating.ts），重启后触发一次 `hydrooj cli script swpuRpSweep '{}'` 重算。
+- [ ] `bash deploy/wiki-help/install-wiki-help.sh` 重装帮助页定制模板（三册使用文档整文件替换上游 wiki_help.html；脚本自带 pm2 restart，装后等 ≥75s 验收）。
 
 ## 10. 验证清单
 
@@ -473,3 +474,11 @@ ssh root@SERVER 'bash /root/culture-seed/hw_seed.sh run'    # 正式执行
 **训练计划 API 实锤**（`hydrooj/src/handler/training.ts` 的 `TrainingEditHandler.post`）：表单字段 `title` / `content`（计划页正文）/ `dag`（**JSON 字符串** `[{_id,title,requireNids,pids:[数字]}]`）/ `pin`（**UnsignedInt**，0/1，非布尔）/ `description`（列表页导语）。tid 缺省=创建，带 tid POST `/training/:tid/edit`=编辑。**解锁语义**（`model/training.ts isDone/isInvalid`）：`requireNids` 指向的章节**全部题目 AC** 才解锁本章——全完成制、无比例，所以必经链上的章节别放真 d8+ 的题。
 
 **调整方式**：换题/改章节名=计划页「编辑」或 mongosh 直改 docType 40 的 dag（无需重启）；创建者会话是服务号，新建计划后记得把 owner 3→2（xcpc_create.sh 已含此步）。
+
+## 22. 站内帮助页 /wiki/help 定制模板（三册使用文档）
+
+上游 ui-default 的 `/wiki/help` 是**硬编码模板**（`templates/wiki_help.html`，没有 `ui-default.help` 设置键），原生只有 Hydro 通用帮助段落。定制模板整文件替换为三册使用文档（2026-10-12 上线）：**学生册** 十节（注册登录 / 做题与判题（含 status 0~33 精确枚举表）/ 训练路线 / 比赛 / 工作台与错题本 / 积分商店 / 个人设置与 RP / QQ 机器人指令 / 讨论区 / Markdown）；**管理员册** 七节（账号与角色 / 题库维护（三条导题通道与 spj·查重·编码坑、checker 清单）/ 训练计划维护 / 比赛管理 / 判题排障 / 配置双轨 / 部署·备份·安全）；**API 册** 五节（架构与鉴权 / 常用速查 / **全量 150 条路由表**（按分类 10 张表，由已部署源码静态扫描生成）/ WebSocket 与 Caddy 网关层 / 集成示例）。章节 h1 带 `data-heading`，自动进页面侧栏菜单。
+
+- 应用：`bash deploy/wiki-help/install-wiki-help.sh`（幂等：已含「完整使用文档，共三册」标记即跳过；原文件自动备份 `.bak-<时间戳>`；**装完必须 `pm2 restart hydrooj`**——模板只在启动时读盘进 registry）。ui-default 升级会整个换掉模板文件，重跑即可恢复。上游 stock 原版保存在 `deploy/wiki-help/wiki_help.stock.html`（回滚 = 拷回 + 重启）。
+- 验证：curl `/wiki/help` 200 且含 23 个 h1 章节；三册标记各出现；其他路由（/ /p /login /reg）不受影响。
+- 文档迭代：改仓库 `deploy/wiki-help/wiki_help.html` → 重跑安装脚本 → 重启。**站点路由变更（插件增删）后需重新生成 API 册的全量表**（150 条基线见 oj.xlsx 2026-10-12 清单），否则表会漂移。
