@@ -488,3 +488,20 @@ ssh root@SERVER 'bash /root/culture-seed/hw_seed.sh run'    # 正式执行
 2. **入口落地**：footer_extra_html 经 `/manage/setting` API（sudo 会话，零重启）追加「使用文档」(/wiki/help) 与「随机一题」(/problem/random) 两行链接——此前帮助页在常规页面无任何入口。
 3. **冲突修正**：内存默认改 256MB（题目 config 为准，本站多数 512MB）；status 22 改「判题机已领取任务」；日志噪音描述改「互联网扫描器探测」；删号清单补 swpuPointsLedger / swpuBadgePrice；删除「稀有徽章限时开放」推测文案。
 4. **插件剪枝**：hydrooj-countdown 已卸载（零路由、唯一功能被落地页遮蔽=纯冗余；tar 备份 /root/backups/hydrooj-countdown-removed-20261012.tgz，addon.json 17→16，repo 无引用）。realboard 保留——预留现场赛（onsite）投屏场景。
+
+## 23. 无密码化登录（passwordless-first，2026-10-12）
+
+学生侧不再有密码登录。`/reg` 重做为单一验证码流（输入邮箱→收码→已注册=直接登录/未注册=补用户名即完成注册，不设密码），管理员经 `?tab=pwd` 进 break-glass 密码面板（服务端 `PRIV_EDIT_SYSTEM` 门控 boot 注入 `canPwd`）。
+
+**架构要点**：
+1. `/reg/code` 新增 `purpose=auto`（默认值）：服务端按邮箱注册状态分流 reg/login，响应含 `registered` 标志驱动前端状态机；显式 reg/login purpose 保留不变（向后兼容）。
+2. `/reg/complete` 的 `password` 参数改为可选：缺省时 `randomBytes(32).hex` 作为口令散列（用户不可知=密码登录不可达）。
+3. 原生 `POST /login` 引擎**保留不删**（Caddy 改写/页脚脚本/2FA/找回密码全兼容），仅 UI 层管理员门控——学生请求 `?tab=pwd` 静默降级到默认验证码流。
+4. linux.do OAuth provider 走 `ctx.oauth.provide`（`plugin-linuxdo-oauth/`），配置 `linuxdo.client_id/secret` 两个系统设置键即启用；未配置不渲染死按钮。
+
+**Wiring 锁更新**（CI/smoke/页脚脚本三处同步，改旧标记必改这三处）：
+- `deploy/smoke.sh`：品牌卡 grep `m-mail`（旧 `tab-reg` 已不存在）；游客 `?tab=pwd` **反向断言**（不注入=PASS）。
+- `scripts/deployment.test.mjs`：frameReady iframe 就绪标记改 `m-mail`；wiring 断言 `guest cannot boot the gated pwd pane`。
+- `deploy/clean-auth-entries.js`（页脚重放脚本）：`frameReady` 判定 `getElementById('m-mail')`——**线上 footer_extra_html 已同步 patch（tab-reg→m-mail），否则登录弹窗 iframe 永远判定未就绪**。
+
+**回滚**：服务器备份 `/root/backups/regcode-pre-passwordless-{index.ts,reg.html}.bak-20261012`；repo 前一版 commit `ac501c6`。
