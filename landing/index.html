@@ -224,6 +224,8 @@ h1 .sum svg{position:absolute;top:-.28em;right:-.62em;width:.5em;height:.5em;col
 .rt-m b{color:var(--gold-hi);font-weight:400}
 .rt-go{margin-top:4px;font-size:12px;color:var(--blue-hi)}
 @media(max-width:640px){.rt{flex-basis:100%;max-width:none}}
+/* 登录用户隐藏注册向内容：#go 注册召唤区 + 页脚登录/注册链接（JS 换装控制） */
+#go[hidden],.ft-col a[hidden]{display:none}
 
 /* 评测终端 */
 .term{background:linear-gradient(165deg,rgba(19,31,53,.92),rgba(10,19,34,.94));border:1px solid var(--line-strong);border-radius:var(--rad);box-shadow:0 30px 90px rgba(2,6,14,.6),inset 0 1px 0 rgba(198,216,240,.08);overflow:hidden;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
@@ -1007,6 +1009,8 @@ int main() {
   var mLogin=doc.querySelector('#mmenu a[href="/reg?tab=pwd"]'),mReg=doc.querySelector('#mmenu a[href="/reg"]');
   var help=doc.querySelector('.hero-help');
   var ctaRow=doc.querySelector('#hero .hero-cta');
+  var goSec=doc.querySelector('#go');
+  var ftAuth=doc.querySelectorAll('.ft-col a[href="/reg?tab=pwd"], .ft-col a[href="/reg"]');
   if(!navLogin||!navCta||!help||!ctaRow)return;
   var orig={
     login:{t:navLogin.textContent,h:navLogin.getAttribute('href')},
@@ -1110,6 +1114,9 @@ int main() {
     if(mReg){mReg.textContent='工作台';mReg.setAttribute('href','/workbench')}
     if(name)paintWelcome(help,name);
     paintCards();
+    /* 注册向内容对成员隐身：#go 召唤区与页脚登录/注册链接只服务游客 */
+    if(goSec)goSec.hidden=true;
+    for(var i=0;i<ftAuth.length;i++)ftAuth[i].hidden=true;
     asUser=true;
   }
   function paintGuest(){
@@ -1119,6 +1126,8 @@ int main() {
     if(mReg&&orig.mr){mReg.textContent=orig.mr.t;mReg.setAttribute('href',orig.mr.h)}
     help.innerHTML=orig.help;
     ctaRow.innerHTML=orig.ctaRow;
+    if(goSec)goSec.hidden=false;
+    for(var i=0;i<ftAuth.length;i++)ftAuth[i].hidden=false;
     meUid=0;meName='';recent=[];
     asUser=false;
   }

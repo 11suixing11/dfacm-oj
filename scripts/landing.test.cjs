@@ -45,6 +45,9 @@ test('landing wiring: swap targets, detection marker and stats exist in shipped 
     assert.ok(html.includes('#hero .hero-cta'), 'the hero CTA container must stay addressable for the card swap');
     assert.ok(html.includes('.rt{'), 'recent-training card styles must exist');
     assert.equal((html.match(/class="hero-cta /g) || []).length, 2, 'hero CTA rows: top hero + #go section');
+    assert.ok(html.includes('id="go"'), 'the register CTA section must exist for guests and no-JS visitors');
+    assert.ok(html.includes("querySelector('#go')"), 'the member paint must keep toggling the register section');
+    assert.ok(html.includes('.ft-col a[href="/reg?tab=pwd"], .ft-col a[href="/reg"]'), 'footer auth links must stay addressable for the member toggle');
     assert.ok(html.includes('4,249'), 'problem count must not regress');
 assert.ok(html.includes('>29</span>'), '29 judge languages');
     assert.ok(!html.includes('data-count'), 'dead attributes: nothing reads them, and they drifted from the visible numbers');
@@ -177,9 +180,16 @@ async function runPage({ page, pages, cached } = {}) {
         '#mmenu a[href="/reg"]': new El('注册账号', '/reg'),
         '.hero-help': new El('', undefined),
         '#hero .hero-cta': new El('', undefined),
+        '#go': Object.assign(new El('', undefined), { hidden: false }),
     };
     els['.hero-help'].innerHTML = GUEST_HELP;
     els['#hero .hero-cta'].innerHTML = HERO_CTA;
+    const qa = {
+        '.ft-col a[href="/reg?tab=pwd"], .ft-col a[href="/reg"]': [
+            Object.assign(new El('登录', '/reg?tab=pwd'), { hidden: false }),
+            Object.assign(new El('注册', '/reg'), { hidden: false }),
+        ],
+    };
     const store = new Map();
     if (cached) store.set('swpu-me', JSON.stringify(cached));
     const fetches = [];
@@ -189,6 +199,7 @@ async function runPage({ page, pages, cached } = {}) {
     const context = vm.createContext({
         document: {
             querySelector: (sel) => els[sel] || null,
+            querySelectorAll: (sel) => qa[sel] || [],
             createElement: (tag) => { const el = new El(''); el.tagName = tag; return el; },
             createTextNode: textNode,
         },
@@ -219,6 +230,7 @@ async function runPage({ page, pages, cached } = {}) {
     await settle();
     return {
         els,
+        qa,
         store,
         fetches,
         fire: (ev) => { (handlers.pageshow || []).forEach((fn) => fn(ev)); },
@@ -246,7 +258,7 @@ const AUTH_PAGE = [
 const GUEST_PAGE = '<li class="nav__list-item"><a href="/login" class="nav__item" name="nav_login">登录</a></li>';
 
 test('logged-in SSR page swaps nav to username + workbench and caches the session', async () => {
-    const { els, store, fetches } = await runPage({ page: AUTH_PAGE });
+    const { els, qa, store, fetches } = await runPage({ page: AUTH_PAGE });
     assert.equal(fetches.length, 2);
     assert.equal(fetches[0].url, '/p');
     assert.equal(fetches[0].opts.credentials, 'same-origin');
@@ -267,6 +279,9 @@ test('logged-in SSR page swaps nav to username + workbench and caches the sessio
     // The second fetch was answered with the SSR HTML fixture, so r.json()
     // threw inside the script's own catch: the static CTA must survive.
     assert.ok(els['#hero .hero-cta'].toHTML().includes('开始登顶训练'), 'malformed recent payload keeps the static CTA');
+    // Register-pitch content hides for members.
+    assert.equal(els['#go'].hidden, true, 'the register CTA section must hide for members');
+    assert.ok(qa['.ft-col a[href="/reg?tab=pwd"], .ft-col a[href="/reg"]'].every((l) => l.hidden === true), 'footer auth links must hide for members');
     const saved = JSON.parse(store.get('swpu-me'));
     assert.equal(saved.uid, 5);
     assert.equal(saved.name, 'e2etest');
@@ -334,12 +349,14 @@ test('each training route id is used consistently across markup and script', () 
 });
 
 test('guest SSR page keeps the registration UI and drops any stale cache', async () => {
-    const { els, store } = await runPage({ page: GUEST_PAGE });
+    const { els, qa, store } = await runPage({ page: GUEST_PAGE });
     assert.equal(els['#nav a.login'].textContent, '登录');
     assert.equal(els['#nav a.login'].getAttribute('href'), '/reg?tab=pwd');
     assert.equal(els['#nav a.cta'].textContent, '注册账号');
     assert.equal(els['#nav a.cta'].getAttribute('href'), '/reg');
     assert.equal(els['.hero-help'].innerHTML, GUEST_HELP);
+    assert.equal(els['#go'].hidden, false, 'guests keep the register CTA section');
+    assert.ok(qa['.ft-col a[href="/reg?tab=pwd"], .ft-col a[href="/reg"]'].every((l) => l.hidden === false), 'guests keep the footer auth links');
     assert.ok(!store.has('swpu-me'));
 });
 
@@ -419,6 +436,7 @@ test('bfcache restore (persisted pageshow) resets to the guest baseline then re-
     assert.equal(els['#nav a.login'].textContent, '登录', 'baseline must reset the moment bfcache restores');
     assert.equal(els['#nav a.cta'].textContent, '注册账号');
     assert.ok(els['#hero .hero-cta'].toHTML().includes('开始登顶训练'), 'baseline must restore the static CTA');
+    assert.equal(els['#go'].hidden, false, 'baseline must restore the register section for the guest re-probe');
     assert.ok(!store.has('swpu-me'));
     assert.equal(fetches.length, 3); // /p probe, /workbench/recent, /p re-probe
     await settle();
@@ -507,7 +525,7 @@ test('cached recent trainings paint instantly and survive a failed refresh', asy
 });
 
 test('a guest probe after a cached member visit restores the static CTA', async () => {
-    const { els, store } = await runPage({
+    const { els, qa, store } = await runPage({
         page: GUEST_PAGE,
         cached: {
             uid: 9, name: 'someone', at: Date.now(),
@@ -516,5 +534,7 @@ test('a guest probe after a cached member visit restores the static CTA', async 
     });
     assert.equal(els['#nav a.login'].textContent, '登录');
     assert.ok(els['#hero .hero-cta'].toHTML().includes('开始登顶训练'), 'member cards must not leak into the guest view');
+    assert.equal(els['#go'].hidden, false, 'member paint must not leave the register section hidden for a guest');
+    assert.ok(qa['.ft-col a[href="/reg?tab=pwd"], .ft-col a[href="/reg"]'].every((l) => l.hidden === false), 'footer auth links must be restored for a guest');
     assert.ok(!store.has('swpu-me'));
 });
