@@ -11,7 +11,7 @@
     <ul>
       <li>新生请按顺序读：<a href="#reg">注册与登录</a> → <a href="#submit">做题与判题</a> → <a href="#training">训练路线</a>。</li>
       <li>答疑互助群：QQ <b>879670443</b>（提问前先看讨论区《提问的智慧》）；训练播报群：QQ <b>1128735782</b>（AC 实时播报、每日榜单、比赛战报）。</li>
-      <li>站内每一页右上角搜索框可搜题库；帮助页随时从页脚「帮助」进入。</li>
+      <li>站内每一页右上角搜索框可搜题库；帮助页入口在页脚「使用文档」链接。</li>
     </ul>
   </div>
 </div>
@@ -47,7 +47,7 @@
   <div class="section__body typo">
     <h2>找题</h2>
     <ul>
-      <li><a href="/p">题库</a>：支持搜索和筛选，例如 <code>?q=difficulty:1</code> 按难度 1~10 筛选，<code>?q=category:动态规划</code> 按算法标签筛选；首页还有「随机一题」。</li>
+      <li><a href="/p">题库</a>：支持搜索和筛选，例如 <code>?q=difficulty:1</code> 按难度 1~10 筛选，<code>?q=category:动态规划</code> 按算法标签筛选；想随机刷题可访问 <code>/problem/random</code>（页脚「随机一题」直达）。</li>
       <li>题目页含题面、样例、提交记录与题解入口（<code>/p/题号/solution</code>，做完再看题解是好习惯）。</li>
     </ul>
     <h2>提交</h2>
@@ -63,12 +63,12 @@
       <tr><td>1</td><td>答案正确（AC）</td><td>8</td><td>系统错误（可申诉/重判）</td></tr>
       <tr><td>2</td><td>答案错误（WA）</td><td>9</td><td>已取消</td></tr>
       <tr><td>3</td><td>超出时间限制（TLE）</td><td>11</td><td>Hack 成功</td></tr>
-      <tr><td>4</td><td>超出内存限制（MLE）</td><td>20/21/22</td><td>判题中 / 编译中 / 已取到（远程题）</td></tr>
+      <tr><td>4</td><td>超出内存限制（MLE）</td><td>20/21/22</td><td>判题中 / 编译中 / 已取到（判题机已领取任务；远程题在此停留较久）</td></tr>
       <tr><td>5</td><td>输出超出限制</td><td>31</td><td>格式错误（多/少空格换行等）</td></tr>
       <tr><td>6</td><td>运行时错误（RE，崩溃/越界）</td><td>32/33</td><td>Hack 成功 / 失败</td></tr>
     </table>
     <ul>
-      <li>时间按 CPU 时间计；内存默认 512MB（题面特别指出的除外）。编译器版本与参数见 <a href="/status">状态页</a>。</li>
+      <li>时间按 CPU 时间计；内存默认 256MB，题目 config 另行指定的以题目为准（本站绝大多数题为 512MB）。编译器版本与参数见 <a href="/status">状态页</a>。</li>
       <li>远程题（POJ / ybtbas / srqc）由远端评测机判题，出结果稍慢，状态 22 表示已送达远端。</li>
       <li>同一题重复 AC 不会重复计分/刷 RP；比赛中的提交与练习互不干扰。</li>
     </ul>
@@ -143,7 +143,7 @@
       <li><b>赚积分</b>：每道题<b>首次 AC</b> 按题目难度入账 1~10 分（难度 1 题=1 分，难度 10 题=10 分；远程题同算）。</li>
       <li><b><a href="/shop">积分商店</a></b>：用积分兑换站内徽章，兑换即永久持有；<a href="/shop/history">积分流水</a>可查每一笔进出。</li>
       <li><b><a href="/mybadge">我的徽章</a></b>：选择一枚「佩戴」后，你的提交记录旁会展示徽章。</li>
-      <li>徽章由管理员上架定价，稀有徽章限时开放，关注商店动态。</li>
+      <li>徽章由管理员上架定价，新徽章上架会在讨论区公告。</li>
     </ul>
   </div>
 </div>
@@ -222,8 +222,9 @@
 </div>
 
 <!-- ============================================================ -->
-<!-- ==================== 管理员手册 ==================== -->
+<!-- ==================== 管理员手册（仅管理员可见） ==================== -->
 <!-- ============================================================ -->
+{% if handler.user.hasPriv(PRIV.PRIV_EDIT_SYSTEM) %}
 
 <div class="section" data-heading-extract-to="#menu-item-wiki_help">
   <div class="section__header">
@@ -244,7 +245,7 @@
       <li><b>用户管理</b>：<a href="/manage/users">/manage/users</a>（搜索/编辑/重置密码/封禁）；单用户 <code>/manage/users/:uid</code> 的 <code>operation=edit</code> 可改 uname（自动清缓存，立即生效）——站内唯一改名通道。</li>
       <li><b>域成员/角色</b>：<a href="/domain/user">/domain/user</a>（operation=set_users，uids+role）；角色定义在 <a href="/domain/role">/domain/role</a>（现有 default / acmer / teamleader）。</li>
       <li><b>给用户设显式角色后</b>若显示「未加入域」，让成员点「我的域」或用 <code>/domain/join?target=system</code> 加入即可；新注册与 OAuth 注册已由钩子自动 join（system+poj 双域）。</li>
-      <li><b>删除测试账号全套</b>（务必全删再重启）：user + domain.user（双域）+ record + document.status + regcode（若是验证码注册）+ oauth（若是 GitHub）+ userBadge + swpu_train（错题本/工作台），然后 pm2 restart 清用户缓存。删除 document.status 必须带 uid 限定（历史事故：误删真实用户 AC 标记）。</li>
+      <li><b>删除测试账号全套</b>（务必全删再重启）：user + domain.user（双域）+ record + document.status + regcode（若是验证码注册）+ oauth（若是 GitHub）+ userBadge + swpu_train（错题本/工作台）+ swpuPointsLedger / swpuBadgePrice（若有过积分/兑换），然后 pm2 restart 清用户缓存。删除 document.status 必须带 uid 限定（历史事故：误删真实用户 AC 标记）。</li>
     </ul>
   </div>
 </div>
@@ -317,7 +318,7 @@
       <li><b>卡记录排查</b>：record 集合按 <b>pid（数字 docId）</b> 查（不是 docId 字段）；非终态（0/20/21/22）超 10 分钟即异常——远程题先查 ws.hydrooj.com 中继是否 200，再重投。</li>
       <li><b>CLI 坑</b>：hydrooj cli execute 会带内嵌判题守护，可能抢任务并在 CLI 退出时把任务掐成僵尸——判题类操作前用 <code>OVERRIDE_CONFIG</code>（disable: true）关内嵌 judge；cli 里的顶层代码必须是顶层 await 语句。</li>
       <li>判题后服务号的 AC 会写 psdoc——已由 swpu-ops 三层自洁自动清（hook 即时删 + 重算前清 + 每小时清扫），无需手工。</li>
-      <li>队列健康：<code>task</code> 集合应为空；pm2 logs hydrooj-error 尾部只有 CF 探测/游客 4xx 属正常。</li>
+      <li>队列健康：<code>task</code> 集合应为空；pm2 logs hydrooj-error 尾部只有互联网扫描器探测（phpinfo/.env 等假路径）和游客 4xx 属正常。</li>
     </ul>
   </div>
 </div>
@@ -358,6 +359,17 @@
     </ul>
   </div>
 </div>
+
+{% else %}
+<div class="section" data-heading-extract-to="#menu-item-wiki_help">
+  <div class="section__header">
+    <h1 class="section__title" id="adm-accounts" data-heading>管理员手册（仅管理员可见）</h1>
+  </div>
+  <div class="section__body typo">
+    <p>管理员手册与后台接口速查仅对管理员账号展示——登录管理员账号后刷新本页即可查看，含账号与角色、题库维护、训练计划、比赛管理、判题排障、配置管理、部署备份安全七节。</p>
+  </div>
+</div>
+{% endif %}
 
 <!-- ============================================================ -->
 <!-- ==================== API / 接口文档 ==================== -->
@@ -401,7 +413,8 @@
       <tr><td>GET</td><td><code>/workbench/data</code> · <code>/mistakes/data</code></td><td>工作台 / 错题本数据 JSON（需登录）</td></tr>
       <tr><td>POST</td><td><code>/shop/redeem</code></td><td>积分兑换徽章</td></tr>
     </table>
-    <h2>管理 / 后台</h2>
+    {% if handler.user.hasPriv(PRIV.PRIV_EDIT_SYSTEM) %}
+    <h2>管理 / 后台（仅管理员可见）</h2>
     <table>
       <tr><th>请求</th><th>接口</th><th>说明</th></tr>
       <tr><td>POST</td><td><code>/contest/create</code></td><td>operation=update + 12 字段（见管理员册）</td></tr>
@@ -410,11 +423,12 @@
       <tr><td>POST</td><td><code>/manage/users/:uid</code></td><td>operation=edit（改名/改资料）</td></tr>
       <tr><td>POST</td><td><code>/domain/user</code></td><td>operation=set_users，uids+role</td></tr>
       <tr><td>POST</td><td><code>/domain/edit</code></td><td>name/bulletin/avatar/langs（域语言白名单）</td></tr>
-      <tr><td>POST</td><td><code>/manage/setting</code></td><td>设置键=值（boolean 用 'on'；sudo；即时生效）</td></tr>
+      <tr><td>POST</td><td><code>/manage/setting</code></td><td>设置键=值（详见管理员册·六）</td></tr>
       <tr><td>POST</td><td><code>/manage/config</code></td><td>value=完整 YAML（整体替换！sudo）</td></tr>
       <tr><td>POST</td><td><code>/problem/import/fps</code> · <code>/problem/import/hydro</code></td><td>导题（坑见管理员册）</td></tr>
       <tr><td>POST</td><td><code>/discuss/:type/:name/create</code></td><td>title/content/pin/highlight</td></tr>
     </table>
+    {% endif %}
     <h2>JSON API（可直接 GET）</h2>
     <table>
       <tr><th>接口</th><th>返回</th></tr>
@@ -640,7 +654,7 @@
       <tr><td>登录收敛</td><td>GET /login（无 query）内部改写到 /reg?tab=pwd；POST /login 与带 query 的 GET 不受影响</td></tr>
       <tr><td>注册收敛</td><td>GET /register（无 query）302 → /reg</td></tr>
       <tr><td>服务号隐身</td><td>/user/3 → 404</td></tr>
-      <tr><td>落地页</td><td>/ → /home.html（custom 资产清单直出；原生首页被遮蔽，countdown 因此不可见）</td></tr>
+      <tr><td>落地页</td><td>/ → /home.html（custom 资产清单直出；原生首页被遮蔽——倒计时挂件已随 countdown 插件一并移除）</td></tr>
       <tr><td>缓存</td><td>静态资源 7 天；theme css 10 分钟；custom 资产 1 小时；home.html 不缓存；仅 2xx 打缓存头</td></tr>
       <tr><td>真实 IP</td><td>trusted_proxies=Cloudflare 段 + XFF 钉扎（@fromcf/@direct 分流）</td></tr>
     </table>

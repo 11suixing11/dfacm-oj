@@ -1,5 +1,17 @@
 # Changelog
 
+## v1.28.0 - 2026-10-12
+
+### Fixed
+
+- **帮助页管理员内容对游客暴露——权限门控修复。** /wiki/help 模板的管理员册七节与 API 册「管理 / 后台」速查表现渲染在 `{% if handler.user.hasPriv(PRIV.PRIV_EDIT_SYSTEM) %}` 内（上游模板同款写法），游客只见占位节。双视角实测：游客五个管理敏感标记（题库维护/judge.yaml/hydsvc-0074/部署备份安全/管理速查）全 0 命中，管理员会话全可见。
+- 文档与现实的六处冲突修正：内存默认 256MB（原误写 512MB——Hydro 无 config 时默认 256，本站题目 config 多为 512）；status 22 不再括注"远程题"（本地判题同样经过）；日志噪音"CF 探测"改"互联网扫描器探测"（vjudge CF 账号已删）；删号全套补 swpuPointsLedger / swpuBadgePrice；删除"稀有徽章限时开放"推测文案；随机一题入口改为 /problem/random 直达。
+- **帮助页入口落地**：footer_extra_html 追加「使用文档」(/wiki/help) 与「随机一题」(/problem/random)——此前帮助页在常规页面无任何入口（文档声称的页脚入口并不存在）。经 /manage/setting API（sudo 会话）提交，零重启。
+
+### Removed
+
+- **hydrooj-countdown 死插件卸载**（架构剪枝）：零路由，唯一功能（原生首页倒计时）被落地页 rewrite 遮蔽为不可见=纯冗余。tar 备份 /root/backups/hydrooj-countdown-removed-20261012.tgz；addon.json 17→16；仓库无该插件引用。realboard 保留（校内选拔赛现场投屏预留）。架构结论：150 条 HTTP 路由属 Hydro 框架本体，不作为剪枝对象（删了破坏框架完整性与升级链）。
+
 ## v1.27.0 - 2026-10-12
 
 ### Added
