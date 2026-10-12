@@ -282,13 +282,14 @@ test('clean-auth-entries.js installs a one-line script with embed-free escape ro
   assert.doesNotMatch(script, /fallback\.href=url/);
   assert.doesNotMatch(script, /direct\.href=url/);
   // The iframe is only revealed for the real /reg page, not any same-URL
-  // Caddy/Hydro error document.
-  assert.match(script, /getElementById\('tab-reg'\)/);
+  // Caddy/Hydro error document. Passwordless single-flow UI: #m-mail is the
+  // always-present email input (the old #tab-reg marker is gone with the tabs).
+  assert.match(script, /getElementById\('m-mail'\)/);
   assert.doesNotMatch(script, /d\.body\}/);
   // The gate depends on that marker existing in reg.html — lock the cross-file
   // wiring so a rename cannot silently break the overlay.
   const page = fs.readFileSync(path.join(repo, 'plugin-swpu-regcode', 'reg.html'), 'utf8');
-  assert.match(page, /id="tab-reg"/);
+  assert.match(page, /id="m-mail"/);
   // The payload must be syntactically valid browser JavaScript.
   new Function(script.replace(/^<script>/, '').replace(/<\/script>$/, ''));
 });
@@ -623,9 +624,9 @@ test('smoke battery locks the boot injection, auth gates and security headers', 
   const source = fs.readFileSync(path.join(repo, 'deploy', 'smoke.sh'), 'utf8');
   const patterns = [
     [/--resolve/, 'loopback discipline (SNI-less curl -k -H Host dies)'],
-    [/tab-reg/, 'branded auth card wiring'],
+    [/m-mail/, 'branded auth card wiring'],
     [/__SWPU_BOOT\.oauth=\[\{/, 'oauth providers injected (2026-10-04 regression)'],
-    [/__SWPU_BOOT\.tab="pwd"/, 'tab boot injection'],
+    [/guest cannot boot the gated pwd pane/, 'passwordless gate: students never boot the pwd pane'],
     [/__SWPU_BOOT\.embed=true/, 'embed boot injection'],
     [/reg\/code/, 'regcode POST path exercised'],
     [/验证码用途不合法/, 'bad purpose rejected without side effects'],

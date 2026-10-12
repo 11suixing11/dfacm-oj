@@ -19,12 +19,12 @@ check() { if [ "$1" -eq 0 ]; then echo "PASS $2"; else echo "FAIL $2"; fails=$((
 if [ "$(code "https://$HOST/")" = "200" ]; then check 0 "GET / = 200"; else check 1 "GET / = 200"; fi
 req "https://$HOST/" | grep -aF 'dfacm.website' >/dev/null; check $? "landing is the branded facade"
 if [ "$(code "https://$HOST/reg")" = "200" ]; then check 0 "GET /reg = 200"; else check 1 "GET /reg = 200"; fi
-req "https://$HOST/reg" | grep -aF 'tab-reg' >/dev/null; check $? "auth page renders the branded card"
+req "https://$HOST/reg" | grep -aF 'm-mail' >/dev/null; check $? "auth page renders the branded card"
 req "https://$HOST/reg" | grep -aF '__SWPU_BOOT.oauth=[{' >/dev/null; check $? "oauth providers injected (github button)"
-req "https://$HOST/reg?tab=pwd" | grep -aF '__SWPU_BOOT.tab="pwd"' >/dev/null; check $? "boot injection: tab=pwd"
+req "https://$HOST/reg?tab=pwd" | grep -aF '__SWPU_BOOT.tab=' >/dev/null; if [ $? -eq 1 ]; then check 0 "guest cannot boot the gated pwd pane"; else check 1 "guest cannot boot the gated pwd pane"; fi
 req "https://$HOST/reg?embed=1&tab=login" | grep -aF '__SWPU_BOOT.embed=true' >/dev/null; check $? "boot injection: embed flag"
-req "https://$HOST/login" | grep -aF '__SWPU_BOOT.tab="pwd"' >/dev/null; check $? "bare /login rewired to the password tab"
-req "https://$HOST/register" | grep -aF 'tab-reg' >/dev/null; check $? "bare /register serves the branded page"
+req "https://$HOST/login" | grep -aF 'm-mail' >/dev/null; check $? "bare /login rewired to the branded page"
+req "https://$HOST/register" | grep -aF 'm-mail' >/dev/null; check $? "bare /register serves the branded page"
 if [ "$(code "https://$HOST/p")" = "200" ]; then check 0 "GET /p = 200"; else check 1 "GET /p = 200"; fi
 if [ "$(code "https://$HOST/training")" = "200" ]; then check 0 "GET /training = 200"; else check 1 "GET /training = 200"; fi
 if [ "$(code "https://$HOST/lostpass")" = "200" ]; then check 0 "GET /lostpass = 200"; else check 1 "GET /lostpass = 200"; fi
