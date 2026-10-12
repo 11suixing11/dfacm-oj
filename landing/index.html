@@ -216,6 +216,14 @@ h1 .sum svg{position:absolute;top:-.28em;right:-.62em;width:.5em;height:.5em;col
 .btn-p:hover{box-shadow:0 16px 44px rgba(42,92,170,.5),inset 0 1px 0 rgba(255,255,255,.18);transform:translateY(-2px)}
 .btn-g{border:1px solid var(--line-strong);color:var(--txt-2);background:var(--glass);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
 .btn-g:hover{border-color:var(--gold-veil);color:var(--gold-hi);transform:translateY(-2px)}
+/* 登录用户：hero CTA 由 JS 换装成"最近训练"卡片（数据来自 /workbench/recent） */
+.rt{flex:1 1 200px;max-width:280px;display:flex;flex-direction:column;gap:5px;padding:15px 18px 13px;border-radius:16px;border:1px solid var(--line-strong);background:var(--glass);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);transition:transform .35s var(--ease),border-color .3s,box-shadow .35s}
+.rt:hover{transform:translateY(-3px);border-color:var(--gold-veil);box-shadow:0 16px 44px var(--glow-a)}
+.rt-t{font-size:14px;font-weight:600;line-height:1.45;color:var(--txt);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.rt-m{font-family:var(--font-m);font-size:11px;letter-spacing:.05em;color:var(--txt-3)}
+.rt-m b{color:var(--gold-hi);font-weight:400}
+.rt-go{margin-top:4px;font-size:12px;color:var(--blue-hi)}
+@media(max-width:640px){.rt{flex-basis:100%;max-width:none}}
 
 /* 评测终端 */
 .term{background:linear-gradient(165deg,rgba(19,31,53,.92),rgba(10,19,34,.94));border:1px solid var(--line-strong);border-radius:var(--rad);box-shadow:0 30px 90px rgba(2,6,14,.6),inset 0 1px 0 rgba(198,216,240,.08);overflow:hidden;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
@@ -991,18 +999,22 @@ int main() {
      切勿改回 name="nav_logout" 当标记：页脚主题脚本含 a[name="nav_logout"]
      字面量，游客页也有，会把游客误判成已登录。
      缓存只做乐观先行绘制，探测结果永远最终裁决；浏览器后退缓存（bfcache）
-     恢复时脚本不会重跑，须监听 pageshow 先回落游客基线再重新探测。 */
+     恢复时脚本不会重跑，须监听 pageshow 先回落游客基线再重新探测。
+     登录确认后另拉 /workbench/recent 把 hero CTA 换装成"最近训练"卡片；
+     接口失败或空列表回退静态 CTA，登录态绘制不受影响。 */
   var doc=document;
   var navLogin=doc.querySelector('#nav a.login'),navCta=doc.querySelector('#nav a.cta');
   var mLogin=doc.querySelector('#mmenu a[href="/reg?tab=pwd"]'),mReg=doc.querySelector('#mmenu a[href="/reg"]');
   var help=doc.querySelector('.hero-help');
-  if(!navLogin||!navCta||!help)return;
+  var ctaRow=doc.querySelector('#hero .hero-cta');
+  if(!navLogin||!navCta||!help||!ctaRow)return;
   var orig={
     login:{t:navLogin.textContent,h:navLogin.getAttribute('href')},
     cta:{t:navCta.textContent,h:navCta.getAttribute('href')},
     ml:mLogin?{t:mLogin.textContent,h:mLogin.getAttribute('href')}:null,
     mr:mReg?{t:mReg.textContent,h:mReg.getAttribute('href')}:null,
-    help:help.innerHTML
+    help:help.innerHTML,
+    ctaRow:ctaRow.innerHTML
   };
   var KEY='swpu-me',TTL=3600000;
   /* 单点定义训练路线 ID：脚本里曾有 8 处硬编码同一个 ObjectId */
@@ -1010,7 +1022,67 @@ int main() {
   function cacheSave(v){try{sessionStorage.setItem(KEY,JSON.stringify(v))}catch(e){}}
   function cacheLoad(){try{var s=sessionStorage.getItem(KEY);if(!s)return null;var v=JSON.parse(s);if(!v||!v.uid||!v.at||Date.now()-v.at>TTL)return null;return v}catch(e){return null}}
   function cacheDrop(){try{sessionStorage.removeItem(KEY)}catch(e){}}
-  var asUser=false;
+  var asUser=false,meUid=0,meName='',recent=[];
+  /* 最近训练卡片：数据来自站内 /workbench/recent（登录用户专属 JSON 接口）。
+     静态 CTA（开始登顶训练 / 浏览题库）是游客与无 JS 的默认形态，登录后由
+     本脚本换装；接口失败或返回空列表时回退静态 CTA，绝不留半成品。 */
+  function fmtAgo(iso){
+    var t=Date.parse(iso);
+    if(!t)return '';
+    var s=(Date.now()-t)/1000;
+    if(s<60)return '刚刚';
+    if(s<3600)return Math.floor(s/60)+' 分钟前';
+    if(s<86400)return Math.floor(s/3600)+' 小时前';
+    if(s<2592000)return Math.floor(s/86400)+' 天前';
+    return Math.floor(s/2592000)+' 个月前';
+  }
+  /* 接口数据落 DOM 前全部过形状校验：url 只收站内训练路径，字段收敛为数字 */
+  function normRecent(list){
+    if(!Array.isArray(list))return [];
+    var out=[];
+    for(var i=0;i<list.length&&out.length<3;i++){
+      var t=list[i]||{};
+      var url=typeof t.url==='string'&&/^\/training\/[0-9a-f]+$/.test(t.url)?t.url:'';
+      if(!url)continue;
+      out.push({
+        url:url,
+        title:typeof t.title==='string'?t.title:'',
+        done:Math.max(0,Math.floor(Number(t.done)||0)),
+        total:Math.max(0,Math.floor(Number(t.total)||0)),
+        at:typeof t.lastActiveAt==='string'?t.lastActiveAt:''
+      });
+    }
+    return out;
+  }
+  function paintCards(){
+    if(!recent.length){ctaRow.innerHTML=orig.ctaRow;return}
+    ctaRow.innerHTML='';
+    for(var i=0;i<recent.length;i++){
+      var t=recent[i];
+      var a=doc.createElement('a');
+      a.setAttribute('href',t.url);
+      a.className='rt';
+      var b=doc.createElement('b');b.className='rt-t';b.textContent=t.title||('训练路线 '+(i+1));a.appendChild(b);
+      var m=doc.createElement('span');m.className='rt-m';
+      var bb=doc.createElement('b');bb.textContent=t.done+' / '+t.total+' 题';
+      m.appendChild(bb);
+      m.appendChild(doc.createTextNode(fmtAgo(t.at)?' · '+fmtAgo(t.at):''));
+      a.appendChild(m);
+      var g=doc.createElement('span');g.className='rt-go';g.textContent='继续 →';a.appendChild(g);
+      ctaRow.appendChild(a);
+    }
+  }
+  function loadRecent(){
+    fetch('/workbench/recent',{credentials:'same-origin',cache:'no-store'}).then(function(r){return r.json()}).then(function(j){
+      if(!j||!j.data||!Array.isArray(j.data.trainings))return; /* 非预期响应：保持现状 */
+      recent=normRecent(j.data.trainings);
+      paintCards();
+      if(asUser&&meName)paintWelcome(help,meName); /* 欢迎行的"继续训练路线"跟随最近一条 */
+      if(asUser)cacheSave({uid:meUid,name:meName,at:Date.now(),recent:recent});
+    }).catch(function(){
+      /* 卡片接口失败不影响登录态绘制：保留现有卡片或静态 CTA，下一轮探测自愈 */
+    });
+  }
   /* 服务端 HTML 里的实体先解成纯文本，随后只经 textContent 落回 DOM：
      用户名即使含 < > & 也不会被当成标记。 */
   function decodeEntities(s){return String(s).replace(/&(#x?[0-9a-f]+|[a-z]+);/gi,function(m,g){
@@ -1025,16 +1097,19 @@ int main() {
     help.appendChild(txt('。'));
     help.appendChild(a('/workbench','打开工作台'));
     var span=document.createElement('span');
-    span.appendChild(a(ROUTE_URL,'继续训练路线'));
+    /* 有最近训练时跟随最近一条，否则回退默认入门路线 */
+    span.appendChild(a(recent.length?recent[0].url:ROUTE_URL,'继续训练路线'));
     help.appendChild(span);
   }
   function paintUser(uid,name){
     var label=decodeEntities(name||'')||'我的主页';
+    meUid=uid;meName=name||'';
     navLogin.textContent=label;navLogin.setAttribute('href','/user/'+uid);navLogin.title='个人主页';
     navCta.textContent='工作台';navCta.setAttribute('href','/workbench');
     if(mLogin){mLogin.textContent=label;mLogin.setAttribute('href','/user/'+uid)}
     if(mReg){mReg.textContent='工作台';mReg.setAttribute('href','/workbench')}
     if(name)paintWelcome(help,name);
+    paintCards();
     asUser=true;
   }
   function paintGuest(){
@@ -1043,6 +1118,8 @@ int main() {
     if(mLogin&&orig.ml){mLogin.textContent=orig.ml.t;mLogin.setAttribute('href',orig.ml.h)}
     if(mReg&&orig.mr){mReg.textContent=orig.mr.t;mReg.setAttribute('href',orig.mr.h)}
     help.innerHTML=orig.help;
+    ctaRow.innerHTML=orig.ctaRow;
+    meUid=0;meName='';recent=[];
     asUser=false;
   }
   function probe(){
@@ -1066,14 +1143,18 @@ int main() {
       }
       if(!uid){if(asUser)paintGuest();cacheDrop();return}
       paintUser(uid,name);
-      cacheSave({uid:uid,name:name,at:Date.now()});
+      cacheSave({uid:uid,name:name,at:Date.now(),recent:recent});
+      loadRecent();
     }).catch(function(){
       /* 探测失败时宁可退回游客视图，也不让已退出的用户看到"欢迎回来" */
       if(asUser){paintGuest();cacheDrop()}
     });
   }
   var cached=cacheLoad();
-  if(cached)paintUser(cached.uid,cached.name);
+  if(cached){
+    recent=normRecent(cached.recent);
+    paintUser(cached.uid,cached.name);
+  }
   probe();
   /* 后退/前进缓存恢复不重跑本脚本，登录态可能已变：先回落基线再重新探测 */
   window.addEventListener('pageshow',function(e){

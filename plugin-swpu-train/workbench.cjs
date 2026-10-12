@@ -103,6 +103,94 @@ function summarizeRecentFailed(entries, limit = 8) {
     return out;
 }
 
+// --- recent trainings for the landing page ---------------------------------
+// "Recently used" is derived from the member's newest non-contest submissions:
+// every record whose pid lives in a plan's dag marks that plan active at the
+// record's timestamp, so the ordering signal is real activity, not enrolment.
+// Enrolment carries no timestamp, so it is only the fallback for members whose
+// scanned records all fall outside any plan (or who only ever enrolled).
+
+function indexPlanPids(tdocs) {
+    const byPid = new Map();
+    for (const tdoc of tdocs) {
+        const dag = Array.isArray(tdoc && tdoc.dag) ? tdoc.dag : [];
+        for (const node of dag) {
+            for (const pid of node.pids || []) {
+                const key = Number(pid);
+                if (!Number.isSafeInteger(key)) continue;
+                if (!byPid.has(key)) byPid.set(key, []);
+                byPid.get(key).push(tdoc);
+            }
+        }
+    }
+    return byPid;
+}
+
+// records: [{pid, at}] — order-independent; keeps the newest Date per plan.
+function lastActiveByPlan(records, byPid) {
+    const last = new Map();
+    for (const record of records || []) {
+        const pid = Number(record && record.pid);
+        if (!Number.isSafeInteger(pid)) continue;
+        const plans = byPid.get(pid);
+        if (!plans) continue;
+        const at = record.at instanceof Date ? record.at : null;
+        if (!at) continue;
+        for (const plan of plans) {
+            const prev = last.get(plan);
+            if (!prev || at > prev) last.set(plan, at);
+        }
+    }
+    return last;
+}
+
+async function buildRecentTrainings({
+    domainId,
+    uid,
+    trainingModel,
+    problemModel,
+    records, // [{pid, at}] recent non-contest submissions (at: Date)
+    now = new Date(),
+    maxTrainings = 3,
+}) {
+    const tdocs = (await trainingModel.getMulti(domainId).toArray())
+        .filter((tdoc) => tdoc && Array.isArray(tdoc.dag));
+    const byPid = indexPlanPids(tdocs);
+    const last = lastActiveByPlan(records, byPid);
+    let ranked = tdocs.filter((tdoc) => last.has(tdoc))
+        .sort((a, b) => last.get(b) - last.get(a))
+        .slice(0, maxTrainings);
+    let source = 'record';
+    if (!ranked.length) {
+        // Mirrors buildWorkbench's enrolment fallback: pinned first, newest docId second.
+        const tsdocs = await trainingModel.getMultiStatus(domainId, { uid, enroll: 1 }).toArray();
+        const tids = tsdocs.map((doc) => doc.docId);
+        const tdict = tids.length ? await trainingModel.getList(domainId, tids) : {};
+        ranked = tids.map((tid) => tdict[String(tid)]).filter(Boolean)
+            .sort((a, b) => (b.pin || 0) - (a.pin || 0) || String(b.docId).localeCompare(String(a.docId)))
+            .slice(0, maxTrainings);
+        source = 'enrolled';
+    }
+    const trainings = [];
+    for (const tdoc of ranked) {
+        const pids = [...new Set((tdoc.dag || []).flatMap((node) => node.pids || []))];
+        const psdocs = pids.length ? await problemModel.getListStatus(domainId, uid, pids) : {};
+        const summary = analyzeTraining(tdoc, psdocs);
+        trainings.push({
+            tid: summary.tid,
+            title: summary.title,
+            url: `/training/${summary.tid}`,
+            done: summary.done,
+            total: summary.total,
+            percent: summary.percent,
+            completed: summary.completed,
+            lastActiveAt: last.has(tdoc) ? last.get(tdoc).toISOString() : null,
+            source,
+        });
+    }
+    return { generatedAt: now.toISOString(), trainings };
+}
+
 async function buildWorkbench({
     domainId,
     uid,
@@ -165,6 +253,9 @@ async function buildWorkbench({
 
 module.exports = {
     buildWorkbench,
+    buildRecentTrainings,
+    indexPlanPids,
+    lastActiveByPlan,
     analyzeTraining,
     summarizeWeek,
     summarizeRecentFailed,

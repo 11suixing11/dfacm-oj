@@ -10,6 +10,7 @@ Hydro **5.0.7** 的登录用户功能插件，包含两个页面：
 ```
 GET  /workbench            工作台页面（no-store）
 GET  /workbench/data       工作台 JSON（每用户 30 次/分钟）
+GET  /workbench/recent     最近使用的训练集 JSON（落地页首页卡片，每用户 30 次/分钟）
 GET  /mistakes             错题本页面（no-store）
 GET  /mistakes/data        错题列表 JSON（filter: open|done|all, page）
 POST /mistakes/update      {pid, reason?, note?, resolved?}  保存原因/笔记/补题状态
@@ -24,6 +25,7 @@ POST /mistakes/sync        手动回填（每用户每分钟 1 次）
 - **收集**：只在 pm2 instance 0（或未设置实例号）注册 `record/change` 监听，且只处理判题结束（`body.key === 'end'`）的负载，避免重判广播造成误判。比赛提交同样收集（赛后补题场景），但排除自测/答案生成的保留 contest id。SE/Canceled/Hacked 等非用户过错状态不收集。
 - **回填**：首次打开错题本（或手动同步）时，扫描该用户最近 300 条**日常训练**（非比赛）未通过提交补齐条目；已 AC 的题依据题目状态直接标记已补题。已有条目不被回填覆盖。
 - **工作台统计**：本周进度与最近未通过只统计非比赛提交（`contest: null`，命中 `{domainId,contest,uid,_id}` 索引，避免全表扫描）；周界按 Asia/Shanghai 周一 00:00。
+- **最近训练**：`/workbench/recent` 扫描该用户最近 600 条非比赛提交，凡是 pid 落在某条训练路线 dag 内的记录都把该路线标记为"使用中"（取记录时间戳的最大值），按最近使用时间倒序返回前 3 条（含 done/total/percent 进度）；扫描窗口内没有任何记录命中路线时，回退为已报名路线（无时间戳，`source: "enrolled"`）。
 - **存储**：Mongo 集合 `swpu_train`，唯一索引 `{domainId, uid, pid}`；`attempts` 为观察到的失败次数。笔记最长 2000 字。
 - **关闭收集**：设置环境变量 `SWPU_TRAIN_MISTAKES=0` 并重启后，不再监听判题事件（页面与已有数据仍可用）。
 

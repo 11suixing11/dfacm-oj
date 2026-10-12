@@ -1,6 +1,7 @@
 /* swpu-train — 个人训练工作台 + 错题复习（d&f算法网定制插件；目录名保留 swpu 以兼容现网）
  * GET  /workbench            训练工作台页面（当前路线 / 下一题 / 本周进度 / 最近未通过）
  * GET  /workbench/data       工作台 JSON 数据
+ * GET  /workbench/recent     最近使用的训练集 JSON（落地页首页卡片用，按最近提交时间排序）
  * GET  /mistakes             错题本页面
  * GET  /mistakes/data        错题列表 JSON（filter: open|done|all, page）
  * POST /mistakes/update      {pid, reason?, note?, resolved?}  保存错误原因 / 复盘笔记 / 补题状态
@@ -17,7 +18,7 @@ const {
     BACKFILL_SCAN_DEFAULT, createMistakeStore, NOTE_MAX_LENGTH, REASONS,
 } = require('./mistakes.cjs');
 const {
-    buildWorkbench, FAILED_STATUSES, STATUS_LABELS, STATUS_TEXTS,
+    buildWorkbench, buildRecentTrainings, FAILED_STATUSES, STATUS_LABELS, STATUS_TEXTS,
 } = require('./workbench.cjs');
 
 const logger = new Logger('swpu-train');
@@ -30,6 +31,8 @@ const WEEKLY_SCAN_LIMIT = 2000;
 const RECENT_SCAN_LIMIT = 60;
 const RECENT_LIMIT = 8;
 const MAX_TRAININGS = 3;
+const HOME_RECORD_SCAN_LIMIT = 600;
+const HOME_MAX_TRAININGS = 3;
 
 // --- CSRF -----------------------------------------------------------------
 // /mistakes/update, /mistakes/remove and /mistakes/sync all change state for
@@ -104,6 +107,16 @@ async function runBackfill(domainId: string, uid: number) {
     return mistakes.backfill(domainId, uid, records, acPids);
 }
 
+// Newest non-contest submissions only (projected to pid + ObjectId timestamp).
+// The landing page ranks trainings by real activity: a record whose pid lives
+// in a plan's dag marks that plan "used" at the record's time.
+async function recentSubmissionTimes(domainId: string, uid: number) {
+    const docs = await RecordModel.getMulti(domainId, {
+        uid, contest: null,
+    }).sort({ _id: -1 }).project({ pid: 1 }).limit(HOME_RECORD_SCAN_LIMIT).toArray();
+    return docs.map((doc) => ({ pid: doc.pid, at: doc._id.getTimestamp() }));
+}
+
 class WorkbenchPageHandler extends Handler {
     async get() { servePage(this, WORKBENCH_PAGE); }
 }
@@ -126,6 +139,21 @@ class WorkbenchDataHandler extends Handler {
             now,
             maxTrainings: MAX_TRAININGS,
             recentLimit: RECENT_LIMIT,
+        });
+        this.response.body = { ok: true, data };
+    }
+}
+
+class RecentTrainingsHandler extends Handler {
+    async get(domainId: string) {
+        await this.limitRate('swpu_train_recent', 60, 30, `u${this.user._id}`);
+        const data = await buildRecentTrainings({
+            domainId,
+            uid: this.user._id,
+            trainingModel: TrainingModel,
+            problemModel: ProblemModel,
+            records: await recentSubmissionTimes(domainId, this.user._id),
+            maxTrainings: HOME_MAX_TRAININGS,
         });
         this.response.body = { ok: true, data };
     }
@@ -255,6 +283,7 @@ export async function apply(ctx: Context) {
     );
     ctx.Route('swpu_workbench', '/workbench', WorkbenchPageHandler, PRIV.PRIV_USER_PROFILE);
     ctx.Route('swpu_workbench_data', '/workbench/data', WorkbenchDataHandler, PRIV.PRIV_USER_PROFILE);
+    ctx.Route('swpu_workbench_recent', '/workbench/recent', RecentTrainingsHandler, PRIV.PRIV_USER_PROFILE);
     ctx.Route('swpu_mistakes', '/mistakes', MistakesPageHandler, PRIV.PRIV_USER_PROFILE);
     ctx.Route('swpu_mistakes_data', '/mistakes/data', MistakesDataHandler, PRIV.PRIV_USER_PROFILE);
     ctx.Route('swpu_mistakes_update', '/mistakes/update', MistakesUpdateHandler, PRIV.PRIV_USER_PROFILE);

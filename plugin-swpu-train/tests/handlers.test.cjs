@@ -6,6 +6,9 @@ const path = require('node:path');
 const Module = require('node:module');
 const esbuild = require('esbuild');
 const { FakeCollection } = require('./fake-collection.cjs');
+const {
+    buildRecentTrainings, indexPlanPids, lastActiveByPlan,
+} = require('../workbench.cjs');
 
 const pluginPath = path.resolve(__dirname, '..', 'index.ts');
 // Bundle with esbuild (devDependency of the regcode plugin, resolved from this
@@ -31,6 +34,13 @@ async function fixture({ env = {} } = {}) {
         { pid: 1001, status: 2, _id: rid('2026-10-07T10:00:00Z') },
         { pid: 1001, status: 3, _id: rid('2026-10-06T10:00:00Z') },
         { pid: 1002, status: 6, _id: rid('2026-10-05T10:00:00Z') },
+    ];
+    // Plans for /workbench/recent: A and B contain the fixture record pids
+    // (1001/1002), C contains none of them.
+    const trainingDocs = [
+        { docId: 'tdocA', title: '一本通基础', pin: 0, dag: [{ _id: 1, title: '语言基础', requireNids: [], pids: [1001, 1003] }] },
+        { docId: 'tdocB', title: '蓝桥杯真题', pin: 0, dag: [{ _id: 1, title: '基础训练', requireNids: [], pids: [1002] }] },
+        { docId: 'tdocC', title: 'XCPC 专题', pin: 0, dag: [{ _id: 1, title: '热身综合', requireNids: [], pids: [2001] }] },
     ];
     const cursor = (docs) => ({
         docs,
@@ -72,8 +82,11 @@ async function fixture({ env = {} } = {}) {
             ])),
         },
         TrainingModel: {
+            getMulti: () => cursor(trainingDocs),
             getMultiStatus: () => ({ toArray: async () => [] }),
-            getList: async () => ({}),
+            getList: async (domainId, tids) => Object.fromEntries((tids || [])
+                .map((tid) => [String(tid), trainingDocs.find((d) => d.docId === String(tid))])
+                .filter(([, v]) => v)),
         },
     };
     const loaded = new Module(pluginPath, module);
@@ -108,7 +121,7 @@ async function fixture({ env = {} } = {}) {
 
 test('routes require login, pages are served no-store, nav and locales are registered', async () => {
     const f = await fixture();
-    for (const url of ['/workbench', '/workbench/data', '/mistakes', '/mistakes/data', '/mistakes/update', '/mistakes/remove', '/mistakes/sync']) {
+    for (const url of ['/workbench', '/workbench/data', '/workbench/recent', '/mistakes', '/mistakes/data', '/mistakes/update', '/mistakes/remove', '/mistakes/sync']) {
         assert.ok(f.routes.has(url), url);
         assert.equal(f.routes.get(url).priv, 4, url);
     }
@@ -132,6 +145,98 @@ test('workbench data is assembled for the signed-in user with rate limits', asyn
     assert.equal(h.response.body.data.user.uname, 'student');
     assert.equal(Array.isArray(f.recordQueries), true);
     assert.ok(f.limits.some((l) => l[0] === 'swpu_train_data' && l[3] === 'u42'));
+});
+
+test('/workbench/recent ranks plans by the newest submission inside them', async () => {
+    const f = await fixture();
+    const h = f.handler('/workbench/recent');
+    await h.get('system');
+    assert.equal(h.response.body.ok, true);
+    assert.ok(f.limits.some((l) => l[0] === 'swpu_train_recent' && l[2] === 30 && l[3] === 'u42'),
+        'must spend its own rate-limit budget');
+    const trainings = h.response.body.data.trainings;
+    // Fixture records: 1001 (plan A) newest on 10-07, 1002 (plan B) on 10-05,
+    // plan C contains none of them. Ranking must follow record time, not docId.
+    assert.equal(trainings.length, 2);
+    assert.equal(trainings[0].tid, 'tdocA');
+    assert.equal(trainings[0].url, '/training/tdocA');
+    assert.equal(trainings[0].source, 'record');
+    assert.equal(trainings[0].lastActiveAt, '2026-10-07T10:00:00.000Z');
+    assert.equal(trainings[0].done, 0);
+    assert.equal(trainings[0].total, 2);
+    assert.equal(trainings[1].tid, 'tdocB');
+    assert.equal(trainings[1].done, 1);
+    assert.equal(trainings[1].total, 1);
+    assert.equal(trainings[1].percent, 100);
+    assert.equal(trainings[1].completed, true);
+    assert.equal(trainings[1].lastActiveAt, '2026-10-05T10:00:00.000Z');
+});
+
+test('/workbench/recent falls back to enrolled plans when no scanned record hits any plan', async () => {
+    const f = await fixture();
+    const emptyCursor = { project() { return this; }, sort() { return this; }, limit() { return this; }, async toArray() { return []; } };
+    f.stub.RecordModel.getMulti = () => emptyCursor;
+    f.stub.TrainingModel.getMultiStatus = () => ({
+        toArray: async () => [{ docId: 'tdocA', enroll: 1 }, { docId: 'tdocC', enroll: 1 }],
+    });
+    const h = f.handler('/workbench/recent');
+    await h.get('system');
+    const trainings = h.response.body.data.trainings;
+    assert.equal(trainings.length, 2);
+    // Pin tie → newest docId first, mirroring buildWorkbench's enrolment order.
+    assert.equal(trainings[0].tid, 'tdocC');
+    assert.equal(trainings[0].source, 'enrolled');
+    assert.equal(trainings[0].lastActiveAt, null);
+    assert.equal(trainings[1].tid, 'tdocA');
+});
+
+test('/workbench/recent answers an empty list for a member with no activity at all', async () => {
+    const f = await fixture();
+    const emptyCursor = { project() { return this; }, sort() { return this; }, limit() { return this; }, async toArray() { return []; } };
+    f.stub.RecordModel.getMulti = () => emptyCursor;
+    const h = f.handler('/workbench/recent');
+    await h.get('system');
+    assert.equal(h.response.body.ok, true);
+    assert.deepEqual(h.response.body.data.trainings, []);
+});
+
+test('lastActiveByPlan: a shared pid marks every plan containing it; junk timestamps are ignored', () => {
+    const a = { docId: 'a', dag: [{ pids: [7] }] };
+    const b = { docId: 'b', dag: [{ pids: [7, 9] }] };
+    const byPid = indexPlanPids([a, b]);
+    const last = lastActiveByPlan([
+        { pid: 7, at: new Date('2026-10-01T00:00:00Z') },
+        { pid: 7, at: 'not a date' },
+        { pid: 7, at: new Date('2026-10-03T00:00:00Z') },
+        { pid: 42, at: new Date('2026-10-05T00:00:00Z') }, // pid outside every plan
+    ], byPid);
+    assert.equal(last.get(a).toISOString(), '2026-10-03T00:00:00.000Z');
+    assert.equal(last.get(b).toISOString(), '2026-10-03T00:00:00.000Z');
+});
+
+test('buildRecentTrainings caps the list at maxTrainings', async () => {
+    const plans = [1, 2, 3, 4].map((n) => ({
+        docId: `t${n}`, title: `路线${n}`, pin: 0, dag: [{ _id: 1, title: 'c', requireNids: [], pids: [n * 10] }],
+    }));
+    const data = await buildRecentTrainings({
+        domainId: 'system',
+        uid: 42,
+        trainingModel: {
+            getMulti: () => ({ async toArray() { return plans; } }),
+            getMultiStatus: () => ({ toArray: async () => [] }),
+            getList: async () => ({}),
+        },
+        problemModel: { getListStatus: async () => ({}) },
+        records: [
+            { pid: 40, at: new Date('2026-10-04T00:00:00Z') },
+            { pid: 30, at: new Date('2026-10-03T00:00:00Z') },
+            { pid: 20, at: new Date('2026-10-02T00:00:00Z') },
+            { pid: 10, at: new Date('2026-10-01T00:00:00Z') },
+        ],
+        maxTrainings: 2,
+    });
+    assert.deepEqual(data.trainings.map((t) => t.tid), ['t4', 't3']);
+    assert.equal(data.trainings[0].lastActiveAt, '2026-10-04T00:00:00.000Z');
 });
 
 test('first mistakes visit backfills from recent failures, later visits skip it', async () => {

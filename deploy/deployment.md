@@ -148,7 +148,7 @@ ln -sfn /usr/local/share/.config/yarn/global/node_modules/hydrooj \
 pm2 restart hydrooj
 ```
 
-安装后 `/workbench` 与 `/mistakes` 出现在登录用户导航中。错题收集只在 pm2 instance 0 运行；设置 `SWPU_TRAIN_MISTAKES=0` 并重启可关闭收集（页面仍可用）。数据口径与限制见 [plugin-swpu-train/README.md](../plugin-swpu-train/README.md)。
+安装后 `/workbench` 与 `/mistakes` 出现在登录用户导航中。另有无界面的 JSON 端点 `GET /workbench/recent`（最近使用的训练集，落地页首页卡片数据源，每用户 30 次/分钟）。错题收集只在 pm2 instance 0 运行；设置 `SWPU_TRAIN_MISTAKES=0` 并重启可关闭收集（页面仍可用）。数据口径与限制见 [plugin-swpu-train/README.md](../plugin-swpu-train/README.md)。
 
 积分商店可选安装（做题赚积分、花积分兑徽章，徽章能力由服务器已装的 badge-for-hydrooj 提供）：
 
