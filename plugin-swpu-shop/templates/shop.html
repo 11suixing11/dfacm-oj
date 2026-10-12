@@ -1,11 +1,55 @@
 {% extends "layout/basic.html" %}
 {% block content %}
+<style>
+/* SWPU shop card shelf — scoped to this page, swpu- prefixed, light + dark.
+   All numbers arrive precomputed from the handler (production Nunjucks is a
+   trimmed build: no min/max filters), the template only prints. */
+.swpu-shelf{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:18px;margin:0 -2px;}
+.swpu-card{display:flex;flex-direction:column;border-radius:14px;overflow:hidden;background:#fff;border:1px solid rgba(15,34,64,.10);box-shadow:0 10px 28px rgba(15,34,64,.06);transition:transform .15s ease,box-shadow .15s ease;}
+.swpu-card:hover{transform:translateY(-2px);box-shadow:0 14px 34px rgba(15,34,64,.12);}
+.swpu-card.is-owned{border-color:rgba(201,162,39,.55);box-shadow:0 0 0 1px rgba(201,162,39,.25);}
+.swpu-card__art{position:relative;min-height:88px;display:flex;align-items:center;justify-content:center;}
+.swpu-card__art-text{font-size:26px;font-weight:700;letter-spacing:.14em;text-shadow:0 1px 2px rgba(0,0,0,.18);}
+.swpu-card__owned-tag{position:absolute;top:10px;right:10px;font-size:12px;line-height:1;padding:4px 10px;border-radius:999px;background:rgba(255,255,255,.20);border:1px solid rgba(255,255,255,.40);}
+.swpu-card__body{display:flex;flex-direction:column;gap:10px;flex:1;padding:14px 16px 16px;}
+.swpu-card__title{font-size:15px;font-weight:600;text-decoration:none;color:#1a2940;}
+.swpu-card__title:hover{text-decoration:underline;}
+.swpu-card__meta{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+.swpu-card__price{font-size:20px;font-weight:700;color:#1a2940;}
+.swpu-card__price .swpu-card__unit{font-size:12.5px;font-weight:400;color:#5b6b80;margin-left:2px;}
+.swpu-card__hint{font-size:12.5px;color:#5b6b80;}
+.swpu-card__action{margin-top:auto;}
+.swpu-card__action .button{width:100%;text-align:center;box-sizing:border-box;}
+.swpu-card__action form{margin:0;}
+.swpu-progress{height:8px;border-radius:999px;overflow:hidden;background:#e9eff8;}
+.swpu-progress__fill{height:100%;border-radius:999px;background:linear-gradient(90deg,#3568b3,#2a5caa);}
+.swpu-card.is-owned .swpu-progress__fill{background:linear-gradient(90deg,#d8b64a,#c9a227);}
+.swpu-shop-me{display:flex;flex-wrap:wrap;align-items:center;gap:6px 16px;margin-bottom:16px;}
+.swpu-shop-me__points{font-size:14px;color:#5b6b80;}
+.swpu-shop-me__points b{font-size:22px;color:#1a2940;margin-right:2px;}
+.swpu-shop-me__next{font-size:13px;color:#5b6b80;}
+.swpu-shop-me__next b{color:#8a6d1f;font-weight:600;}
+.swpu-shop-empty{padding:34px 10px;text-align:center;}
+html.theme--dark .swpu-card{background:#16233d;border-color:rgba(255,255,255,.08);box-shadow:none;}
+html.theme--dark .swpu-card:hover{box-shadow:0 10px 26px rgba(0,0,0,.35);}
+html.theme--dark .swpu-card.is-owned{border-color:rgba(201,162,39,.55);box-shadow:0 0 0 1px rgba(201,162,39,.20);}
+html.theme--dark .swpu-card__title{color:#f4f7fb;}
+html.theme--dark .swpu-card__price{color:#f4f7fb;}
+html.theme--dark .swpu-card__price .swpu-card__unit{color:#a7b4c7;}
+html.theme--dark .swpu-card__hint{color:#a7b4c7;}
+html.theme--dark .swpu-progress{background:rgba(255,255,255,.12);}
+html.theme--dark .swpu-shop-me__points{color:#a7b4c7;}
+html.theme--dark .swpu-shop-me__points b{color:#f4f7fb;}
+html.theme--dark .swpu-shop-me__next{color:#a7b4c7;}
+html.theme--dark .swpu-shop-me__next b{color:#c9a227;}
+@media (prefers-reduced-motion: reduce){.swpu-card{transition:none;}.swpu-card:hover{transform:none;}}
+@media (max-width:560px){.swpu-shelf{grid-template-columns:1fr;}.swpu-card__art{min-height:72px;}}
+</style>
 <div class="section">
   <div class="section__header">
     <h1 class="section__title">{{ _('积分商店') }}</h1>
     <div class="section__tools">
       {% if signedIn %}
-        <span class="typo">{{ _('我的积分') }}: <b>{{ balance }}</b></span>
         <a href="{{ url('swpu_shop_history') }}" class="rounded button">{{ _('积分流水') }}</a>
       {% else %}
         <a href="/reg?tab=login" class="primary rounded button">{{ _('登录后兑换') }}</a>
@@ -17,56 +61,54 @@
     <blockquote class="note typo">{{ error }}</blockquote>
   </div>
   {% endif %}
-  <div class="section__body no-padding">
-    <table class="data-table">
-      <thead>
-        <tr>
-          <th>{{ _('徽章') }}</th>
-          <th>{{ _('名称') }}</th>
-          <th>{{ _('价格') }}</th>
-          <th>{{ _('状态') }}</th>
-          <th>{{ _('操作') }}</th>
-        </tr>
-      </thead>
-      <tbody>
-        {%- for bdoc in badges -%}
-        <tr>
-          <td>
+  <div class="section__body">
+    {% if signedIn %}
+    <div class="swpu-shop-me">
+      <span class="swpu-shop-me__points">{{ _('我的积分') }}：<b>{{ balance }}</b>{{ _('分') }}</span>
+      {% if next %}
+      <span class="swpu-shop-me__next">{{ _('距离下一枚') }}「{{ next.title }}」{{ _('还差') }} <b>{{ next.need }}</b> {{ _('分') }}</span>
+      {% endif %}
+    </div>
+    {% endif %}
+    <div class="swpu-shelf">
+      {%- for bdoc in badges -%}
+      <div class="swpu-card{% if bdoc.owned %} is-owned{% endif %}">
+        <div class="swpu-card__art" style="background:{{ bdoc.backgroundColor }};color:{{ bdoc.fontColor }};">
+          <span class="swpu-card__art-text">{{ bdoc.short }}</span>
+          {% if bdoc.owned %}<span class="swpu-card__owned-tag">{{ _('已拥有') }}</span>{% endif %}
+        </div>
+        <div class="swpu-card__body">
+          <a class="swpu-card__title" href="/badge/{{ bdoc._id }}">{{ bdoc.title }}</a>
+          <div class="swpu-card__meta">
+            <span class="swpu-card__price">{{ bdoc.price }}<span class="swpu-card__unit">{{ _('分') }}</span></span>
             <span class="user-profile-badge v-center" style="background-color:{{ bdoc.backgroundColor }};color:{{ bdoc.fontColor }};" data-tooltip="{{ bdoc.title }}">{{ bdoc.short }}</span>
-          </td>
-          <td><a href="/badge/{{ bdoc._id }}">{{ bdoc.title }}</a></td>
-          <td>{{ bdoc.price }}</td>
-          <td>
+          </div>
+          {% if signedIn and not bdoc.owned %}
+          <div class="swpu-progress"><div class="swpu-progress__fill" style="width:{{ bdoc.progress }}%;"></div></div>
+          <div class="swpu-card__hint">{% if bdoc.can %}{{ _('积分足够，立即兑换') }}{% else %}{{ _('还差') }} {{ bdoc.need }} {{ _('分') }}{% endif %}</div>
+          {% endif %}
+          <div class="swpu-card__action">
             {% if bdoc.owned %}
-              <span class="icon icon-check"></span> {{ _('已拥有') }}
-            {% elif bdoc.enabled %}
-              {{ _('上架中') }}
-            {% else %}
-              {{ _('未上架') }}
-            {% endif %}
-          </td>
-          <td>
-            {% if bdoc.owned %}
-              <a href="/mybadge" class="rounded button">{{ _('佩戴') }}</a>
-            {% elif bdoc.enabled and signedIn %}
-<form method="post" action="{{ url('swpu_shop_redeem') }}" class="inline-form">
-              <input type="hidden" name="csrf" value="{{ csrf }}">
-              <input type="hidden" name="badgeId" value="{{ bdoc._id }}">
-                <button type="submit" class="primary rounded button">{{ _('兑换') }}（{{ bdoc.price }} {{ _('分') }}）</button>
+              <a href="/mybadge" class="rounded button">{{ _('去佩戴') }}</a>
+            {% elif bdoc.can %}
+              <form method="post" action="{{ url('swpu_shop_redeem') }}">
+                <input type="hidden" name="csrf" value="{{ csrf }}">
+                <input type="hidden" name="badgeId" value="{{ bdoc._id }}">
+                <button type="submit" class="primary rounded button">{{ _('兑换') }}</button>
               </form>
-            {% elif bdoc.enabled %}
-              <a href="/reg?tab=login" class="rounded button">{{ _('登录后兑换') }}</a>
+            {% elif signedIn %}
+              <button type="button" class="rounded button" disabled>{{ _('积分不足') }}</button>
             {% else %}
-              —
+              <a href="/reg?tab=login" class="primary rounded button">{{ _('登录后兑换') }}</a>
             {% endif %}
-          </td>
-        </tr>
-        {%- endfor -%}
-        {% if not badges.length %}
-        <tr><td colspan="5">{{ _('暂无徽章。') }}</td></tr>
-        {% endif %}
-      </tbody>
-    </table>
+          </div>
+        </div>
+      </div>
+      {%- endfor -%}
+      {% if not badges.length %}
+      <div class="swpu-shop-empty typo">{{ _('暂无上架徽章，敬请期待。') }}</div>
+      {% endif %}
+    </div>
   </div>
   <div class="section__body typo">
     <p>{{ _('每道题首次通过（AC）按难度获得 1~10 积分；在此用积分兑换徽章，兑换后到「我的徽章」页面佩戴。') }}</p>

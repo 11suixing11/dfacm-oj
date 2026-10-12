@@ -211,28 +211,69 @@ test('routes, privileges, UI injections and i18n are registered', async () => {
     assert.equal(ledgerIndexes[0][1][0].unique, true);
 });
 
-test('shop page lists badges with prices and marks owned ones for signed-in users', async () => {
+test('shop page shelves on-sale badges only, cheapest first, with progress and the next goal', async () => {
     const f = await fixture({
         badges: [
             { _id: 7, short: '队长', title: '队长徽章', backgroundColor: '#2a5caa', fontColor: '#ffffff' },
             { _id: 8, short: '新人', title: '新人徽章', backgroundColor: '#c9a227', fontColor: '#000000' },
+            { _id: 9, short: '身份', title: '未上架徽章', backgroundColor: '#111111', fontColor: '#ffffff' },
         ],
-        prices: [{ _id: 7, price: 10, enabled: true }],
+        // #9 是管理员直发的身份徽章：未上架，不进学生货架。
+        prices: [
+            { _id: 8, price: 30, enabled: true },
+            { _id: 7, price: 10, enabled: true },
+            { _id: 9, price: 5, enabled: false },
+        ],
     });
+    await f.ledger.insertOne({ uid: 42, delta: 8, ref: 'solve:system:1', kind: 'solve', detail: 'P1', ts: NOW });
+    // uid 42 已拥有 #8（直接发过），owned 卡不再带进度数据。
+    f.userBadgeModel.userBadgeAdd(null, 42, 8);
     const h = f.handler('/shop');
     await h.get('system');
     assert.equal(h.response.template, 'shop.html');
     assert.equal(h.response.body.signedIn, true);
-    assert.equal(h.response.body.balance, 0);
+    assert.equal(h.response.body.balance, 8);
     const listed = h.response.body.badges;
-    assert.equal(listed.length, 2);
-    const onSale = listed.find((b) => b._id === 7);
-    assert.equal(onSale.enabled, true);
-    assert.equal(onSale.price, 10);
-    assert.equal(onSale.owned, false);
-    assert.equal(listed.find((b) => b._id === 8).enabled, false);
-    // sorting: on-sale first
-    assert.equal(listed[0]._id, 7);
+    // 未上架的 #9 不列；卡序 = 阶梯价升序（10 分的 #7 在 30 分的 #8 前）。
+    assert.deepEqual(listed.map((b) => b._id), [7, 8]);
+    const goal = listed[0];
+    assert.equal(goal.price, 10);
+    assert.equal(goal.owned, false);
+    assert.equal(goal.can, false); // 8 < 10
+    assert.equal(goal.need, 2);
+    assert.equal(goal.progress, 80); // floor(8 * 100 / 10)
+    const owned = listed[1];
+    assert.equal(owned.owned, true);
+    assert.equal(owned.need, null);
+    assert.equal(owned.can, null);
+    assert.equal(owned.progress, null);
+    // 下一目标跳过已拥有的 #8，指向最便宜的未拥有徽章 #7。
+    assert.deepEqual(h.response.body.next, { title: '队长徽章', need: 2 });
+});
+
+test('shop page progress math: an affordable card shows can=true and never becomes the next goal', async () => {
+    const f = await fixture({
+        badges: [
+            { _id: 7, short: '队长', title: '队长徽章' },
+            { _id: 8, short: '新人', title: '新人徽章' },
+        ],
+        prices: [
+            { _id: 7, price: 10, enabled: true },
+            { _id: 8, price: 30, enabled: true },
+        ],
+    });
+    await f.ledger.insertOne({ uid: 42, delta: 12, ref: 'solve:system:1', kind: 'solve', detail: 'P1', ts: NOW });
+    const h = f.handler('/shop');
+    await h.get('system');
+    const [affordable, outOfReach] = h.response.body.badges;
+    assert.equal(affordable.can, true);
+    assert.equal(affordable.need, 0);
+    assert.equal(affordable.progress, 100);
+    assert.equal(outOfReach.can, false);
+    assert.equal(outOfReach.need, 18);
+    assert.equal(outOfReach.progress, 40);
+    // 够得着的 #7 不算「下一目标」，#8 才是。
+    assert.deepEqual(h.response.body.next, { title: '新人徽章', need: 18 });
 });
 
 test('shop page renders for guests without balance data', async () => {
@@ -245,7 +286,13 @@ test('shop page renders for guests without balance data', async () => {
     await h.get('system');
     assert.equal(h.response.body.signedIn, false);
     assert.equal(h.response.body.balance, null);
-    assert.equal(h.response.body.badges.length, 1);
+    assert.equal(h.response.body.next, null);
+    const [card] = h.response.body.badges;
+    assert.equal(card._id, 7);
+    assert.equal(card.owned, false);
+    assert.equal(card.need, null);
+    assert.equal(card.can, null);
+    assert.equal(card.progress, null);
 });
 
 test('redeem endpoint debits the ledger and redirects to /mybadge', async () => {

@@ -513,18 +513,30 @@ test('points-shop plugin ships every documented file and its templates render th
   for (const name of documented) {
     assert.ok(fs.existsSync(path.join(repo, 'plugin-swpu-shop', name)), `missing ${name}`);
   }
-  // Template wiring: Nunjucks pages extend the site layout, use the shared
-  // section/data-table classes and the badge preview DOM contract.
+  // Template wiring: Nunjucks pages extend the site layout and use the shared
+  // section component; the two data pages keep the data-table, the shop is a
+  // branded card shelf (swpu- prefixed, scoped styles).
   for (const template of ['shop.html', 'history.html', 'manage.html']) {
     const source = fs.readFileSync(path.join(repo, 'plugin-swpu-shop', 'templates', template), 'utf8');
     assert.match(source, /\{% extends "layout\/basic.html" %\}/, `${template} must extend the site layout`);
     assert.match(source, /class="section"/, `${template} must use the section component`);
+  }
+  for (const template of ['history.html', 'manage.html']) {
+    const source = fs.readFileSync(path.join(repo, 'plugin-swpu-shop', 'templates', template), 'utf8');
     assert.match(source, /data-table/, `${template} must use the data-table component`);
   }
   const shop = fs.readFileSync(path.join(repo, 'plugin-swpu-shop', 'templates', 'shop.html'), 'utf8');
+  assert.match(shop, /swpu-shelf/, 'the shop must shelf badges as a card grid');
+  assert.match(shop, /swpu-card__art/, 'each card must preview the badge color block');
   assert.match(shop, /user-profile-badge v-center/, 'badge preview must reuse the badge DOM contract');
   assert.match(shop, /href="\/badge\/{{ bdoc\._id }}"/, 'badge title must link to the badge plugin detail page');
   assert.match(shop, /href="\/reg\?tab=login"/, 'guests must be sent to the branded login tab');
+  // The badge ladder and the ledger hygiene scripts ship with the deploy tree.
+  assert.ok(fs.existsSync(path.join(repo, 'deploy', 'shop', 'badges-seed.js')), 'missing deploy/shop/badges-seed.js');
+  assert.ok(fs.existsSync(path.join(repo, 'deploy', 'shop', 'ledger-cleanup.js')), 'missing deploy/shop/ledger-cleanup.js');
+  const seed = fs.readFileSync(path.join(repo, 'deploy', 'shop', 'badges-seed.js'), 'utf8');
+  assert.match(seed, /swpuBadgePrice/, 'the seed must price the ladder into swpuBadgePrice');
+  assert.match(fs.readFileSync(path.join(repo, 'deploy', 'shop', 'ledger-cleanup.js'), 'utf8'), /hydsvc/, 'the cleanup must guard the service-account purge');
   const manage = fs.readFileSync(path.join(repo, 'plugin-swpu-shop', 'templates', 'manage.html'), 'utf8');
   assert.match(manage, /name="operation" value="price"/, 'manage form must post operation=price');
   assert.match(manage, /name="badgeId"/, 'manage form must carry badgeId');

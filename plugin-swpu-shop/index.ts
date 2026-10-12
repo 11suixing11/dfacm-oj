@@ -58,17 +58,20 @@ class ShopPageHandler extends Handler {
             const priceMap = new Map(priceDocs.map((doc: any) => [doc._id, doc]));
             for (const bdoc of bdocs) {
                 const priceDoc = priceMap.get(bdoc._id);
+                // 货架只摆真的在售商品：未定价/未上架的徽章（管理员直发的身份
+                // 徽章）留在 /manage/shop 里，不在学生页面占位。
+                if (!priceDoc || !priceDoc.enabled) continue;
                 rows.push({
                     _id: bdoc._id,
                     short: bdoc.short || '',
                     title: bdoc.title || '',
                     backgroundColor: bdoc.backgroundColor || '#2a5caa',
                     fontColor: bdoc.fontColor || '#ffffff',
-                    price: priceDoc ? +priceDoc.price : 0,
-                    enabled: !!priceDoc?.enabled,
+                    price: +priceDoc.price,
                 });
             }
-            rows.sort((a, b) => Number(b.enabled) - Number(a.enabled) || b.price - a.price || a._id - b._id);
+            // 阶梯价升序：从大本营到登顶，卡序即成长路线。
+            rows.sort((a, b) => a.price - b.price || a._id - b._id);
         }
         const signedIn = this.user._id > 0 && this.user.hasPriv(PRIV.PRIV_USER_PROFILE);
         let balance = null;
@@ -80,16 +83,36 @@ class ShopPageHandler extends Handler {
                 ownedIds = new Set(owned.map((doc: any) => doc.badgeId));
             }
         }
+        // 进度/缺口/下一目标都在服务端算好：生产环境的 Nunjucks 是裁剪版
+        // （没有 min/max 过滤器），模板只做输出不做运算。
+        let next: { title: string; need: number } | null = null;
+        const badges = rows.map((row) => {
+            const owned = ownedIds.has(row._id);
+            const card: any = { ...row, owned };
+            if (signedIn && balance !== null && !owned) {
+                const need = Math.max(0, row.price - balance);
+                card.need = need;
+                card.can = balance >= row.price;
+                card.progress = Math.min(100, Math.floor((balance * 100) / row.price));
+                if (need > 0 && !next) next = { title: row.title, need };
+            } else {
+                card.need = null;
+                card.can = null;
+                card.progress = null;
+            }
+            return card;
+        });
         this.response.body = {
             _id: this.user._id,
             uname: this.user.uname,
             signedIn,
             balance,
+            next,
             // Echoed back by a failed form POST so the member sees why.
             error: shopError(this),
             // Redeem is a plain form POST, so the token travels as a hidden field.
             csrf: signedIn ? csrfToken(this) : '',
-            badges: rows.map((row) => ({ ...row, owned: ownedIds.has(row._id) })),
+            badges,
         };
         this.response.template = 'shop.html';
     }

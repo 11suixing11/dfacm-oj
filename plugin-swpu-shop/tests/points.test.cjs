@@ -211,6 +211,40 @@ test('awardSolve exclusions: hidden problems, self-owned problems and uid<=1 nev
     assert.equal(ledger.docs.length, 0);
 });
 
+// The judge service account (uid 3) is used to test the pipeline end to end, so
+// its ACs are infrastructure noise — the same policy the RP sweep applies. The
+// 2026-10-04 deployment predated this guard and its test ACs polluted the ledger
+// with 686 points.
+test('awardSolve excludes service accounts (SWPU_SERVICE_UIDS defaults to the judge uid 3)', async () => {
+    const points = loadPoints();
+    const m = models();
+    m.seedProblem('system', 1000, { title: '正常题', hidden: false, owner: 9, difficulty: 5 });
+    const ledger = new FakeLedger();
+    const collections = { ledger, price: new FakePrice(), userBadge: m.userBadge };
+    assert.deepEqual(await points.awardSolve(m, collections, now, { uid: 3, domainId: 'system', docId: 1000 }),
+        { awarded: false, delta: 0 });
+    assert.equal(ledger.docs.length, 0);
+    // env parsing mirrors rp-sweep: default [3], empty disables, list is deduped and sorted
+    assert.deepEqual(points.serviceUidsFromEnv({}), [3]);
+    assert.deepEqual(points.serviceUidsFromEnv({ SWPU_SERVICE_UIDS: '' }), []);
+    assert.deepEqual(points.serviceUidsFromEnv({ SWPU_SERVICE_UIDS: '3, 7,7, x' }), [3, 7]);
+    // An operator who empties the list opted out of the exclusion on purpose.
+    const saved = process.env.SWPU_SERVICE_UIDS;
+    process.env.SWPU_SERVICE_UIDS = '';
+    try {
+        assert.deepEqual(await points.awardSolve(m, collections, now, { uid: 3, domainId: 'system', docId: 1000 }),
+            { awarded: true, delta: 5 });
+    } finally {
+        if (saved === undefined) delete process.env.SWPU_SERVICE_UIDS;
+        else process.env.SWPU_SERVICE_UIDS = saved;
+    }
+    assert.equal(ledger.docs.length, 1);
+    // Real members are unaffected.
+    assert.deepEqual(await points.awardSolve(m, collections, now, { uid: 42, domainId: 'system', docId: 1000 }),
+        { awarded: true, delta: 5 });
+    assert.equal(ledger.docs.length, 2);
+});
+
 test('balance aggregation: mixed positive and negative deltas sum correctly', async () => {
     const points = loadPoints();
     const ledger = new FakeLedger();

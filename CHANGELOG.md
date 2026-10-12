@@ -1,5 +1,15 @@
 # Changelog
 
+## v1.30.0 - 2026-10-13
+
+### Changed
+
+- **积分商店开张：品牌化货架 + 「攀登者之路」徽章套系 + 计分数据治理。** 此前商店功能已部署但定价表为空——学生打开 `/shop` 全是「未上架」，等于空壳。三件事让它真正可用：
+  1. **服务号计分排除（根因修复）**：`points.ts awardSolve` 现按 `SWPU_SERVICE_UIDS` 排除服务号 AC（默认 `3` = hydsvc-0074 判题服务号，留空关闭；解析口径照抄 rp-sweep）——判题链路测试曾给 uid 3 攒出 686 分污染。存量清理由 `deploy/shop/ledger-cleanup.js`（mongosh，幂等）完成，同时清掉已删测试号的孤儿流水行；守卫：uid 3 的 uname 必须以 `hydsvc` 开头才执行，防 uid 复用误删。
+  2. **商店页品牌化重设计**（`shop.html` 重写）：卡片货架——徽章大色块预览 + 用户名旁真实 chip 效果（复用 badge 插件 DOM 契约）+ 价格牌 + 余额进度条 + 下一枚目标提示；`swpu-` 前缀 scoped 样式、明暗双主题、移动端单列自适应。progress/need/can/next 全部服务端算好（生产 Nunjucks 是裁剪版，模板只输出不运算）；未上架徽章（管理员直发的身份徽章）不再进学生货架，卡序=阶梯价升序。
+  3. **「攀登者之路」徽章套系**：`deploy/shop/badges-seed.js`（mongosh，幂等，`$set` 不碰 users 直发名单）上架 5 级登山主题徽章——大本营 30 / 雪线 100 / 冰川 250 / 冲顶 500 / 登顶 1000 分，配品牌色渐变（石板灰蓝→品牌蓝→冰川蓝→金→午夜金），与站点「向山顶，提交你的答案」的山峰隐喻一致。
+- 测试同步：points.test.cjs 新增服务号排除用例（含 env 解析矩阵）；handlers.test.cjs 商店页用例改为货架口径（只列上架/价格排序/进度数学/next 目标/游客空数据）；deployment.test.mjs shop wiring 断言卡片货架标记（swpu-shelf/swpu-card__art）替代 data-table（history/manage 仍断言表格），并锁定两个新 deploy 脚本存在。本地 66/66 测试全绿。
+
 ## v1.29.0 - 2026-10-12
 
 ### Changed

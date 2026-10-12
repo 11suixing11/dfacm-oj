@@ -95,6 +95,21 @@ export function redeemRef(badgeId: number) {
     return `redeem:${badgeId}`;
 }
 
+// Service accounts whose ACs are judging-infrastructure noise and must never
+// credit points. Defaults to the judge account (uid 3 = hydsvc-0074) — the
+// same policy the RP sweep applies to its document.status purge — because the
+// judge session is routinely used to test the pipeline and its ACs already
+// polluted the ledger once (686 points before this guard existed). Empty
+// string disables the exclusion entirely; kept per-call so tests can tweak it.
+export function serviceUidsFromEnv(env: { SWPU_SERVICE_UIDS?: string } = process.env): number[] {
+    const raw = (env.SWPU_SERVICE_UIDS === undefined ? '3' : env.SWPU_SERVICE_UIDS).trim();
+    if (!raw) return [];
+    const uids = raw.split(',')
+        .map((value) => Number.parseInt(value.trim(), 10))
+        .filter((n) => Number.isInteger(n) && n > 0);
+    return [...new Set(uids)].sort((a, b) => a - b);
+}
+
 function isDuplicateKey(e: any) {
     return e && (e as { code?: number }).code === 11000;
 }
@@ -106,6 +121,8 @@ export interface AwardResult {
 
 // 首次 AC 入账。uid<=1 早退（Guest/系统号；事件路径拿不到 udoc，
 // 与 rp 脚本 udoc?.hasPriv(PRIV_USER_PROFILE) 的过滤目标一致）；
+// 服务号（SWPU_SERVICE_UIDS，默认判题号 uid 3）不入账——判题链路测试的 AC
+// 是基础设施噪声，与 rp-sweep 清 document.status 的治理目标同一口径；
 // 自建题（owner===uid）与隐藏题不计分，防刷口径与 rp 脚本相同。
 // 幂等由 {uid, ref} 唯一索引兜底：insert 撞重复键静默返回未入账。
 export async function awardSolve(
@@ -116,6 +133,7 @@ export async function awardSolve(
 ): Promise<AwardResult> {
     const { uid, domainId, docId } = entry;
     if (!Number.isSafeInteger(uid) || uid <= 1) return { awarded: false, delta: 0 };
+    if (serviceUidsFromEnv().includes(uid)) return { awarded: false, delta: 0 };
     if (!domainId || !Number.isSafeInteger(docId) || docId <= 0) return { awarded: false, delta: 0 };
     const pdoc = await models.problem.get(domainId, docId);
     if (!pdoc || pdoc.hidden || pdoc.owner === uid) return { awarded: false, delta: 0 };

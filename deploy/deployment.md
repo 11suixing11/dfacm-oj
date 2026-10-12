@@ -175,9 +175,23 @@ hydrooj cli script swpuShopBackfill '{"domainId":""}'   # 空 domainId 时回填
 
 脚本幂等（唯一键 `solve:{domainId}:{docId}` 挡重复），可重复运行、增量运行；`kind` 记 `backfill`，与实时入账互不冲突。
 
+徽章商品上架（「攀登者之路」套系：大本营 30 / 雪线 100 / 冰川 250 / 冲顶 500 / 登顶 1000 分；幂等，可重复运行，`$set` 不碰管理员直发的 users 名单）：
+
+```bash
+mongosh "$(python3 -c "import json;print(json.load(open('/root/.hydro/config.json'))['uri'])")" \
+        /root/swpu-oj/deploy/shop/badges-seed.js
+```
+
+积分流水历史污染清理（uid 3 判题服务号判题测试攒分 + 已删测试号的孤儿流水行；守卫：uid 3 的 uname 必须以 hydsvc 开头，否则拒绝执行。服务号 AC 自 v1.30.0 起已在源头被 `SWPU_SERVICE_UIDS` 排除，此脚本只清存量）：
+
+```bash
+mongosh "$(python3 -c "import json;print(json.load(open('/root/.hydro/config.json'))['uri'])")" \
+        /root/swpu-oj/deploy/shop/ledger-cleanup.js
+```
+
 验收：
 
-- `/shop` 游客可达（200），徽章卡片显示预览色块/标题/价格/状态；登录后显示「我的积分」与兑换按钮。
+- `/shop` 游客可达（200），品牌化卡片货架按价格升序显示上架徽章（大色块预览 / 标题 / 价格 / 用户名旁 chip 效果）；登录后显示「我的积分」、每卡余额进度条与兑换按钮（积分不足显示还差多少分），未上架徽章不进货架；游客按钮为登录入口。
 - `/shop/history` 登录后 200，显示时间/类型/明细/变动/累计余额，分页 20/页。
 - `/manage/shop` 域管理员可见，每行价格 + 上架 checkbox 可保存。
 - 兑换成功后跳转 `/mybadge`，佩戴后全站用户名旁出现徽章。

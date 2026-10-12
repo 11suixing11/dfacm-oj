@@ -4,8 +4,8 @@ Hydro **5.0.7** 的小型 addon。把徽章产品化为积分兑换机制：每�
 
 ## 能做什么
 
-- **赚积分**：`record/change` 判题终态事件里，status === 1（Accepted）且是该用户该题首次通过时，按题目难度入账（难度口径与 Hydro RP 脚本完全一致：显式 `difficulty` 优先，缺失时用 `nSubmit/nAccept` 推导，`lib/difficulty.ts` 全文移植，1~10 分）。隐藏题、自建题（owner 是本人）、uid ≤ 1（Guest/系统号）不入账。只在 pm2 instance 0 注册，失败只记日志，绝不影响判题流程。
-- **花积分**：`/shop`（游客可看）列出徽章卡片：预览色块、标题（链到 badge 插件详情页 `/badge/<id>`）、价格、状态；登录者显示「我的积分」与兑换按钮，游客显示「登录后兑换」。`POST /shop/redeem` 兑换：未上架/已持有/余额不足各返回明确业务错误，成功后跳转 `/mybadge` 提示佩戴。
+- **赚积分**：`record/change` 判题终态事件里，status === 1（Accepted）且是该用户该题首次通过时，按题目难度入账（难度口径与 Hydro RP 脚本完全一致：显式 `difficulty` 优先，缺失时用 `nSubmit/nAccept` 推导，`lib/difficulty.ts` 全文移植，1~10 分）。隐藏题、自建题（owner 是本人）、uid ≤ 1（Guest/系统号）、服务号（`SWPU_SERVICE_UIDS`，默认 `3` = hydsvc-0074 判题号，留空关闭）不入账。只在 pm2 instance 0 注册，失败只记日志，绝不影响判题流程。
+- **花积分**：`/shop`（游客可看）是品牌化卡片货架：徽章大色块预览、用户名旁真实 chip 效果、价格牌、每卡余额进度条与「还差 N 分」提示、下一枚目标（progress/need/can/next 均由服务端算好——生产 Nunjucks 是裁剪版，模板只输出）；登录者可兑换，游客按钮为登录入口。只有上架徽章进货架（未定价/未上架的身份徽章只在管理页可见），卡序=价格升序。`POST /shop/redeem` 兑换：未上架/已持有/余额不足各返回明确业务错误，成功后跳转 `/mybadge` 提示佩戴。
 - **积分流水**：`/shop/history`（登录）分页 20 条/页，时间正序，列：时间/类型/明细/变动/累计余额（跨页前缀和）。
 - **管理**：`/manage/shop`（域管理员 `PRIV_MANAGE_ALL_DOMAIN`）列出全部徽章（含未定价），每行价格 input + 上架 checkbox，单行保存。
 - **回填**：`swpuShopBackfill` 脚本扫历史 AC 记录入账（`kind: 'backfill'`），幂等可重跑，与实时入账互不冲突。
@@ -27,9 +27,10 @@ Hydro **5.0.7** 的小型 addon。把徽章产品化为积分兑换机制：每�
 
 见 [deploy/deployment.md](../deploy/deployment.md) 第 4 节积分商店段落（cp 块同样被 `deploy/deploy.sh` 解析发货）。安装后：
 
-1. 在 `/manage/shop` 给徽章定价并勾选上架。
+1. 在 `/manage/shop` 给徽章定价并勾选上架（或直接跑 `deploy/shop/badges-seed.js` 上架「攀登者之路」5 级套系：大本营 30 / 雪线 100 / 冰川 250 / 冲顶 500 / 登顶 1000 分；mongosh 幂等脚本，可重复运行）。
 2. 跑一次回填：`hydrooj cli script swpuShopBackfill '{}'`（空 domainId 回填 `system` 与 `poj` 两个域）。
-3. 验收 `/shop`（游客 200）、`/shop/history`（登录 200，未登录 302）、`/manage/shop`（管理员可见）。
+3. 存量污染清理（可选，历史部署的判题测试曾给 uid 3 攒 686 分）：`deploy/shop/ledger-cleanup.js`（mongosh；同时清已删测试号的孤儿流水行；守卫：uid 3 的 uname 必须以 `hydsvc` 开头）。
+4. 验收 `/shop`（游客 200）、`/shop/history`（登录 200，未登录 302）、`/manage/shop`（管理员可见）。
 
 ## 验证
 
