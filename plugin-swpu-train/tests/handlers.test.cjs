@@ -60,6 +60,9 @@ async function fixture({ env = {} } = {}) {
                 this.response = { body: {}, headers: {}, addHeader: (k, v) => { this.response.headers[k] = v; } };
                 this.user = { _id: 42, uname: 'student' };
                 this.session = stub.session;
+                // The real framework resolves route params from this.args;
+                // undecorated methods must read this.args.domainId themselves.
+                this.args = { domainId: 'system' };
             }
             async limitRate(...args) { limits.push(args); }
         },
@@ -140,7 +143,7 @@ test('routes require login, pages are served no-store, nav and locales are regis
 test('workbench data is assembled for the signed-in user with rate limits', async () => {
     const f = await fixture();
     const h = f.handler('/workbench/data');
-    await h.get('system');
+    await h.get();
     assert.equal(h.response.body.ok, true);
     assert.equal(h.response.body.data.user.uname, 'student');
     assert.equal(Array.isArray(f.recordQueries), true);
@@ -150,7 +153,7 @@ test('workbench data is assembled for the signed-in user with rate limits', asyn
 test('/workbench/recent ranks plans by the newest submission inside them', async () => {
     const f = await fixture();
     const h = f.handler('/workbench/recent');
-    await h.get('system');
+    await h.get();
     assert.equal(h.response.body.ok, true);
     assert.ok(f.limits.some((l) => l[0] === 'swpu_train_recent' && l[2] === 30 && l[3] === 'u42'),
         'must spend its own rate-limit budget');
@@ -180,7 +183,7 @@ test('/workbench/recent falls back to enrolled plans when no scanned record hits
         toArray: async () => [{ docId: 'tdocA', enroll: 1 }, { docId: 'tdocC', enroll: 1 }],
     });
     const h = f.handler('/workbench/recent');
-    await h.get('system');
+    await h.get();
     const trainings = h.response.body.data.trainings;
     assert.equal(trainings.length, 2);
     // Pin tie → newest docId first, mirroring buildWorkbench's enrolment order.
@@ -195,7 +198,7 @@ test('/workbench/recent answers an empty list for a member with no activity at a
     const emptyCursor = { project() { return this; }, sort() { return this; }, limit() { return this; }, async toArray() { return []; } };
     f.stub.RecordModel.getMulti = () => emptyCursor;
     const h = f.handler('/workbench/recent');
-    await h.get('system');
+    await h.get();
     assert.equal(h.response.body.ok, true);
     assert.deepEqual(h.response.body.data.trainings, []);
 });

@@ -122,7 +122,16 @@ class WorkbenchPageHandler extends Handler {
 }
 
 class WorkbenchDataHandler extends Handler {
-    async get(domainId: string) {
+    // Hydro's bare (undecorated) method parameters receive the whole args
+    // object, NOT the declared name: decorators.ts only installs the
+    // per-name argument wrapper when a method has at least one @param/@post
+    // decorator. `async get(domainId: string)` therefore silently passed the
+    // args object into every db query keyed on domainId — the weekly stats,
+    // recent failures and route progress have been empty since the plugin
+    // first shipped. Read this.args.domainId instead (the framework itself
+    // resolves route params the same way).
+    async get() {
+        const domainId = this.args.domainId;
         await this.limitRate('swpu_train_data', 60, 30, `u${this.user._id}`);
         const now = new Date();
         const data = await buildWorkbench({
@@ -145,7 +154,11 @@ class WorkbenchDataHandler extends Handler {
 }
 
 class RecentTrainingsHandler extends Handler {
-    async get(domainId: string) {
+    // Same rule as WorkbenchDataHandler: no decorators on this method, so the
+    // framework hands the args object to every declared parameter. Never take
+    // domainId as a bare parameter here.
+    async get() {
+        const domainId = this.args.domainId;
         await this.limitRate('swpu_train_recent', 60, 30, `u${this.user._id}`);
         const data = await buildRecentTrainings({
             domainId,

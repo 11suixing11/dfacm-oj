@@ -2,6 +2,10 @@
 
 ## v1.31.0 - 2026-10-13
 
+### Fixed
+
+- **工作台数据全空的老 bug（插件上线以来）+ 新接口同病，一并修复。** E2E 复验 `/workbench/recent` 恒为空时实锤根因：Hydro 框架（@hydrooj/framework decorators.ts）**只给带装饰器的方法安装按名注入的参数包装**；无装饰器的裸方法参数收到的是**整个 args 对象**而非声明的参数名——`async get(domainId: string)` 里 domainId 实为 `{"domainId":"system","__start":...}`，凡以它为键的 db 查询全部落空。受害者：WorkbenchDataHandler（周统计/最近未通过/路线进度自 PR#4 上线起一直为空，当时 E2E 只验了 JSON 结构没验数字，漏网两天）；今天新写的 RecentTrainingsHandler 同样中招。修法：两个无装饰器 GET handler 改为无参数方法，体内 `const domainId = this.args.domainId`（框架解析 route 参数的同款官方路径）。有装饰器的方法（@param/@post 声明过的方法首参按参数名注入字符串）不受影响——错题本的 update/remove/sync 与 regcode 的 POST 全程健康，无需改动。
+
 ### Added
 
 - **首页 hero CTA 换装成「最近训练」卡片（登录用户专属）。** 此前落地页首屏的「开始登顶训练 →」是写死的一条链接，永远指向一本通入门路线——对回来训练的老用户毫无指向性。现在：
