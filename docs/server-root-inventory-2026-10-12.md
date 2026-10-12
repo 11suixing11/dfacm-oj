@@ -8,6 +8,31 @@
 
 ---
 
+## 执行记录 · 2026-10-12 08:46 CST（站长拍板"删掉"，全部执行完毕）
+
+**服务器**：表一 ✅可删 全部执行。补录并删除了 3 个漏分类的 2026-10-03 迁移回滚目录
+（`swpu-backup-authclean-20261003-152055` / `swpu-regcode-backup-20261003-020419` /
+`swpu-native-dark-backup-20261003-000749`）。附条件项也已完成：`p5-spj` 在确认
+#10003 testdata 内 spj.cc 副本无恙后删除（源码已归档 `deploy/checkers/`）；vjudge CF
+账号先备份（`/root/backups/vjudge-cf-account-backup-20261012.json`，849B）再删，
+**POJ 账号完好**。`/root` 终态 = 六个必留目录：backups / fps / NOIP / packs /
+swpu-rank-deploy / swpu-theme-deploy。
+
+- ai_* 空集合实际有 17 个（本表初版写的 `ai_msg` 名字不准）：删掉 15 个空的；
+  **保留** `ai_plugin_install`（1 条，已摘除的 ai-helper 插件的 install 标记，含
+  `telemetryEnabled: true` 字段——死数据，将来可清）。
+- **新发现，未删、待拍板**：`oplog`(929) / `a.oplog.access`(146) / `a.oplog.error`(56)
+  ——已摘除的 hydro-aoplog 插件存活期留下的访问日志，非空所以保守保留；确认无用
+  可随时清。
+- 审计 JSON 已归档 `/root/backups/audit-json-20261012/`（3 个）；全程日志
+  `/root/backups/cleanup-log-2026-10-12.txt`（含每项体积与 df 前后对比）。
+
+**本地**：`landing` / `taxonomy` / `diag-10003` / `culture_seed` / `zcode_run` /
+`temp_oj_fix` / `_archive` 七个目录 + 4 张截图 + `zcode-shop-spec.md` 原件全部删除。
+工作区只剩必留：`swpu-oj` / `promo` / `assets_src` / `xcpc-fix` / `CODELY.md`。
+
+---
+
 ## 表一 · OJ 服务器 `/root`（107.151.246.137 / dfacm.website）
 
 ### ✅ 必留（生产依赖或唯一数据源）
