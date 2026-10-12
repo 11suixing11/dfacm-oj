@@ -619,6 +619,14 @@ test('deploy orchestrator locks the stage-verify-activate-restart-wait-smoke ord
   assert.match(source, /StrictHostKeyChecking/);
   // Smoke is executed from the synced copy, not from a stale leftover.
   assert.match(source, /bash \$REMOTE_DEPLOY\/deploy\/smoke\.sh/);
+  // The readiness probe must grep a marker the branded /reg page actually
+  // contains. The passwordless rework (v1.29.0) replaced the `tab-reg`
+  // marker with `m-mail`, but the probe was missed in that sweep, so every
+  // deploy from 2026-10-12 false-failed at wait_ready while the service was
+  // healthy. Lock both directions: probe greps m-mail, and the dead marker
+  // is gone.
+  assert.match(source, /grep -a m-mail/, 'the readiness probe must grep the live m-mail marker');
+  assert.ok(!/grep -a tab-reg/.test(source), 'the readiness probe must not grep the removed tab-reg marker');
 });
 
 // The two subsetted fonts and the icon set are served from custom/ but were

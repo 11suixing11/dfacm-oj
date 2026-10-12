@@ -219,8 +219,12 @@ wait_ready() {
     # Three consecutive successes 1s apart: a single success can come from
     # the draining pre-restart process during the handover window, and the
     # smoke battery must not race that gap.
+    # The grep marker follows the branded /reg page: m-mail since the
+    # passwordless rework (v1.29.0). The pre-rework marker `tab-reg` no
+    # longer exists in the page, which made every deploy since 2026-10-12
+    # false-fail here while the service was perfectly healthy.
     local probe REMOTE_TIMEOUT=$((WAIT_SECONDS + 60))
-    probe="ok=0; for i in \$(seq 1 $WAIT_SECONDS); do if curl -sk --resolve $SMOKE_HOST:443:127.0.0.1 https://$SMOKE_HOST/reg 2>/dev/null | grep -a tab-reg >/dev/null; then ok=\$((ok+1)); [ \$ok -ge 3 ] && exit 0; else ok=0; fi; sleep 1; done; exit 1"
+    probe="ok=0; for i in \$(seq 1 $WAIT_SECONDS); do if curl -sk --resolve $SMOKE_HOST:443:127.0.0.1 https://$SMOKE_HOST/reg 2>/dev/null | grep -a m-mail >/dev/null; then ok=\$((ok+1)); [ \$ok -ge 3 ] && exit 0; else ok=0; fi; sleep 1; done; exit 1"
     if ! remote "$probe"; then
         echo "service did not serve the branded /reg stably within ${WAIT_SECONDS}s; check pm2 logs before trusting this deploy" >&2
         exit 67

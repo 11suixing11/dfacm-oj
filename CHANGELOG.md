@@ -5,6 +5,7 @@
 ### Fixed
 
 - **导航菜单「积分商店」点了打不开（10-04 上线以来的老 bug）。** ui-default 渲染 UserDropdown/ControlPanel 注入项时用 `url(item.name)` 按**路由名**解析 href；本插件的注入名写的是 `shop`/`shop_manage`，而路由名是 `swpu_shop`/`swpu_shop_manage`——解析不到时 Hydro 把错误串当 href 返回，登录用户下拉菜单里的链接成了字面量 `Error: No route found for name: shop`（控制面板的「积分商店管理」同病）。修法（badge 插件同款惯例）：injectUI 注入名对齐路由名，i18n 键同步改 `swpu_shop`/`swpu_shop_manage`；deployment.test.mjs 加 wiring 回归锁——每个注入名必须能匹配到一条 `ctx.Route('<同名>', ...)`。
+- **deploy.sh wait_ready 探针误报修复。** 无密码化改版（v1.29.0）把 /reg 页标记 `tab-reg` 换成了 `m-mail`，当时 smoke/ci/footer 四处 wiring 都改了，唯独 deploy.sh 的就绪探针漏改——10-12 起每次部署都在 wait_ready 误报"服务未就绪"（实际服务健康，本次 75s/180s 两次实锤）。修法：探针改 grep `m-mail`；deployment.test.mjs 加双向锁（探针必须 grep m-mail、死标记 tab-reg 必须不存在）。
 
 ## v1.30.0 - 2026-10-13
 
