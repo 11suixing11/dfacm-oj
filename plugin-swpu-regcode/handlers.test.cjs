@@ -91,7 +91,7 @@ class Handler {
         async limitRate(...args) { limits.push(args); }
     }
     class UserAlreadyExistError extends Error {}
-    const state = { sendMailError: null, createError: null, missingAtFinalLogin: false, loginMethods: null };
+    const state = { sendMailError: null, createError: null, missingAtFinalLogin: false, loginMethods: null, nodemailer: null };
     const stub = {
         BlackListModel: { async get() { return null; } },
         db: { collection() { return collection; } },
@@ -103,6 +103,10 @@ class Handler {
         SettingModel: { Setting: (...args) => args, SystemSetting: () => () => {} },
         SystemModel: { get(key) { return settings[key]; } },
         Types: { Email: [], String: [], Password: [], Username: [(v) => v.trim(), (v) => v.trim().length >= 3] },
+        Schema: {
+            object: (shape) => ({ shape }),
+            string: () => ({ default() { return this; } }),
+        },
         UserAlreadyExistError,
         UserModel: {
             _handleMailLower: normalize,
@@ -127,9 +131,15 @@ class Handler {
     const loaded = new Module(pluginPath, module);
     loaded.filename = pluginPath;
     loaded.paths = module.paths;
-    loaded.require = (id) => id === 'hydrooj' ? stub : require(id);
+    loaded.require = (id) => id === 'hydrooj' ? stub
+        : (id === 'nodemailer' && state.nodemailer ? state.nodemailer : require(id));
     loaded._compile(compiled, pluginPath);
-    await loaded.exports.apply({ effect(fn) { fn(); }, Route(name, url, HandlerClass, priv) { routes.set(url, { HandlerClass, priv }); } });
+    const scripts = new Map();
+    await loaded.exports.apply({
+        effect(fn) { fn(); },
+        Route(name, url, HandlerClass, priv) { routes.set(url, { HandlerClass, priv }); },
+        addScript(name, desc, schema, fn) { scripts.set(name, fn); },
+    });
     function handler(url, args = {}) { const h = new (routes.get(url).HandlerClass)(); h.args = args; h.loginMethods = state.loginMethods; return h; }
     // Renders /reg and returns the CSRF token it injected, the way a browser
     // obtains one before posting.
@@ -145,7 +155,7 @@ class Handler {
         await h.post('system', mail, purpose);
         return h;
     }
-    return { collection, users, user, handler, issue, csrf, session, routes, events, audits, mails, limits, joins, settings, state, UserAlreadyExistError };
+    return { collection, users, user, handler, issue, csrf, session, routes, scripts, events, audits, mails, limits, joins, settings, state, UserAlreadyExistError };
 }
 
 test('input alias delivers the login code only to the bound account mailbox', async () => {
@@ -484,4 +494,62 @@ test('registration auto-joins the ranking domains with the default role', async 
         { domainId: 'system', uid: 50, role: 'default', autojoin: true },
         { domainId: 'poj', uid: 50, role: 'default', autojoin: true },
     ]);
+});
+
+test('backup SMTP channel delivers a working code when the primary channel is down', async () => {
+    const f = await fixture(); f.user();
+    f.state.sendMailError = new Error('primary smtp down');
+    f.settings['swpu.regcode.smtp2_host'] = 'smtp.example.com';
+    f.settings['swpu.regcode.smtp2_user'] = 'bot@example.com';
+    f.settings['swpu.regcode.smtp2_pass'] = 'authorization-code';
+    f.settings['swpu.regcode.smtp2_port'] = 465;
+    let delivered = null;
+    f.state.nodemailer = {
+        createTransport(opts) {
+            f.state.transportOpts = opts;
+            return {
+                async sendMail(o) { delivered = o; return { messageId: 'm1' }; },
+            };
+        },
+    };
+    const issued = await f.issue('ab@school.example', 'login');
+    assert.equal(issued.response.body.ok, true);
+    // The primary channel never delivered; the backup carried the branded mail.
+    assert.equal(f.mails.length, 0);
+    assert.equal(delivered.to, 'a.b@school.example');
+    assert.match(delivered.subject, /登录验证码/);
+    assert.match(delivered.html, /ONLINE JUDGE/);
+    assert.match(delivered.html, /final/);
+    assert.equal(f.state.transportOpts.host, 'smtp.example.com');
+    assert.equal(f.state.transportOpts.auth.user, 'bot@example.com');
+    // The delivered code must still verify like a mailed one.
+    const code = delivered.text.match(/\b\d{6}\b/)[0];
+    const login = f.handler('/reg/login', { mail: 'ab@school.example', code });
+    await login.post('system', 'ab@school.example', code, await f.csrf());
+    assert.equal(login.session.uid, 42);
+});
+
+test('swpuIssueCode issues a code without touching the mail channel', async () => {
+    const f = await fixture(); f.user();
+    const reports = [];
+    assert.equal(await f.scripts.get('swpuIssueCode')({ mail: 'ab@school.example' }, (p) => reports.push(p)), true);
+    assert.match(reports[0].message, /purpose=login/);
+    assert.match(reports[0].message, /\b\d{6}\b/);
+    assert.equal(f.mails.length, 0);
+    assert.equal(f.collection.docs.size, 1);
+    // Unregistered address + auto resolves to a registration code.
+    const f2 = await fixture();
+    const reports2 = [];
+    assert.equal(await f2.scripts.get('swpuIssueCode')({ mail: 'new@school.example', purpose: 'auto' }, (p) => reports2.push(p)), true);
+    assert.match(reports2[0].message, /purpose=reg/);
+    // A registered address asking for purpose=reg is rejected with guidance.
+    const f3 = await fixture(); f3.user();
+    const reports3 = [];
+    assert.equal(await f3.scripts.get('swpuIssueCode')({ mail: 'a.b@school.example', purpose: 'reg' }, (p) => reports3.push(p)), false);
+    assert.match(reports3[0].message, /已注册/);
+    // Garbage purpose is refused outright.
+    const f4 = await fixture();
+    const reports4 = [];
+    assert.equal(await f4.scripts.get('swpuIssueCode')({ mail: 'new@school.example', purpose: 'evil' }, (p) => reports4.push(p)), false);
+    assert.equal(f4.collection.docs.size, 0);
 });

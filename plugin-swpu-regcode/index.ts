@@ -3,13 +3,15 @@
  * POST /reg/code       {mail, purpose:reg|login|auto}  发送 6 位验证码（auto=按注册状态自动判 reg 或 login）
  * POST /reg/complete   {mail, code, uname, [password]}  注册并登录（无密码=随机不可用散列）
  * POST /reg/login      {mail, code}     验证码免密登录
+ * 脚本 swpuIssueCode   {mail, purpose}  管理员人工发码兜底（邮件通道故障时经 /manage/script 或 CLI 取码转告）
+ * 发信：系统 smtp.* 为主通道；swpu.regcode.smtp2_* 六键配置备用通道，主通道失败时自动切换
  */
 import fs from 'fs';
 import { randomBytes, timingSafeEqual } from 'crypto';
 import { join } from 'path';
 import {
     BlackListModel, Context, db, DomainModel, Handler, Logger, OplogModel, PERM, post, PRIV,
-    sendMail, SettingModel, SystemModel, Types, UserAlreadyExistError, UserModel,
+    Schema, sendMail, SettingModel, SystemModel, Types, UserAlreadyExistError, UserModel,
 } from 'hydrooj';
 import { loginPolicyFailure } from './auth';
 import { createCodeStore } from './codes';
@@ -149,6 +151,88 @@ function mailHtml(title: string, code: string, note: string) {
 </div>`;
 }
 
+// 发信双通道：先走 Hydro 的 sendMail（系统 smtp.* 主通道）；失败时切换到插件自有的
+// 备用通道（swpu.regcode.smtp2_* 设置键），Gmail 整体故障也不能把学生锁在门外。
+// smtp2_host 留空 = 备用通道停用。
+async function deliverCode(recipient: string, mode: CodePurpose, code: string): Promise<boolean> {
+    const subject = mode === 'reg' ? '【d&f算法网】注册验证码' : '【d&f算法网】登录验证码';
+    const text = mode === 'reg'
+        ? `您的验证码是 ${code}，5 分钟内有效。如非本人操作请忽略本邮件。`
+        : `您的登录验证码是 ${code}，5 分钟内有效。如非本人操作请忽略本邮件并建议修改密码。`;
+    const html = mailHtml(
+        mode === 'reg' ? '你的注册验证码' : '你的登录验证码',
+        code,
+        mode === 'reg'
+            ? '验证码 5 分钟内有效。如非本人操作，请忽略本邮件。'
+            : '验证码 5 分钟内有效。如非本人操作，请忽略本邮件并建议尽快修改密码。',
+    );
+    try {
+        await sendMail(recipient, subject, text, html);
+        return true;
+    } catch (e) {
+        logger.error('primary mail channel failed:', e instanceof Error ? e.message : String(e));
+    }
+    const host = String(SystemModel.get('swpu.regcode.smtp2_host') || '');
+    const user = String(SystemModel.get('swpu.regcode.smtp2_user') || '');
+    const pass = String(SystemModel.get('swpu.regcode.smtp2_pass') || '');
+    if (!host || !user || !pass) return false;
+    try {
+        // nodemailer 位于 yarn global 树（与 hydrooj 同级）；插件目录内的
+        // node_modules/nodemailer 软链由部署清单保证（见 deployment.md）。
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const nodemailer = require('nodemailer');
+        const port = positiveLimit(SystemModel.get('swpu.regcode.smtp2_port'), 465);
+        const secure = String(SystemModel.get('swpu.regcode.smtp2_secure')) !== 'false';
+        const from = String(SystemModel.get('swpu.regcode.smtp2_from') || user);
+        const transport = nodemailer.createTransport({ host, port, secure, auth: { user, pass } });
+        await transport.sendMail({ from, to: recipient, subject, text, html });
+        logger.info('code delivered via backup smtp channel');
+        return true;
+    } catch (e) {
+        logger.error('backup mail channel failed:', e instanceof Error ? e.message : String(e));
+    }
+    return false;
+}
+
+// 邮件通道整体故障时的管理员兜底：经 /manage/script 或
+// `hydrooj cli script swpuIssueCode '{"mail":"..."}'` 直接生成验证码，由管理员
+// 经 QQ/口头转告学生。全程不经过邮件。
+async function issueCodeManually(
+    args: { mail?: string; purpose?: string },
+    report: (payload: Record<string, unknown>) => void,
+): Promise<boolean> {
+    const mail = normalizeMail(String(args?.mail || ''));
+    const raw = String(args?.purpose || 'auto');
+    if (raw !== 'auto' && raw !== 'reg' && raw !== 'login') {
+        report({ message: 'purpose 只支持 auto / reg / login。' });
+        return false;
+    }
+    if (!mail.includes('@')) {
+        report({ message: '邮箱地址不合法。' });
+        return false;
+    }
+    const registered = await UserModel.getByEmail('system', mail);
+    const mode: CodePurpose = raw === 'auto' ? (registered ? 'login' : 'reg')
+        : (raw === 'login' ? 'login' : 'reg');
+    if (mode === 'reg' && registered) {
+        report({ message: `该邮箱已注册（${registered.uname}），请改用 purpose=login 发登录码。` });
+        return false;
+    }
+    if (mode === 'login' && !registered) {
+        report({ message: '该邮箱未注册，请改用 purpose=reg 发注册码。' });
+        return false;
+    }
+    const issued = mode === 'login'
+        ? await codes.prepare(UserModel._handleMailLower(registered!.mail), 'login', registered!._id)
+        : await codes.prepare(mail, 'reg', undefined);
+    if (!await codes.activate(issued)) {
+        report({ message: '发码失败：该邮箱已有更新的验证码，请使用最新一封邮件中的验证码。' });
+        return false;
+    }
+    report({ message: `已发码（purpose=${mode}）：${issued.code}，5 分钟内有效——请经 QQ/口头转告用户，勿在群内公开。` });
+    return true;
+}
+
 class RegPageHandler extends Handler {
     noCheckPermView = true;
     async get() {
@@ -231,19 +315,8 @@ class RegCodeHandler extends Handler {
         const issued = await codes.prepare(mode === 'reg' ? recipient : mailKey, mode,
             mode === 'login' ? registered._id : undefined);
         const { code } = issued;
-        try {
-            if (mode === 'reg') {
-                await sendMail(recipient, '【d&f算法网】注册验证码',
-                    `您的验证码是 ${code}，5 分钟内有效。如非本人操作请忽略本邮件。`,
-                    mailHtml('你的注册验证码', code, '验证码 5 分钟内有效。如非本人操作，请忽略本邮件。'));
-            } else {
-                await sendMail(recipient, '【d&f算法网】登录验证码',
-                    `您的登录验证码是 ${code}，5 分钟内有效。如非本人操作请忽略本邮件并建议修改密码。`,
-                    mailHtml('你的登录验证码', code, '验证码 5 分钟内有效。如非本人操作，请忽略本邮件并建议尽快修改密码。'));
-            }
-        } catch (e) {
+        if (!await deliverCode(recipient, mode, code)) {
             await codes.discard(issued);
-            logger.error('send code failed:', e instanceof Error ? e.message : String(e));
             this.response.body = { ok: false, message: '验证码邮件发送失败，请稍后再试。' };
             return;
         }
@@ -394,11 +467,27 @@ export async function apply(ctx: Context) {
             (value) => localRedirect(value, '') !== ''),
         Setting('setting_swpu_regcode', 'swpu.regcode.login_redirect', DEFAULTS.loginRedirect, 'text',
             '验证码登录成功跳转路径', '仅允许站内路径。', 0, (value) => localRedirect(value, '') !== ''),
+        Setting('setting_swpu_regcode', 'swpu.regcode.smtp2_host', '', 'text',
+            '备用发信 SMTP 主机', '主通道（系统 smtp.*）故障时自动切换；留空停用备用通道。', 0),
+        Setting('setting_swpu_regcode', 'swpu.regcode.smtp2_port', 465, 'number',
+            '备用发信 SMTP 端口', '465=SSL，587=STARTTLS。', 0, isPositive),
+        Setting('setting_swpu_regcode', 'swpu.regcode.smtp2_secure', true, 'boolean',
+            '备用通道是否 SSL', '465 端口必须勾选。', 0),
+        Setting('setting_swpu_regcode', 'swpu.regcode.smtp2_user', '', 'text',
+            '备用发信账号', '完整邮箱地址。', 0),
+        Setting('setting_swpu_regcode', 'swpu.regcode.smtp2_pass', '', 'text',
+            '备用发信密码/授权码', 'QQ 邮箱填授权码（非登录密码）。', 0),
+        Setting('setting_swpu_regcode', 'swpu.regcode.smtp2_from', '', 'text',
+            '备用发件人显示', '如 "d&f算法网" <user@example.com>；留空则用账号地址。', 0),
     ));
     await codes.ensureIndexes();
     ctx.Route('reg_page', '/reg', RegPageHandler);
     ctx.Route('reg_code', '/reg/code', RegCodeHandler);
     ctx.Route('reg_complete', '/reg/complete', RegCompleteHandler, PRIV.PRIV_REGISTER_USER);
     ctx.Route('code_login', '/reg/login', CodeLoginHandler);
+    ctx.addScript('swpuIssueCode', 'd&f算法网：人工发码（邮件通道故障时管理员兜底，码转告用户）', Schema.object({
+        mail: Schema.string(),
+        purpose: Schema.string().default('auto'),
+    }), issueCodeManually);
     logger.info('swpu-regcode routes ready: /reg, /reg/code, /reg/complete, /reg/login');
 }

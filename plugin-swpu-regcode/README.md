@@ -17,6 +17,8 @@ POST /reg/login      {mail, code}      验证码免密登录
 - 单邮箱 **60 秒 1 条**、单 IP 默认 **每小时 200 条**、全站默认 **每小时 500 条**；注册与登录共用发送额度
 - 邮箱域黑名单复用 Hydro `BlackListModel`；已注册邮箱直接提示去登录
 - 建号复用 `UserModel.create`；QQ 邮箱注册自动挂 QQ 头像
+- **发信双通道**：主通道走 Hydro `sendMail`（系统 `smtp.*`）；失败时自动切换到 `swpu.regcode.smtp2_*` 备用通道（`deliverCode`），主备全挂则验证码作废并提示稍后再试
+- **管理员人工发码**：脚本 `swpuIssueCode`（控制面板「脚本管理」或 `hydrooj cli script swpuIssueCode '{"mail":"…"}'`）直接生成验证码供管理员转告，邮件通道整体故障时的兜底；CLI 的脚本表查找有上游时序缺陷（可能误报 `Script not found`），可靠通道是网页面板
 - 登录保留 Hydro 的会话更新、`auth/before-login` / `auth/login` 事件和 `user.loginSuccess` 审计；审计记录不包含验证码或密码
 - 已启用两步验证 / 通行密钥的账号、被禁用账号、关闭 `server.login`、严格比赛模式 IP 绑定都会在发码和登录两步分别检查
 - reg.html 由插件直接读取同目录文件输出，**放在 addon 目录里，UI 重装/升级不影响**
@@ -28,10 +30,12 @@ POST /reg/login      {mail, code}      验证码免密登录
 mkdir -p /root/.hydro/addons/swpu-regcode
 #    把运行文件一起上传：index.ts / auth.ts / codes.ts / config.ts / logic.ts / reg.html / package.json
 
-# 2. 让插件能 require('hydrooj')（按你的 hydrooj 包实际路径调整软链目标）
+# 2. 让插件能 require('hydrooj') 与 nodemailer（备用发信通道用；按你的实际全局包路径调整软链目标）
 mkdir -p /root/.hydro/addons/swpu-regcode/node_modules
 ln -sfn /usr/local/share/.config/yarn/global/node_modules/hydrooj \
         /root/.hydro/addons/swpu-regcode/node_modules/hydrooj
+ln -sfn /usr/local/share/.config/yarn/global/node_modules/nodemailer \
+        /root/.hydro/addons/swpu-regcode/node_modules/nodemailer
 
 # 3. 注册 addon：参考 addon.json.example，编辑 /root/.hydro/addon.json
 
@@ -55,6 +59,12 @@ pm2 restart hydrooj
 | `limit.regcode_verify_account` | `10` | 每邮箱每分钟校验请求上限 |
 | `swpu.regcode.register_redirect` | `/training` | 注册成功跳转；可填写已有训练路线路径 |
 | `swpu.regcode.login_redirect` | `/` | 验证码登录成功跳转 |
+| `swpu.regcode.smtp2_host` | 空 | 备用发信 SMTP 主机；**留空=停用备用通道** |
+| `swpu.regcode.smtp2_port` | `465` | 备用发信端口（465=SSL / 587=STARTTLS） |
+| `swpu.regcode.smtp2_secure` | `true` | 备用通道是否 SSL（465 必须） |
+| `swpu.regcode.smtp2_user` | 空 | 备用发信账号（完整邮箱地址） |
+| `swpu.regcode.smtp2_pass` | 空 | 备用发信授权码 |
+| `swpu.regcode.smtp2_from` | 空 | 备用发件人显示（留空=用账号地址） |
 
 跳转只允许站内路径；限流值必须是 1–100000 的整数。旧版写死的训练路线地址已改为后台配置，升级后请把 `swpu.regcode.register_redirect` 设置为实际路线。
 

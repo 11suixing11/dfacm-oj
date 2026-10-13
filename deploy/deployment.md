@@ -112,11 +112,18 @@ cp /root/swpu-oj/plugin-swpu-regcode/{index.ts,auth.ts,codes.ts,config.ts,logic.
 mkdir -p /root/.hydro/addons/swpu-regcode/node_modules
 ln -sfn /usr/local/share/.config/yarn/global/node_modules/hydrooj \
         /root/.hydro/addons/swpu-regcode/node_modules/hydrooj
+ln -sfn /usr/local/share/.config/yarn/global/node_modules/nodemailer \
+        /root/.hydro/addons/swpu-regcode/node_modules/nodemailer
 # 参考 plugin-swpu-regcode/addon.json.example，把插件路径加入 /root/.hydro/addon.json
 pm2 restart hydrooj
 ```
 
 验证码限流、跳转路径和邮箱冷却都在系统设置里调整，见 [plugin-swpu-regcode/README.md](../plugin-swpu-regcode/README.md)。升级到本版本后旧验证码需要重新获取。
+
+发信有两级兜底：
+
+- **主通道失败自动切换**：系统设置 `swpu.regcode.smtp2_host / smtp2_port / smtp2_secure / smtp2_user / smtp2_pass / smtp2_from` 六键配置备用 SMTP（经控制面板「系统设置」或 per-key 文档写入）。主通道（系统 `smtp.*`，现为 Gmail）投递失败时，验证码邮件自动改走备用通道；`smtp2_host` 留空 = 停用。
+- **邮件整体故障人工发码**：控制面板「脚本管理」运行 `swpuIssueCode`（参数 `mail`，可选 `purpose=reg|login|auto`），直接生成 6 位验证码显示在报告里，管理员经 QQ/口头转告学生；全程不经邮件。CLI 等价 `hydrooj cli script swpuIssueCode '{"mail":"<邮箱>"}'`——注意 CLI 的脚本表查找存在时序缺陷（可能在插件 apply 完成前执行而误报 `Script not found`，实锤于 2026-10-13），**可靠通道是网页面板**。
 
 管理员周报与判题健康摘要可选安装：
 
@@ -212,6 +219,8 @@ mongosh "$(python3 -c "import json;print(json.load(open('/root/.hydro/config.jso
 | `smtp.verify` | 注册是否强制邮箱验证（false = 注册零摩擦） |
 
 注意：Hydro 仅在 `smtp.verify && smtp.user` 同时为真时发验证邮件。
+
+主备切换与故障处置（全站级一键切换脚本、regcode 插件级自动备用通道、人工发码兜底）见 [smtp-switch.md](smtp-switch.md)。
 
 ## 6. 反向代理真实 IP
 
@@ -394,7 +403,7 @@ bash /opt/swpu-oj/scripts/backup-hydro.sh \
 
 ### 异机副本：自动拉取到维护人电脑
 
-服务器 cron（`17 3 * * *`）生成日备后，管理机每天 **09:07** 由 Windows 计划任务 `OJ backup pull` 运行 `C:\Users\yuki\Desktop\oj备份\pull_oj_backup.ps1`：
+服务器 cron 生成日备（`17 3` 与 `37 15` 每日两份，`/root/daily-backup.sh` 保留最近 14 份 zip；RPO 12 小时）后，管理机每天 **09:07** 由 Windows 计划任务 `OJ backup pull` 运行 `C:\Users\yuki\Desktop\oj备份\pull_oj_backup.ps1`：
 
 - 依次尝试 Tailscale（`100.69.19.62`）与公网（`107.151.246.137`），先通者为准；只拉本地缺失的文件（`.part` 中转，断网/中断不留半截文件）。
 - 拉取范围：`/root/backups` 下全部平铺文件（含 `dead-19` / `ybt-remote-609` 等题库归档 JSON），本地 `backup-*.zip` 只保留最近 14 份，一次性归档永不删。
@@ -519,3 +528,31 @@ ssh root@SERVER 'bash /root/culture-seed/hw_seed.sh run'    # 正式执行
 - `deploy/clean-auth-entries.js`（页脚重放脚本）：`frameReady` 判定 `getElementById('m-mail')`——**线上 footer_extra_html 已同步 patch（tab-reg→m-mail），否则登录弹窗 iframe 永远判定未就绪**。
 
 **回滚**：服务器备份 `/root/backups/regcode-pre-passwordless-{index.ts,reg.html}.bak-20261012`；repo 前一版 commit `ac501c6`。
+
+## 24. 站点健康监控与告警（眼睛，2026-10-13）
+
+目标：站点挂了/磁盘满/判题队列积压/心跳失联不再靠"有人发现"，QQ 群机器人成为外部观察者。
+
+### 24.1 服务器心跳（137）
+
+`/root/swpu-heartbeat.sh`（cron `3-59/10 * * * *`，日志 `/root/backups/heartbeat.log`，超 1MB 自截断）：把磁盘 %、可用内存 MB、load1、判题队列深度（`task` 集合计数）写入 Mongo `systatus` 集合 `{_id:'hb', ts, disk, mem, load, pending}`。纯附加动作，读库侧（167 bot）零依赖。
+
+### 24.2 bot 巡检与告警（167）
+
+`plugin-swpu-broadcast`（v2.2.0）在轮询循环内每 10 分钟做一轮健康检查：
+
+- 公网站点探测 `GET https://dfacm.website/reg`（浏览器 UA，三连试；200=正常，5xx/超时=故障，403=CDN 拦截→未知不告警）；
+- 读 137 心跳文档：超 15 分钟未更新 → 心跳失联告警；磁盘 >85%、可用内存 <300MB、判题队列 >20 → 资源告警；
+- Mongo 连接自检（bot 自身数据源）。
+
+**告警策略**：只在状态**转变**时播报（故障→告警、恢复→报恢复），持续故障每小时补发一次提醒；状态与冷却时间存插件 SQLite `meta`（`health_state` / `health_alert_ts`）。全部正常不打扰。
+
+**手动巡检**：群里发 `/oj健康` 即时输出健康快照（站点延迟/心跳年龄/磁盘/内存/负载/队列/告警项）。
+
+### 24.3 邮件通道兜底
+
+见 [smtp-switch.md](smtp-switch.md)：regcode 插件级备用 SMTP 自动切换（`swpu.regcode.smtp2_*` 六键）+ 全站级一键切换脚本（`/root/switch-smtp-qq.sh` / `/root/switch-smtp-gmail.sh`，服务器侧，含凭据）+ `swpuIssueCode` 人工发码（见第 4 节）。
+
+### 24.4 备份频率
+
+每日两备（03:17 / 15:37），保留 14 份（见第 15 节）；RPO 12 小时。

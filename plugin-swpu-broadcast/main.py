@@ -62,6 +62,19 @@ class SwpuAcmBroadcast(star.Star):
     RECORDS_SCHEMA_VERSION = 2
     USER_QQ_MAP: dict[str, str] = {}
     DEFAULT_MERGE_ADMINS: tuple[str, ...] = ("1977717178",)
+    # --- Ops health monitor: the OJ server writes a heartbeat doc into Mongo
+    # (systatus, every 10 minutes via /root/swpu-heartbeat.sh); this side
+    # independently probes the public site and reads the heartbeat, then
+    # alerts the group only on state transitions, with one hourly reminder
+    # while a problem persists. The bot itself is the external pair of eyes.
+    HEALTH_INTERVAL_SECONDS = 600
+    HEARTBEAT_STALE_SECONDS = 900
+    HEALTH_PROBE_PATH = "/reg"
+    HEALTH_HTTP_TIMEOUT_SECONDS = 12
+    DISK_ALERT_PCT = 85
+    MEM_ALERT_MB = 300
+    PENDING_ALERT_COUNT = 20
+    HEALTH_ALERT_REMIND_SECONDS = 3_600
 
     # Hydro STATUS enum -> the display text the web UI shows. The
     # "%Accepted%" LIKE matches downstream rely on status 1 being the exact
@@ -145,6 +158,10 @@ class SwpuAcmBroadcast(star.Star):
         self._hidden_pids_at: datetime | None = None
         self._stale_sweep_at: float = 0.0
         self._poll_count = 0
+        self._health_at: float = 0.0
+        self._health_snap: dict[str, object] = {}
+        self._health_last_states: dict[str, str] = {}
+        self._health_checked_at: datetime | None = None
 
     def _load_state(self) -> dict:
         """Load, migrate, and normalize persisted plugin state.
@@ -1671,6 +1688,147 @@ class SwpuAcmBroadcast(star.Star):
             await self._sync_recent(docs)
         await self._contest_end_reports()
 
+    # ------------------------------------------------------------------
+    # Ops health monitor: external eyes on the OJ.
+    # ------------------------------------------------------------------
+
+    def _hb_read(self) -> dict | None:
+        return self._mongo().systatus.find_one({"_id": "hb"})
+
+    async def _http_probe(self) -> tuple[str, float]:
+        """Probe the public site: up / down / unknown (a Cloudflare challenge
+        answers from the edge, so it proves neither side)."""
+        url = f"{self.BASE_URL}{self.HEALTH_PROBE_PATH}"
+        headers = {
+            "User-Agent": (
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                "(KHTML, like Gecko) Chrome/124.0 Safari/537.36"
+            ),
+        }
+        started = time.time()
+        for attempt in range(3):
+            try:
+                timeout = aiohttp.ClientTimeout(total=self.HEALTH_HTTP_TIMEOUT_SECONDS)
+                async with aiohttp.ClientSession(timeout=timeout, headers=headers) as session:
+                    async with session.get(url) as response:
+                        elapsed = time.time() - started
+                        if response.status == 200:
+                            return "up", elapsed
+                        if response.status >= 500:
+                            return "down", elapsed
+                        return "unknown", elapsed
+            except Exception:
+                if attempt == 2:
+                    return "down", time.time() - started
+                await asyncio.sleep(5)
+        return "down", time.time() - started
+
+    async def _health_snapshot(self) -> dict[str, object]:
+        snap: dict[str, object] = {}
+        snap["http"], snap["http_latency"] = await self._http_probe()
+        hb = None
+        try:
+            hb = await asyncio.wait_for(asyncio.to_thread(self._hb_read), timeout=8)
+        except Exception:
+            hb = None
+        snap["hb"] = hb
+        mongo_state = "ok"
+        try:
+            await asyncio.wait_for(asyncio.to_thread(self._db_ping), timeout=4)
+        except Exception:
+            mongo_state = "down"
+        snap["mongo"] = mongo_state
+        return snap
+
+    def _health_states(self, snap: dict[str, object]) -> dict[str, str]:
+        states: dict[str, str] = {}
+        http = str(snap.get("http"))
+        states["http"] = "up" if http == "up" else ("down" if http == "down" else "unknown")
+        states["mongo"] = str(snap.get("mongo"))
+        hb = snap.get("hb")
+        if not isinstance(hb, dict):
+            states["hb"] = "stale"
+        else:
+            ts = hb.get("ts")
+            if isinstance(ts, datetime):
+                if ts.tzinfo is None:
+                    ts = ts.replace(tzinfo=timezone.utc)
+                age = (datetime.now(timezone.utc) - ts).total_seconds()
+            else:
+                age = float("inf")
+            states["hb"] = "stale" if age > self.HEARTBEAT_STALE_SECONDS else "ok"
+            states["disk"] = "high" if int(hb.get("disk") or 0) > self.DISK_ALERT_PCT else "ok"
+            states["mem"] = "low" if int(hb.get("mem") or 0) < self.MEM_ALERT_MB else "ok"
+            states["pending"] = "high" if int(hb.get("pending") or 0) > self.PENDING_ALERT_COUNT else "ok"
+        return states
+
+    async def _health_tick(self) -> None:
+        snap = await self._health_snapshot()
+        states = self._health_states(snap)
+        try:
+            prev = json.loads(self._db_get_meta("health_state") or "{}")
+        except Exception:
+            prev = {}
+        try:
+            remind = json.loads(self._db_get_meta("health_alert_ts") or "{}")
+        except Exception:
+            remind = {}
+        now_ts = time.time()
+        hb_doc = snap["hb"] if isinstance(snap.get("hb"), dict) else {}
+        problems: list[tuple[str, str]] = []
+        for key, state in states.items():
+            if state in ("ok", "up", "unknown"):
+                continue
+            label = {
+                "http": f"站点 HTTPS 探测失败（无法访问 {self.BASE_URL}）",
+                "mongo": "OJ 数据库不可达（播报暂停中）",
+                "hb": "服务器心跳失联（超过 15 分钟无更新：服务器宕机或定时任务故障）",
+                "disk": f"服务器磁盘使用率 {hb_doc.get('disk')}%（阈值 {self.DISK_ALERT_PCT}%）",
+                "mem": f"服务器可用内存 {hb_doc.get('mem')}MB（阈值 {self.MEM_ALERT_MB}MB）",
+                "pending": f"判题队列积压 {hb_doc.get('pending')} 条（判题机可能停摆）",
+            }.get(key, key)
+            problems.append((key, label))
+        alert_lines: list[str] = []
+        for key, label in problems:
+            if prev.get(key) != states[key]:
+                alert_lines.append(f"⚠️ OJ 告警：{label}")
+                remind[key] = now_ts
+            elif now_ts - float(remind.get(key) or 0) >= self.HEALTH_ALERT_REMIND_SECONDS:
+                alert_lines.append(f"⚠️ OJ 告警（持续中）：{label}")
+                remind[key] = now_ts
+        names = {"http": "站点 HTTPS", "mongo": "OJ 数据库", "hb": "服务器心跳",
+                 "disk": "磁盘使用率", "mem": "可用内存", "pending": "判题队列"}
+        for key, state in states.items():
+            if state in ("ok", "up", "unknown"):
+                if prev.get(key) in ("down", "high", "low", "stale"):
+                    alert_lines.append(f"✅ OJ 恢复：{names.get(key, key)}已恢复正常")
+        if alert_lines:
+            try:
+                await self.context.send_message(
+                    self.GROUP_SESSION, MessageChain().plain("\n".join(alert_lines))
+                )
+            except Exception:
+                self.logger.exception("health alert delivery failed")
+        self._db_set_meta("health_state", json.dumps(states, ensure_ascii=False))
+        self._db_set_meta("health_alert_ts", json.dumps(remind, ensure_ascii=False))
+        self._health_snap = snap
+        self._health_last_states = states
+        self._health_checked_at = datetime.now()
+        if problems or self._poll_count % 6 == 0:
+            self.logger.info("health check: %s", states)
+
+    async def _maybe_health(self) -> None:
+        now = time.time()
+        if now - self._health_at < self.HEALTH_INTERVAL_SECONDS:
+            return
+        self._health_at = now
+        try:
+            await asyncio.wait_for(self._health_tick(), timeout=60)
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            self.logger.exception("health tick failed")
+
     async def _drain_pending_cards(self) -> None:
         """Broadcast queued cards, oldest first.
 
@@ -1813,6 +1971,7 @@ class SwpuAcmBroadcast(star.Star):
         await self._drain_pending_cards()
         t_drain = time.time()
         await self._maybe_stale_sweep()
+        await self._maybe_health()
         t_sweep = time.time()
         self._poll_count += 1
         if new_count or self._poll_count % 20 == 0:
@@ -2592,11 +2751,51 @@ class SwpuAcmBroadcast(star.Star):
             "比赛提交实时播报 · 每日 00:00 自动公布累计榜与昨日榜"
         )
 
+    @filter.command("oj健康")
+    async def health_status(self, event: AstrMessageEvent):
+        """查看 OJ 站点健康快照（站点/心跳/资源/队列）。"""
+        snap = await self._health_snapshot()
+        states = self._health_states(snap)
+        http = str(snap.get("http"))
+        http_text = {
+            "up": f"正常（延迟 {float(snap.get('http_latency') or 0):.2f}s）",
+            "down": "异常（HTTPS 探测失败）",
+        }.get(http, "未知（CDN 拦截或非 2xx，无法判定）")
+        hb = snap.get("hb")
+        if isinstance(hb, dict):
+            ts = hb.get("ts")
+            if isinstance(ts, datetime):
+                if ts.tzinfo is None:
+                    ts = ts.replace(tzinfo=timezone.utc)
+                age = int((datetime.now(timezone.utc) - ts).total_seconds() // 60)
+            else:
+                age = -1
+            hb_text = (
+                f"{age} 分钟前（磁盘 {hb.get('disk')}% · 可用内存 {hb.get('mem')}MB · "
+                f"负载 {int(hb.get('load') or 0) / 100:.2f} · 判题队列 {hb.get('pending')}）"
+            )
+        else:
+            hb_text = "无数据（心跳失联）"
+        bad = [k for k, v in states.items() if v not in ("ok", "up", "unknown")]
+        verdict = (
+            "全部正常 ✅"
+            if not bad
+            else "存在告警项：\n" + "\n".join(f"· {k} → {states[k]}" for k in bad)
+        )
+        yield event.plain_result(
+            "d&f算法网健康快照\n"
+            f"站点 HTTPS：{http_text}\n"
+            f"服务器心跳：{hb_text}\n"
+            f"数据连接：{'正常' if snap.get('mongo') == 'ok' else '异常'}\n"
+            f"告警状态：{verdict}\n"
+            f"巡检节奏：每 {self.HEALTH_INTERVAL_SECONDS // 60} 分钟一次，异常自动播报到本群"
+        )
+
     @filter.command("oj帮助")
     async def plugin_help(self, event: AstrMessageEvent):
         """显示 OJ 相关命令。"""
         yield event.plain_result(
-            "d&f算法网命令\n/oj题目 题号：查询题目\n/oj排名：发送累计 AC 排名\n/今日榜单：查看今天 AC 榜单\n/比赛排名：查看当前比赛实时排名\n/oj状态：查看播报状态\n/绑定 用户名：开始账号绑定\n/绑定确认：验证个人简介中的验证码\n/解绑：解除当前 QQ 绑定\n/我的排名：查询当前排名\n/最近提交：查询最近提交\n/我的做题统计：查询累计统计\n/合并账号 小号 主号：合并同一人的多个 OJ 账号（管理员）\n/解除合并 小号：解除多个 OJ 账号合并（管理员）\n/合并列表：查看账号合并关系（管理员）\n/oj帮助：显示本帮助"
+            "d&f算法网命令\n/oj题目 题号：查询题目\n/oj排名：发送累计 AC 排名\n/今日榜单：查看今天 AC 榜单\n/比赛排名：查看当前比赛实时排名\n/oj状态：查看播报状态\n/oj健康：查看站点健康\n/绑定 用户名：开始账号绑定\n/绑定确认：验证个人简介中的验证码\n/解绑：解除当前 QQ 绑定\n/我的排名：查询当前排名\n/最近提交：查询最近提交\n/我的做题统计：查询累计统计\n/合并账号 小号 主号：合并同一人的多个 OJ 账号（管理员）\n/解除合并 小号：解除多个 OJ 账号合并（管理员）\n/合并列表：查看账号合并关系（管理员）\n/oj帮助：显示本帮助"
         )
 
     @filter.command("指令")
@@ -2617,6 +2816,7 @@ class SwpuAcmBroadcast(star.Star):
             "/今日榜单：查看今天 AC 榜单\n"
             "/比赛排名：查看当前比赛排名\n"
             "/oj状态：查看播报状态\n"
+            "/oj健康：查看站点健康\n"
             "/oj帮助：查看 OJ 帮助"
         )
 
