@@ -1,6 +1,6 @@
 {
-  "name": "swpu-shop",
-  "version": "0.1.0",
+  "name": "dfacm-train",
+  "version": "1.0.0",
   "private": true,
   "main": "index.ts",
   "engines": { "node": ">=22" },

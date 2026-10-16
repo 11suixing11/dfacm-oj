@@ -1,4 +1,4 @@
-/* swpu-shop — 积分商店（d&f算法网定制插件；目录名保留 swpu 以兼容现网）
+/* swpu-shop — 积分商店（d&f算法网定制插件；仓库目录名 dfacm，服务器 addon 目录保留 swpu- 前缀以兼容现网）
  * GET  /shop            商店页：上架徽章列表（游客可看）
  * POST /shop/redeem     {badgeId} 花积分兑换徽章（badge-for-hydrooj 持有链路）
  * GET  /shop/history    我的积分流水（分页 20/页，时间正序累计余额）
@@ -266,7 +266,7 @@ class ShopManageSaveHandler extends Handler {
     }
 }
 
-// record/change 负载形态以 plugin-swpu-ops/live-rp.cjs 的 hook 为准：
+// record/change 负载形态以 plugin-dfacm-ops/live-rp.cjs 的 hook 为准：
 // (rdoc, _set, _push, body)，终态判定 body.key === 'end'，AC 判定 rdoc.status。
 function onRecordChange(rdoc: any, _set: any, _push: any, body: any) {
     if (!body || body.key !== 'end') return;

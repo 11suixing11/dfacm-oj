@@ -50,11 +50,11 @@ test('Caddy keeps both domains and their www entries', () => {
 
 test('each public plugin README starts with the d&f brand', () => {
     const pluginReadmes = [
-        'plugin-swpu-broadcast/README.md',
-        'plugin-swpu-ops/README.md',
-        'plugin-swpu-regcode/README.md',
-        'plugin-swpu-shop/README.md',
-        'plugin-swpu-train/README.md',
+        'plugin-dfacm-broadcast/README.md',
+        'plugin-dfacm-ops/README.md',
+        'plugin-dfacm-regcode/README.md',
+        'plugin-dfacm-shop/README.md',
+        'plugin-dfacm-train/README.md',
     ];
     for (const file of pluginReadmes) {
         assert.match(read(file), /^# d&f算法网/m, `${file} is missing the public brand title`);

@@ -107,38 +107,38 @@ SWPU_THEME_LEGACY=1 bash /root/swpu-oj/deploy/install-theme.sh
 
 ```bash
 mkdir -p /root/.hydro/addons/swpu-regcode
-cp /root/swpu-oj/plugin-swpu-regcode/{index.ts,auth.ts,codes.ts,config.ts,logic.ts,reg.html,package.json} \
+cp /root/swpu-oj/plugin-dfacm-regcode/{index.ts,auth.ts,codes.ts,config.ts,logic.ts,reg.html,package.json} \
    /root/.hydro/addons/swpu-regcode/
 mkdir -p /root/.hydro/addons/swpu-regcode/node_modules
 ln -sfn /usr/local/share/.config/yarn/global/node_modules/hydrooj \
         /root/.hydro/addons/swpu-regcode/node_modules/hydrooj
 ln -sfn /usr/local/share/.config/yarn/global/node_modules/nodemailer \
         /root/.hydro/addons/swpu-regcode/node_modules/nodemailer
-# 参考 plugin-swpu-regcode/addon.json.example，把插件路径加入 /root/.hydro/addon.json
+# 参考 plugin-dfacm-regcode/addon.json.example，把插件路径加入 /root/.hydro/addon.json
 pm2 restart hydrooj
 ```
 
-验证码限流、跳转路径和邮箱冷却都在系统设置里调整，见 [plugin-swpu-regcode/README.md](../plugin-swpu-regcode/README.md)。升级到本版本后旧验证码需要重新获取。
+验证码限流、跳转路径和邮箱冷却都在系统设置里调整，见 [plugin-dfacm-regcode/README.md](../plugin-dfacm-regcode/README.md)。升级到本版本后旧验证码需要重新获取。
 
 发信有两级兜底：
 
-- **主通道失败自动切换**：系统设置 `swpu.regcode.smtp2_host / smtp2_port / smtp2_secure / smtp2_user / smtp2_pass / smtp2_from` 六键配置备用 SMTP（经控制面板「系统设置」或 per-key 文档写入）。主通道（系统 `smtp.*`，现为 Gmail）投递失败时，验证码邮件自动改走备用通道；`smtp2_host` 留空 = 停用。
+- **主通道失败自动切换**：系统设置 `dfacm.regcode.smtp2_host / smtp2_port / smtp2_secure / smtp2_user / smtp2_pass / smtp2_from` 六键配置备用 SMTP（经控制面板「系统设置」或 per-key 文档写入）。主通道（系统 `smtp.*`，现为 Gmail）投递失败时，验证码邮件自动改走备用通道；`smtp2_host` 留空 = 停用。
 - **邮件整体故障人工发码**：控制面板「脚本管理」运行 `swpuIssueCode`（参数 `mail`，可选 `purpose=reg|login|auto`），直接生成 6 位验证码显示在报告里，管理员经 QQ/口头转告学生；全程不经邮件。CLI 等价 `hydrooj cli script swpuIssueCode '{"mail":"<邮箱>"}'`——注意 CLI 的脚本表查找存在时序缺陷（可能在插件 apply 完成前执行而误报 `Script not found`，实锤于 2026-10-13），**可靠通道是网页面板**。
 
 管理员周报与判题健康摘要可选安装：
 
 ```bash
 mkdir -p /root/.hydro/addons/swpu-ops
-cp /root/swpu-oj/plugin-swpu-ops/{index.ts,operations.cjs,report.cjs,live-rp.cjs,rp-sweep.cjs,package.json} \
+cp /root/swpu-oj/plugin-dfacm-ops/{index.ts,operations.cjs,report.cjs,live-rp.cjs,rp-sweep.cjs,package.json} \
    /root/.hydro/addons/swpu-ops/
 mkdir -p /root/.hydro/addons/swpu-ops/node_modules
 ln -sfn /usr/local/share/.config/yarn/global/node_modules/hydrooj \
         /root/.hydro/addons/swpu-ops/node_modules/hydrooj
-# 参考 plugin-swpu-ops/addon.json.example，把插件路径加入 /root/.hydro/addon.json
+# 参考 plugin-dfacm-ops/addon.json.example，把插件路径加入 /root/.hydro/addon.json
 pm2 restart hydrooj
 ```
 
-安装后在“控制面板 → 脚本管理”用 `hydrooj cli script swpuWeeklyReport '{}'` 或后台表单运行，详见 [plugin-swpu-ops/README.md](../plugin-swpu-ops/README.md)。
+安装后在“控制面板 → 脚本管理”用 `hydrooj cli script swpuWeeklyReport '{}'` 或后台表单运行，详见 [plugin-dfacm-ops/README.md](../plugin-dfacm-ops/README.md)。
 
 两个报表脚本只读；同一 addon 默认启用的 RP 钩子会更新排名。它过滤评测过程并串行合并重算，设置 `SWPU_LIVE_RP=0` 后重启可以关闭。
 
@@ -146,29 +146,29 @@ pm2 restart hydrooj
 
 ```bash
 mkdir -p /root/.hydro/addons/swpu-train
-cp /root/swpu-oj/plugin-swpu-train/{index.ts,mistakes.cjs,workbench.cjs,workbench.html,mistakes.html,package.json} \
+cp /root/swpu-oj/plugin-dfacm-train/{index.ts,mistakes.cjs,workbench.cjs,workbench.html,mistakes.html,package.json} \
    /root/.hydro/addons/swpu-train/
 mkdir -p /root/.hydro/addons/swpu-train/node_modules
 ln -sfn /usr/local/share/.config/yarn/global/node_modules/hydrooj \
         /root/.hydro/addons/swpu-train/node_modules/hydrooj
-# 参考 plugin-swpu-train/addon.json.example，把插件路径加入 /root/.hydro/addon.json
+# 参考 plugin-dfacm-train/addon.json.example，把插件路径加入 /root/.hydro/addon.json
 pm2 restart hydrooj
 ```
 
-安装后 `/workbench` 与 `/mistakes` 出现在登录用户导航中。另有无界面的 JSON 端点 `GET /workbench/recent`（最近使用的训练集，落地页首页卡片数据源，每用户 30 次/分钟）。错题收集只在 pm2 instance 0 运行；设置 `SWPU_TRAIN_MISTAKES=0` 并重启可关闭收集（页面仍可用）。数据口径与限制见 [plugin-swpu-train/README.md](../plugin-swpu-train/README.md)。
+安装后 `/workbench` 与 `/mistakes` 出现在登录用户导航中。另有无界面的 JSON 端点 `GET /workbench/recent`（最近使用的训练集，落地页首页卡片数据源，每用户 30 次/分钟）。错题收集只在 pm2 instance 0 运行；设置 `SWPU_TRAIN_MISTAKES=0` 并重启可关闭收集（页面仍可用）。数据口径与限制见 [plugin-dfacm-train/README.md](../plugin-dfacm-train/README.md)。
 
 积分商店可选安装（做题赚积分、花积分兑徽章，徽章能力由服务器已装的 badge-for-hydrooj 提供）：
 
 ```bash
 mkdir -p /root/.hydro/addons/swpu-shop/templates
-cp /root/swpu-oj/plugin-swpu-shop/{index.ts,points.ts,package.json} \
+cp /root/swpu-oj/plugin-dfacm-shop/{index.ts,points.ts,package.json} \
    /root/.hydro/addons/swpu-shop/
-cp /root/swpu-oj/plugin-swpu-shop/{templates/shop.html,templates/history.html,templates/manage.html} \
+cp /root/swpu-oj/plugin-dfacm-shop/{templates/shop.html,templates/history.html,templates/manage.html} \
    /root/.hydro/addons/swpu-shop/templates/
 mkdir -p /root/.hydro/addons/swpu-shop/node_modules
 ln -sfn /usr/local/share/.config/yarn/global/node_modules/hydrooj \
         /root/.hydro/addons/swpu-shop/node_modules/hydrooj
-# 参考 plugin-swpu-shop/addon.json.example，把插件路径加入 /root/.hydro/addon.json
+# 参考 plugin-dfacm-shop/addon.json.example，把插件路径加入 /root/.hydro/addon.json
 pm2 restart hydrooj
 ```
 
@@ -262,7 +262,7 @@ curl -sSI https://<域名>/ | grep -Ei 'strict-transport|x-content-type|referrer
 
 ## 8. 字体与图标
 
-- 展示字体子集化：`python scripts/subset_fonts.py <zcool.ttf> <jbmono.ttf> landing`（需 fonttools + brotli）。脚本会同时读取 `landing/index.html` 和 `plugin-swpu-regcode/reg.html`，产出约 100KB 的 woff2。
+- 展示字体子集化：`python scripts/subset_fonts.py <zcool.ttf> <jbmono.ttf> landing`（需 fonttools + brotli）。脚本会同时读取 `landing/index.html` 和 `plugin-dfacm-regcode/reg.html`，产出约 100KB 的 woff2。
 - 注意 `swpu-mono.woff2` 同时是 OJ 全站 code/pre 字体（`theme/00-brand.css`），子集已覆盖题面代码常用符号（箭头/数学运算符/制表框线等）；需要扩充时改 `subset_fonts.py` 里的 `unicodes` 重新生成并上传即可，无需改 CSS。
 - 图标全套由 Pillow 渲染（4x 超采样）：favicon 96px、logo 192px、apple-touch 180px、android-chrome 192px。
 
@@ -539,7 +539,7 @@ ssh root@SERVER 'bash /root/culture-seed/hw_seed.sh run'    # 正式执行
 
 ### 24.2 bot 巡检与告警（167）
 
-`plugin-swpu-broadcast`（v2.2.0）在轮询循环内每 10 分钟做一轮健康检查：
+`plugin-dfacm-broadcast`（v2.2.0）在轮询循环内每 10 分钟做一轮健康检查：
 
 - 公网站点探测 `GET https://dfacm.website/reg`（浏览器 UA，三连试；200=正常，5xx/超时=故障，403=CDN 拦截→未知不告警）；
 - 读 137 心跳文档：超 15 分钟未更新 → 心跳失联告警；磁盘 >85%、可用内存 <300MB、判题队列 >20 → 资源告警；
@@ -551,7 +551,7 @@ ssh root@SERVER 'bash /root/culture-seed/hw_seed.sh run'    # 正式执行
 
 ### 24.3 邮件通道兜底
 
-见 [smtp-switch.md](smtp-switch.md)：regcode 插件级备用 SMTP 自动切换（`swpu.regcode.smtp2_*` 六键）+ 全站级一键切换脚本（`/root/switch-smtp-qq.sh` / `/root/switch-smtp-gmail.sh`，服务器侧，含凭据）+ `swpuIssueCode` 人工发码（见第 4 节）。
+见 [smtp-switch.md](smtp-switch.md)：regcode 插件级备用 SMTP 自动切换（`dfacm.regcode.smtp2_*` 六键）+ 全站级一键切换脚本（`/root/switch-smtp-qq.sh` / `/root/switch-smtp-gmail.sh`，服务器侧，含凭据）+ `swpuIssueCode` 人工发码（见第 4 节）。
 
 ### 24.4 备份频率
 

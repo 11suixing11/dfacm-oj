@@ -103,7 +103,7 @@ swpu-rank-deploy / swpu-theme-deploy。
 
 | 路径 | 动作 | 说明 |
 |---|---|---|
-| `zcode-shop-spec.md` | ✅ 已拷入 `plugin-swpu-shop/SPEC.md` | shop 插件实现规格（事实快照为 2026-10-04：当时域名/uid/题数与今天不同，仅作历史规格存档）；原件可删 |
+| `zcode-shop-spec.md` | ✅ 已拷入 `plugin-dfacm-shop/SPEC.md` | shop 插件实现规格（事实快照为 2026-10-04：当时域名/uid/题数与今天不同，仅作历史规格存档）；原件可删 |
 
 ---
 

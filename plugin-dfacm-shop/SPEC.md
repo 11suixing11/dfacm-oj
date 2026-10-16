@@ -1,12 +1,12 @@
-# plugin-swpu-shop 实现规格书（SWPU OJ 积分商店）
+# plugin-dfacm-shop 实现规格书（SWPU OJ 积分商店）
 
 > 本文档是给实现者的完整规格。你无法访问线上服务器，所有服务器侧事实已内嵌在本文档第 4 节，以其为准，不要凭空猜测 Hydro API。
 
 ## 1. 背景与目标
 
-SWPU OJ（Hydro v5.0.7，线上 https://swpuacm.xyz，本仓库是站点定制层开源仓库 github.com/11suixing11/swpu-oj）已有徽章功能（第三方插件 badge-for-hydrooj，装在服务器，仓库里没有它的源码）。产品决策已定：把徽章做成**积分兑换机制**。
+SWPU OJ（Hydro v5.0.7，线上 https://swpuacm.xyz，本仓库是站点定制层开源仓库 github.com/11suixing11/dfacm-oj）已有徽章功能（第三方插件 badge-for-hydrooj，装在服务器，仓库里没有它的源码）。产品决策已定：把徽章做成**积分兑换机制**。
 
-要实现的 `plugin-swpu-shop`（仓库第 4 个自研插件，前三个：plugin-swpu-regcode / plugin-swpu-train / plugin-swpu-ops）：
+要实现的 `plugin-dfacm-shop`（仓库第 4 个自研插件，前三个：plugin-dfacm-regcode / plugin-dfacm-train / plugin-dfacm-ops）：
 
 1. **做题赚积分**：用户每道题**首次 AC**（Accepted）按题目难度入账 1~10 积分。难度来源与站内 Hydro RP 系统同源（详见 4.4 节难度算法）。
 2. **花积分兑徽章**：管理员给徽章定价并上架，用户积分余额足够即可兑换，兑换即获得该徽章的持有权（复用 badge-for-hydrooj 的持有/佩戴/展示全链路，我们**只调用它的模型，绝不 fork**）。
@@ -18,13 +18,13 @@ SWPU OJ（Hydro v5.0.7，线上 https://swpuacm.xyz，本仓库是站点定制�
 2. **不引入任何 npm 运行时依赖**。线上曾有 yarn global 依赖树污染（bson 版本冲突）导致全站 500 的事故。插件源码只允许 `import ... from 'hydrooj'` 和 Node 内置模块；测试只用 `node:test` 内置框架。`package.json` 的 devDependencies 允许且只允许 `hydrooj`（版本写法对齐现有插件）。**不要**生成 package-lock.json，除非现有插件有此惯例（检查 regcode 是否有 lock 及 CI 怎么用它——regcode 有 lock 是历史遗留，新插件不需要）。
 3. **不改动既有插件/主题/落地页/部署脚本的既有行为**。集成分只做增量：`deploy/deployment.md` 加段落、`deploy/smoke.sh` 加检查项、`.github/workflows/ci.yml` 加测试行、`deployment.test.mjs` 加 wiring 断言、`addon.json.example`（如存在，找一下实际文件名）加注册行、`CHANGELOG.md` 加条目、`README.md` 插件清单加一行（若 README 有此清单）。
 4. **不要 `git push`**。完成后做本地 commit（conventional commit 风格，参考 `git log`），由人审查后推送。
-5. 代码风格对齐 `plugin-swpu-regcode/index.ts`（TypeScript + Hydro 装饰器路由）；模板 Nunjucks，对齐 regcode/train 页面结构（`{% extends "layout/basic.html" %}` + `.section` / `.data-table` / `.rounded primary button` 等现有类）；测试风格对齐 `plugin-swpu-regcode/handlers.test.cjs`（node:test + stub db，避免真实 Mongo）。
+5. 代码风格对齐 `plugin-dfacm-regcode/index.ts`（TypeScript + Hydro 装饰器路由）；模板 Nunjucks，对齐 regcode/train 页面结构（`{% extends "layout/basic.html" %}` + `.section` / `.data-table` / `.rounded primary button` 等现有类）；测试风格对齐 `plugin-dfacm-regcode/handlers.test.cjs`（node:test + stub db，避免真实 Mongo）。
 
 ## 3. 必读参考文件（动工前读完，再开始写代码）
 
-- `plugin-swpu-regcode/` 全部源文件——Handler/路由/@param/i18n/模板/测试 stub 模式
-- `plugin-swpu-train/`——数据接口拆分（index.ts + 独立 cjs）、mongosh 部署辅助脚本、测试
-- `plugin-swpu-ops/index.ts` 与 `plugin-swpu-ops/live-rp.cjs`——`ctx.on('record/change', ...)` 事件钩子的**确切负载签名**（以 live-rp.cjs 中 hook 的实际用法为准）、pm2 instance-0 守卫、`ctx.addScript(...)` 注册后台脚本的模式、`ctx.on('dispose', ...)` 清理
+- `plugin-dfacm-regcode/` 全部源文件——Handler/路由/@param/i18n/模板/测试 stub 模式
+- `plugin-dfacm-train/`——数据接口拆分（index.ts + 独立 cjs）、mongosh 部署辅助脚本、测试
+- `plugin-dfacm-ops/index.ts` 与 `plugin-dfacm-ops/live-rp.cjs`——`ctx.on('record/change', ...)` 事件钩子的**确切负载签名**（以 live-rp.cjs 中 hook 的实际用法为准）、pm2 instance-0 守卫、`ctx.addScript(...)` 注册后台脚本的模式、`ctx.on('dispose', ...)` 清理
 - `deploy/deployment.md`、`deploy/deploy.sh`、`deploy/smoke.sh`——部署清单 cp 块格式（**deploy.sh 会解析 deployment.md 的 cp 块来同步文件**，写错格式会破坏部署）、smoke 检查项格式
 - `.github/workflows/ci.yml`、`deployment.test.mjs`——wiring 断言写法（测试会 grep 文件内容锁定集成）
 - `CHANGELOG.md`——版本条目格式（当前最新版本号以文件为准，新增条目顺延）
@@ -36,7 +36,7 @@ SWPU OJ（Hydro v5.0.7，线上 https://swpuacm.xyz，本仓库是站点定制�
 - Hydro v5.0.7，UI 包 ui-default 4.58.5，服务监听 127.0.0.1:8888，由 Caddy 反代 https://swpuacm.xyz
 - 域：`system`（本地题 4298 道）与 `poj`（vjudge 远程判题 3031 道）。积分对**全部域**生效（POJ 远程 AC 也是真实做题）
 - 用户 uid：0=Guest，1=Hydro（系统），2=kitty（超管），3=judge（priv=-1 root），4=core
-- 前缀约定：本插件所有新集合名以 `swpu` 开头，避免与 Hydro/第三方插件冲突
+- 前缀约定：本插件所有新集合名以 `swpu` 开头（现网沿用此前缀，未随仓库改名），避免与 Hydro/第三方插件冲突
 
 ### 4.2 badge-for-hydrooj 模型（global.Hydro.model，直接调用）
 
@@ -61,7 +61,7 @@ Mongo 集合（Hydro 默认库内）：
 ### 4.3 record（评测记录）与判题事件
 
 - record 文档关键字段：`{ domainId: string, docId: number, uid: number, status: number, score: number, ... }`，**status === 1 表示 Accepted**（Hydro STATUS.STATUS_ACCEPTED = 1）
-- 判题落库后触发的事件：`ctx.on('record/change', hook)`。**hook 收到的负载形态以 plugin-swpu-ops/live-rp.cjs 中 hook 函数的实际实现为准**（它从负载里取了 domainId 并判断终态），照抄其取值方式，不要自己发明字段名
+- 判题落库后触发的事件：`ctx.on('record/change', hook)`。**hook 收到的负载形态以 plugin-dfacm-ops/live-rp.cjs 中 hook 函数的实际实现为准**（它从负载里取了 domainId 并判断终态），照抄其取值方式，不要自己发明字段名
 - 防重入守卫（多 pm2 实例时只跑一份）：`if (!process.env.NODE_APP_INSTANCE || process.env.NODE_APP_INSTANCE === '0')`，照抄 swpu-ops
 - 题目 document 字段：`{ domainId, docId, docType: 10, title, difficulty: number|null, hidden: boolean, nSubmit: number, nAccept: number, owner: number(uid) }`。**线上 7329 题的 difficulty 全部为空**，难度靠 4.4 节算法从 nSubmit/nAccept 推导；nSubmit/nAccept 数据有效
 
@@ -201,7 +201,7 @@ redeem(ctx, uid, badgeId):
 
 ### 5.6 测试（node:test，全 stub，不起真 Mongo）
 
-至少覆盖（文件名对齐仓库惯例，如 `plugin-swpu-shop/points.test.cjs`）：
+至少覆盖（文件名对齐仓库惯例，如 `plugin-dfacm-shop/points.test.cjs`）：
 1. 难度算法移植正确性：nSubmit=0 → difficulty 链 fallback 到 5；正常 nSubmit/nAccept 产出 1~10；difficulty 显式存在时优先
 2. awardSolve 幂等：同一 (uid, domainId, docId) 第二次 insert 撞唯一索引 → 返回"已入账"且不抛错
 3. awardSolve 排除：hidden 题、owner===uid、uid<=1 不入账
@@ -218,12 +218,12 @@ redeem(ctx, uid, badgeId):
 - `deployment.test.mjs`：5.6 节第 7 条的 wiring 断言
 - `addon.json.example`（或实际文件名）：加 swpu-shop 路径行
 - `CHANGELOG.md`：新版本条目（版本号顺延现有最新，内容用一句话+要点列表描述积分商店）
-- `README.md`：插件清单加 plugin-swpu-shop 一行（若有清单段落；没有就建一个简短的功能清单段落）
+- `README.md`：插件清单加 plugin-dfacm-shop 一行（若有清单段落；没有就建一个简短的功能清单段落）
 
 ## 6. 预期产出文件清单
 
 ```
-plugin-swpu-shop/
+plugin-dfacm-shop/
   index.ts        路由/Handler/i18n/UI注入/事件钩子/addScript
   points.ts       纯逻辑层：difficultyAlgorithm 移植、awardSolve、redeem、余额、流水查询（便于单测注入 stub db）
   templates/shop.html

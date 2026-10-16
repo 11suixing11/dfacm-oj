@@ -17,7 +17,7 @@ export function localRedirect(value: unknown, fallback: string) {
     if (typeof value !== 'string' || !value.startsWith('/') || value.startsWith('//')
         || /[\\\s\u0000-\u001f\u007f]/.test(value)) return fallback;
     try {
-        if (new URL(value, 'https://swpu.invalid').origin !== 'https://swpu.invalid') return fallback;
+        if (new URL(value, 'https://dfacm.invalid').origin !== 'https://dfacm.invalid') return fallback;
     } catch {
         return fallback;
     }

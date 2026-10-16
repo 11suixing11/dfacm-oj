@@ -40,10 +40,10 @@ jobs:
         run: |
           test -f landing/index.html
           test ! -f landing/reg.html
-          test -f plugin-swpu-regcode/reg.html
-          grep -q 'action="/login"' plugin-swpu-regcode/reg.html
-          grep -q 'pane-pwd' plugin-swpu-regcode/reg.html
-          grep -q 'tab=pwd' plugin-swpu-regcode/reg.html
+          test -f plugin-dfacm-regcode/reg.html
+          grep -q 'action="/login"' plugin-dfacm-regcode/reg.html
+          grep -q 'pane-pwd' plugin-dfacm-regcode/reg.html
+          grep -q 'tab=pwd' plugin-dfacm-regcode/reg.html
           grep -q "/reg?tab=pwd" landing/index.html
           test -f theme/00-brand.css
           test ! -f theme/00-native-dark-brand.css
@@ -89,12 +89,12 @@ jobs:
       - name: Reject reintroduced injection sinks
         run: |
           # Provider/username data must never be concatenated into markup.
-          if grep -nE "innerHTML\s*=\s*(p\.|providers|name)" plugin-swpu-regcode/reg.html landing/index.html; then
+          if grep -nE "innerHTML\s*=\s*(p\.|providers|name)" plugin-dfacm-regcode/reg.html landing/index.html; then
             echo "operator- or user-supplied data reached an innerHTML assignment"
             exit 1
           fi
           # A string replacement expands $&, $\`, $' and $$ in the replacement.
-          if grep -n "replace(BOOT_MARK, boot" plugin-swpu-regcode/index.ts; then
+          if grep -n "replace(BOOT_MARK, boot" plugin-dfacm-regcode/index.ts; then
             echo "the /reg boot payload must use a function replacer, not a string"
             exit 1
           fi
@@ -140,9 +140,9 @@ jobs:
           node - <<'EOF'
           const fs = require('fs');
           const specs = [
-            ['plugin-swpu-regcode/index.ts', 2],
-            ['plugin-swpu-shop/index.ts', 2],
-            ['plugin-swpu-train/index.ts', 3],
+            ['plugin-dfacm-regcode/index.ts', 2],
+            ['plugin-dfacm-shop/index.ts', 2],
+            ['plugin-dfacm-train/index.ts', 3],
           ];
           let bad = 0;
           for (const [file, expected] of specs) {
@@ -154,13 +154,13 @@ jobs:
               bad++;
             }
           }
-          for (const client of ['plugin-swpu-regcode/reg.html', 'plugin-swpu-train/mistakes.html']) {
+          for (const client of ['plugin-dfacm-regcode/reg.html', 'plugin-dfacm-train/mistakes.html']) {
             if (!/body\.set\('csrf'/.test(fs.readFileSync(client, 'utf8'))) {
               console.error(`${client} does not send the csrf token`);
               bad++;
             }
           }
-          for (const tpl of ['plugin-swpu-shop/templates/shop.html', 'plugin-swpu-shop/templates/manage.html']) {
+          for (const tpl of ['plugin-dfacm-shop/templates/shop.html', 'plugin-dfacm-shop/templates/manage.html']) {
             if (!/name="csrf"/.test(fs.readFileSync(tpl, 'utf8'))) {
               console.error(`${tpl} has no csrf hidden field`);
               bad++;
@@ -203,23 +203,23 @@ jobs:
         with:
           node-version: 22
       - name: Install regcode test dependencies
-        working-directory: plugin-swpu-regcode
+        working-directory: plugin-dfacm-regcode
         run: npm ci --no-audit --no-fund
       - name: Run regcode tests
-        working-directory: plugin-swpu-regcode
+        working-directory: plugin-dfacm-regcode
         run: npm test
       - name: Install train test dependencies
-        working-directory: plugin-swpu-train
+        working-directory: plugin-dfacm-train
         run: npm ci --no-audit --no-fund
       - name: Run train plugin tests
-        working-directory: plugin-swpu-train
+        working-directory: plugin-dfacm-train
         run: npm test
       - name: Run ops plugin tests
-        run: node --test plugin-swpu-ops/tests/*.test.cjs
+        run: node --test plugin-dfacm-ops/tests/*.test.cjs
       - name: Install shop test dependencies
-        working-directory: plugin-swpu-shop
+        working-directory: plugin-dfacm-shop
         run: npm ci --no-audit --no-fund
       - name: Run shop plugin tests
-        run: node --test plugin-swpu-shop/tests/*.test.cjs
+        run: node --test plugin-dfacm-shop/tests/*.test.cjs
       - name: Run deployment script tests
         run: node --test scripts/deployment.test.mjs scripts/landing.test.cjs scripts/repository.test.cjs

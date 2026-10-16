@@ -19,7 +19,7 @@ Hydro **5.0.7** 的小型 addon。把徽章产品化为积分兑换机制：每�
 - `swpuPointsLedger`（积分流水，追加式）：`{ uid, delta(正=入账/负=扣减), kind: 'solve'|'redeem'|'admin'|'backfill', ref(幂等键), detail, ts }`。唯一索引 `{uid, ref}` 是防刷与防双花的根基：solve 用 `solve:{domainId}:{docId}`（同一人同一题只入账一次），redeem 用 `redeem:{badgeId}`（同一人对同一徽章只能扣一次分）；insert 撞重复键静默吸收。查询索引 `{uid, ts: -1}`。
 - `swpuBadgePrice`（定价表，`_id` 即 badgeId）：`{ price, enabled, updatedAt }`。
 - 余额 = `sum(delta)` 实时聚合（用户量小不做缓存，将来可加缓存集合）。
-- 集合名以 `swpu` 前缀隔离，不触碰 Hydro/第三方插件的集合（读 `userBadge` 只查不改）。
+- 集合名以 `swpu` 前缀隔离（现网集合名，未随仓库改名，避免迁移存量数据），不触碰 Hydro/第三方插件的集合（读 `userBadge` 只查不改）。
 
 并发说明：单实例 pm2 + redeem 唯一键后，双花只剩"两请求同时过余额检查"的窄窗口，v1 接受（用户量级极小），未来可升级 Mongo transaction。
 

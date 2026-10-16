@@ -6,7 +6,7 @@
 
 - 先阅读 `README.md` 与 `deploy/deployment.md`，了解插件边界和部署约束。
 - 不要提交 SMTP、MongoDB、服务器、QQ 机器人或 OAuth 凭据。
-- 不要为了改公开品牌而重命名 `plugin-swpu-*`、`SWPU_*` 环境变量、Mongo 集合或服务器部署路径；这些是现网兼容标识。
+- 不要为了改公开品牌而重命名 `plugin-dfacm-*`、`SWPU_*` 环境变量、Mongo 集合或服务器部署路径；这些是现网兼容标识。
 - 面向用户的文字、页面标题和截图请使用 **d&f算法网**，主域名使用 `dfacm.website`；`swpuacm.xyz` 只作为兼容入口。
 
 ## 验证
@@ -15,12 +15,12 @@
 
 ```bash
 node --test scripts/deployment.test.mjs scripts/landing.test.cjs
-node --test plugin-swpu-ops/tests/*.test.cjs
-node --test plugin-swpu-shop/tests/*.test.cjs
-node --test plugin-swpu-train/tests/*.test.cjs
+node --test plugin-dfacm-ops/tests/*.test.cjs
+node --test plugin-dfacm-shop/tests/*.test.cjs
+node --test plugin-dfacm-train/tests/*.test.cjs
 ```
 
-认证插件的完整测试需要在 `plugin-swpu-regcode/` 中执行 `npm ci` 后运行 `npm test`。
+认证插件的完整测试需要在 `plugin-dfacm-regcode/` 中执行 `npm ci` 后运行 `npm test`。
 
 ## Pull Request
 

@@ -1,5 +1,5 @@
 {
-  "name": "swpu-regcode",
+  "name": "dfacm-regcode",
   "version": "1.2.0",
   "main": "index.ts",
   "private": true,

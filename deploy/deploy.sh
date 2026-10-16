@@ -102,15 +102,20 @@ doc_files() {
 
 # Prints "<local repo path><TAB><remote absolute path>" for every shipped file.
 stage_manifest() {
-    local addon files f
-    for addon in plugin-swpu-regcode plugin-swpu-ops plugin-swpu-train plugin-swpu-shop; do
+    # The live server keeps its addon directories under the historical
+    # swpu-* names (that is what /root/.hydro/addons/addon.json registers);
+    # only the repository-side directories were renamed to plugin-dfacm-*.
+    # Map each repo addon back onto its swpu-* install target explicitly.
+    local addon remote_addon files f
+    for addon in plugin-dfacm-regcode plugin-dfacm-ops plugin-dfacm-train plugin-dfacm-shop; do
+        remote_addon="swpu-${addon#plugin-dfacm-}"
         files="$(doc_files "$addon")"
         if [ -z "$files" ]; then
             echo "deployment.md has no cp block for $addon" >&2
             return 66
         fi
         for f in $files; do
-            printf '%s\t%s/%s\n' "$addon/$f" "$REMOTE_ADDONS/${addon#plugin-}" "$f"
+            printf '%s\t%s/%s\n' "$addon/$f" "$REMOTE_ADDONS/$remote_addon" "$f"
         done
     done
     # The whole landing tree, not just index.html: the two subsetted woff2

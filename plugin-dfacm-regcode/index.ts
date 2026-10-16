@@ -1,10 +1,10 @@
-/* swpu-regcode — 无密码验证码单流登录（d&f算法网定制插件；目录名保留 swpu 以兼容现网）
+/* swpu-regcode — 无密码验证码单流登录（d&f算法网定制插件；仓库目录名 dfacm，服务器 addon 目录保留 swpu- 前缀以兼容现网）
  * GET  /reg            登录/注册单页（读取同目录 reg.html；学生=验证码流，管理员可 ?tab=pwd 进密码面板）
  * POST /reg/code       {mail, purpose:reg|login|auto}  发送 6 位验证码（auto=按注册状态自动判 reg 或 login）
  * POST /reg/complete   {mail, code, uname, [password]}  注册并登录（无密码=随机不可用散列）
  * POST /reg/login      {mail, code}     验证码免密登录
  * 脚本 swpuIssueCode   {mail, purpose}  管理员人工发码兜底（邮件通道故障时经 /manage/script 或 CLI 取码转告）
- * 发信：系统 smtp.* 为主通道；swpu.regcode.smtp2_* 六键配置备用通道，主通道失败时自动切换
+ * 发信：系统 smtp.* 为主通道；dfacm.regcode.smtp2_* 六键配置备用通道，主通道失败时自动切换
  */
 import fs from 'fs';
 import { randomBytes, timingSafeEqual } from 'crypto';
@@ -152,7 +152,7 @@ function mailHtml(title: string, code: string, note: string) {
 }
 
 // 发信双通道：先走 Hydro 的 sendMail（系统 smtp.* 主通道）；失败时切换到插件自有的
-// 备用通道（swpu.regcode.smtp2_* 设置键），Gmail 整体故障也不能把学生锁在门外。
+// 备用通道（dfacm.regcode.smtp2_* 设置键），Gmail 整体故障也不能把学生锁在门外。
 // smtp2_host 留空 = 备用通道停用。
 async function deliverCode(recipient: string, mode: CodePurpose, code: string): Promise<boolean> {
     const subject = mode === 'reg' ? '【d&f算法网】注册验证码' : '【d&f算法网】登录验证码';
@@ -172,18 +172,18 @@ async function deliverCode(recipient: string, mode: CodePurpose, code: string): 
     } catch (e) {
         logger.error('primary mail channel failed:', e instanceof Error ? e.message : String(e));
     }
-    const host = String(SystemModel.get('swpu.regcode.smtp2_host') || '');
-    const user = String(SystemModel.get('swpu.regcode.smtp2_user') || '');
-    const pass = String(SystemModel.get('swpu.regcode.smtp2_pass') || '');
+    const host = String(SystemModel.get('dfacm.regcode.smtp2_host') || '');
+    const user = String(SystemModel.get('dfacm.regcode.smtp2_user') || '');
+    const pass = String(SystemModel.get('dfacm.regcode.smtp2_pass') || '');
     if (!host || !user || !pass) return false;
     try {
         // nodemailer 位于 yarn global 树（与 hydrooj 同级）；插件目录内的
         // node_modules/nodemailer 软链由部署清单保证（见 deployment.md）。
         // eslint-disable-next-line @typescript-eslint/no-var-requires
         const nodemailer = require('nodemailer');
-        const port = positiveLimit(SystemModel.get('swpu.regcode.smtp2_port'), 465);
-        const secure = String(SystemModel.get('swpu.regcode.smtp2_secure')) !== 'false';
-        const from = String(SystemModel.get('swpu.regcode.smtp2_from') || user);
+        const port = positiveLimit(SystemModel.get('dfacm.regcode.smtp2_port'), 465);
+        const secure = String(SystemModel.get('dfacm.regcode.smtp2_secure')) !== 'false';
+        const from = String(SystemModel.get('dfacm.regcode.smtp2_from') || user);
         const transport = nodemailer.createTransport({ host, port, secure, auth: { user, pass } });
         await transport.sendMail({ from, to: recipient, subject, text, html });
         logger.info('code delivered via backup smtp channel');
@@ -417,7 +417,7 @@ class RegCompleteHandler extends Handler {
             return;
         }
         this.response.body = { ok: true, redirect: localRedirect(
-            SystemModel.get('swpu.regcode.register_redirect'), DEFAULTS.registerRedirect,
+            SystemModel.get('dfacm.regcode.register_redirect'), DEFAULTS.registerRedirect,
         ) };
     }
 }
@@ -443,7 +443,7 @@ class CodeLoginHandler extends Handler {
         if (!checked.ok) { fail(this, codeMessages[checked.reason]); return; }
         if (!await loginAs(this, domainId, udoc._id)) return;
         this.response.body = { ok: true, redirect: localRedirect(
-            SystemModel.get('swpu.regcode.login_redirect'), DEFAULTS.loginRedirect,
+            SystemModel.get('dfacm.regcode.login_redirect'), DEFAULTS.loginRedirect,
         ) };
     }
 }
@@ -462,22 +462,22 @@ export async function apply(ctx: Context) {
             '验证码校验：每 IP 每分钟上限', '', 0, isPositive),
         Setting('setting_swpu_regcode', 'limit.regcode_verify_account', DEFAULTS.verifyAccountMinute, 'number',
             '验证码校验：每邮箱每分钟上限', '', 0, isPositive),
-        Setting('setting_swpu_regcode', 'swpu.regcode.register_redirect', DEFAULTS.registerRedirect, 'text',
+        Setting('setting_swpu_regcode', 'dfacm.regcode.register_redirect', DEFAULTS.registerRedirect, 'text',
             '注册成功跳转路径', '站内路径，如 /training；可填写已有训练路线地址。', 0,
             (value) => localRedirect(value, '') !== ''),
-        Setting('setting_swpu_regcode', 'swpu.regcode.login_redirect', DEFAULTS.loginRedirect, 'text',
+        Setting('setting_swpu_regcode', 'dfacm.regcode.login_redirect', DEFAULTS.loginRedirect, 'text',
             '验证码登录成功跳转路径', '仅允许站内路径。', 0, (value) => localRedirect(value, '') !== ''),
-        Setting('setting_swpu_regcode', 'swpu.regcode.smtp2_host', '', 'text',
+        Setting('setting_swpu_regcode', 'dfacm.regcode.smtp2_host', '', 'text',
             '备用发信 SMTP 主机', '主通道（系统 smtp.*）故障时自动切换；留空停用备用通道。', 0),
-        Setting('setting_swpu_regcode', 'swpu.regcode.smtp2_port', 465, 'number',
+        Setting('setting_swpu_regcode', 'dfacm.regcode.smtp2_port', 465, 'number',
             '备用发信 SMTP 端口', '465=SSL，587=STARTTLS。', 0, isPositive),
-        Setting('setting_swpu_regcode', 'swpu.regcode.smtp2_secure', true, 'boolean',
+        Setting('setting_swpu_regcode', 'dfacm.regcode.smtp2_secure', true, 'boolean',
             '备用通道是否 SSL', '465 端口必须勾选。', 0),
-        Setting('setting_swpu_regcode', 'swpu.regcode.smtp2_user', '', 'text',
+        Setting('setting_swpu_regcode', 'dfacm.regcode.smtp2_user', '', 'text',
             '备用发信账号', '完整邮箱地址。', 0),
-        Setting('setting_swpu_regcode', 'swpu.regcode.smtp2_pass', '', 'text',
+        Setting('setting_swpu_regcode', 'dfacm.regcode.smtp2_pass', '', 'text',
             '备用发信密码/授权码', 'QQ 邮箱填授权码（非登录密码）。', 0),
-        Setting('setting_swpu_regcode', 'swpu.regcode.smtp2_from', '', 'text',
+        Setting('setting_swpu_regcode', 'dfacm.regcode.smtp2_from', '', 'text',
             '备用发件人显示', '如 "d&f算法网" <user@example.com>；留空则用账号地址。', 0),
     ));
     await codes.ensureIndexes();

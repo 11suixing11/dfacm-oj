@@ -24,6 +24,6 @@ curl -L -o /tmp/jbmono.ttf "https://github.com/JetBrains/JetBrainsMono/raw/maste
 python scripts/subset_fonts.py /tmp/zcool.ttf /tmp/jbmono.ttf landing
 ```
 
-脚本会扫描 `landing/index.html` 与 `plugin-swpu-regcode/reg.html` 里实际出现的字符，额外补齐全部可打印 ASCII 与常用中英文标点，然后输出 `landing/swpu-display.woff2`、`landing/swpu-mono.woff2`，并把用字清单写进 `glyphs.txt`（已 gitignore）。
+脚本会扫描 `landing/index.html` 与 `plugin-dfacm-regcode/reg.html` 里实际出现的字符，额外补齐全部可打印 ASCII 与常用中英文标点，然后输出 `landing/swpu-display.woff2`、`landing/swpu-mono.woff2`，并把用字清单写进 `glyphs.txt`（已 gitignore）。
 
 **注意**：字形集合是从 HTML 源码静态扫描出来的。若页面文案改动后忘记重跑脚本，新增的汉字会以 fallback 字体渲染；反之删掉的字会留在子集里。改动落地页或注册页文案后应重跑并一并提交新的 woff2。

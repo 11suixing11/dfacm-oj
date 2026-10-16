@@ -336,7 +336,7 @@ test('SMTP failure leaves no usable code and does not create a session', async (
 });
 
 test('registration succeeds with audit, hooks, QQ avatar and configurable local redirect', async () => {
-    const f = await fixture(); f.settings['swpu.regcode.register_redirect'] = '/training/team';
+    const f = await fixture(); f.settings['dfacm.regcode.register_redirect'] = '/training/team';
     await f.issue('123456@qq.com', 'reg');
     const args = { mail: '123456@qq.com', code: f.mails[0].code, uname: 'newuser', password: 'secret-password' };
     const h = f.handler('/reg/complete', args);
@@ -499,10 +499,10 @@ test('registration auto-joins the ranking domains with the default role', async 
 test('backup SMTP channel delivers a working code when the primary channel is down', async () => {
     const f = await fixture(); f.user();
     f.state.sendMailError = new Error('primary smtp down');
-    f.settings['swpu.regcode.smtp2_host'] = 'smtp.example.com';
-    f.settings['swpu.regcode.smtp2_user'] = 'bot@example.com';
-    f.settings['swpu.regcode.smtp2_pass'] = 'authorization-code';
-    f.settings['swpu.regcode.smtp2_port'] = 465;
+    f.settings['dfacm.regcode.smtp2_host'] = 'smtp.example.com';
+    f.settings['dfacm.regcode.smtp2_user'] = 'bot@example.com';
+    f.settings['dfacm.regcode.smtp2_pass'] = 'authorization-code';
+    f.settings['dfacm.regcode.smtp2_port'] = 465;
     let delivered = null;
     f.state.nodemailer = {
         createTransport(opts) {

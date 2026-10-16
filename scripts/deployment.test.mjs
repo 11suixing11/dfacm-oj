@@ -288,7 +288,7 @@ test('clean-auth-entries.js installs a one-line script with embed-free escape ro
   assert.doesNotMatch(script, /d\.body\}/);
   // The gate depends on that marker existing in reg.html — lock the cross-file
   // wiring so a rename cannot silently break the overlay.
-  const page = fs.readFileSync(path.join(repo, 'plugin-swpu-regcode', 'reg.html'), 'utf8');
+  const page = fs.readFileSync(path.join(repo, 'plugin-dfacm-regcode', 'reg.html'), 'utf8');
   assert.match(page, /id="m-mail"/);
   // The payload must be syntactically valid browser JavaScript.
   new Function(script.replace(/^<script>/, '').replace(/<\/script>$/, ''));
@@ -480,7 +480,7 @@ test('a post-write verification failure rolls every file back', () => {
 
 test('documented addon installations contain every module and asset the entries load', () => {
   const instructions = fs.readFileSync(path.join(repo, 'deploy/deployment.md'), 'utf8');
-  for (const addon of ['plugin-swpu-ops', 'plugin-swpu-train']) {
+  for (const addon of ['plugin-dfacm-ops', 'plugin-dfacm-train']) {
     const names = instructions.match(new RegExp(`cp /root/swpu-oj/${addon}/\\{([^}]+)\\}`))[1].split(',');
     const installed = fs.mkdtempSync(path.join(root, 'installed-addon-'));
     for (const name of names) fs.copyFileSync(path.join(repo, addon, name), path.join(installed, name));
@@ -503,7 +503,7 @@ test('points-shop plugin ships every documented file and its templates render th
   // deploy.sh manifest, which parses the same blocks.
   const instructions = fs.readFileSync(path.join(repo, 'deploy/deployment.md'), 'utf8');
   const documented = [];
-  for (const match of instructions.matchAll(/cp \/root\/swpu-oj\/plugin-swpu-shop\/\{([^}]+)\}/g)) {
+  for (const match of instructions.matchAll(/cp \/root\/swpu-oj\/plugin-dfacm-shop\/\{([^}]+)\}/g)) {
     documented.push(...match[1].split(',').map((name) => name.trim()));
   }
   assert.deepEqual(documented.sort(), [
@@ -511,21 +511,21 @@ test('points-shop plugin ships every documented file and its templates render th
     'templates/history.html', 'templates/manage.html', 'templates/shop.html',
   ]);
   for (const name of documented) {
-    assert.ok(fs.existsSync(path.join(repo, 'plugin-swpu-shop', name)), `missing ${name}`);
+    assert.ok(fs.existsSync(path.join(repo, 'plugin-dfacm-shop', name)), `missing ${name}`);
   }
   // Template wiring: Nunjucks pages extend the site layout and use the shared
   // section component; the two data pages keep the data-table, the shop is a
   // branded card shelf (swpu- prefixed, scoped styles).
   for (const template of ['shop.html', 'history.html', 'manage.html']) {
-    const source = fs.readFileSync(path.join(repo, 'plugin-swpu-shop', 'templates', template), 'utf8');
+    const source = fs.readFileSync(path.join(repo, 'plugin-dfacm-shop', 'templates', template), 'utf8');
     assert.match(source, /\{% extends "layout\/basic.html" %\}/, `${template} must extend the site layout`);
     assert.match(source, /class="section"/, `${template} must use the section component`);
   }
   for (const template of ['history.html', 'manage.html']) {
-    const source = fs.readFileSync(path.join(repo, 'plugin-swpu-shop', 'templates', template), 'utf8');
+    const source = fs.readFileSync(path.join(repo, 'plugin-dfacm-shop', 'templates', template), 'utf8');
     assert.match(source, /data-table/, `${template} must use the data-table component`);
   }
-  const shop = fs.readFileSync(path.join(repo, 'plugin-swpu-shop', 'templates', 'shop.html'), 'utf8');
+  const shop = fs.readFileSync(path.join(repo, 'plugin-dfacm-shop', 'templates', 'shop.html'), 'utf8');
   assert.match(shop, /swpu-shelf/, 'the shop must shelf badges as a card grid');
   assert.match(shop, /swpu-card__art/, 'each card must preview the badge color block');
   assert.match(shop, /user-profile-badge v-center/, 'badge preview must reuse the badge DOM contract');
@@ -537,22 +537,22 @@ test('points-shop plugin ships every documented file and its templates render th
   const seed = fs.readFileSync(path.join(repo, 'deploy', 'shop', 'badges-seed.js'), 'utf8');
   assert.match(seed, /swpuBadgePrice/, 'the seed must price the ladder into swpuBadgePrice');
   assert.match(fs.readFileSync(path.join(repo, 'deploy', 'shop', 'ledger-cleanup.js'), 'utf8'), /hydsvc/, 'the cleanup must guard the service-account purge');
-  const manage = fs.readFileSync(path.join(repo, 'plugin-swpu-shop', 'templates', 'manage.html'), 'utf8');
+  const manage = fs.readFileSync(path.join(repo, 'plugin-dfacm-shop', 'templates', 'manage.html'), 'utf8');
   assert.match(manage, /name="operation" value="price"/, 'manage form must post operation=price');
   assert.match(manage, /name="badgeId"/, 'manage form must carry badgeId');
   // Integration wiring: smoke battery, CI matrix, addon registry example.
   const smoke = fs.readFileSync(path.join(repo, 'deploy', 'smoke.sh'), 'utf8');
   assert.match(smoke, /\/shop/) && assert.match(smoke, /shop\/history/);
   const ci = fs.readFileSync(path.join(repo, '.github', 'workflows', 'ci.yml'), 'utf8');
-  assert.match(ci, /node --test plugin-swpu-shop\/tests\/\*\.test\.cjs/);
-  const addonExample = fs.readFileSync(path.join(repo, 'plugin-swpu-shop', 'addon.json.example'), 'utf8');
+  assert.match(ci, /node --test plugin-dfacm-shop\/tests\/\*\.test\.cjs/);
+  const addonExample = fs.readFileSync(path.join(repo, 'plugin-dfacm-shop', 'addon.json.example'), 'utf8');
   assert.match(addonExample, /swpu-shop/);
   const orchestrator = fs.readFileSync(path.join(repo, 'deploy', 'deploy.sh'), 'utf8');
-  assert.match(orchestrator, /plugin-swpu-shop/, 'deploy.sh must ship the shop addon');
+  assert.match(orchestrator, /plugin-dfacm-shop/, 'deploy.sh must ship the shop addon');
   // Nav entries resolve their href via url(item.name), so every injectUI node
   // name must be a registered route name — the 2026-10-13 bug shipped a menu
   // item whose href was the literal string "Error: No route found for name: shop".
-  const indexSource = fs.readFileSync(path.join(repo, 'plugin-swpu-shop', 'index.ts'), 'utf8');
+  const indexSource = fs.readFileSync(path.join(repo, 'plugin-dfacm-shop', 'index.ts'), 'utf8');
   for (const nodeName of ['swpu_shop', 'swpu_shop_manage']) {
     assert.match(indexSource, new RegExp(`ctx\\.Route\\('${nodeName}'`), `${nodeName} must be a registered route name`);
     assert.match(indexSource, new RegExp(`injectUI\\('[^']+', '${nodeName}'`), `${nodeName} must be injected under its route name`);

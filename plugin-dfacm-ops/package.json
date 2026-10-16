@@ -1,11 +1,9 @@
 {
-  "name": "swpu-train",
+  "name": "dfacm-ops",
   "version": "1.0.0",
   "private": true,
   "main": "index.ts",
   "engines": { "node": ">=22" },
-  "devDependencies": {
-    "esbuild": "0.25.12"
-  },
+  "peerDependencies": { "hydrooj": "5.0.7" },
   "scripts": { "test": "node --test tests/*.test.cjs" }
 }

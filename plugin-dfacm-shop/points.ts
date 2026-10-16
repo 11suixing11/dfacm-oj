@@ -1,4 +1,4 @@
-/* 积分商店纯逻辑层（plugin-swpu-shop）
+/* 积分商店纯逻辑层（plugin-dfacm-shop）
  * 难度算法全文移植自 Hydro lib/difficulty.ts（v5.0.7），口径与 rp 脚本一致：
  *   const difficulty = +pdoc.difficulty || difficultyAlgorithm(pdoc.nSubmit, pdoc.nAccept) || 5;
  * 集合与外部模型全部通过参数注入，node:test 用 stub 覆盖，不连真实 Mongo。

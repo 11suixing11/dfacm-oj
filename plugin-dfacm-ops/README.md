@@ -87,7 +87,7 @@ hydrooj cli script swpuRpSweep '{}'
 纯 Node 测试，不安装完整 Hydro，不连接 MongoDB 或线上服务：
 
 ```bash
-node --test plugin-swpu-ops/tests/*.test.cjs
+node --test plugin-dfacm-ops/tests/*.test.cjs
 ```
 
 覆盖时间边界、北京时间默认窗口、无效参数、同题去重、历史 AC 排除、小组零提交、状态分类、文件导出及模拟原生模型的只读查询。

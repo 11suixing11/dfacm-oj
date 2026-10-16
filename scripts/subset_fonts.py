@@ -2,7 +2,7 @@
 """Subset the display (ZCOOL QingKe HuangYou) and mono (JetBrains Mono) fonts.
 
 - swpu-display.woff2: only the glyphs actually used by landing/index.html +
-  plugin-swpu-regcode/reg.html (display font is landing/reg only).
+  plugin-dfacm-regcode/reg.html (display font is landing/reg only).
 - swpu-mono.woff2: theme/00-brand.css applies it as the site-wide code font
   (pre/code), so its subset must serve OJ problem-statement code blocks, not
   just the landing page. Coverage: printable ASCII, Latin-1, general
@@ -23,7 +23,7 @@ def main():
     repo_root = os.path.dirname(os.path.abspath(landing))
     sources = (
         os.path.join(landing, 'index.html'),
-        os.path.join(repo_root, 'plugin-swpu-regcode', 'reg.html'),
+        os.path.join(repo_root, 'plugin-dfacm-regcode', 'reg.html'),
     )
     html = ''
     for p in sources:

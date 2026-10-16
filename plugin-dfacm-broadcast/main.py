@@ -32,7 +32,7 @@ from astrbot.core.utils.astrbot_path import (
 )
 
 
-class SwpuAcmBroadcast(star.Star):
+class DfacmAcmBroadcast(star.Star):
     """Broadcast new d&f算法网 AC submissions and cumulative ranking."""
 
     STATE_SCHEMA_VERSION = 1

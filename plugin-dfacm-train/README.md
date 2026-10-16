@@ -33,7 +33,7 @@ POST /mistakes/sync        手动回填（每用户每分钟 1 次）
 
 ```bash
 mkdir -p /root/.hydro/addons/swpu-train
-cp /root/swpu-oj/plugin-swpu-train/{index.ts,mistakes.cjs,workbench.cjs,workbench.html,mistakes.html,package.json} \
+cp /root/swpu-oj/plugin-dfacm-train/{index.ts,mistakes.cjs,workbench.cjs,workbench.html,mistakes.html,package.json} \
    /root/.hydro/addons/swpu-train/
 mkdir -p /root/.hydro/addons/swpu-train/node_modules
 ln -sfn /usr/local/share/.config/yarn/global/node_modules/hydrooj \
@@ -47,7 +47,7 @@ pm2 restart hydrooj
 ## 本地测试
 
 ```bash
-cd plugin-swpu-train
+cd plugin-dfacm-train
 npm ci
 npm test
 ```

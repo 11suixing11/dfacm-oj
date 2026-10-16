@@ -5,7 +5,7 @@
 ### Added
 
 - **站点长出"眼睛"：健康监控与告警三件套。** 此前站点挂了/磁盘满/判题队列积压全靠"有人发现"。现在：① 137 服务器 `/root/swpu-heartbeat.sh`（cron 每 10 分钟）把磁盘 %、可用内存、load1、判题队列深度写入 Mongo `systatus` 集合心跳文档；② 167 机器人（swpu-broadcast v2.2.0）在轮询循环内每 10 分钟独立巡检——公网站点探测（/reg，浏览器 UA 三连试，5xx/超时=故障，403=CDN 拦截不误报）+ 心跳新鲜度（>15 分钟=失联）+ 磁盘>85%/内存<300MB/队列>20 阈值 + Mongo 自身连通——**只在状态转变时播报**（故障→告警、恢复→报恢复），持续故障每小时补发一次提醒，状态与冷却存插件 SQLite；③ 新指令 `/oj健康` 即时输出健康快照（站点延迟/心跳年龄/资源/队列/告警项），群成员可用。告警面与播报面同一个群（1128735782），服务器宕机时心跳失联由 bot 外部视角兜底可见。
-- **邮件通道三级兜底（无密码登录的命脉保障）。** 学生 100% 邮箱码登录，Gmail 单点故障=全站没人能进。现在三级：① regcode 插件新增**备用发信通道自动切换**——`swpu.regcode.smtp2_host/port/secure/user/pass/from` 六键（控制面板可配），主通道（系统 `smtp.*`）投递失败时验证码邮件自动改走备用 SMTP，`deliverCode` 统一双通道投递（品牌模板不变），留空停用；部署要求插件目录 `node_modules/nodemailer` 软链（安装块已更新）；② 全站级一键切换脚本 `/root/switch-smtp-qq.sh` / `/root/switch-smtp-gmail.sh`（服务器侧保存凭据，切换前自动备份原授权码），覆盖找回密码等全部邮件；③ **`swpuIssueCode` 人工发码脚本**（控制面板脚本管理或 CLI）——邮件整体故障时管理员直接出 6 位码经 QQ 转告，全程不经邮件。切换手册入库 [deploy/smtp-switch.md](deploy/smtp-switch.md)。
+- **邮件通道三级兜底（无密码登录的命脉保障）。** 学生 100% 邮箱码登录，Gmail 单点故障=全站没人能进。现在三级：① regcode 插件新增**备用发信通道自动切换**——`dfacm.regcode.smtp2_host/port/secure/user/pass/from` 六键（控制面板可配），主通道（系统 `smtp.*`）投递失败时验证码邮件自动改走备用 SMTP，`deliverCode` 统一双通道投递（品牌模板不变），留空停用；部署要求插件目录 `node_modules/nodemailer` 软链（安装块已更新）；② 全站级一键切换脚本 `/root/switch-smtp-qq.sh` / `/root/switch-smtp-gmail.sh`（服务器侧保存凭据，切换前自动备份原授权码），覆盖找回密码等全部邮件；③ **`swpuIssueCode` 人工发码脚本**（控制面板脚本管理或 CLI）——邮件整体故障时管理员直接出 6 位码经 QQ 转告，全程不经邮件。切换手册入库 [deploy/smtp-switch.md](deploy/smtp-switch.md)。
 - **备份 RPO 24h→12h。** 日备加第二时间点（03:17 / 15:37），保留份数 7→14（磁盘余量充足）；deployment.md §15 同步。
 
 ### Changed
@@ -85,7 +85,7 @@
 ### Security
 
 - **Closed Dependabot alert #1** (medium, dev scope): `tsx` 4.19.2 pulled in a nested
-  `esbuild ~0.23.0` (vulnerable ≤0.24.2) inside `plugin-swpu-regcode/package-lock.json`.
+  `esbuild ~0.23.0` (vulnerable ≤0.24.2) inside `plugin-dfacm-regcode/package-lock.json`.
   Bumped the test runner to `tsx` 4.20.3, whose `esbuild ~0.25.0` dedupes with the
   existing direct `esbuild 0.25.12` — the lock now carries exactly one esbuild, 0.25.12.
   Test-runner usage (`tsx --test` on the TS suites) is unchanged; CI's fresh
@@ -129,7 +129,7 @@
   not be mistaken for the source of truth.
 - **Archived into the repo**: the #10003 testlib checker source
   (`deploy/checkers/10003-spj.cc` + its `config.yaml`) and the swpu-shop implementation
-  spec (`plugin-swpu-shop/SPEC.md`, facts current as of 2026-10-04) — both previously
+  spec (`plugin-dfacm-shop/SPEC.md`, facts current as of 2026-10-04) — both previously
   existed only on the server / loose in the workspace.
 
 ## v1.25.0 - 2026-10-11
@@ -394,7 +394,7 @@ the road of algorithm competition.
 ### Compatibility
 
 - Runtime addon directories, Mongo collection prefixes, environment variables
-  and deployment paths that begin with `swpu` remain internal compatibility
+  and deployment paths that begin with `dfacm` remain internal compatibility
   identifiers. Renaming those would break existing installations and data;
   they do not define the public brand.
 
@@ -524,7 +524,7 @@ old code.
 ### Security
 
 - **The `/reg` boot payload was assembled with `String.replace` and a string
-  replacement (`plugin-swpu-regcode`).** The replacement is JSON containing an
+  replacement (`plugin-dfacm-regcode`).** The replacement is JSON containing an
   OAuth provider's `text`, and a string replacement expands `$&`, `` $` ``,
   `$'` and `$$` — so a provider whose text contained `` $` `` spliced the
   remaining ~400 lines of `reg.html` into the inline `<script>`. Now uses a
@@ -685,8 +685,8 @@ copy needs a re-run.
 
 ### Added
 
-- **Self-enforcing service-account hygiene (`plugin-swpu-ops`).** The v1.12.0 incident root cause — the RP script scores `document.status`, not `record`, and `calcLevel` writes the stored rank without filtering `join`, so one leftover solved-status row for the judge service account (hydsvc-0074) resurrected phantom RP and displaced every real member — is now guarded by the system instead of a human memory item: every RP recalculation purges service-account rows from `document.status` before computing (aborting the run, not computing on a dirty source), the live hook deletes a service account's just-written status row on sight, and the purge list is configurable via `SWPU_SERVICE_UIDS` (default `3`, empty disables). The judge account's `record` rows are deliberately left alone — they are debugging evidence and do not feed RP.
-- **Every member reaches the ranking boards, whatever created the account (`plugin-swpu-ops`).** The v1.12.0 auto-join covered only `/reg/complete`; a GitHub (or any OAuth) first login funnels into Hydro core's `UserRegisterWithCodeHandler`, which sets no join flag, and admin-created accounts don't either — such members stayed invisible on `/ranking` even after solving (surfaced by the owner's own GitHub-registered account missing its poj membership). Two layers close the gap: the plugin now hooks Hydro's serial `auth/login` event — the chokepoint every login and registration path ends in (`SWPU_AUTO_JOIN=0` to disable) — and joins the member to `system` + `poj` on sight with existing roles preserved, and the hourly sweep reconciles every member's join flags (missing domain docs inserted with the default role, service accounts excluded).
+- **Self-enforcing service-account hygiene (`plugin-dfacm-ops`).** The v1.12.0 incident root cause — the RP script scores `document.status`, not `record`, and `calcLevel` writes the stored rank without filtering `join`, so one leftover solved-status row for the judge service account (hydsvc-0074) resurrected phantom RP and displaced every real member — is now guarded by the system instead of a human memory item: every RP recalculation purges service-account rows from `document.status` before computing (aborting the run, not computing on a dirty source), the live hook deletes a service account's just-written status row on sight, and the purge list is configurable via `SWPU_SERVICE_UIDS` (default `3`, empty disables). The judge account's `record` rows are deliberately left alone — they are debugging evidence and do not feed RP.
+- **Every member reaches the ranking boards, whatever created the account (`plugin-dfacm-ops`).** The v1.12.0 auto-join covered only `/reg/complete`; a GitHub (or any OAuth) first login funnels into Hydro core's `UserRegisterWithCodeHandler`, which sets no join flag, and admin-created accounts don't either — such members stayed invisible on `/ranking` even after solving (surfaced by the owner's own GitHub-registered account missing its poj membership). Two layers close the gap: the plugin now hooks Hydro's serial `auth/login` event — the chokepoint every login and registration path ends in (`SWPU_AUTO_JOIN=0` to disable) — and joins the member to `system` + `poj` on sight with existing roles preserved, and the hourly sweep reconciles every member's join flags (missing domain docs inserted with the default role, service accounts excluded).
 - **Hourly RP sweep (`rp-sweep.cjs`).** Mutations that bypass the record flow — contest deletion, admin edits, manual database fixes — fire no events, and Hydro's own `task.daily` only recomputes at 03:00. The sweep reruns the RP script for all domains every hour (3-minute startup delay past the 75-second readiness window, pm2 instance 0 only, `SWPU_RP_SWEEP=0` to disable, serialized with the live path through a shared lock so two RP computations never overlap), bounding out-of-band staleness to one hour.
 - **`swpuRpSweep` admin script** — `hydrooj cli script swpuRpSweep '{}'` performs an immediate purge + full-domain recalculation after out-of-band data fixes, replacing the hand-typed `rp` CLI invocation.
 
@@ -702,11 +702,11 @@ copy needs a re-run.
 
 ### Added
 
-- **Points shop (`plugin-swpu-shop`)** — badges become something you earn and spend. Every problem's first AC credits 1–10 points by difficulty (the same algorithm Hydro's RP script uses, ported verbatim from `lib/difficulty.ts`), and admins put badges on sale at `/manage/shop` for members to redeem with their balance at `/shop` (guest-browsable). Redemption reuses the installed badge-for-hydrooj model for ownership (`userBadgeAdd`) — no fork, no modification; wearing still happens on `/mybadge`.
+- **Points shop (`plugin-dfacm-shop`)** — badges become something you earn and spend. Every problem's first AC credits 1–10 points by difficulty (the same algorithm Hydro's RP script uses, ported verbatim from `lib/difficulty.ts`), and admins put badges on sale at `/manage/shop` for members to redeem with their balance at `/shop` (guest-browsable). Redemption reuses the installed badge-for-hydrooj model for ownership (`userBadgeAdd`) — no fork, no modification; wearing still happens on `/mybadge`.
   - Idempotency is index-backed: `swpuPointsLedger` has a unique `{uid, ref}` key (`solve:{domainId}:{docId}` per solve, `redeem:{badgeId}` per redemption), so resubmissions, event replays and double-spend races can never double-credit; inserts that hit the key are silently absorbed.
   - `/shop/history` shows the full ledger with a running balance (prefix sums across pages, 20/page); balance is a live `$sum` aggregation — the site is small, no cache yet.
   - `swpuShopBackfill` script replays historical AC records (`kind: 'backfill'`, same idempotency key, safe to rerun); the `record/change` hook awards live, pm2 instance 0 only, error-isolated from judging.
-  - New collection prefix `swpu` (`swpuPointsLedger`, `swpuBadgePrice`); no new npm runtime dependencies; covered by 21 unit tests plus deployment wiring assertions; smoke battery gains `/shop` 200, badge-table render and the `/shop/history`, `/manage/shop` guest gates.
+  - New collection prefix `dfacm` (`swpuPointsLedger`, `swpuBadgePrice`); no new npm runtime dependencies; covered by 21 unit tests plus deployment wiring assertions; smoke battery gains `/shop` 200, badge-table render and the `/shop/history`, `/manage/shop` guest gates.
 
 ## v1.12.0 - 2026-10-04
 
@@ -782,7 +782,7 @@ copy needs a re-run.
 
 ### Added
 
-- **Live RP ranking** (`plugin-swpu-ops/live-rp.cjs`): Hydro only recalculates RP in `task.daily` (03:00), so a freshly solved problem took until the next night to show on the ranking page. The ops plugin now listens on `record/change` and reruns the domain `rp` script ~30s after a judged submission (debounced — a contest burst yields at most one run per window; registered on pm2 instance 0 only; idempotent with the daily task). The `swpu-ops` addon is now actually deployed to the server (it previously existed only in the repo) and keeps a replay copy in `/root/swpu-theme-deploy/plugin-swpu-ops/`.
+- **Live RP ranking** (`plugin-dfacm-ops/live-rp.cjs`): Hydro only recalculates RP in `task.daily` (03:00), so a freshly solved problem took until the next night to show on the ranking page. The ops plugin now listens on `record/change` and reruns the domain `rp` script ~30s after a judged submission (debounced — a contest burst yields at most one run per window; registered on pm2 instance 0 only; idempotent with the daily task). The `swpu-ops` addon is now actually deployed to the server (it previously existed only in the repo) and keeps a replay copy in `/root/swpu-theme-deploy/plugin-dfacm-ops/`.
 
 ### Fixed
 
@@ -834,7 +834,7 @@ copy needs a re-run.
 
 ### Added
 
-- `plugin-swpu-ops`: read-only admin scripts for weekly training reports (CSV/Markdown) and judge health summaries (Markdown/JSON), registered with Hydro's `PRIV_EDIT_SYSTEM` + sudo script permissions and no HTTP routes.
+- `plugin-dfacm-ops`: read-only admin scripts for weekly training reports (CSV/Markdown) and judge health summaries (Markdown/JSON), registered with Hydro's `PRIV_EDIT_SYSTEM` + sudo script permissions and no HTTP routes.
 - `scripts/backup-hydro.sh`: locked, non-destructive backup wrapper around `hydrooj backup --withAddons` with ZIP validation, sidecar state archives, checksums and offsite/restore guidance.
 - `scripts/check-deployment.sh`: read-only deployment checks with `--role web|judge` and opt-in HTTP cache verification.
 - Handler-level regression tests for `swpu-regcode` and `deploy/deployment.md` sections on backup/restore, deployment checks and manual judge acceptance.

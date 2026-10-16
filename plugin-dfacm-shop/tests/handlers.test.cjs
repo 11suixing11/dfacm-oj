@@ -1,6 +1,6 @@
 'use strict';
 
-// Handler-level wiring tests for plugin-swpu-shop: routes and privileges,
+// Handler-level wiring tests for plugin-dfacm-shop: routes and privileges,
 // i18n dictionaries, UI injections, record/change awarding and the backfill
 // script. index.ts is bundled with esbuild with `hydrooj` stubbed out — no
 // Mongo, no badge plugin, no network.

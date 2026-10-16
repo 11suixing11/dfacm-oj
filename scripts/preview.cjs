@@ -5,7 +5,7 @@ const path = require('node:path');
 const root = path.resolve(__dirname, '..');
 const files = new Map([
   ['/', 'landing/index.html'], ['/home.html', 'landing/index.html'],
-  ['/reg', 'plugin-swpu-regcode/reg.html'], ['/reg.html', 'plugin-swpu-regcode/reg.html'],
+  ['/reg', 'plugin-dfacm-regcode/reg.html'], ['/reg.html', 'plugin-dfacm-regcode/reg.html'],
   ...['swpu-display.woff2', 'swpu-mono.woff2'].map(name => ['/' + name, 'landing/' + name]),
   ...fs.readdirSync(path.join(root, 'landing/assets')).map(name => ['/' + name, 'landing/assets/' + name]),
 ]);

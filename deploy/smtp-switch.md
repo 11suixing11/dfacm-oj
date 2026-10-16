@@ -7,7 +7,7 @@
 
 | 层级 | 覆盖范围 | 生效方式 | 前置条件 |
 |---|---|---|---|
-| ① 自动备用通道 | regcode 验证码邮件（注册+登录） | 主通道失败时插件自动切换，无需人工 | 配置 `swpu.regcode.smtp2_*` 六键（一次性） |
+| ① 自动备用通道 | regcode 验证码邮件（注册+登录） | 主通道失败时插件自动切换，无需人工 | 配置 `dfacm.regcode.smtp2_*` 六键（一次性） |
 | ② 全站一键切换 | 全部邮件（含找回密码） | `/root/switch-smtp-qq.sh`，需 pm2 restart | 137 服务器上已部署切换脚本 |
 | ③ 人工发码 | 单个用户登录/注册 | `swpuIssueCode` 脚本出码，管理员转告 | 无（不依赖任何邮件服务） |
 
@@ -17,12 +17,12 @@
 
 | 键 | 示例值 |
 |---|---|
-| `swpu.regcode.smtp2_host` | `smtp.qq.com` |
-| `swpu.regcode.smtp2_port` | `465` |
-| `swpu.regcode.smtp2_secure` | `true`（465 必须） |
-| `swpu.regcode.smtp2_user` | 完整邮箱地址 |
-| `swpu.regcode.smtp2_pass` | 授权码（QQ 邮箱=授权码，非登录密码） |
-| `swpu.regcode.smtp2_from` | `"d&f算法网" <邮箱>`（留空=用账号地址） |
+| `dfacm.regcode.smtp2_host` | `smtp.qq.com` |
+| `dfacm.regcode.smtp2_port` | `465` |
+| `dfacm.regcode.smtp2_secure` | `true`（465 必须） |
+| `dfacm.regcode.smtp2_user` | 完整邮箱地址 |
+| `dfacm.regcode.smtp2_pass` | 授权码（QQ 邮箱=授权码，非登录密码） |
+| `dfacm.regcode.smtp2_from` | `"d&f算法网" <邮箱>`（留空=用账号地址） |
 
 - `smtp2_host` 留空 = 备用通道停用（默认）。
 - 主通道（系统 `smtp.*`）投递失败时自动改走备用通道，成功后日志出现 `code delivered via backup smtp channel`。
