@@ -1,5 +1,25 @@
 # Changelog
 
+## v1.33.1 - 2026-10-16
+
+### Changed
+
+- **导航「工作台 / 错题本」挪到「评测记录」旁边（站长需求：让用户更容易看到并用起来）。** 两个入口自上线起一直被 Hydro 默认追加在主导航最末尾——排在「排名」「Rating排行榜」之后，次序与可见性都最差。修法：`plugin-dfacm-train` 的 `ctx.injectUI('Nav', …)` 加 `args.before: 'ranking'`，走 hydrooj `src/lib/ui.ts` 的原生 splice 定位（`before` 命中节点名即前插，不碰 ui-default 源码、不靠 CSS hack、无需 Hydro 升级）。登录导航顺序变为：… 讨论 · **评测记录 · 工作台 · 错题本** · 排名 · Rating排行榜（移动端菜单同一份 SSR 导航，自动同步）。游客视角不变（两项本就要求 `PRIV_USER_PROFILE`）。handlers.test.cjs 的 injectUI 桩补记 `args` 并新增断言锁住 `before: 'ranking'`，防止后续改动把位置悄悄丢回队尾；README/deployment.md 的导航描述与验收清单同步。
+
+## v1.33.0 - 2026-10-16
+
+### Added
+
+- **称号工坊：积分商店新增 DIY 称号特权（学生用户反馈直出）。** 学生花 **500 积分解锁（含首次铸造）、之后每次修改 50 积分**，在 `/shop/title` 自选 **≤4 字文案 + 六色预设色板**，铸造一枚只属于自己的徽章——走 badge-for-hydrooj 的 `badgeAdd`（max(_id)+1 分配编号并写入持有，只调用其模型不 fork），佩戴后称号 chip 与徽章一致出现在全站用户名旁（ranking / discuss / solution）；修改走 `badgeEdit`，它会给所有佩戴者重序列化 `user.badge` 串并失效用户缓存——**改名即时生效，展示端零开发**。工坊页实时预览只用 textContent（不碰 innerHTML），明暗双主题。
+- **先显后管的防滥用三闸**：字符白名单（中文/字母/数字，码点计数，表情与标点天然拒绝）+ 色值只从预设色板出（杜绝任意 CSS 注入面）+ 保留词拦截（官方/系统/管理/站长/裁判/出题/客服/审核/admin 等，子串不区分大小写）。管理端 `/manage/shop` 新增称号表（成员/当前称号/状态/更新时间）：「停用」一键摘持有与佩戴（兜底闸，积分不退），「恢复」翻回资格，称号由成员在工坊重新保存铸造（照常计费）。
+- **幂等与一致性**：解锁三重闸（`swpuTitles` uid 唯一索引 + ledger `title_unlock` 固定 ref 撞 {uid,ref} 唯一键 + 状态行存在即拒）；历史故障自愈——扣过分但状态行缺失时补建不再收费；修改失败自动冲正（先扣分后写徽章、失败 refund 退款入流水，同 redeem 教义）；badgeAdd 并发撞号重试一次 + 进程内铸造全局锁（单实例 pm2 教义）。流水新增 kind `title`。
+- 商店货架第一张卡换装「DIY 称号工坊」特权入口（游客→登录、未解锁→解锁、已解锁→进工坊三态）。
+
+### Changed
+
+- 积分流水页补「称号」「退款」类型标签——退款流水（兑换失败冲正）此前误显示为「管理员调整」。
+- 测试：titles.test.cjs 12 组（校验/解锁/自愈/首铸/计费/冲正/重铸/撞号重试/停用/管理端）+ handlers.test.cjs 新增 8 组（路由权限/工坊页态/特权卡/解锁/首铸免费/修改计费/无效拦截/CSRF/管理端停用恢复）；CI 的 CSRF 覆盖断言 shop 2→5（三个新 POST），发货清单 wiring 锁加 titles.ts / templates/title.html，smoke 加 `/shop/title` 302 门禁检查。
+
 ## v1.32.0 - 2026-10-13
 
 ### Added

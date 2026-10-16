@@ -1,0 +1,136 @@
+{% extends "layout/basic.html" %}
+{% block content %}
+<style>
+/* 称号工坊 — scoped to this page, swpu- prefixed, light + dark.
+   服务端把所有数字与色板都算好再渲染（生产 Nunjucks 是裁剪版），
+   模板只做输出；实时预览脚本只用 textContent，不碰 innerHTML。 */
+.swpu-title-state{max-width:640px;margin:0 auto;padding:26px 18px;text-align:center;}
+.swpu-title-preview{display:inline-block;font-size:22px;font-weight:700;letter-spacing:.08em;line-height:1;padding:10px 18px;border-radius:10px;box-shadow:0 6px 18px rgba(15,34,64,.18);margin-bottom:18px;}
+.swpu-title-price{font-size:26px;font-weight:700;color:#1a2940;}
+.swpu-title-price .swpu-card__unit{font-size:13px;font-weight:400;color:#5b6b80;}
+.swpu-title-note{font-size:13.5px;color:#5b6b80;margin-top:10px;}
+.swpu-title-form{max-width:640px;margin:0 auto;padding:0 18px 26px;}
+.swpu-title-field{margin-bottom:18px;}
+.swpu-title-field label{display:block;font-size:13.5px;color:#5b6b80;margin-bottom:8px;}
+.swpu-title-field input[type=text]{width:100%;box-sizing:border-box;}
+.swpu-title-palette{display:flex;flex-wrap:wrap;gap:10px;}
+.swpu-title-swatch{display:inline-flex;align-items:center;cursor:pointer;margin:0;}
+.swpu-title-swatch input{position:absolute;opacity:0;pointer-events:none;}
+.swpu-title-swatch__chip{padding:6px 14px;border-radius:8px;font-size:14px;font-weight:600;border:2px solid transparent;transition:border-color .12s ease;}
+.swpu-title-swatch input:checked + .swpu-title-swatch__chip{border-color:#1a2940;box-shadow:0 0 0 2px rgba(26,41,64,.18);}
+.swpu-title-actions{display:flex;gap:12px;align-items:center;flex-wrap:wrap;}
+html.theme--dark .swpu-title-price{color:#f4f7fb;}
+html.theme--dark .swpu-title-price .swpu-card__unit{color:#a7b4c7;}
+html.theme--dark .swpu-title-note{color:#a7b4c7;}
+html.theme--dark .swpu-title-field label{color:#a7b4c7;}
+html.theme--dark .swpu-title-swatch input:checked + .swpu-title-swatch__chip{border-color:#f4f7fb;box-shadow:0 0 0 2px rgba(244,247,251,.15);}
+</style>
+<div class="section">
+  <div class="section__header">
+    <h1 class="section__title">{{ _('称号工坊') }}</h1>
+    <div class="section__tools">
+      <a href="{{ url('swpu_shop') }}" class="rounded button">{{ _('返回商店') }}</a>
+      <a href="{{ url('swpu_shop_history') }}" class="rounded button">{{ _('积分流水') }}</a>
+    </div>
+  </div>
+  {% if error %}
+  <div class="section__body">
+    <blockquote class="note typo">{{ error }}</blockquote>
+  </div>
+  {% endif %}
+  {% if ok %}
+  <div class="section__body">
+    <blockquote class="note typo">{{ _('称号已保存。到「我的徽章」页即可佩戴展示。') }}</blockquote>
+  </div>
+  {% endif %}
+
+  {% if not unlocked %}
+  {# ---- 未解锁：特权说明 + 解锁表单 ---- #}
+  <div class="section__body">
+    <div class="swpu-title-state">
+      <span class="swpu-title-preview user-profile-badge v-center" id="swpu-title-preview" style="background:#16233d;color:#e8d592;">你的称号</span>
+      <div class="swpu-title-price">{{ unlockPrice }}<span class="swpu-card__unit">{{ _('分 · 一次性解锁') }}</span></div>
+      <p class="swpu-title-note typo">
+        {{ _('解锁后可铸造一枚只属于你的专属称号：自选文案与配色，佩戴后与徽章一样出现在全站你的用户名旁。首次铸造已含在解锁价内，之后每次修改仅需 50 分。') }}
+      </p>
+      <form method="post" action="{{ url('swpu_shop_title_unlock') }}" class="swpu-title-actions" style="justify-content:center;">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        {% if canUnlock %}
+        <button type="submit" class="primary rounded button">{{ _('解锁称号工坊') }}</button>
+        {% else %}
+        <button type="submit" class="primary rounded button" disabled>{{ _('积分不足') }}</button>
+        {% endif %}
+        <span class="typo">{{ _('当前余额') }}：{{ balance }} {{ _('分') }}</span>
+      </form>
+    </div>
+  </div>
+
+  {% elif not active %}
+  {# ---- 已解锁但被管理员停用 ---- #}
+  <div class="section__body">
+    <blockquote class="note typo">{{ _('你的称号已被管理员停用，如有疑问请联系管理员。') }}</blockquote>
+  </div>
+
+  {% else %}
+  {# ---- 已解锁：当前称号预览 + 编辑表单 ---- #}
+  <div class="section__body">
+    <div class="swpu-title-state">
+      <span class="swpu-title-preview user-profile-badge v-center" id="swpu-title-preview" style="{% if text %}background:{{ bg }};color:{{ fg }};{% else %}background:#16233d;color:#e8d592;{% endif %}">{% if text %}{{ text }}{% else %}你的称号{% endif %}</span>
+      {% if text %}
+      <p class="swpu-title-note typo">{{ _('当前称号已生效，修改保存后全站展示即时更新。') }}</p>
+      {% else %}
+      <p class="swpu-title-note typo">{{ _('为你的第一枚称号取个名字（首次铸造免费），保存后到「我的徽章」页佩戴。') }}</p>
+      {% endif %}
+    </div>
+    <form method="post" action="{{ url('swpu_shop_title_save') }}" class="swpu-title-form">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <div class="swpu-title-field">
+        <label for="swpu-title-text">{{ _('称号文案') }}（{{ _('最多') }} {{ maxChars }} {{ _('个字，中文/字母/数字') }}）</label>
+        <input type="text" id="swpu-title-text" name="text" maxlength="4" value="{{ text }}" placeholder="{{ _('如：AK之神') }}" autocomplete="off">
+      </div>
+      <div class="swpu-title-field">
+        <label>{{ _('称号配色') }}</label>
+        <div class="swpu-title-palette">
+          {%- for p in palettes -%}
+          <label class="swpu-title-swatch">
+            <input type="radio" name="palette" value="{{ p.id }}" data-bg="{{ p.bg }}" data-fg="{{ p.fg }}" {% if p.bg == bg or (not bg and loop.first) %}checked{% endif %}>
+            <span class="swpu-title-swatch__chip" style="background:{{ p.bg }};color:{{ p.fg }};">{{ p.name }}</span>
+          </label>
+          {%- endfor -%}
+        </div>
+      </div>
+      <div class="swpu-title-actions">
+        <button type="submit" class="primary rounded button">{{ _('保存称号') }}</button>
+        <span class="typo">{% if minted %}{{ _('每次修改需') }} {{ editPrice }} {{ _('分') }}{% else %}{{ _('首次铸造免费') }}{% endif %}</span>
+        <a href="/mybadge" class="rounded button">{{ _('去佩戴') }}</a>
+      </div>
+    </form>
+  </div>
+  {% endif %}
+
+  <div class="section__body typo">
+    <p>{{ _('规则：称号与徽章共用佩戴位，同一时间只展示一枚；文案限中文/字母/数字且最多 4 个字，配色从预设色板中选择；不当称号会被管理员停用，积分不予退还。') }}</p>
+  </div>
+</div>
+<script>
+(function () {
+    var input = document.getElementById('swpu-title-text');
+    var chip = document.getElementById('swpu-title-preview');
+    if (!input || !chip) return;
+    var swatches = document.querySelectorAll('input[name="palette"]');
+    function refresh() {
+        var text = input.value.slice(0, 4);
+        chip.textContent = text || '你的称号';
+        for (var i = 0; i < swatches.length; i++) {
+            if (swatches[i].checked) {
+                chip.style.backgroundColor = swatches[i].getAttribute('data-bg');
+                chip.style.color = swatches[i].getAttribute('data-fg');
+            }
+        }
+    }
+    input.addEventListener('input', refresh);
+    for (var j = 0; j < swatches.length; j++) swatches[j].addEventListener('change', refresh);
+    refresh();
+})();
+</script>
+{% endblock %}

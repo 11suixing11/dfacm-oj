@@ -71,6 +71,28 @@ html.theme--dark .swpu-shop-me__next b{color:#c9a227;}
     </div>
     {% endif %}
     <div class="swpu-shelf">
+      <div class="swpu-card swpu-card--title">
+        <div class="swpu-card__art" style="background:#16233d;color:#e8d592;">
+          <span class="swpu-card__art-text">{{ _('你的称号') }}</span>
+        </div>
+        <div class="swpu-card__body">
+          <a class="swpu-card__title" href="{{ url('swpu_shop_title') }}">{{ _('DIY 称号工坊') }}</a>
+          <div class="swpu-card__meta">
+            <span class="swpu-card__price">{{ titlePriv.price }}<span class="swpu-card__unit">{{ _('分') }}</span></span>
+            <span class="user-profile-badge v-center" style="background-color:#16233d;color:#e8d592;" data-tooltip="{{ _('DIY 称号工坊') }}">{{ _('称号') }}</span>
+          </div>
+          <div class="swpu-card__hint">{{ _('解锁后铸造一枚全站展示的专属称号') }}</div>
+          <div class="swpu-card__action">
+            {% if not signedIn %}
+              <a href="/reg?tab=login" class="primary rounded button">{{ _('登录后解锁') }}</a>
+            {% elif titlePriv.unlocked %}
+              <a href="{{ url('swpu_shop_title') }}" class="rounded button">{{ _('进入称号工坊') }}</a>
+            {% else %}
+              <a href="{{ url('swpu_shop_title') }}" class="primary rounded button">{{ _('解锁称号工坊') }}</a>
+            {% endif %}
+          </div>
+        </div>
+      </div>
       {%- for bdoc in badges -%}
       <div class="swpu-card{% if bdoc.owned %} is-owned{% endif %}">
         <div class="swpu-card__art" style="background:{{ bdoc.backgroundColor }};color:{{ bdoc.fontColor }};">

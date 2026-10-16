@@ -36,6 +36,7 @@ if [ "$(code "https://$HOST/mistakes")" = "302" ]; then check 0 "GET /mistakes g
 if [ "$(code "https://$HOST/shop")" = "200" ]; then check 0 "GET /shop = 200 (points shop, guest-visible)"; else check 1 "GET /shop = 200 (points shop, guest-visible)"; fi
 req "https://$HOST/shop" | grep -aF 'swpu-shelf' >/dev/null; check $? "shop page renders the badge card shelf"
 if [ "$(code "https://$HOST/shop/history")" = "302" ]; then check 0 "GET /shop/history gated (302)"; else check 1 "GET /shop/history gated (302)"; fi
+if [ "$(code "https://$HOST/shop/title")" = "302" ]; then check 0 "GET /shop/title gated (302)"; else check 1 "GET /shop/title gated (302)"; fi
 if [ "$(code "https://$HOST/manage/shop")" = "302" ]; then check 0 "GET /manage/shop gated (302)"; else check 1 "GET /manage/shop gated (302)"; fi
 
 # --- regcode POST path (validation-only: no mail sent, no rate consumed) ---

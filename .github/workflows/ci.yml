@@ -134,14 +134,14 @@ jobs:
           echo "both Cloudflare range lists agree ($(printf '%s\n' "$first" | wc -l) ranges)"
       - name: Require CSRF coverage on every state-changing POST
         run: |
-          # These five POSTs change state using nothing but the session cookie.
+          # These ten state-changing POSTs use nothing but the session cookie.
           # Each must declare the token parameter and check it; each client must
           # send it. A silent removal here is the whole protection disappearing.
           node - <<'EOF'
           const fs = require('fs');
           const specs = [
             ['plugin-dfacm-regcode/index.ts', 2],
-            ['plugin-dfacm-shop/index.ts', 2],
+            ['plugin-dfacm-shop/index.ts', 5],
             ['plugin-dfacm-train/index.ts', 3],
           ];
           let bad = 0;
@@ -160,7 +160,7 @@ jobs:
               bad++;
             }
           }
-          for (const tpl of ['plugin-dfacm-shop/templates/shop.html', 'plugin-dfacm-shop/templates/manage.html']) {
+          for (const tpl of ['plugin-dfacm-shop/templates/shop.html', 'plugin-dfacm-shop/templates/manage.html', 'plugin-dfacm-shop/templates/title.html']) {
             if (!/name="csrf"/.test(fs.readFileSync(tpl, 'utf8'))) {
               console.error(`${tpl} has no csrf hidden field`);
               bad++;

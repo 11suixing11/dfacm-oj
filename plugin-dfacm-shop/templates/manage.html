@@ -56,4 +56,64 @@
     <p>{{ _('价格为正整数；勾选「上架」后用户才能在商店看到并兑换。每行单独保存。') }}</p>
   </div>
 </div>
+<div class="section">
+  <div class="section__header">
+    <h1 class="section__title">{{ _('称号工坊管理') }}</h1>
+    <div class="section__tools">
+      <a href="{{ url('swpu_shop') }}" class="rounded button">{{ _('查看商店') }}</a>
+    </div>
+  </div>
+  <div class="section__body no-padding">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>{{ _('成员') }}</th>
+          <th>{{ _('当前称号') }}</th>
+          <th>{{ _('状态') }}</th>
+          <th>{{ _('更新时间') }}</th>
+          <th>{{ _('操作') }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {%- for row in titleRows -%}
+        <tr>
+          <td>{{ row.uname }} <span class="typo">#{{ row.uid }}</span></td>
+          <td>
+            {% if row.text %}
+            <span class="user-profile-badge v-center" style="background-color:{{ row.bg }};color:{{ row.fg }};" data-tooltip="{{ row.text }}">{{ row.text }}</span>
+            {% else %}
+            <span class="typo">{{ _('未铸造') }}</span>
+            {% endif %}
+          </td>
+          <td>{{ _('在用') if row.active else _('已停用') }}</td>
+          <td>{% if row.updatedAt %}{{ datetimeSpan(row.updatedAt)|safe }}{% else %}-{% endif %}</td>
+          <td>
+            {% if row.active %}
+            <form method="post" action="{{ url('swpu_shop_title_manage') }}" class="inline-form">
+              <input type="hidden" name="csrf" value="{{ csrf }}">
+              <input type="hidden" name="operation" value="revoke">
+              <input type="hidden" name="uid" value="{{ row.uid }}">
+              <button type="submit" class="rounded button">{{ _('停用') }}</button>
+            </form>
+            {% else %}
+            <form method="post" action="{{ url('swpu_shop_title_manage') }}" class="inline-form">
+              <input type="hidden" name="csrf" value="{{ csrf }}">
+              <input type="hidden" name="operation" value="restore">
+              <input type="hidden" name="uid" value="{{ row.uid }}">
+              <button type="submit" class="primary rounded button">{{ _('恢复') }}</button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+        {%- endfor -%}
+        {% if not titleRows.length %}
+        <tr><td colspan="5">{{ _('还没有成员解锁称号工坊。') }}</td></tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+  <div class="section__body typo">
+    <p>{{ _('「停用」会摘下该成员的称号持有与佩戴（先显后管的兜底闸，积分不退）；「恢复」只翻回使用资格，称号需成员在工坊里重新保存铸造（照常计费）。') }}</p>
+  </div>
+</div>
 {% endblock %}

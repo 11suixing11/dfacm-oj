@@ -506,9 +506,13 @@ test('points-shop plugin ships every documented file and its templates render th
   for (const match of instructions.matchAll(/cp \/root\/swpu-oj\/plugin-dfacm-shop\/\{([^}]+)\}/g)) {
     documented.push(...match[1].split(',').map((name) => name.trim()));
   }
+  // Array.sort() 字典序里 templates/* < titles.ts（'e' < 'i'），期望数组必须
+  // 与 documented.sort() 的真实顺序逐项一致——v1.33.0 首次把 titles.ts 排错位
+  // 挂过整个套件（另一会话实测 58/59 唯一失败），此后按真实序写死。
   assert.deepEqual(documented.sort(), [
     'index.ts', 'package.json', 'points.ts',
-    'templates/history.html', 'templates/manage.html', 'templates/shop.html',
+    'templates/history.html', 'templates/manage.html', 'templates/shop.html', 'templates/title.html',
+    'titles.ts',
   ]);
   for (const name of documented) {
     assert.ok(fs.existsSync(path.join(repo, 'plugin-dfacm-shop', name)), `missing ${name}`);
@@ -542,7 +546,7 @@ test('points-shop plugin ships every documented file and its templates render th
   assert.match(manage, /name="badgeId"/, 'manage form must carry badgeId');
   // Integration wiring: smoke battery, CI matrix, addon registry example.
   const smoke = fs.readFileSync(path.join(repo, 'deploy', 'smoke.sh'), 'utf8');
-  assert.match(smoke, /\/shop/) && assert.match(smoke, /shop\/history/);
+  assert.match(smoke, /\/shop/) && assert.match(smoke, /shop\/history/) && assert.match(smoke, /shop\/title/);
   const ci = fs.readFileSync(path.join(repo, '.github', 'workflows', 'ci.yml'), 'utf8');
   assert.match(ci, /node --test plugin-dfacm-shop\/tests\/\*\.test\.cjs/);
   const addonExample = fs.readFileSync(path.join(repo, 'plugin-dfacm-shop', 'addon.json.example'), 'utf8');
@@ -557,6 +561,24 @@ test('points-shop plugin ships every documented file and its templates render th
     assert.match(indexSource, new RegExp(`ctx\\.Route\\('${nodeName}'`), `${nodeName} must be a registered route name`);
     assert.match(indexSource, new RegExp(`injectUI\\('[^']+', '${nodeName}'`), `${nodeName} must be injected under its route name`);
   }
+  // Title workshop (DIY 称号) wiring: the workshop page ships with the deploy
+  // tree, its state POSTs carry CSRF, the preview never touches innerHTML,
+  // history labels the new ledger kind, and every route name is registered.
+  const titlePage = fs.readFileSync(path.join(repo, 'plugin-dfacm-shop', 'templates', 'title.html'), 'utf8');
+  assert.match(titlePage, /\{% extends "layout\/basic.html" %\}/, 'title.html must extend the site layout');
+  assert.match(titlePage, /class="section"/, 'title.html must use the section component');
+  assert.match(titlePage, /swpu-title-preview/, 'title.html must render the preview chip');
+  assert.match(titlePage, /url\('swpu_shop_title_unlock'\)/, 'title.html must post to the unlock route');
+  assert.match(titlePage, /url\('swpu_shop_title_save'\)/, 'title.html must post to the save route');
+  assert.ok(!/innerHTML\s*=/.test(titlePage), 'the preview updater must never assign innerHTML (textContent only)');
+  assert.match(manage, /swpu_shop_title_manage/, 'manage.html must post title ops to the manage route');
+  assert.match(manage, /value="revoke"/, 'manage.html must carry the revoke operation');
+  assert.match(fs.readFileSync(path.join(repo, 'plugin-dfacm-shop', 'templates', 'history.html'), 'utf8'), /doc\.kind == 'title'/, 'history must label title ledger rows');
+  for (const routeName of ['swpu_shop_title', 'swpu_shop_title_unlock', 'swpu_shop_title_save', 'swpu_shop_title_manage']) {
+    assert.match(indexSource, new RegExp(`ctx\\.Route\\('${routeName}'`), `${routeName} must be a registered route name`);
+  }
+  assert.match(indexSource, /swpuTitles/, 'the shop must own the swpuTitles state collection');
+  assert.match(shop, /swpu_shop_title/, 'the shop shelf must link the title workshop card');
 });
 
 test('light default initialization supports a new site and preserves user choices on rerun', () => {

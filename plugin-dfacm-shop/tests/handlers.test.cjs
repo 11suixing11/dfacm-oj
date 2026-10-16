@@ -29,6 +29,9 @@ class FakeLedger {
         this.docs.push({ ...doc, _id: `oid-${this.docs.length + 1}` });
         return { insertedId: 'ok' };
     }
+    async findOne(filter) {
+        return this.docs.find((d) => Object.entries(filter).every(([k, v]) => d[k] === v)) || null;
+    }
     find(filter) {
         const rows = this.docs.filter((d) => Object.entries(filter).every(([k, v]) => d[k] === v));
         return {
@@ -75,11 +78,45 @@ class FakePrice {
     find() { const docs = [...this.docs]; return { async toArray() { return docs; } }; }
 }
 
-async function fixture({ env = {}, badgeReady = true, badges = [], records = [], prices = [] } = {}) {
+// swpuTitles 桩：uid 唯一（解锁幂等第二道闸）+ 常规 CRUD/find 游标。
+class FakeTitles {
+    constructor(docs = []) { this.docs = [...docs]; }
+    async findOne(filter) {
+        return this.docs.find((d) => Object.entries(filter).every(([k, v]) => d[k] === v)) || null;
+    }
+    async insertOne(doc) {
+        if (this.docs.some((d) => d.uid === doc.uid)) {
+            const e = new Error('E11000 duplicate key'); e.code = 11000; throw e;
+        }
+        this.docs.push({ ...doc, _id: `toid-${this.docs.length + 1}` });
+        return { insertedId: 'ok' };
+    }
+    async updateOne(filter, update) {
+        const doc = this.docs.find((d) => Object.entries(filter).every(([k, v]) => d[k] === v));
+        if (doc) Object.assign(doc, update.$set || {});
+        return { matchedCount: doc ? 1 : 0 };
+    }
+    find(filter) {
+        const rows = this.docs.filter((d) => Object.entries(filter).every(([k, v]) => d[k] === v));
+        return {
+            _rows: rows,
+            sort(spec) {
+                const [key, dir] = Object.entries(spec)[0];
+                this._rows = [...this._rows].sort((a, b) => (a[key] > b[key] ? 1 : a[key] < b[key] ? -1 : 0) * dir);
+                return this;
+            },
+            async toArray() { return [...this._rows]; },
+        };
+    }
+}
+
+async function fixture({ env = {}, badgeReady = true, badges = [], records = [], prices = [], titleDocs = [] } = {}) {
     const ledger = new FakeLedger();
     const price = new FakePrice(prices);
+    const titles = new FakeTitles(titleDocs);
     const userBadgeDocs = [];
     const userBadgeAdds = [];
+    const userBadgeDels = [];
     const routes = new Map();
     const listeners = {};
     const nav = [];
@@ -92,10 +129,31 @@ async function fixture({ env = {}, badgeReady = true, badges = [], records = [],
     const badgeModel = {
         badgeGetMulti: () => ({ async toArray() { return [...badges]; } }),
         badgeGet: async (ctx, id) => badges.find((b) => b._id === id) || null,
+        // badgeAdd 源码同款：max(_id)+1 分配，insert 后把 users 逐个写入持有。
+        badgeAdd: async (ctx, short, title, backgroundColor, fontColor, content, users) => {
+            const id = badges.reduce((m, b) => Math.max(m, b._id), 0) + 1;
+            badges.push({ _id: id, short, title, backgroundColor, fontColor, content, users: [...users] });
+            for (const uid of users) await userBadgeModel.userBadgeAdd(null, uid, id);
+            return id;
+        },
+        // badgeEdit 只改徽章文档（真实实现还会给佩戴者重序列化 user.badge，
+        // 那是调用方不可见的副作用，不在 handler 测试的断言范围）。
+        badgeEdit: async (ctx, id, short, title, backgroundColor, fontColor) => {
+            const b = badges.find((x) => x._id === id);
+            if (!b) throw new Error('badge missing');
+            Object.assign(b, { short, title, backgroundColor, fontColor });
+            return 1;
+        },
     };
     const userBadgeModel = {
         userBadgeAdd: async (ctx, uid, badgeId) => { userBadgeAdds.push({ uid, badgeId }); userBadgeDocs.push({ owner: uid, badgeId }); return 'oid'; },
         userBadgeGetMulti: () => ({ async toArray() { return [...userBadgeDocs]; } }),
+        userBadgeDel: async (ctx, uid, badgeId) => {
+            userBadgeDels.push({ uid, badgeId });
+            const i = userBadgeDocs.findIndex((d) => d.owner === uid && d.badgeId === badgeId);
+            if (i >= 0) userBadgeDocs.splice(i, 1);
+            return 1;
+        },
     };
     const problems = new Map();
     const recordColl = {
@@ -124,6 +182,7 @@ async function fixture({ env = {}, badgeReady = true, badges = [], records = [],
     const collectionsByName = {
         swpuPointsLedger: ledger,
         swpuBadgePrice: price,
+        swpuTitles: titles,
         userBadge: { async findOne(f) { return userBadgeDocs.find((d) => d.owner === f.owner && d.badgeId === f.badgeId) || null; } },
     };
     const stub = {
@@ -152,7 +211,9 @@ async function fixture({ env = {}, badgeReady = true, badges = [], records = [],
         Schema: { object: (shape) => shape, string: () => ({ default: (v) => v }) },
     };
     if (badgeReady) {
-        global.Hydro = { model: { badge: badgeModel, userBadge: userBadgeModel } };
+        // user.getList 是 badge 插件与 Hydro 本体同款的管理端名单接口；
+        // 管理页用它把 uid 渲染成 uname，这里给恒空映射走 #uid 回退。
+        global.Hydro = { model: { badge: badgeModel, userBadge: userBadgeModel, user: { getList: async () => ({}) } } };
     } else {
         delete global.Hydro;
     }
@@ -184,8 +245,8 @@ async function fixture({ env = {}, badgeReady = true, badges = [], records = [],
         return h;
     };
     return {
-        ledger, price, routes, listeners, nav, locales, scripts, indexes, handler,
-        userBadgeAdds, problems, badgeModel, userBadgeModel,
+        ledger, price, titles, routes, listeners, nav, locales, scripts, indexes, handler,
+        userBadgeAdds, userBadgeDels, problems, badgeModel, userBadgeModel,
         seedProblem: (domainId, pid, doc) => problems.set(`${domainId}#${pid}`, doc),
     };
 }
@@ -523,3 +584,174 @@ test('backfill script deduplicates by (uid, pid) and stays idempotent with live 
     assert.equal(f.ledger.docs.length, before);
     assert.ok(messages.some((m) => (m.message || '').includes('回填完成')));
 });
+
+// --- 称号工坊（DIY 称号：合成徽章，全站用户名旁展示） -----------------------
+
+test('title workshop routes registered with the right privileges', async () => {
+    const f = await fixture();
+    assert.equal(f.routes.get('/shop/title').priv, 4);
+    assert.equal(f.routes.get('/shop/title/unlock').priv, 4);
+    assert.equal(f.routes.get('/shop/title/save').priv, 4);
+    assert.equal(f.routes.get('/manage/shop/title').priv, 4096);
+});
+
+test('workshop page shows the locked state with prices, palette and the ok flag', async () => {
+    const f = await fixture();
+    const h = f.handler('/shop/title');
+    await h.get('system');
+    assert.equal(h.response.template, 'title.html');
+    assert.equal(h.response.body.unlocked, false);
+    assert.equal(h.response.body.canUnlock, false);
+    assert.equal(h.response.body.unlockPrice, 500);
+    assert.equal(h.response.body.editPrice, 50);
+    assert.equal(h.response.body.maxChars, 4);
+    assert.equal(h.response.body.palettes.length, 6);
+    assert.match(h.response.body.csrf, /^[0-9a-f]{64}$/);
+    const ok = f.handler('/shop/title', 'get', { ok: '1' });
+    await ok.get('system');
+    assert.equal(ok.response.body.ok, true);
+});
+
+test('shop page carries the title privilege card state for guests and members', async () => {
+    const guest = await fixture();
+    const g = guest.handler('/shop');
+    g.user = { _id: 0, uname: 'Guest', hasPriv: () => false };
+    await g.get('system');
+    assert.deepEqual(g.response.body.titlePriv, { unlocked: false, price: 500 });
+    const member = await fixture({ titleDocs: [{ uid: 42, active: true, minted: 0 }] });
+    const m = member.handler('/shop');
+    await m.get('system');
+    assert.deepEqual(m.response.body.titlePriv, { unlocked: true, price: 500 });
+});
+
+test('unlock debits 500 and creates the state row; insufficient funds bounce back', async () => {
+    const f = await fixture();
+    await f.ledger.insertOne({ uid: 42, delta: 600, ref: 'solve:system:1', kind: 'solve', detail: 'P1', ts: NOW });
+    const page = f.handler('/shop/title');
+    await page.get('system');
+    const h = f.handler('/shop/title/unlock');
+    await h.post('system', page.response.body.csrf);
+    assert.equal(h.response.redirect, '/shop/title');
+    assert.equal(f.ledger.docs.length, 2);
+    assert.deepEqual(
+        { delta: f.ledger.docs[1].delta, kind: f.ledger.docs[1].kind, ref: f.ledger.docs[1].ref },
+        { delta: -500, kind: 'title', ref: 'title_unlock' },
+    );
+    assert.equal(f.titles.docs.length, 1);
+    assert.equal(f.titles.docs[0].minted, 0);
+    // 余额不足：不扣分、不建行，原因带回查询串
+    const f2 = await fixture();
+    await f2.ledger.insertOne({ uid: 42, delta: 300, ref: 'solve:system:1', kind: 'solve', detail: 'P1', ts: NOW });
+    const p2 = f2.handler('/shop/title');
+    await p2.get('system');
+    const h2 = f2.handler('/shop/title/unlock');
+    await assert.rejects(() => h2.post('system', p2.response.body.csrf));
+    assert.match(decodeURIComponent(h2.response.redirect), /积分不足/);
+    assert.equal(f2.titles.docs.length, 0);
+    assert.equal(f2.ledger.docs.length, 1);
+});
+
+test('save mints the first title free, then charges 50 per edit', async () => {
+    const f = await fixture();
+    await f.ledger.insertOne({ uid: 42, delta: 600, ref: 'solve:system:1', kind: 'solve', detail: 'P1', ts: NOW });
+    const page = f.handler('/shop/title');
+    await page.get('system');
+    const unlock = f.handler('/shop/title/unlock');
+    await unlock.post('system', page.response.body.csrf);
+    const save = f.handler('/shop/title/save');
+    await save.post('system', '卷王', 'gold', page.response.body.csrf);
+    assert.equal(save.response.redirect, '/shop/title?ok=1');
+    // 首铸免费：只有解锁那一笔扣费
+    assert.equal(f.ledger.docs.length, 2);
+    assert.deepEqual(f.userBadgeAdds, [{ uid: 42, badgeId: 1 }], 'badgeAdd 写入持有');
+    assert.equal(f.titles.docs[0].minted, 1);
+    assert.equal(f.titles.docs[0].text, '卷王');
+    assert.equal(f.titles.docs[0].bg, '#c9a227');
+    // 第二次保存 = 修改，扣 50
+    const save2 = f.handler('/shop/title/save');
+    await save2.post('system', '摆烂', 'midnight', page.response.body.csrf);
+    assert.equal(f.ledger.docs.length, 3);
+    assert.equal(f.ledger.docs[2].delta, -50);
+    assert.equal(f.titles.docs[0].text, '摆烂');
+    assert.equal(f.titles.docs[0].bg, '#16233d');
+});
+
+test('save rejects invalid text and unknown palettes without debiting', async () => {
+    const f = await fixture();
+    await f.ledger.insertOne({ uid: 42, delta: 600, ref: 'solve:system:1', kind: 'solve', detail: 'P1', ts: NOW });
+    const page = f.handler('/shop/title');
+    await page.get('system');
+    const unlock = f.handler('/shop/title/unlock');
+    await unlock.post('system', page.response.body.csrf);
+    for (const [label, text, palette] of [
+        ['too long', '今天也要加油鸭', 'gold'],
+        ['blocked word', '官方认证', 'gold'],
+        ['empty', '  ', 'gold'],
+        ['unknown palette', '卷王', 'hotpink'],
+    ]) {
+        const save = f.handler('/shop/title/save');
+        await assert.rejects(() => save.post('system', text, palette, page.response.body.csrf), null, label);
+        assert.match(save.response.redirect, /^\/shop\/title\?error=/, label);
+    }
+    assert.equal(f.ledger.docs.length, 2, '无效保存不扣分（只有解锁那一笔）');
+    assert.equal(f.userBadgeAdds.length, 0, '无效保存不发徽章');
+});
+
+// The three new state-changing POSTs spend points or rewrite member-visible
+// state using nothing but the session cookie — same CSRF contract as redeem.
+test('title state-changing POSTs reject a missing or wrong CSRF token', async () => {
+    const f = await fixture();
+    await f.ledger.insertOne({ uid: 42, delta: 600, ref: 'solve:system:1', kind: 'solve', detail: 'P1', ts: NOW });
+    const page = f.handler('/shop/title');
+    await page.get('system');
+    const token = page.response.body.csrf;
+    for (const [label, url, args] of [
+        ['unlock without a token', '/shop/title/unlock', ['system']],
+        ['unlock with a wrong token', '/shop/title/unlock', ['system', '0'.repeat(64)]],
+        ['save without a token', '/shop/title/save', ['system', '卷王', 'gold']],
+        ['save with a wrong token', '/shop/title/save', ['system', '卷王', 'gold', 'x'.repeat(64)]],
+        ['revoke without a token', '/manage/shop/title', ['system', 'revoke', 42]],
+    ]) {
+        const h = f.handler(url, 'post');
+        await assert.rejects(() => h.post(...args), null, label);
+        assert.equal(f.ledger.docs.length, 1, `${label}: must not debit`);
+        assert.equal(f.titles.docs.length, 0, `${label}: must not change state`);
+    }
+    // 校验桩没有把 POST 整体吞掉：正确的 token 应当成功
+    const unlock = f.handler('/shop/title/unlock');
+    await unlock.post('system', token);
+    assert.equal(f.titles.docs.length, 1);
+});
+
+test('manage page lists title rows and revoke/restore round-trip', async () => {
+    const f = await fixture({
+        titleDocs: [{
+            uid: 42, badgeId: 1, minted: 1, text: '卷王', bg: '#c9a227', fg: '#ffffff',
+            active: true, createdAt: NOW, updatedAt: NOW,
+        }],
+    });
+    f.userBadgeModel.userBadgeAdd(null, 42, 1); // 持有在，摘除才可观察
+    const page = f.handler('/manage/shop');
+    await page.get('system');
+    assert.equal(page.response.body.titleRows.length, 1);
+    const row = page.response.body.titleRows[0];
+    assert.equal(row.uid, 42);
+    assert.equal(row.uname, '#42'); // getList 桩返回空映射 → #uid 回退
+    assert.equal(row.text, '卷王');
+    assert.equal(row.active, true);
+    // 停用：摘持有 + active=false
+    const revoke = f.handler('/manage/shop/title', 'post');
+    await revoke.post('system', 'revoke', 42, page.response.body.csrf);
+    assert.equal(revoke.response.redirect, '/manage/shop');
+    assert.deepEqual(f.userBadgeDels, [{ uid: 42, badgeId: 1 }]);
+    assert.equal(f.titles.docs[0].active, false);
+    // 恢复：只翻回资格
+    const restore = f.handler('/manage/shop/title', 'post');
+    await restore.post('system', 'restore', 42, page.response.body.csrf);
+    assert.equal(f.titles.docs[0].active, true);
+    // 未知操作带回原因
+    const bad = f.handler('/manage/shop/title', 'post');
+    await assert.rejects(bad.post('system', 'destroy', 42, page.response.body.csrf), /不支持的操作/);
+    assert.match(bad.response.redirect, /^\/manage\/shop\?error=/);
+});
+

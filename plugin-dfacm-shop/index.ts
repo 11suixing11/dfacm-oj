@@ -15,6 +15,10 @@ import {
     LEDGER_PAGE_SIZE, awardSolve, getBalance, listLedger, problemDifficulty,
     redeem, setPrice, ShopError,
 } from './points';
+import {
+    getTitleState, restoreTitle, revokeTitle, saveTitle, TITLE_EDIT_PRICE,
+    TITLE_MAX_CHARS, TITLE_PALETTES, TITLE_UNLOCK_PRICE, unlockTitle,
+} from './titles';
 
 const logger = new Logger('swpu-shop');
 
@@ -32,12 +36,15 @@ function badgeModels() {
 
 const ledger = db.collection('swpuPointsLedger' as any);
 const price = db.collection('swpuBadgePrice' as any);
+// 称号工坊状态行：uid 唯一（apply 里建索引），一行 = 一个会员的解锁状态。
+const titlesColl = db.collection('swpuTitles' as any);
 
 function collections() {
     return {
         ledger,
         price,
         userBadge: db.collection('userBadge' as any),
+        titles: titlesColl,
     };
 }
 
@@ -102,12 +109,19 @@ class ShopPageHandler extends Handler {
             }
             return card;
         });
+        // 称号工坊特权卡（货架第一张）：游客/未解锁/已解锁三态由服务端算好。
+        let titlePriv: { unlocked: boolean; price: number } = { unlocked: false, price: TITLE_UNLOCK_PRICE };
+        if (signedIn) {
+            const trow = await getTitleState(collections(), this.user._id);
+            titlePriv = { unlocked: !!trow, price: TITLE_UNLOCK_PRICE };
+        }
         this.response.body = {
             _id: this.user._id,
             uname: this.user.uname,
             signedIn,
             balance,
             next,
+            titlePriv,
             // Echoed back by a failed form POST so the member sees why.
             error: shopError(this),
             // Redeem is a plain form POST, so the token travels as a hidden field.
@@ -243,9 +257,39 @@ class ShopManageHandler extends Handler {
             }
             rows.sort((a, b) => a._id - b._id);
         }
-        this.response.body = { badges: rows, error: shopError(this), csrf: csrfToken(this) };
+        // 称号工坊管理列表：unames 走 Hydro user 模型（badge 插件同款 getList），
+        // 组件缺席时退回 #uid 展示。
+        const titleDocs = await titlesColl.find({}).sort({ updatedAt: -1 }).toArray();
+        const titleUids = [...new Set(titleDocs.map((doc: any) => doc.uid))];
+        let udict: any = {};
+        const userModel = (global as any).Hydro?.model?.user;
+        if (userModel && userModel.getList && titleUids.length) {
+            udict = await userModel.getList(this.args?.domainId || 'system', titleUids) || {};
+        }
+        const titleRows = titleDocs.map((doc: any) => ({
+            uid: doc.uid,
+            uname: (udocOf(udict, doc.uid)) || `#${doc.uid}`,
+            text: doc.text || '',
+            bg: doc.bg || '',
+            fg: doc.fg || '',
+            active: doc.active !== false,
+            badgeId: doc.badgeId,
+            updatedAt: doc.updatedAt,
+        }));
+        this.response.body = { badges: rows, titleRows, error: shopError(this), csrf: csrfToken(this) };
         this.response.template = 'manage.html';
     }
+}
+
+// udict entries may be plain user docs or [uname, ...] tuples depending on the
+// Hydro build; both shapes expose uname at position 0 or as a property.
+function udocOf(udict: any, uid: number): string | null {
+    const entry = udict[uid];
+    if (!entry) return null;
+    if (typeof entry === 'string') return entry;
+    if (entry.uname) return entry.uname;
+    if (Array.isArray(entry) && typeof entry[0] === 'string') return entry[0];
+    return null;
 }
 
 class ShopManageSaveHandler extends Handler {
@@ -259,6 +303,92 @@ class ShopManageSaveHandler extends Handler {
         try {
             if (operation && operation !== 'price') throw new ShopError('不支持的操作。');
             await setPrice(collections(), now, badgeId, price, enabled !== false);
+        } catch (e) {
+            failShop(this, e, '/manage/shop');
+        }
+        this.response.redirect = '/manage/shop';
+    }
+}
+
+// --- 称号工坊（DIY 称号：合成徽章，全站用户名旁展示） ----------------------
+//
+// GET  /shop/title          工坊页：未解锁（解锁表单）/ 可编辑（文案+色板表单）/ 已停用
+// POST /shop/title/unlock   解锁特权（500 分，含首次铸造；ledger ref 幂等）
+// POST /shop/title/save     铸造/修改称号（首次免费，之后 50 分/次）
+// POST /manage/shop/title   管理端：operation=revoke 停用 / restore 恢复
+class TitleWorkshopHandler extends Handler {
+    async get() {
+        const row = await getTitleState(collections(), this.user._id);
+        const balance = await getBalance(collections(), this.user._id);
+        this.response.body = {
+            unlocked: !!row,
+            active: row ? row.active !== false : false,
+            minted: row ? row.minted === 1 : false,
+            text: (row && row.text) || '',
+            bg: (row && row.bg) || '',
+            fg: (row && row.fg) || '',
+            balance,
+            unlockPrice: TITLE_UNLOCK_PRICE,
+            editPrice: TITLE_EDIT_PRICE,
+            canUnlock: balance >= TITLE_UNLOCK_PRICE,
+            palettes: TITLE_PALETTES,
+            maxChars: TITLE_MAX_CHARS,
+            error: shopError(this),
+            ok: !!(this.args && this.args.ok === '1'),
+            csrf: csrfToken(this),
+        };
+        this.response.template = 'title.html';
+    }
+}
+
+class TitleUnlockHandler extends Handler {
+    @post('csrf', Types.String, true)
+    async post(domainId: string, csrf?: string) {
+        if (csrfRejected(this, csrf)) { failShop(this, new ShopError('会话已过期，请刷新页面后重试。'), '/shop/title'); }
+        try {
+            await unlockTitle(collections(), now, this.user._id);
+        } catch (e) {
+            failShop(this, e, '/shop/title');
+        }
+        this.response.redirect = '/shop/title';
+    }
+}
+
+class TitleSaveHandler extends Handler {
+    @post('text', Types.String)
+    @post('palette', Types.String)
+    @post('csrf', Types.String, true)
+    async post(domainId: string, text: string, palette: string, csrf?: string) {
+        if (csrfRejected(this, csrf)) { failShop(this, new ShopError('会话已过期，请刷新页面后重试。'), '/shop/title'); }
+        const models = badgeModels();
+        if (!models.badge || !models.userBadge) {
+            failShop(this, new ShopError('徽章组件未就绪，请联系管理员。'), '/shop/title');
+        }
+        try {
+            await saveTitle(this.ctx, models, collections(), now, this.user._id, text, palette);
+        } catch (e) {
+            failShop(this, e, '/shop/title');
+        }
+        this.response.redirect = '/shop/title?ok=1';
+    }
+}
+
+class TitleManageSaveHandler extends Handler {
+    @post('operation', Types.String)
+    @post('uid', Types.PositiveInt)
+    @post('csrf', Types.String, true)
+    async post(domainId: string, operation: string, uid: number, csrf?: string) {
+        if (csrfRejected(this, csrf)) { failShop(this, new ShopError('会话已过期，请刷新页面后重试。'), '/manage/shop'); }
+        const models = badgeModels();
+        try {
+            if (operation === 'revoke') {
+                if (!models.userBadge) throw new ShopError('徽章组件未就绪，请联系管理员。');
+                await revokeTitle(this.ctx, models, collections(), now, uid);
+            } else if (operation === 'restore') {
+                await restoreTitle(collections(), now, uid);
+            } else {
+                throw new ShopError('不支持的操作。');
+            }
         } catch (e) {
             failShop(this, e, '/manage/shop');
         }
@@ -338,6 +468,12 @@ export async function apply(ctx: Context) {
         { key: { uid: 1, ref: 1 }, name: 'uid_ref', unique: true },
         { key: { uid: 1, ts: -1 }, name: 'uid_ts' },
     );
+    // swpuTitles：一行一个会员的解锁状态，uid 唯一索引是解锁幂等的第二道闸
+    // （第一道是 ledger 的 title_unlock 固定 ref），也保证 findOne({uid}) 快路径。
+    await db.ensureIndexes(
+        db.collection('swpuTitles' as any),
+        { key: { uid: 1 }, name: 'uid_unique', unique: true },
+    );
     // No explicit index for swpuBadgePrice: the collection is a handful of
     // badges, and an _id spec is rejected by MongoDB ("background is not valid
     // for an _id index") because Hydro's ensureIndexes injects background:true.
@@ -346,6 +482,10 @@ export async function apply(ctx: Context) {
     ctx.Route('swpu_shop_history', '/shop/history', ShopHistoryHandler, PRIV.PRIV_USER_PROFILE);
     ctx.Route('swpu_shop_manage', '/manage/shop', ShopManageHandler, PRIV.PRIV_MANAGE_ALL_DOMAIN);
     ctx.Route('swpu_shop_manage_save', '/manage/shop', ShopManageSaveHandler, PRIV.PRIV_MANAGE_ALL_DOMAIN);
+    ctx.Route('swpu_shop_title', '/shop/title', TitleWorkshopHandler, PRIV.PRIV_USER_PROFILE);
+    ctx.Route('swpu_shop_title_unlock', '/shop/title/unlock', TitleUnlockHandler, PRIV.PRIV_USER_PROFILE);
+    ctx.Route('swpu_shop_title_save', '/shop/title/save', TitleSaveHandler, PRIV.PRIV_USER_PROFILE);
+    ctx.Route('swpu_shop_title_manage', '/manage/shop/title', TitleManageSaveHandler, PRIV.PRIV_MANAGE_ALL_DOMAIN);
     // ui-default 渲染注入菜单项用的是 url(item.name)：注入名必须是已注册的
     // 路由名（badge 插件同款惯例），否则菜单 href 会变成字面量
     // "Error: No route found for name: shop"（2026-10-13 修复的老 bug）。
@@ -366,5 +506,5 @@ export async function apply(ctx: Context) {
     if (!process.env.NODE_APP_INSTANCE || process.env.NODE_APP_INSTANCE === '0') {
         ctx.on('record/change', onRecordChange);
     }
-    logger.info('swpu-shop routes ready: /shop, /shop/history, /manage/shop');
+    logger.info('swpu-shop routes ready: /shop, /shop/history, /shop/title, /manage/shop');
 }

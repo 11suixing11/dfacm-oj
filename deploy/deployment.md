@@ -155,15 +155,15 @@ ln -sfn /usr/local/share/.config/yarn/global/node_modules/hydrooj \
 pm2 restart hydrooj
 ```
 
-安装后 `/workbench` 与 `/mistakes` 出现在登录用户导航中。另有无界面的 JSON 端点 `GET /workbench/recent`（最近使用的训练集，落地页首页卡片数据源，每用户 30 次/分钟）。错题收集只在 pm2 instance 0 运行；设置 `SWPU_TRAIN_MISTAKES=0` 并重启可关闭收集（页面仍可用）。数据口径与限制见 [plugin-dfacm-train/README.md](../plugin-dfacm-train/README.md)。
+安装后 `/workbench` 与 `/mistakes` 出现在登录用户导航中（经 `injectUI` 的 `before: 'ranking'` 定位在内置「评测记录」项之后、「排名」之前，而非默认追加的导航末尾）。另有无界面的 JSON 端点 `GET /workbench/recent`（最近使用的训练集，落地页首页卡片数据源，每用户 30 次/分钟）。错题收集只在 pm2 instance 0 运行；设置 `SWPU_TRAIN_MISTAKES=0` 并重启可关闭收集（页面仍可用）。数据口径与限制见 [plugin-dfacm-train/README.md](../plugin-dfacm-train/README.md)。
 
 积分商店可选安装（做题赚积分、花积分兑徽章，徽章能力由服务器已装的 badge-for-hydrooj 提供）：
 
 ```bash
 mkdir -p /root/.hydro/addons/swpu-shop/templates
-cp /root/swpu-oj/plugin-dfacm-shop/{index.ts,points.ts,package.json} \
+cp /root/swpu-oj/plugin-dfacm-shop/{index.ts,points.ts,titles.ts,package.json} \
    /root/.hydro/addons/swpu-shop/
-cp /root/swpu-oj/plugin-dfacm-shop/{templates/shop.html,templates/history.html,templates/manage.html} \
+cp /root/swpu-oj/plugin-dfacm-shop/{templates/shop.html,templates/history.html,templates/manage.html,templates/title.html} \
    /root/.hydro/addons/swpu-shop/templates/
 mkdir -p /root/.hydro/addons/swpu-shop/node_modules
 ln -sfn /usr/local/share/.config/yarn/global/node_modules/hydrooj \
@@ -172,7 +172,7 @@ ln -sfn /usr/local/share/.config/yarn/global/node_modules/hydrooj \
 pm2 restart hydrooj
 ```
 
-安装后用户下拉菜单出现「积分商店」（`/shop`），控制面板出现「积分商店管理」（`/manage/shop`）。每道题首次 AC 按难度（Hydro RP 同源算法，1~10 分）自动入账；管理员在 `/manage/shop` 给徽章定价并上架后，用户即可用积分兑换，兑换记录进 `swpuPointsLedger`，徽章持有关系写入 badge 插件的 `userBadge`（只调用其模型，不修改它）。佩戴仍在 badge 插件的 `/mybadge` 完成。
+安装后用户下拉菜单出现「积分商店」（`/shop`），控制面板出现「积分商店管理」（`/manage/shop`）。每道题首次 AC 按难度（Hydro RP 同源算法，1~10 分）自动入账；管理员在 `/manage/shop` 给徽章定价并上架后，用户即可用积分兑换，兑换记录进 `swpuPointsLedger`，徽章持有关系写入 badge 插件的 `userBadge`（只调用其模型，不修改它）。佩戴仍在 badge 插件的 `/mybadge` 完成。称号工坊（`/shop/title`）：500 积分解锁（含首次铸造）、每次修改 50 积分，学生自铸 ≤4 字专属称号——合成徽章走 badge-for-hydrooj 的 `badgeAdd`/`badgeEdit`（修改会给所有佩戴者热更新 user.badge，全站展示零开发）；先显后管：预设色板 + 字符白名单 + 保留词拦截，管理端 `/manage/shop` 称号表「停用」一键摘持有与佩戴（积分不退）、「恢复」翻回资格；状态存 `swpuTitles`（uid 唯一索引），流水新增 kind `title`。
 
 历史 AC 回填（站点 2026-10-01 上线，记录量极小，一次跑完）：
 
@@ -289,7 +289,7 @@ curl -sSI https://<域名>/ | grep -Ei 'strict-transport|x-content-type|referrer
 - [ ] 注册流程走通（验证码邮件到达）。
 - [ ] `/reg?tab=pwd` 密码登录后回首页；合法 `return` 回原页面，`//外站`、反斜杠及控制字符输入均不能导致站外导航。
 - [ ] 两步验证 / 通行密钥账号能通过常显原生入口完成登录；iframe 内的原生入口、OAuth、找回密码都在顶层打开。
-- [ ] 登录后 `/workbench` 与 `/mistakes` 返回 200 且出现在导航中；未登录访问被重定向到登录页。
+- [ ] 登录后 `/workbench` 与 `/mistakes` 返回 200 且出现在导航中（位于「评测记录」之后、「排名」之前）；未登录访问被重定向到登录页。
 - [ ] 提交一份固定错误输出（WA）判题结束后，该题出现在 `/mistakes`；补题 AC 后自动标记已补题。
 - [ ] 找回密码邮件里的链接是绝对地址（`server.url` 必须是完整的 `https://域名/`，新站应为 `https://dfacm.website/`，**保留结尾 `/`**）。
 - [ ] 注册接口日志里的 `request.ip` 不再是 127.0.0.1（真实 IP 链路见第 6 节）。

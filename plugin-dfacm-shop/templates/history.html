@@ -27,6 +27,8 @@
             {% if doc.kind == 'solve' %}{{ _('做题') }}
             {% elif doc.kind == 'redeem' %}{{ _('兑换') }}
             {% elif doc.kind == 'backfill' %}{{ _('历史入账') }}
+            {% elif doc.kind == 'title' %}{{ _('称号') }}
+            {% elif doc.kind == 'refund' %}{{ _('退款') }}
             {% else %}{{ _('管理员调整') }}{% endif %}
           </td>
           <td>{{ doc.detail }}</td>
