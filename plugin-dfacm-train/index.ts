@@ -302,8 +302,11 @@ export async function apply(ctx: Context) {
     ctx.Route('swpu_mistakes_update', '/mistakes/update', MistakesUpdateHandler, PRIV.PRIV_USER_PROFILE);
     ctx.Route('swpu_mistakes_remove', '/mistakes/remove', MistakesRemoveHandler, PRIV.PRIV_USER_PROFILE);
     ctx.Route('swpu_mistakes_sync', '/mistakes/sync', MistakesSyncHandler, PRIV.PRIV_USER_PROFILE);
-    ctx.injectUI('Nav', 'swpu_workbench', { prefix: 'workbench' }, PRIV.PRIV_USER_PROFILE);
-    ctx.injectUI('Nav', 'swpu_mistakes', { prefix: 'mistakes' }, PRIV.PRIV_USER_PROFILE);
+    // Hydro appends injected nav nodes at the far end (after 排名/Rating),
+    // burying the two entries. args.before splices each node in front of the
+    // built-in 'ranking' one, so they land right after 评测记录 (record_main).
+    ctx.injectUI('Nav', 'swpu_workbench', { prefix: 'workbench', before: 'ranking' }, PRIV.PRIV_USER_PROFILE);
+    ctx.injectUI('Nav', 'swpu_mistakes', { prefix: 'mistakes', before: 'ranking' }, PRIV.PRIV_USER_PROFILE);
     ctx.i18n.load('zh', { swpu_workbench: '工作台', swpu_mistakes: '错题本' });
     ctx.i18n.load('en', { swpu_workbench: 'Workbench', swpu_mistakes: 'Mistakes' });
     // Collect judged results into each user's mistake book. pm2 instance 0 only:

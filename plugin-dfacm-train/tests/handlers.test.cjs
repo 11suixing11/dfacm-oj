@@ -99,7 +99,7 @@ async function fixture({ env = {} } = {}) {
     loaded._compile(compiled, pluginPath);
     await loaded.exports.apply({
         Route(name, url, HandlerClass, priv) { routes.set(url, { name, HandlerClass, priv }); },
-        injectUI: (node, name, args, priv) => nav.push({ node, name, priv }),
+        injectUI: (node, name, args, priv) => nav.push({ node, name, args, priv }),
         i18n: { load: (lang, dict) => locales.push({ lang, dict }) },
         on: (event, fn) => { listeners[event] = fn; },
     });
@@ -129,6 +129,12 @@ test('routes require login, pages are served no-store, nav and locales are regis
         assert.equal(f.routes.get(url).priv, 4, url);
     }
     assert.deepEqual(f.nav.map((n) => n.name), ['swpu_workbench', 'swpu_mistakes']);
+    // Both entries must sit next to the built-in 评测记录 item: hydrooj's
+    // inject() splices a node before the node named in args.before, and without
+    // it the entries append after 排名/Rating排行榜 at the far end of the nav.
+    for (const item of f.nav) {
+        assert.equal(item.args.before, 'ranking', `${item.name} must inject before 'ranking'`);
+    }
     assert.ok(f.locales.some((l) => l.lang === 'zh' && l.dict.swpu_workbench === '工作台'));
     const page = f.handler('/workbench');
     await page.get();
