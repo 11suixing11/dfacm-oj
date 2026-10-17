@@ -75,6 +75,28 @@ class DfacmAcmBroadcast(star.Star):
     MEM_ALERT_MB = 300
     PENDING_ALERT_COUNT = 20
     HEALTH_ALERT_REMIND_SECONDS = 3_600
+    # --- XCPC contest calendar: the OJ serves /calendar/data (the same JSON
+    # the /calendar page renders, hand-maintained by the site owner). This
+    # side mirrors it and publishes a next-week digest on Sunday evening plus
+    # D-3/D-1 pings for registration deadlines. A fetch failure falls back to
+    # the persisted copy for a week; beyond that the feature stays quiet
+    # instead of broadcasting from stale data.
+    CALENDAR_FEED_PATH = "/calendar/data"
+    CALENDAR_FETCH_SECONDS = 6 * 3_600
+    CALENDAR_CACHE_MAX_AGE = 7 * 86_400
+    CALENDAR_HTTP_TIMEOUT_SECONDS = 15
+    CALENDAR_FETCH_BACKOFF_SECONDS = 600
+    CALENDAR_DIGEST_DOW = 6          # Monday=0 ... Sunday=6
+    CALENDAR_DIGEST_TIME = (20, 30)  # first poll at/after 20:30 CST fires it
+    CALENDAR_REG_REMIND_DAYS: tuple[int, ...] = (3, 1)
+    CALENDAR_TYPE_LABELS: dict[str, str] = {
+        "icpc": "ICPC",
+        "ccpc": "CCPC",
+        "provincial": "省赛",
+        "invitational": "邀请赛",
+        "school": "校级赛",
+        "other": "其他",
+    }
 
     # Hydro STATUS enum -> the display text the web UI shows. The
     # "%Accepted%" LIKE matches downstream rely on status 1 being the exact
@@ -162,6 +184,9 @@ class DfacmAcmBroadcast(star.Star):
         self._health_snap: dict[str, object] = {}
         self._health_last_states: dict[str, str] = {}
         self._health_checked_at: datetime | None = None
+        self._calendar_at: float = 0.0
+        self._calendar_events: list[dict] | None = None
+        self._calendar_next_try: float = 0.0
 
     def _load_state(self) -> dict:
         """Load, migrate, and normalize persisted plugin state.
@@ -1829,6 +1854,320 @@ class DfacmAcmBroadcast(star.Star):
         except Exception:
             self.logger.exception("health tick failed")
 
+    # ------------------------------------------------------------------
+    # XCPC contest calendar: weekly briefing + registration deadline pings.
+    # ------------------------------------------------------------------
+
+    async def _calendar_http(self) -> dict:
+        """Fetch the OJ calendar feed (guest-visible, same payload as the
+        /calendar page)."""
+        url = f"{self.BASE_URL}{self.CALENDAR_FEED_PATH}"
+        headers = {
+            "User-Agent": (
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                "(KHTML, like Gecko) Chrome/124.0 Safari/537.36"
+            ),
+        }
+        timeout = aiohttp.ClientTimeout(total=self.CALENDAR_HTTP_TIMEOUT_SECONDS)
+        async with aiohttp.ClientSession(timeout=timeout, headers=headers) as session:
+            async with session.get(url) as response:
+                if response.status != 200:
+                    raise RuntimeError(f"calendar feed HTTP {response.status}")
+                return await response.json(content_type=None)
+
+    def _sanitize_calendar(self, raw_events: object) -> list[dict]:
+        """Keep only well-formed, timezone-aware events (the feed is
+        hand-maintained data; one bad row must not sink the digest)."""
+        events: list[dict] = []
+        if not isinstance(raw_events, list):
+            return events
+        for raw in raw_events:
+            if not isinstance(raw, dict):
+                continue
+            event_id = str(raw.get("id") or "").strip()
+            name = str(raw.get("name") or "").strip()
+            if not event_id or not name:
+                continue
+
+            def parse(value: object) -> datetime | None:
+                text = str(value or "").strip()
+                if not text:
+                    return None
+                try:
+                    parsed = datetime.fromisoformat(text)
+                except ValueError:
+                    return None
+                # The feed pins +08:00; naive timestamps would poison every
+                # aware/naive comparison downstream, so reject them.
+                return parsed if parsed.tzinfo is not None else None
+
+            start = parse(raw.get("start"))
+            if start is None:
+                continue
+            end = parse(raw.get("end"))
+            reg = parse(raw.get("regDeadline"))
+            if end is not None and end < start:
+                end = None
+            events.append(
+                {
+                    "id": event_id,
+                    "name": name,
+                    "type": str(raw.get("type") or "other"),
+                    "form": str(raw.get("form") or "onsite"),
+                    "location": str(raw.get("location") or "").strip(),
+                    "url": str(raw.get("url") or "").strip(),
+                    "note": str(raw.get("note") or "").strip(),
+                    "start": start,
+                    "end": end,
+                    "reg": reg,
+                }
+            )
+        events.sort(key=lambda event: event["start"])
+        return events
+
+    def _calendar_persist(self, events: list[dict], updated: str, now: float) -> None:
+        """Persist the sanitized feed so restarts and site outages keep the
+        calendar alive for up to a week."""
+        payload = {
+            "updated": updated,
+            "events": [
+                {
+                    "id": event["id"],
+                    "name": event["name"],
+                    "type": event["type"],
+                    "form": event["form"],
+                    "location": event["location"],
+                    "url": event["url"],
+                    "note": event["note"],
+                    "start": event["start"].isoformat(),
+                    "end": event["end"].isoformat() if event["end"] else None,
+                    "regDeadline": event["reg"].isoformat() if event["reg"] else None,
+                }
+                for event in events
+            ],
+        }
+        self._db_set_meta("calendar_data", json.dumps(payload, ensure_ascii=False))
+        self._db_set_meta("calendar_data_ts", str(int(now)))
+
+    def _calendar_from_meta(self, now: float) -> list[dict] | None:
+        try:
+            payload = json.loads(self._db_get_meta("calendar_data") or "null")
+            cached_ts = int(self._db_get_meta("calendar_data_ts") or 0)
+        except Exception:
+            payload, cached_ts = None, 0
+        if (
+            not isinstance(payload, dict)
+            or not isinstance(payload.get("events"), list)
+            or not cached_ts
+            or now - cached_ts > self.CALENDAR_CACHE_MAX_AGE
+        ):
+            return None
+        if self._calendar_events is None:
+            self._calendar_events = self._sanitize_calendar(payload["events"])
+            self.logger.info(
+                "calendar feed serving cached copy (%d events)", len(self._calendar_events)
+            )
+        return self._calendar_events
+
+    async def _calendar_fetch(self) -> list[dict] | None:
+        """The contest list, from memory / the OJ feed / the persisted copy.
+
+        A successful fetch holds in memory for CALENDAR_FETCH_SECONDS; a
+        failure backs off CALENDAR_FETCH_BACKOFF_SECONDS and falls back to
+        the persisted copy. Nothing usable = None and the caller stays
+        quiet — broadcasting from stale data would be worse."""
+        now = time.time()
+        if (
+            self._calendar_events is not None
+            and now - self._calendar_at < self.CALENDAR_FETCH_SECONDS
+        ):
+            return self._calendar_events
+        if now >= self._calendar_next_try:
+            self._calendar_next_try = now + self.CALENDAR_FETCH_BACKOFF_SECONDS
+            try:
+                data = await asyncio.wait_for(
+                    self._calendar_http(),
+                    timeout=self.CALENDAR_HTTP_TIMEOUT_SECONDS + 5,
+                )
+                updated = str(data.get("updated") or "") if isinstance(data, dict) else ""
+                raw_events = data.get("events") if isinstance(data, dict) else None
+                events = self._sanitize_calendar(raw_events)
+                self._calendar_events = events
+                self._calendar_at = now
+                self._calendar_persist(events, updated, now)
+                self.logger.info("calendar feed refreshed: %d events", len(events))
+                return events
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                self.logger.warning(
+                    "calendar feed fetch failed; retrying in 10 minutes", exc_info=True
+                )
+        return self._calendar_from_meta(now)
+
+    @staticmethod
+    def _calendar_status(event: dict, now: datetime) -> str:
+        end = event["end"] or event["start"]
+        if now < event["start"]:
+            return "upcoming"
+        if now > end:
+            return "ended"
+        return "ongoing"
+
+    @staticmethod
+    def _calendar_when(event: dict) -> str:
+        """'10月24日（周六）–10月25日（周日）' / '9月6日（周日）13:00–18:00'."""
+        weekdays = "一二三四五六日"
+        start, end = event["start"], event["end"]
+
+        def day(value: datetime) -> str:
+            return f"{value.month}月{value.day}日（周{weekdays[value.weekday()]}）"
+
+        if end and end.date() != start.date():
+            return f"{day(start)}–{day(end)}"
+        if end and (start.hour or start.minute):
+            return (
+                f"{day(start)} {start.hour}:{start.minute:02d}"
+                f"–{end.hour}:{end.minute:02d}"
+            )
+        return day(start)
+
+    @staticmethod
+    def _calendar_fmt_dt(value: datetime) -> str:
+        weekdays = "一二三四五六日"
+        return f"{value.month}月{value.day}日（周{weekdays[value.weekday()]}）{value.hour}:{value.minute:02d}"
+
+    def _calendar_place(self, event: dict) -> str:
+        location, form = event["location"], event["form"]
+        if location and form != "onsite":
+            suffix = "线上" if form == "online" else "线上/线下"
+            return f"{location} · {suffix}"
+        if location:
+            return location
+        if form == "online":
+            return "线上"
+        return ""
+
+    def _calendar_line(self, event: dict, now: datetime | None = None) -> str:
+        label = self.CALENDAR_TYPE_LABELS.get(event["type"], "其他")
+        line = f"· {self._calendar_when(event)} {event['name']}"
+        extras: list[str] = []
+        place = self._calendar_place(event)
+        if place:
+            extras.append(place)
+        # ICPC/CCPC names identify themselves; the label only adds signal
+        # for the remaining categories.
+        if event["type"] not in ("icpc", "ccpc"):
+            extras.append(label)
+        if extras:
+            line += "（" + " · ".join(extras) + "）"
+        if now and self._calendar_status(event, now) == "upcoming":
+            tz = ZoneInfo("Asia/Shanghai")
+            days = (event["start"].astimezone(tz).date() - now.date()).days
+            if days <= 0:
+                line += " —— 今天开赛"
+            elif days == 1:
+                line += " —— 明天开赛"
+            else:
+                line += f" —— 还有 {days} 天"
+        return line
+
+    async def _calendar_weekly(self, now: datetime, events: list[dict]) -> None:
+        """Sunday evening: preview every event starting next week plus every
+        registration deadline that closes next week. At-most-once per ISO
+        week — the mark goes down before the send, the same trade-off the
+        daily ranking makes, so a failed delivery never spams the group."""
+        if now.weekday() != self.CALENDAR_DIGEST_DOW:
+            return
+        if (now.hour, now.minute) < self.CALENDAR_DIGEST_TIME:
+            return
+        days_ahead = (7 - now.weekday()) % 7
+        next_monday = now.date() + timedelta(days=days_ahead)
+        week_key = f"cal_week:{next_monday.isoformat()}"
+        if self._db_get_meta(week_key):
+            return
+        tz = ZoneInfo("Asia/Shanghai")
+        window_start = datetime(
+            next_monday.year, next_monday.month, next_monday.day, tzinfo=tz
+        )
+        window_end = window_start + timedelta(days=7)
+        starting = [event for event in events if window_start <= event["start"] < window_end]
+        deadlines = [
+            event
+            for event in events
+            if event["reg"] and window_start <= event["reg"] < window_end and event["start"] > now
+        ]
+        sunday = next_monday + timedelta(days=6)
+        lines = [
+            f"🗓️ 下周 XCPC 赛程（{next_monday.month}月{next_monday.day}日"
+            f"–{sunday.month}月{sunday.day}日）",
+            "",
+        ]
+        if starting:
+            lines.extend(self._calendar_line(event) for event in starting)
+        else:
+            lines.append("· 下周暂无收录的 XCPC 赛事")
+        if deadlines:
+            lines.append("")
+            lines.append("⏳ 下周报名截止")
+            lines.extend(
+                f"· {event['name']}：{self._calendar_fmt_dt(event['reg'])} 截止"
+                for event in deadlines
+            )
+        lines.append("")
+        lines.append("完整日历：https://dfacm.website/calendar")
+        self._db_set_meta(week_key, "1")
+        try:
+            await self.context.send_message(
+                self.GROUP_SESSION, MessageChain().plain("\n".join(lines))
+            )
+        except Exception:
+            self.logger.exception("weekly calendar digest delivery failed")
+
+    async def _calendar_reg_reminders(self, now: datetime, events: list[dict]) -> None:
+        """D-3 / D-1 pings for every future event with a registration
+        deadline, deduplicated per (event, day) in meta."""
+        tz = ZoneInfo("Asia/Shanghai")
+        for event in events:
+            reg = event["reg"]
+            if reg is None or event["start"] <= now:
+                continue
+            days_left = (reg.astimezone(tz).date() - now.date()).days
+            if days_left not in self.CALENDAR_REG_REMIND_DAYS:
+                continue
+            key = f"cal_reg:{event['id']}:d{days_left}"
+            if self._db_get_meta(key):
+                continue
+            self._db_set_meta(key, "1")
+            message = (
+                f"⏳ 报名提醒：{event['name']}\n"
+                f"报名将于 {self._calendar_fmt_dt(reg)} 截止（还剩 {days_left} 天）。"
+            )
+            place = self._calendar_place(event)
+            if place:
+                message += f"\n地点：{place}"
+            if event["url"]:
+                message += f"\n{event['url']}"
+            try:
+                await self.context.send_message(
+                    self.GROUP_SESSION, MessageChain().plain(message)
+                )
+            except Exception:
+                self.logger.exception("calendar reg reminder delivery failed")
+
+    async def _maybe_calendar(self) -> None:
+        try:
+            events = await self._calendar_fetch()
+            if not events:
+                return
+            now = datetime.now(ZoneInfo("Asia/Shanghai"))
+            await self._calendar_weekly(now, events)
+            await self._calendar_reg_reminders(now, events)
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            self.logger.exception("calendar tick failed")
+
     async def _drain_pending_cards(self) -> None:
         """Broadcast queued cards, oldest first.
 
@@ -1972,6 +2311,7 @@ class DfacmAcmBroadcast(star.Star):
         t_drain = time.time()
         await self._maybe_stale_sweep()
         await self._maybe_health()
+        await self._maybe_calendar()
         t_sweep = time.time()
         self._poll_count += 1
         if new_count or self._poll_count % 20 == 0:
@@ -2791,11 +3131,37 @@ class DfacmAcmBroadcast(star.Star):
             f"巡检节奏：每 {self.HEALTH_INTERVAL_SECONDS // 60} 分钟一次，异常自动播报到本群"
         )
 
+    @filter.command("赛程")
+    async def calendar_list(self, event: AstrMessageEvent):
+        """查看 XCPC 赛事日历（进行中与即将到来）。"""
+        events = await self._calendar_fetch()
+        if not events:
+            yield event.plain_result("暂时拿不到赛事日历数据，请稍后再试。")
+            return
+        now = datetime.now(ZoneInfo("Asia/Shanghai"))
+        ongoing = [e for e in events if self._calendar_status(e, now) == "ongoing"]
+        upcoming = [e for e in events if self._calendar_status(e, now) == "upcoming"]
+        lines: list[str] = []
+        if ongoing:
+            lines.append("🔴 进行中")
+            lines.extend(self._calendar_line(e) for e in ongoing)
+        if upcoming:
+            lines.append("✅ 即将到来" if lines else "✅ 即将到来的 XCPC 赛事")
+            lines.extend(self._calendar_line(e, now) for e in upcoming[:12])
+        if not lines:
+            yield event.plain_result(
+                "近期暂无收录的 XCPC 赛事。完整日历：https://dfacm.website/calendar"
+            )
+            return
+        lines.append("")
+        lines.append("完整日历与报名截止：https://dfacm.website/calendar")
+        yield event.plain_result("\n".join(lines))
+
     @filter.command("oj帮助")
     async def plugin_help(self, event: AstrMessageEvent):
         """显示 OJ 相关命令。"""
         yield event.plain_result(
-            "d&f算法网命令\n/oj题目 题号：查询题目\n/oj排名：发送累计 AC 排名\n/今日榜单：查看今天 AC 榜单\n/比赛排名：查看当前比赛实时排名\n/oj状态：查看播报状态\n/oj健康：查看站点健康\n/绑定 用户名：开始账号绑定\n/绑定确认：验证个人简介中的验证码\n/解绑：解除当前 QQ 绑定\n/我的排名：查询当前排名\n/最近提交：查询最近提交\n/我的做题统计：查询累计统计\n/合并账号 小号 主号：合并同一人的多个 OJ 账号（管理员）\n/解除合并 小号：解除多个 OJ 账号合并（管理员）\n/合并列表：查看账号合并关系（管理员）\n/oj帮助：显示本帮助"
+            "d&f算法网命令\n/oj题目 题号：查询题目\n/oj排名：发送累计 AC 排名\n/今日榜单：查看今天 AC 榜单\n/比赛排名：查看当前比赛实时排名\n/赛程：查看 XCPC 赛事日历\n/oj状态：查看播报状态\n/oj健康：查看站点健康\n/绑定 用户名：开始账号绑定\n/绑定确认：验证个人简介中的验证码\n/解绑：解除当前 QQ 绑定\n/我的排名：查询当前排名\n/最近提交：查询最近提交\n/我的做题统计：查询累计统计\n/合并账号 小号 主号：合并同一人的多个 OJ 账号（管理员）\n/解除合并 小号：解除多个 OJ 账号合并（管理员）\n/合并列表：查看账号合并关系（管理员）\n/oj帮助：显示本帮助"
         )
 
     @filter.command("指令")
@@ -2815,6 +3181,7 @@ class DfacmAcmBroadcast(star.Star):
             "/oj排名：查看累计 AC 排名\n"
             "/今日榜单：查看今天 AC 榜单\n"
             "/比赛排名：查看当前比赛排名\n"
+            "/赛程：查看 XCPC 赛事日历\n"
             "/oj状态：查看播报状态\n"
             "/oj健康：查看站点健康\n"
             "/oj帮助：查看 OJ 帮助"
