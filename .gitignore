@@ -31,3 +31,7 @@ lwqq.tgz
 # Broadcast bot credential file (read-only MongoDB URI). Only the
 # mongo_uri.txt.example template belongs in the repository.
 plugin-dfacm-broadcast/mongo_uri.txt
+
+# Contest calendar runtime cache (platform auto-fetch, written by auto.cjs
+# on the server and by stray test-refresh races locally; never shipped).
+plugin-dfacm-calendar/auto-cache.json

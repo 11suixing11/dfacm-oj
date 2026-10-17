@@ -100,6 +100,8 @@ class DfacmAcmBroadcast(star.Star):
         "asta": "百度之星",
         "industry": "企业赛",
         "ccsp": "CCSP",
+        "cf": "CF",
+        "atcoder": "AtCoder",
         "other": "其他",
     }
 
@@ -2135,7 +2137,11 @@ class DfacmAcmBroadcast(star.Star):
             "",
         ]
         if starting:
-            lines.extend(self._calendar_line(event) for event in starting)
+            # 平台赛（CF/AtCoder）合并进来后一周可能有七八场：周报只列前
+            # 10 场，其余指去日历，官方赛永远排在平台赛前面（按开始时间）。
+            lines.extend(self._calendar_line(event) for event in starting[:10])
+            if len(starting) > 10:
+                lines.append(f"· ……另有 {len(starting) - 10} 场，完整清单见日历")
         else:
             lines.append("· 下周暂无收录的赛事")
         if deadlines:

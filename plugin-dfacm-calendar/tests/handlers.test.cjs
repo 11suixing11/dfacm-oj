@@ -17,6 +17,9 @@ const esbuild = require('esbuild');
 const pluginDir = path.resolve(__dirname, '..');
 const pluginPath = path.join(pluginDir, 'index.ts');
 const repo = path.resolve(pluginDir, '..');
+// Handler 测试默认关闭平台赛自动抓取：apply() 的 warmup() 与后续 handler
+// 调用都不会发起真实外网请求；需要测合并的用例自行临时打开并桩掉 fetch。
+process.env.SWPU_CALENDAR_AUTO_OFF = '1';
 const compiled = esbuild.buildSync({
     entryPoints: [pluginPath], bundle: true, platform: 'node', format: 'cjs', write: false,
     external: ['hydrooj'], tsconfigRaw: { compilerOptions: { experimentalDecorators: true } },
@@ -169,6 +172,62 @@ test('a broken data file falls back to the last good copy and flags itself', asy
         assert.equal(coldFeed.response.body.ok, false);
         assert.deepEqual(coldFeed.response.body.events, []);
     } finally {
+        fs.rmSync(dir, { recursive: true, force: true });
+    }
+});
+
+// 平台自动抓取打开时，CF/AtCoder 条目与官方赛共用同一条时间轴，
+// 页面、数据端点与筛选 chips 三处都能看到它们。
+test('platform auto events merge into the page, the feed and the filter chips', async () => {
+    const savedOff = process.env.SWPU_CALENDAR_AUTO_OFF;
+    const savedCache = process.env.SWPU_CALENDAR_AUTO_CACHE;
+    delete process.env.SWPU_CALENDAR_AUTO_OFF;
+    const dir = fs.mkdtempSync(path.join(fs.realpathSync(fixtureParent), '.calendar-auto-'));
+    process.env.SWPU_CALENDAR_AUTO_CACHE = path.join(dir, 'auto-cache.json');
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = async (url) => {
+        if (String(url).includes('codeforces')) {
+            return {
+                ok: true, status: 200,
+                json: async () => ({
+                    status: 'OK',
+                    result: [{
+                        id: 1988, name: 'Codeforces Round 999 (Div. 2)', phase: 'BEFORE',
+                        startTimeSeconds: Math.floor(Date.parse('2026-10-22T08:30:00+08:00') / 1000),
+                        durationSeconds: 9000,
+                    }],
+                }),
+            };
+        }
+        return { ok: true, status: 200, json: async () => [] };
+    };
+    try {
+        const f = await fixture();
+        // warmup() 的后台刷新要过几个事件循环（真实磁盘 I/O 的宏任务），
+        // 这正是"冷启动先返回、后台补齐"的设计行为：等它落地再断言。
+        await new Promise((r) => setTimeout(r, 150));
+        const h = f.handler('/calendar');
+        await h.get('system', '');
+        const ids = [...h.response.body.upcoming].map((e) => e.id);
+        assert.ok(ids.includes('cf-1988'), 'the auto CF round must appear in the timeline');
+        const cf = h.response.body.upcoming.find((e) => e.id === 'cf-1988');
+        assert.equal(cf.typeLabel, 'CF');
+        assert.equal(cf.color, '#4a90d9');
+        assert.equal(cf.placeText, '线上');
+        const chipKeys = h.response.body.filters.map((x) => x.key);
+        assert.ok(chipKeys.includes('cf'), 'a CF filter chip must be offered');
+        const data = f.handler('/calendar/data');
+        await data.get('system');
+        const feedIds = data.response.body.events.map((e) => e.id);
+        assert.ok(feedIds.includes('cf-1988'), 'auto events must reach the bot feed');
+        // 官方赛不会被平台条目挤掉
+        assert.ok(feedIds.includes('icpc51-chengdu'), 'the curated season stays in the feed');
+    } finally {
+        globalThis.fetch = realFetch;
+        if (savedOff === undefined) delete process.env.SWPU_CALENDAR_AUTO_OFF;
+        else process.env.SWPU_CALENDAR_AUTO_OFF = savedOff;
+        if (savedCache === undefined) delete process.env.SWPU_CALENDAR_AUTO_CACHE;
+        else process.env.SWPU_CALENDAR_AUTO_CACHE = savedCache;
         fs.rmSync(dir, { recursive: true, force: true });
     }
 });

@@ -207,7 +207,7 @@ mongosh "$(python3 -c "import json;print(json.load(open('/root/.hydro/config.jso
 
 ```bash
 mkdir -p /root/.hydro/addons/swpu-calendar/templates
-cp /root/swpu-oj/plugin-dfacm-calendar/{index.ts,calendar.cjs,calendar.json,package.json} \
+cp /root/swpu-oj/plugin-dfacm-calendar/{auto.cjs,calendar.cjs,calendar.json,index.ts,package.json} \
    /root/.hydro/addons/swpu-calendar/
 cp /root/swpu-oj/plugin-dfacm-calendar/{templates/calendar.html} \
    /root/.hydro/addons/swpu-calendar/templates/
@@ -219,6 +219,8 @@ pm2 restart hydrooj
 ```
 
 安装后导航栏出现「赛事日历」（`/calendar`，落在「评测记录」旁，游客可见），页面按「进行中 / 即将到来 / 已结束」分组展示并支持 `?type=` 按类型筛选；`GET /calendar/data` 为无鉴权只读 JSON 端点（限速）。赛程数据在 `plugin-dfacm-calendar/calendar.json` 手工维护（字段与流程见 [plugin-dfacm-calendar/README.md](../plugin-dfacm-calendar/README.md)）：**改数据文件后 `bash deploy/deploy.sh --sync-only` 即时生效，无需 pm2 restart**——页面每次请求现读磁盘，数据文件写坏时页面回退上一份好数据并提示，不会 500。
+
+平台赛（Codeforces / AtCoder）由 `auto.cjs` 每小时自动抓取合并进同一条时间轴：磁盘缓存 + 后台刷新，抓取失败回退上一份缓存（≤24 小时），全源不可用时只是平台区块缺席、官方日历不受影响；运行时缓存写在与插件同目录的 `auto-cache.json`（发货清单之外，无需部署）。
 
 **不要**在 `/root/.hydro/addons/swpu-regcode/` 运行 `npm install` 或 `npm ci`（其他插件同理），避免重建运行目录的 `node_modules` 和 Hydro 软链。开发测试在独立仓库检出目录的插件目录中运行 `npm ci && npm test`，依赖按锁文件安装。
 

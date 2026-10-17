@@ -30,9 +30,11 @@
 //   asta        百度之星（Astar 程序设计大赛）
 //   industry    企业赛（华为软件精英挑战赛、字节青训营赛等厂商主办）
 //   ccsp        CCF 大学生计算机系统与程序设计竞赛（CCSP）
+//   cf          Codeforces Round 等（auto.cjs 自动抓取）
+//   atcoder     AtCoder ABC/ARC 等（auto.cjs 自动抓取）
 //   other       其余算法类赛事（睿抗 RAICOM 程序设计赛道等）
 
-const TYPES = ['icpc', 'ccpc', 'provincial', 'invitational', 'school', 'lqb', 'ladder', 'asta', 'industry', 'ccsp', 'other'];
+const TYPES = ['icpc', 'ccpc', 'provincial', 'invitational', 'school', 'lqb', 'ladder', 'asta', 'industry', 'ccsp', 'cf', 'atcoder', 'other'];
 const TYPE_META = {
     icpc: { label: 'ICPC', color: '#2a5caa', fg: '#ffffff' },
     ccpc: { label: 'CCPC', color: '#c9a227', fg: '#1a2940' },
@@ -44,6 +46,8 @@ const TYPE_META = {
     asta: { label: '百度之星', color: '#d9534f', fg: '#ffffff' },
     industry: { label: '企业赛', color: '#7a5cae', fg: '#ffffff' },
     ccsp: { label: 'CCSP', color: '#8f5a44', fg: '#ffffff' },
+    cf: { label: 'CF', color: '#4a90d9', fg: '#ffffff' },
+    atcoder: { label: 'AtCoder', color: '#5aa02c', fg: '#ffffff' },
     other: { label: '其他', color: '#8a94a6', fg: '#ffffff' },
 };
 const FORM_LABELS = { onsite: '现场', online: '线上', hybrid: '线上/线下' };
@@ -197,6 +201,27 @@ function statusOf(event, now) {
     return 'ongoing';
 }
 
+// 合并手工日历与平台赛自动条目：自动条目走同一套 validateEvent，
+// 与手工条目撞 id 时以手工为准，输出与 loadCalendar 同形（直接喂
+// describeEvents）。自动源的坏行静默丢弃——官方赛永远优先。
+function mergeCalendar(manual, autoRaw) {
+    const events = [...manual.events];
+    const skipped = [...manual.skipped];
+    const seen = new Set(events.map((event) => event.id));
+    let dropped = 0;
+    for (const raw of Array.isArray(autoRaw) ? autoRaw : []) {
+        const result = validateEvent(raw, events.length + dropped);
+        if (!result.ok || seen.has(result.event.id)) {
+            dropped++;
+            continue;
+        }
+        seen.add(result.event.id);
+        events.push(result.event);
+    }
+    events.sort((a, b) => a._start.getTime() - b._start.getTime());
+    return { updated: manual.updated, events, skipped, autoDropped: dropped };
+}
+
 // 单条赛事的展示 DTO：全部文案服务端算好，模板只做输出（生产 Nunjucks
 // 是裁剪版，没有日期运算能力）。
 function describeEvent(event, now) {
@@ -316,6 +341,7 @@ module.exports = {
     fmtDateTime,
     fmtTime,
     loadCalendar,
+    mergeCalendar,
     sameCstDay,
     statusOf,
     validateEvent,

@@ -1,6 +1,6 @@
 # d&f算法网定制插件：赛事日历
 
-给队员一个"作战情报中心"：把 ICPC / CCPC / 省赛 / 邀请赛 / 校级比赛，以及蓝桥杯、天梯赛（CCCC-GPLT）、百度之星、企业赛、CCF CCSP 等全生态算法赛事的赛程收进站内一个页面，按"进行中 / 即将到来 / 已结束"分组展示，带倒计时与报名截止提醒。全站对游客可见（赛事情报无登录门槛），导航栏落在「评测记录」旁。
+给队员一个"作战情报中心"：把 ICPC / CCPC / 省赛 / 邀请赛 / 校级比赛，以及蓝桥杯、天梯赛（CCCC-GPLT）、百度之星、企业赛、CCF CCSP 等全生态算法赛事的赛程收进站内一个页面，按"进行中 / 即将到来 / 已结束"分组展示，带倒计时与报名截止提醒；**Codeforces 与 AtCoder 的平台赛由 `auto.cjs` 每小时自动抓取**，与官方赛共用同一条时间轴。全站对游客可见（赛事情报无登录门槛），导航栏落在「评测记录」旁。
 
 - `GET /calendar` 日历页（`?type=` 按类型筛选，页首 chips 只出现有数据的类型）
 - `GET /calendar/data` 只读 JSON 端点——QQ 播报机器人（swpu-broadcast）抓取同一份数据做每周播报与报名截止提醒
@@ -19,7 +19,19 @@
 | `asta` | 百度之星 | Astar 程序设计大赛 |
 | `industry` | 企业赛 | 厂商主办公开赛（华为软件精英挑战赛、字节青训营赛等） |
 | `ccsp` | CCSP | CCF 大学生计算机系统与程序设计竞赛 |
+| `cf` | CF | Codeforces Round 等（`auto.cjs` 自动抓取，不进 calendar.json） |
+| `atcoder` | AtCoder | AtCoder ABC/ARC 等（`auto.cjs` 自动抓取，不进 calendar.json） |
 | `other` | 其他 | 其余算法类赛事（睿抗 RAICOM 程序设计赛道等） |
+
+## 平台赛自动抓取（auto.cjs）
+
+民间高频赛事（CF 每周 2-5 场、AtCoder ABC 每周六一场）手工维护不现实，全部自动：
+
+- **数据源**：Codeforces 官方 API（`codeforces.com/api/contest.list`）+ AtCoder 社区数据源（`kenkoooo.com/atcoder/resources/contests.json`，atcoder-problems 同款），零鉴权零注册
+- **抓取窗口**：`[now-12h, now+14d]`——刚结束的场次保留片刻方便补题，只看未来两周
+- **缓存纪律**：磁盘缓存（插件目录 `auto-cache.json`，发货清单之外）+ 每小时最多一次真实外网请求；页面渲染只等本地磁盘水合（毫秒级），外网刷新永远在后台；抓取失败回退上一份缓存（≤24 小时），全源不可用只是平台区块缺席，**官方日历完全不受影响**
+- **运行时开关**：`SWPU_CALENDAR_AUTO_OFF=1` 整条管线关闭；`SWPU_CALENDAR_AUTO_CACHE` 指定缓存文件路径（测试/排障用）
+- 自动条目永远不与手工条目撞 id（撞了以手工为准）；牛客/洛谷没有公开 API，想接需要爬页面（反爬变动要维护），另行评估
 
 ## 数据维护（站长操作手册）
 

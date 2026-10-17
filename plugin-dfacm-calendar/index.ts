@@ -2,15 +2,19 @@
  * GET  /calendar        赛事日历页（游客可看）：进行中 / 即将到来 / 已结束 三组，支持 ?type= 按类型筛选
  * GET  /calendar/data   日历 JSON 端点（QQ 播报机器人的只读数据源，公开、限速）
  *
- * 数据 = 本目录 calendar.json，站长手动维护。每次请求现读磁盘：
- * 更新赛程只需改文件 + deploy.sh --sync-only，无需重启进程。
- * 文件解析失败时回退到上一份好数据并在页面提示，绝不 500。
+ * 数据两路：
+ * 1. 本目录 calendar.json，站长手动维护。每次请求现读磁盘：更新赛程只需
+ *    改文件 + deploy.sh --sync-only，无需重启进程；文件解析失败回退上一份
+ *    好数据并在页面提示，绝不 500。
+ * 2. auto.cjs 自动抓取平台赛（Codeforces / AtCoder），磁盘缓存 + 后台刷新，
+ *    与官方赛合并进同一条时间轴；抓取失败只是平台区块缺席，官方日历不受影响。
  */
 import fs from 'fs';
 import { join } from 'path';
 import { Context, Handler, Logger, param, Types } from 'hydrooj';
 
-const { describeEvents, loadCalendar } = require('./calendar.cjs');
+const { describeEvents, loadCalendar, mergeCalendar } = require('./calendar.cjs');
+const { getAutoEvents, warmup } = require('./auto.cjs');
 
 const logger = new Logger('swpu-calendar');
 
@@ -40,7 +44,10 @@ class CalendarPageHandler extends Handler {
     @param('type', Types.String, true)
     async get(domainId: string, type = '') {
         const parsed = readCalendar();
-        this.response.body = { ...describeEvents(parsed, new Date(), type), broken: parsed.broken };
+        // 平台自动条目与官方赛同一条时间轴（auto.cjs 磁盘水合毫秒级直接
+        // await；外网刷新永远在后台，渲染永不被它阻塞）。
+        const merged = mergeCalendar(parsed, await getAutoEvents());
+        this.response.body = { ...describeEvents(merged, new Date(), type), broken: parsed.broken };
         this.response.template = 'calendar.html';
     }
 }
@@ -52,11 +59,12 @@ class CalendarDataHandler extends Handler {
         // 机器人低频轮询 + 全站共享一个限速桶即可。
         await this.limitRate('swpu_calendar_data', 60, 120, 'public');
         const parsed = readCalendar();
+        const merged = mergeCalendar(parsed, await getAutoEvents());
         this.response.body = {
             ok: !parsed.broken,
             updated: parsed.updated,
             generatedAt: new Date().toISOString(),
-            events: parsed.events.map((event: any) => ({
+            events: merged.events.map((event: any) => ({
                 id: event.id,
                 name: event.name,
                 type: event.type,
@@ -83,5 +91,8 @@ export async function apply(ctx: Context) {
     ctx.injectUI('Nav', 'swpu_calendar', { prefix: 'calendar', before: 'ranking' });
     ctx.i18n.load('zh', { swpu_calendar: '赛事日历' });
     ctx.i18n.load('en', { swpu_calendar: 'Contest Calendar' });
+    // 启动预热平台赛缓存：加载几秒后首批访客就能看到 CF/AtCoder；
+    // 预热失败与后续刷新失败一样，只影响平台区块，官方日历无感。
+    warmup();
     logger.info('swpu-calendar routes ready: /calendar, /calendar/data');
 }

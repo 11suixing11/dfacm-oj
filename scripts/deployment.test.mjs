@@ -591,7 +591,7 @@ test('contest-calendar plugin ships its data, template and bot-feed wiring', () 
     documented.push(...match[1].split(',').map((name) => name.trim()));
   }
   assert.deepEqual(documented.sort(), [
-    'calendar.cjs', 'calendar.json', 'index.ts', 'package.json', 'templates/calendar.html',
+    'auto.cjs', 'calendar.cjs', 'calendar.json', 'index.ts', 'package.json', 'templates/calendar.html',
   ]);
   for (const name of documented) {
     assert.ok(fs.existsSync(path.join(repo, 'plugin-dfacm-calendar', name)), `missing ${name}`);
@@ -604,6 +604,13 @@ test('contest-calendar plugin ships its data, template and bot-feed wiring', () 
   );
   assert.equal(parsed.skipped.length, 0, parsed.skipped.join('; '));
   assert.ok(parsed.events.length > 0, 'the shipped season must not be empty');
+  // The auto-fetch module must stay wiring-consistent: it powers the platform
+  // contest merge and must keep its env escape hatches (tests + ops).
+  const autoSource = fs.readFileSync(path.join(repo, 'plugin-dfacm-calendar', 'auto.cjs'), 'utf8');
+  assert.match(autoSource, /SWPU_CALENDAR_AUTO_CACHE/, 'auto.cjs must keep the cache-path override');
+  assert.match(autoSource, /SWPU_CALENDAR_AUTO_OFF/, 'auto.cjs must keep the kill switch');
+  assert.match(autoSource, /codeforces\.com\/api\/contest\.list/, 'CF API upstream pinned');
+  assert.match(autoSource, /kenkoooo\.com\/atcoder\/resources\/contests\.json/, 'AtCoder upstream pinned');
   // Template wiring: extends the site layout, uses the section component, the
   // branded scoped styles, and no client-side date math.
   const tpl = fs.readFileSync(path.join(repo, 'plugin-dfacm-calendar', 'templates', 'calendar.html'), 'utf8');
@@ -618,8 +625,10 @@ test('contest-calendar plugin ships its data, template and bot-feed wiring', () 
   assert.match(index, /ctx\.Route\('swpu_calendar', '\/calendar', CalendarPageHandler\)/);
   assert.match(index, /ctx\.Route\('swpu_calendar_data', '\/calendar\/data', CalendarDataHandler\)/);
   assert.match(index, /injectUI\('Nav', 'swpu_calendar'/);
-  // The bot feed projects raw events — internal Date fields must not leak.
-  assert.match(index, /events: parsed\.events\.map/);
+  // The bot feed projects raw events (manual + auto merged) — internal Date
+  // fields must not leak, and the merge must actually reach the projection.
+  assert.match(index, /events: merged\.events\.map/);
+  assert.match(index, /mergeCalendar\(parsed, await getAutoEvents\(\)\)/);
   // Integration wiring: smoke battery, CI matrix, orchestrator, addon registry.
   const smoke = fs.readFileSync(path.join(repo, 'deploy', 'smoke.sh'), 'utf8');
   assert.match(smoke, /\/calendar"/);

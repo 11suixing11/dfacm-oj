@@ -1,5 +1,18 @@
 # Changelog
 
+## v1.35.0 - 2026-10-18
+
+### Added
+
+- **平台赛自动抓取：日历长出"民间比赛"层（站长拍板"民间的比赛整上去"）。** 新模块 `plugin-dfacm-calendar/auto.cjs`：**Codeforces 官方 API**（`contest.list`）+ **AtCoder 社区数据源**（kenkoooo atcoder-problems 同款）每小时自动抓取，未来 14 天窗口内的 CF Round / Div 赛 / AtCoder ABC·ARC 与官方赛**共用同一条时间轴**（进行中/即将到来/已结束三组混排），新徽章 `cf`（亮蓝）与 `atcoder`（草绿），`?type=` 筛选与 chips 全部生效。**零维护**：站长一条都不用手录，正好解决"比赛太少"。
+- **抓取纪律（外网依赖的隔离设计）**：页面渲染只 await 本地磁盘水合（毫秒级），外网刷新永远在后台（inflight 去重）；磁盘缓存 `auto-cache.json`（发货清单之外）+ 每小时最多一次真实外网请求；抓取失败回退上一份缓存（≤24h），全源不可用只是平台区块缺席——**官方日历完全不受影响，绝不 500**。运行时开关 `SWPU_CALENDAR_AUTO_OFF=1` / 缓存路径 `SWPU_CALENDAR_AUTO_CACHE`。双源并发、单源成功即算成功（部分成功也落缓存下轮补全）。
+- `mergeCalendar`：自动条目走与手工同一条 `validateEvent` 校验管线，与手工条目撞 id 以手工为准。
+
+### Changed
+
+- swpu-broadcast 2.3.1→2.3.2：`CALENDAR_TYPE_LABELS` 补 `cf` / `atcoder`（周报与 /赛程 里不再误标"其他"）；周报"下周开赛"列表加 10 场上限（平台赛并入后一周可能七八场，超出指去日历——官方赛与平台赛按开始时间同序竞争排序）。
+- 测试 28 组（auto.test.cjs 7 新增：CF/AtCoder 归一化、抓取窗口、CST ISO 换算、冷启动/TTL/双重退避缓存纪律、磁盘缓存跨重载、双源全败保持旧缓存、OFF 开关；handlers +1 合并视图：自动条目进页面/数据端点/筛选 chips 且官方赛不被挤掉）；deployment.test.mjs 发货锁加 auto.cjs 与上游 API/开关 wiring 断言。
+
 ## v1.34.1 - 2026-10-18
 
 ### Added
