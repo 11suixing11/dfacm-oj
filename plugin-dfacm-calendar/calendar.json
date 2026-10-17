@@ -1,5 +1,5 @@
 {
-  "updated": "2026-10-17",
+  "updated": "2026-10-18",
   "events": [
     {
       "id": "icpc51-online-1",
@@ -29,6 +29,16 @@
       "end": "2026-10-18T23:59:59+08:00",
       "location": "西安",
       "url": "https://icpc.pku.edu.cn/tzgg/f5516ebbc85f414a89224a1adf91a380.htm"
+    },
+    {
+      "id": "ccsp-2026",
+      "name": "2026 CCF CCSP 竞赛（大学生计算机系统与程序设计竞赛）",
+      "type": "ccsp",
+      "start": "2026-10-21T00:00:00+08:00",
+      "end": "2026-10-22T23:59:59+08:00",
+      "location": "成都 · 西华大学（郫都校区）",
+      "url": "https://www.ccf.org.cn/ccsp",
+      "note": "10月21日 9:00–21:00 比赛、22日颁奖，与 CNCC2026 同期；报名已于 10月11日 截止"
     },
     {
       "id": "icpc51-chengdu",
@@ -112,6 +122,18 @@
       "location": "杭州",
       "url": "https://icpc.pku.edu.cn/tzgg/index.htm",
       "note": "各区域赛金牌/前列队伍晋级"
+    },
+    {
+      "id": "lqb-18",
+      "name": "第十八届蓝桥杯（软件赛 / 电子赛 / 人工智能赛）",
+      "type": "lqb",
+      "approx": true,
+      "start": "2027-04-01T00:00:00+08:00",
+      "end": "2027-04-30T23:59:59+08:00",
+      "regDeadline": "2026-12-18T14:00:00+08:00",
+      "location": "各省赛点",
+      "url": "https://dasai.lanqiao.cn/",
+      "note": "省赛定于 2027年4月（具体日期待官方公布）；全国总决赛 2027年6月中上旬"
     }
   ]
 }

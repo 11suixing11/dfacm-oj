@@ -61,6 +61,7 @@ class CalendarDataHandler extends Handler {
                 name: event.name,
                 type: event.type,
                 form: event.form,
+                approx: !!event.approx,
                 location: event.location,
                 start: event.start,
                 end: event.end,

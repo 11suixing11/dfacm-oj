@@ -95,6 +95,11 @@ class DfacmAcmBroadcast(star.Star):
         "provincial": "省赛",
         "invitational": "邀请赛",
         "school": "校级赛",
+        "lqb": "蓝桥杯",
+        "ladder": "天梯赛",
+        "asta": "百度之星",
+        "industry": "企业赛",
+        "ccsp": "CCSP",
         "other": "其他",
     }
 
@@ -1908,12 +1913,28 @@ class DfacmAcmBroadcast(star.Star):
             reg = parse(raw.get("regDeadline"))
             if end is not None and end < start:
                 end = None
+            approx = raw.get("approx") is True
+            if approx and end is None:
+                # 与站点 calendar.cjs 同款约定：approx 条目的日期只精确到月，
+                # 没有 end 时补足月末窗口，避免被当成单日赛事提前判"已结束"。
+                if start.month == 12:
+                    next_month = start.replace(
+                        year=start.year + 1, month=1, day=1,
+                        hour=0, minute=0, second=0, microsecond=0,
+                    )
+                else:
+                    next_month = start.replace(
+                        month=start.month + 1, day=1,
+                        hour=0, minute=0, second=0, microsecond=0,
+                    )
+                end = next_month - timedelta(microseconds=1)
             events.append(
                 {
                     "id": event_id,
                     "name": name,
                     "type": str(raw.get("type") or "other"),
                     "form": str(raw.get("form") or "onsite"),
+                    "approx": approx,
                     "location": str(raw.get("location") or "").strip(),
                     "url": str(raw.get("url") or "").strip(),
                     "note": str(raw.get("note") or "").strip(),
@@ -1936,6 +1957,7 @@ class DfacmAcmBroadcast(star.Star):
                     "name": event["name"],
                     "type": event["type"],
                     "form": event["form"],
+                    "approx": event["approx"],
                     "location": event["location"],
                     "url": event["url"],
                     "note": event["note"],
@@ -2016,13 +2038,16 @@ class DfacmAcmBroadcast(star.Star):
 
     @staticmethod
     def _calendar_when(event: dict) -> str:
-        """'10月24日（周六）–10月25日（周日）' / '9月6日（周日）13:00–18:00'."""
+        """'10月24日（周六）–10月25日（周日）' / '9月6日（周日）13:00–18:00'
+        / '2027年4月（日期待公布）'."""
         weekdays = "一二三四五六日"
         start, end = event["start"], event["end"]
 
         def day(value: datetime) -> str:
             return f"{value.month}月{value.day}日（周{weekdays[value.weekday()]}）"
 
+        if event.get("approx"):
+            return f"{start.year}年{start.month}月（日期待公布）"
         if end and end.date() != start.date():
             return f"{day(start)}–{day(end)}"
         if end and (start.hour or start.minute):
@@ -2061,7 +2086,7 @@ class DfacmAcmBroadcast(star.Star):
             extras.append(label)
         if extras:
             line += "（" + " · ".join(extras) + "）"
-        if now and self._calendar_status(event, now) == "upcoming":
+        if now and not event.get("approx") and self._calendar_status(event, now) == "upcoming":
             tz = ZoneInfo("Asia/Shanghai")
             days = (event["start"].astimezone(tz).date() - now.date()).days
             if days <= 0:
@@ -2091,7 +2116,13 @@ class DfacmAcmBroadcast(star.Star):
             next_monday.year, next_monday.month, next_monday.day, tzinfo=tz
         )
         window_end = window_start + timedelta(days=7)
-        starting = [event for event in events if window_start <= event["start"] < window_end]
+        # approx 条目日期只精确到月，无法判定"下周开赛"，只进截止清单；
+        # 精确日期的赛事才会进"下周开赛"列表。
+        starting = [
+            event
+            for event in events
+            if not event.get("approx") and window_start <= event["start"] < window_end
+        ]
         deadlines = [
             event
             for event in events
@@ -2099,14 +2130,14 @@ class DfacmAcmBroadcast(star.Star):
         ]
         sunday = next_monday + timedelta(days=6)
         lines = [
-            f"🗓️ 下周 XCPC 赛程（{next_monday.month}月{next_monday.day}日"
+            f"🗓️ 下周赛程（{next_monday.month}月{next_monday.day}日"
             f"–{sunday.month}月{sunday.day}日）",
             "",
         ]
         if starting:
             lines.extend(self._calendar_line(event) for event in starting)
         else:
-            lines.append("· 下周暂无收录的 XCPC 赛事")
+            lines.append("· 下周暂无收录的赛事")
         if deadlines:
             lines.append("")
             lines.append("⏳ 下周报名截止")
@@ -3150,7 +3181,7 @@ class DfacmAcmBroadcast(star.Star):
             lines.extend(self._calendar_line(e, now) for e in upcoming[:12])
         if not lines:
             yield event.plain_result(
-                "近期暂无收录的 XCPC 赛事。完整日历：https://dfacm.website/calendar"
+                "近期暂无收录的算法赛事。完整日历：https://dfacm.website/calendar"
             )
             return
         lines.append("")

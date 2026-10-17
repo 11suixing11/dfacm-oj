@@ -7,22 +7,43 @@
 // calendar.json 的条目字段：
 //   id          必填，字符串，全局唯一（QQ 播报机器人的防重键）
 //   name        必填，赛事名称
-//   type        必填，icpc | ccpc | provincial | invitational | school | other
+//   type        必填，见下方分类指南
 //   form        可选，onsite（默认）| online | hybrid
 //   location    可选，地点（现场赛城市 / 承办高校）
 //   start       必填，ISO 8601（带 +08:00 偏移）；多日赛事给首日 00:00
 //   end         可选，ISO 8601；多日赛事给末日 23:59:59
-//   regDeadline 可选，ISO 8601，报名截止
+//   approx      可选，true = 日期只精确到月：start/end 圈出月份窗口，
+//               展示为"2027年4月（日期待公布）"，不显示倒计时与具体星期；
+//               报名截止等精确时间不受影响
+//   regDeadline 可选，ISO 8601，报名截止（bot 会在 D-3 / D-1 提醒）
 //   url         可选，官方/报名链接，必须 http(s):// 开头
 //   note        可选，一行备注
+//
+// 分类指南（type 选型，徽章色即品牌色板）：
+//   icpc        ICPC 全体系（网络预选赛/区域赛/EC-Final/世界总决赛）
+//   ccpc        CCPC 全体系（网络赛/分站赛/女生专场/高职专场/总决赛）
+//   provincial  各省程序设计竞赛（四川省赛、广东省赛 GDCPC 等）
+//   invitational 全国邀请赛（西安/湘潭/深圳/南昌邀请赛等）
+//   school      本校比赛（校内选拔等）
+//   lqb         蓝桥杯（省赛/全国决赛）
+//   ladder      中国高校计算机大赛-团体程序设计天梯赛（CCCC-GPLT）
+//   asta        百度之星（Astar 程序设计大赛）
+//   industry    企业赛（华为软件精英挑战赛、字节青训营赛等厂商主办）
+//   ccsp        CCF 大学生计算机系统与程序设计竞赛（CCSP）
+//   other       其余算法类赛事（睿抗 RAICOM 程序设计赛道等）
 
-const TYPES = ['icpc', 'ccpc', 'provincial', 'invitational', 'school', 'other'];
+const TYPES = ['icpc', 'ccpc', 'provincial', 'invitational', 'school', 'lqb', 'ladder', 'asta', 'industry', 'ccsp', 'other'];
 const TYPE_META = {
     icpc: { label: 'ICPC', color: '#2a5caa', fg: '#ffffff' },
     ccpc: { label: 'CCPC', color: '#c9a227', fg: '#1a2940' },
     provincial: { label: '省赛', color: '#3d9ad1', fg: '#ffffff' },
     invitational: { label: '邀请赛', color: '#57708a', fg: '#ffffff' },
     school: { label: '校级赛', color: '#3f8f5f', fg: '#ffffff' },
+    lqb: { label: '蓝桥杯', color: '#2a8f8f', fg: '#ffffff' },
+    ladder: { label: '天梯赛', color: '#b3541e', fg: '#ffffff' },
+    asta: { label: '百度之星', color: '#d9534f', fg: '#ffffff' },
+    industry: { label: '企业赛', color: '#7a5cae', fg: '#ffffff' },
+    ccsp: { label: 'CCSP', color: '#8f5a44', fg: '#ffffff' },
     other: { label: '其他', color: '#8a94a6', fg: '#ffffff' },
 };
 const FORM_LABELS = { onsite: '现场', online: '线上', hybrid: '线上/线下' };
@@ -106,6 +127,14 @@ function validateEvent(raw, index) {
     if (!Object.keys(FORM_LABELS).includes(form)) return { ok: false, id, reason: `未知 form：${raw.form}` };
     const url = raw.url === undefined || raw.url === null ? '' : String(raw.url).trim();
     if (url && !/^https?:\/\//.test(url)) return { ok: false, id, reason: `url 必须以 http(s):// 开头：${url}` };
+    const approx = raw.approx === true;
+    // approx 条目约定 start/end 圈出月份窗口（如 2027-04-01 ~ 2027-04-30），
+    // end 缺席时补一个月窗口，避免"日期待公布"的条目被当成单日赛事。
+    if (approx && !end) {
+        const p = cstParts(start);
+        const nextMonth = p.m === 12 ? { y: p.y + 1, m: 1 } : { y: p.y, m: p.m + 1 };
+        end = new Date(Date.UTC(nextMonth.y, nextMonth.m - 1, 1) - (CST + 1));
+    }
     return {
         ok: true,
         event: {
@@ -113,6 +142,7 @@ function validateEvent(raw, index) {
             name: raw.name.trim(),
             type: raw.type,
             form,
+            approx,
             location: raw.location ? String(raw.location).trim() : '',
             // 原始 ISO 字符串原样保留（/calendar/data 端点与 bot 依赖）
             start: raw.start,
@@ -176,7 +206,11 @@ function describeEvent(event, now) {
     const end = event._end;
     let dateText;
     let timeText = '';
-    if (end && !sameCstDay(start, end)) {
+    if (event.approx) {
+        // 月份级条目：只说年月，不猜具体星期。
+        const p = cstParts(start);
+        dateText = `${p.y}年${p.m}月`;
+    } else if (end && !sameCstDay(start, end)) {
         dateText = `${fmtDate(start)} – ${fmtDate(end)}`;
     } else {
         dateText = fmtDate(start);
@@ -186,8 +220,9 @@ function describeEvent(event, now) {
         }
     }
     let countdownText;
-    if (status === 'ongoing') countdownText = '进行中';
+    if (status === 'ongoing') countdownText = event.approx ? '临近 / 进行中' : '进行中';
     else if (status === 'ended') countdownText = '已结束';
+    else if (event.approx) countdownText = '日期待公布';
     else {
         const days = cstDayDiff(now, start);
         if (days <= 0) countdownText = '今天开赛';
@@ -220,6 +255,7 @@ function describeEvent(event, now) {
         fg: meta.fg,
         form: event.form,
         formLabel: FORM_LABELS[event.form],
+        approx: !!event.approx,
         placeText,
         url: event.url,
         note: event.note,

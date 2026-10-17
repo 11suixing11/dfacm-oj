@@ -184,3 +184,75 @@ test('empty data renders an empty-but-valid view', () => {
     assert.deepEqual(view.filters, [{ key: '', label: '全部', count: 0 }]);
     assert.equal(view.updated, '');
 });
+
+// --- 扩展生态分类与 approx（月份级日期） -----------------------------------
+
+test('new ecosystem types validate and get their badges', () => {
+    const parsed = load({
+        events: [
+            { id: 'ccsp', name: 'CCSP', type: 'ccsp', start: '2026-10-21T00:00:00+08:00', end: '2026-10-22T23:59:59+08:00' },
+            { id: 'ladder', name: '天梯赛', type: 'ladder', start: '2027-04-20T13:30:00+08:00' },
+            { id: 'industry', name: '企业赛', type: 'industry', start: '2027-03-15T00:00:00+08:00' },
+            { id: 'asta', name: '百度之星', type: 'asta', start: '2027-07-15T00:00:00+08:00' },
+            { id: 'lqb', name: '蓝桥杯', type: 'lqb', start: '2027-04-11T09:00:00+08:00' },
+        ],
+    });
+    assert.equal(parsed.skipped.length, 0);
+    const view = describeEvents(parsed, at('2026-10-18T12:00:00+08:00'), '');
+    // chips 只出现有数据的类型，且按 TYPES 定义的固定顺序排列
+    assert.deepEqual(view.filters.map((f) => f.key),
+        ['', 'lqb', 'ladder', 'asta', 'industry', 'ccsp']);
+    const badges = Object.fromEntries(view.upcoming.concat(view.ended).map((e) => [e.id, [e.typeLabel, e.color]]));
+    assert.equal(badges.ccsp[0], 'CCSP');
+    assert.equal(badges.lqb[0], '蓝桥杯');
+    assert.equal(badges.ladder[0], '天梯赛');
+    assert.equal(badges.asta[0], '百度之星');
+    assert.equal(badges.industry[0], '企业赛');
+});
+
+test('approx events show month-precision dates; deadlines stay exact', () => {
+    const parsed = load({
+        events: [{
+            id: 'lqb18', name: '蓝桥杯', type: 'lqb', approx: true,
+            start: '2027-04-01T00:00:00+08:00', end: '2027-04-30T23:59:59+08:00',
+            regDeadline: '2026-12-18T14:00:00+08:00',
+        }],
+    });
+    const view = describeEvents(parsed, NOW, '');
+    const event = view.upcoming[0];
+    assert.equal(event.approx, true);
+    assert.equal(event.dateText, '2027年4月');
+    assert.equal(event.timeText, '');
+    assert.equal(event.countdownText, '日期待公布');
+    // 报名截止是精确时间：正常显示并可触发 D-3/D-1 提醒
+    assert.equal(event.regText, '报名截止：12月18日（周五） 14:00');
+    assert.equal(event.regSoon, false);
+});
+
+test('approx without end defaults to a month window, never a single day', () => {
+    const parsed = load({
+        events: [{ id: 'x', name: '某赛事', type: 'industry', approx: true, start: '2027-05-01T00:00:00+08:00' }],
+    });
+    const event = parsed.events[0];
+    assert.ok(event._end, 'month window must be synthesized');
+    const view = describeEvents(parsed, at('2027-05-20T12:00:00+08:00'), '');
+    assert.equal(view.upcoming.length, 0);
+    assert.equal(view.ongoing.length, 1, 'May 20 sits inside the synthesized May window');
+    assert.equal(view.ended.length, 0);
+    const view2 = describeEvents(parsed, at('2027-05-02T12:00:00+08:00'), '');
+    assert.equal(view2.ongoing.length, 1);
+    assert.equal(view2.ongoing[0].countdownText, '临近 / 进行中');
+    const view3 = describeEvents(parsed, at('2027-06-05T12:00:00+08:00'), '');
+    assert.equal(view3.ended.length, 1, 'after May 2027 the window has passed');
+});
+
+test('the shipped seed carries the CCSP and Lanqiao entries with their verified facts', () => {
+    const parsed = loadCalendar(fs.readFileSync(SEED, 'utf-8'));
+    const ccsp = parsed.events.find((e) => e.id === 'ccsp-2026');
+    assert.ok(ccsp, 'CCSP 2026 must be in the seed');
+    assert.equal(ccsp.type, 'ccsp');
+    const lqb = parsed.events.find((e) => e.id === 'lqb-18');
+    assert.ok(lqb, 'Lanqiao 18th must be in the seed');
+    assert.equal(lqb.approx, true);
+    assert.ok(lqb.regDeadline, 'the 12-18 registration deadline is the actionable fact');
+});
