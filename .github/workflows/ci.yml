@@ -221,5 +221,10 @@ jobs:
         run: npm ci --no-audit --no-fund
       - name: Run shop plugin tests
         run: node --test plugin-dfacm-shop/tests/*.test.cjs
+      - name: Install calendar test dependencies
+        working-directory: plugin-dfacm-calendar
+        run: npm ci --no-audit --no-fund
+      - name: Run calendar plugin tests
+        run: node --test plugin-dfacm-calendar/tests/*.test.cjs
       - name: Run deployment script tests
         run: node --test scripts/deployment.test.mjs scripts/landing.test.cjs scripts/repository.test.cjs

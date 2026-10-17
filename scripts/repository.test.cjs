@@ -51,6 +51,7 @@ test('Caddy keeps both domains and their www entries', () => {
 test('each public plugin README starts with the d&f brand', () => {
     const pluginReadmes = [
         'plugin-dfacm-broadcast/README.md',
+        'plugin-dfacm-calendar/README.md',
         'plugin-dfacm-ops/README.md',
         'plugin-dfacm-regcode/README.md',
         'plugin-dfacm-shop/README.md',

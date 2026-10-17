@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/11suixing11/dfacm-oj/actions/workflows/ci.yml/badge.svg)](https://github.com/11suixing11/dfacm-oj/actions/workflows/ci.yml)
 
-> 基于 [Hydro OJ](https://hydro.ac) v5.0.7 的独立平台定制层：品牌门面首页、一站式认证页、训练工作台 / 积分商店 / QQ 群播报、排名自动化与一键部署。
+> 基于 [Hydro OJ](https://hydro.ac) v5.0.7 的独立平台定制层：品牌门面首页、一站式认证页、训练工作台 / 积分商店 / 赛事日历 / QQ 群播报、排名自动化与一键部署。
 
 **品牌寓意**：每个人都能在算法竞赛这条路上找到属于自己的 final。
 
@@ -21,6 +21,7 @@ OJ 内核使用开源的 Hydro，本仓库收录的是我们围绕它做的**全
 | [`plugin-dfacm-ops/`](plugin-dfacm-ops/) | 管理员报表与排名自动化：训练周报 / 判题健康摘要两个只读脚本；RP 准实时重算（判题结束 30 秒防抖，不再等到凌晨）+ 每小时全域清扫 + 评测服务号状态自洁（防幽灵排名）+ 成员自动加域与每小时对账（任何注册路径漏网 ≤1 小时自愈上榜）。无公共 HTTP 路由 |
 | [`plugin-dfacm-train/`](plugin-dfacm-train/) | 个人训练工作台 `/workbench` + 错题本 `/mistakes`：当前路线与下一题、本周进度、最近未通过；判题结束自动收集未 AC 题，记录错误原因、复盘笔记与补题状态 |
 | [`plugin-dfacm-shop/`](plugin-dfacm-shop/) | 积分商店：每道题首次 AC 按难度（Hydro RP 同源算法）入账 1~10 积分，`/shop` 花积分兑徽章（复用 badge-for-hydrooj 持有链路），`/shop/history` 积分流水，`/manage/shop` 徽章定价上下架；`{uid, ref}` 唯一键幂等防双花，兑换失败自动退款。称号工坊 `/shop/title`：500 分解锁（含首次铸造）+ 50 分/次修改，学生自铸 ≤4 字专属称号（合成徽章复用全站展示链路，改名经 `badgeEdit` 即时热更新），先显后管——预设色板 + 字符白名单 + 保留词拦截，管理端一键停用/恢复 |
+| [`plugin-dfacm-calendar/`](plugin-dfacm-calendar/) | XCPC 赛事日历 `/calendar`：ICPC / CCPC / 省赛 / 邀请赛 / 校级比赛的赛事情报页，进行中 / 即将到来（倒计时与报名截止提醒）/ 已结束三组展示，游客可见；`/calendar/data` 只读 JSON 端点供 QQ 播报抓取。数据在 `calendar.json` 手工维护，改文件 `deploy --sync-only` 即时生效、无需重启，坏数据自动回退上一份好数据 |
 | [`plugin-dfacm-broadcast/`](plugin-dfacm-broadcast/) | QQ 群播报（AstrBot 插件，Python，部署在机器人服务器）：只读直连 OJ MongoDB 轮询，AC 卡片、每日榜单、比赛零配置直播（赛中实时发卡 + 终榜战报）、账号绑定 / 签到 / 账号合并；不抓网页、不动站点权限，与 Hydro 分离部署 |
 | [`theme/`](theme/) | Hydro 原生 Light / Dark 双主题 + `00-brand.css` 品牌薄层；默认 light，保留用户偏好；01-05 为旧版回退 |
 | [`deploy/`](deploy/) | Caddy 配置范例 + 一键部署编排器 `deploy.sh`（staged 上传 → 双端 sha256 对账 → 安装 → 唯一一次重启 → 就绪等待 → 冒烟电池）+ 门面/主题安装器 + 两个上游补丁（排名 own-row 去重与自己行高亮、单题 RP 保底）+ 脱敏部署清单 `deployment.md` |
@@ -76,6 +77,7 @@ bash deploy/deploy.sh --stage-only   # 只上传并对账，不动线上任何�
 ├── plugin-dfacm-ops/         管理报表与排名自动化（Hydro addon）
 ├── plugin-dfacm-train/       训练工作台与错题本（Hydro addon）
 ├── plugin-dfacm-shop/        积分商店（Hydro addon）
+├── plugin-dfacm-calendar/    XCPC 赛事日历（Hydro addon）
 ├── plugin-dfacm-broadcast/   QQ 群播报（AstrBot 插件，Python）
 ├── theme/                   双主题品牌薄层 + 旧版回退 overlay
 ├── deploy/                  Caddyfile / 部署编排器 / 安装器 / 上游补丁 / 部署清单
@@ -93,7 +95,7 @@ bash deploy/deploy.sh --stage-only   # 只上传并对账，不动线上任何�
 - 验证码用 `crypto.randomInt` 生成、绑定 purpose（注册/登录互斥）、失败次数 MongoDB 原子自增、显式检查 TTL；登录码只发往账号已绑定的邮箱。
 - 所有改状态的 POST（注册完成、验证码登录、错题本、商店兑换与管理页定价）都携带会话级 CSRF token（`timingSafeEqual` 比较）；发码接口刻意豁免——首次访客尚无可保护的会话。
 - 只有直接对端是回环地址时才信任 `X-Forwarded-For` 首段；Caddy 配置覆盖客户端传入的 XFF，Cloudflare 场景由 `@fromcf` 钉扎真实 IP，CI 锁定两份 Cloudflare 网段列表逐字节一致。
-- CI：gitleaks 全历史 secret 扫描、五套测试全量执行（regcode / train / ops / shop / 部署与落地页脚本，约 200 项）、`shellcheck -S warning`、Caddyfile 解析检查、CSRF 覆盖 wiring 断言、注入面与主题作用域回归锁、弃用域名扫描；文档里无法在仓库实现中验证的调优声明一旦再引入即失败。
+- CI：gitleaks 全历史 secret 扫描、六套测试全量执行（regcode / train / ops / shop / calendar / 部署与落地页脚本）、`shellcheck -S warning`、Caddyfile 解析检查、CSRF 覆盖 wiring 断言、注入面与主题作用域回归锁、弃用域名扫描；文档里无法在仓库实现中验证的调优声明一旦再引入即失败。
 - `plugin-dfacm-ops` 的报表脚本（`PRIV_EDIT_SYSTEM` + sudo）只读数据库、写 0700 权限的本地报表文件；RP 重算 / 清扫 / 自动加域 / 服务号自洁可分别用 `SWPU_LIVE_RP` / `SWPU_RP_SWEEP` / `SWPU_AUTO_JOIN` / `SWPU_SERVICE_UIDS` 环境变量关闭。没有公共 HTTP 路由。
 - 仓库不含 SMTP、数据库或服务器凭据；QQ 播报的连接串走 `mongo_uri.txt`（已 gitignore，仅提交 example）；部署与主题脚本修改前自动备份到发布目录之外。
 

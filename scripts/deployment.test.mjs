@@ -479,8 +479,8 @@ test('a post-write verification failure rolls every file back', () => {
 });
 
 test('documented addon installations contain every module and asset the entries load', () => {
-  const instructions = fs.readFileSync(path.join(repo, 'deploy/deployment.md'), 'utf8');
-  for (const addon of ['plugin-dfacm-ops', 'plugin-dfacm-train']) {
+  const instructions = fs.readFileSync(path.join(repo, 'deploy', 'deployment.md'), 'utf8');
+  for (const addon of ['plugin-dfacm-ops', 'plugin-dfacm-train', 'plugin-dfacm-calendar']) {
     const names = instructions.match(new RegExp(`cp /root/swpu-oj/${addon}/\\{([^}]+)\\}`))[1].split(',');
     const installed = fs.mkdtempSync(path.join(root, 'installed-addon-'));
     for (const name of names) fs.copyFileSync(path.join(repo, addon, name), path.join(installed, name));
@@ -579,6 +579,57 @@ test('points-shop plugin ships every documented file and its templates render th
   }
   assert.match(indexSource, /swpuTitles/, 'the shop must own the swpuTitles state collection');
   assert.match(shop, /swpu_shop_title/, 'the shop shelf must link the title workshop card');
+});
+
+test('contest-calendar plugin ships its data, template and bot-feed wiring', () => {
+  // The calendar addon serves every page render straight from calendar.json on
+  // disk (updates ship via deploy.sh --sync-only without a restart), so the
+  // documented cp blocks must cover the data file as well as the code.
+  const instructions = fs.readFileSync(path.join(repo, 'deploy', 'deployment.md'), 'utf8');
+  const documented = [];
+  for (const match of instructions.matchAll(/cp \/root\/swpu-oj\/plugin-dfacm-calendar\/\{([^}]+)\}/g)) {
+    documented.push(...match[1].split(',').map((name) => name.trim()));
+  }
+  assert.deepEqual(documented.sort(), [
+    'calendar.cjs', 'calendar.json', 'index.ts', 'package.json', 'templates/calendar.html',
+  ]);
+  for (const name of documented) {
+    assert.ok(fs.existsSync(path.join(repo, 'plugin-dfacm-calendar', name)), `missing ${name}`);
+  }
+  // The shipped season must validate cleanly with the plugin's own loader.
+  const requirePlugin = createRequire(path.join(repo, 'plugin-dfacm-calendar', 'index.ts'));
+  const calendar = requirePlugin('./calendar.cjs');
+  const parsed = calendar.loadCalendar(
+    fs.readFileSync(path.join(repo, 'plugin-dfacm-calendar', 'calendar.json'), 'utf8'),
+  );
+  assert.equal(parsed.skipped.length, 0, parsed.skipped.join('; '));
+  assert.ok(parsed.events.length > 0, 'the shipped season must not be empty');
+  // Template wiring: extends the site layout, uses the section component, the
+  // branded scoped styles, and no client-side date math.
+  const tpl = fs.readFileSync(path.join(repo, 'plugin-dfacm-calendar', 'templates', 'calendar.html'), 'utf8');
+  assert.match(tpl, /\{% extends "layout\/basic.html" %\}/, 'calendar.html must extend the site layout');
+  assert.match(tpl, /class="section"/, 'calendar.html must use the section component');
+  assert.match(tpl, /swpu-cal-chip/, 'calendar.html must render the type filter chips');
+  assert.match(tpl, /swpu-cal-card/, 'calendar.html must render event cards');
+  assert.match(tpl, /data-table/, 'ended events must reuse the data-table component');
+  // Route/injectUI wiring: ui-default resolves nav hrefs via url(item.name),
+  // so the injected name must equal the registered route name.
+  const index = fs.readFileSync(path.join(repo, 'plugin-dfacm-calendar', 'index.ts'), 'utf8');
+  assert.match(index, /ctx\.Route\('swpu_calendar', '\/calendar', CalendarPageHandler\)/);
+  assert.match(index, /ctx\.Route\('swpu_calendar_data', '\/calendar\/data', CalendarDataHandler\)/);
+  assert.match(index, /injectUI\('Nav', 'swpu_calendar'/);
+  // The bot feed projects raw events — internal Date fields must not leak.
+  assert.match(index, /events: parsed\.events\.map/);
+  // Integration wiring: smoke battery, CI matrix, orchestrator, addon registry.
+  const smoke = fs.readFileSync(path.join(repo, 'deploy', 'smoke.sh'), 'utf8');
+  assert.match(smoke, /\/calendar"/);
+  assert.match(smoke, /calendar\/data/);
+  const ci = fs.readFileSync(path.join(repo, '.github', 'workflows', 'ci.yml'), 'utf8');
+  assert.match(ci, /plugin-dfacm-calendar/);
+  const orchestrator = fs.readFileSync(path.join(repo, 'deploy', 'deploy.sh'), 'utf8');
+  assert.match(orchestrator, /plugin-dfacm-calendar/, 'deploy.sh must ship the calendar addon');
+  const addonExample = fs.readFileSync(path.join(repo, 'plugin-dfacm-calendar', 'addon.json.example'), 'utf8');
+  assert.match(addonExample, /swpu-calendar/);
 });
 
 test('light default initialization supports a new site and preserves user choices on rerun', () => {

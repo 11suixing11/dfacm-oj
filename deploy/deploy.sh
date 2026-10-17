@@ -107,7 +107,7 @@ stage_manifest() {
     # only the repository-side directories were renamed to plugin-dfacm-*.
     # Map each repo addon back onto its swpu-* install target explicitly.
     local addon remote_addon files f
-    for addon in plugin-dfacm-regcode plugin-dfacm-ops plugin-dfacm-train plugin-dfacm-shop; do
+    for addon in plugin-dfacm-regcode plugin-dfacm-ops plugin-dfacm-train plugin-dfacm-shop plugin-dfacm-calendar; do
         remote_addon="swpu-${addon#plugin-dfacm-}"
         files="$(doc_files "$addon")"
         if [ -z "$files" ]; then

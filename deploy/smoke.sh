@@ -39,6 +39,12 @@ if [ "$(code "https://$HOST/shop/history")" = "302" ]; then check 0 "GET /shop/h
 if [ "$(code "https://$HOST/shop/title")" = "302" ]; then check 0 "GET /shop/title gated (302)"; else check 1 "GET /shop/title gated (302)"; fi
 if [ "$(code "https://$HOST/manage/shop")" = "302" ]; then check 0 "GET /manage/shop gated (302)"; else check 1 "GET /manage/shop gated (302)"; fi
 
+# --- contest calendar (guest-visible intelligence page + bot feed) ---
+if [ "$(code "https://$HOST/calendar")" = "200" ]; then check 0 "GET /calendar = 200 (contest calendar, guest-visible)"; else check 1 "GET /calendar = 200 (contest calendar, guest-visible)"; fi
+req "https://$HOST/calendar" | grep -aF 'swpu-cal-chip' >/dev/null; check $? "calendar page renders the branded schedule"
+if [ "$(code "https://$HOST/calendar/data")" = "200" ]; then check 0 "GET /calendar/data = 200 (bot feed)"; else check 1 "GET /calendar/data = 200 (bot feed)"; fi
+req "https://$HOST/calendar/data" | grep -aF '"events"' >/dev/null; check $? "calendar feed serves the events array"
+
 # --- regcode POST path (validation-only: no mail sent, no rate consumed) ---
 req -X POST -d 'mail=smoke@example.com&purpose=hack' "https://$HOST/reg/code" \
     | grep -a '验证码用途不合法' >/dev/null; check $? "regcode rejects a bad purpose"

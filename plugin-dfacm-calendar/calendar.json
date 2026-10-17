@@ -1,0 +1,117 @@
+{
+  "updated": "2026-10-17",
+  "events": [
+    {
+      "id": "icpc51-online-1",
+      "name": "第51届 ICPC Asia EC 网络预选赛（第一场）",
+      "type": "icpc",
+      "form": "online",
+      "start": "2026-09-06T13:00:00+08:00",
+      "end": "2026-09-06T18:00:00+08:00",
+      "url": "https://icpc.pku.edu.cn/tzgg/12450f30353743ccaa302be16a7a1d85.htm",
+      "note": "PTA 平台举办；成绩作为各区域赛入围的重要参考"
+    },
+    {
+      "id": "icpc51-online-2",
+      "name": "第51届 ICPC Asia EC 网络预选赛（第二场）",
+      "type": "icpc",
+      "form": "online",
+      "start": "2026-09-12T13:00:00+08:00",
+      "end": "2026-09-12T18:00:00+08:00",
+      "url": "https://icpc.pku.edu.cn/tzgg/12450f30353743ccaa302be16a7a1d85.htm",
+      "note": "PTA 平台举办"
+    },
+    {
+      "id": "icpc51-xian",
+      "name": "第51届 ICPC 亚洲区域赛（西安站）",
+      "type": "icpc",
+      "start": "2026-10-17T00:00:00+08:00",
+      "end": "2026-10-18T23:59:59+08:00",
+      "location": "西安",
+      "url": "https://icpc.pku.edu.cn/tzgg/f5516ebbc85f414a89224a1adf91a380.htm"
+    },
+    {
+      "id": "icpc51-chengdu",
+      "name": "第51届 ICPC 亚洲区域赛（成都站）",
+      "type": "icpc",
+      "start": "2026-10-24T00:00:00+08:00",
+      "end": "2026-10-25T23:59:59+08:00",
+      "location": "成都",
+      "url": "https://icpc.pku.edu.cn/tzgg/16b0883826d74a238e0ca1423ea52a2e.htm"
+    },
+    {
+      "id": "ccpc2026-female",
+      "name": "2026 CCPC 女生专场",
+      "type": "ccpc",
+      "start": "2026-10-31T00:00:00+08:00",
+      "end": "2026-11-01T23:59:59+08:00",
+      "location": "成都信息工程大学（航空港校区）",
+      "url": "https://ccpc.io/",
+      "note": "面向高校女生的全国专场比赛"
+    },
+    {
+      "id": "icpc51-wuhan",
+      "name": "第51届 ICPC 亚洲区域赛（武汉站）",
+      "type": "icpc",
+      "start": "2026-10-31T00:00:00+08:00",
+      "end": "2026-11-01T23:59:59+08:00",
+      "location": "武汉",
+      "url": "https://icpc.pku.edu.cn/tzgg/7d13ff1991d74f7aa55a3dd8b3b8c9e2.htm"
+    },
+    {
+      "id": "icpc51-nanjing",
+      "name": "第51届 ICPC 亚洲区域赛（南京站）",
+      "type": "icpc",
+      "start": "2026-11-07T00:00:00+08:00",
+      "end": "2026-11-08T23:59:59+08:00",
+      "location": "南京",
+      "url": "https://icpc.pku.edu.cn/tzgg/1fb98fa9d73a476b853c348bd8dabed3.htm"
+    },
+    {
+      "id": "icpc51-shenyang",
+      "name": "第51届 ICPC 亚洲区域赛（沈阳站）",
+      "type": "icpc",
+      "start": "2026-11-14T00:00:00+08:00",
+      "end": "2026-11-15T23:59:59+08:00",
+      "location": "沈阳",
+      "url": "https://icpc.pku.edu.cn/tzgg/1cc97f0e462547c7963cd1b314df6c57.htm"
+    },
+    {
+      "id": "icpc51-shanghai",
+      "name": "第51届 ICPC 亚洲区域赛（上海站）",
+      "type": "icpc",
+      "start": "2026-12-05T00:00:00+08:00",
+      "end": "2026-12-06T23:59:59+08:00",
+      "location": "上海",
+      "url": "https://icpc.pku.edu.cn/tzgg/index.htm"
+    },
+    {
+      "id": "icpc51-nanchang",
+      "name": "第51届 ICPC 亚洲区域赛（南昌站）",
+      "type": "icpc",
+      "start": "2026-12-19T00:00:00+08:00",
+      "end": "2026-12-20T23:59:59+08:00",
+      "location": "南昌",
+      "url": "https://icpc.pku.edu.cn/tzgg/index.htm"
+    },
+    {
+      "id": "icpc51-hongkong",
+      "name": "第51届 ICPC 亚洲区域赛（港澳站）",
+      "type": "icpc",
+      "start": "2027-01-09T00:00:00+08:00",
+      "end": "2027-01-10T23:59:59+08:00",
+      "location": "香港",
+      "url": "https://icpc.pku.edu.cn/tzgg/index.htm"
+    },
+    {
+      "id": "icpc51-ecfinal",
+      "name": "第51届 ICPC 东亚区总决赛（EC-Final）",
+      "type": "icpc",
+      "start": "2027-01-26T00:00:00+08:00",
+      "end": "2027-01-28T23:59:59+08:00",
+      "location": "杭州",
+      "url": "https://icpc.pku.edu.cn/tzgg/index.htm",
+      "note": "各区域赛金牌/前列队伍晋级"
+    }
+  ]
+}

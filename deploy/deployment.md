@@ -203,6 +203,23 @@ mongosh "$(python3 -c "import json;print(json.load(open('/root/.hydro/config.jso
 - `/manage/shop` 域管理员可见，每行价格 + 上架 checkbox 可保存。
 - 兑换成功后跳转 `/mybadge`，佩戴后全站用户名旁出现徽章。
 
+XCPC 赛事日历可选安装（站内赛事情报页：ICPC / CCPC / 省赛 / 邀请赛 / 校级比赛的手工维护日历，游客可见；附只读 JSON 端点供 QQ 播报机器人抓取）：
+
+```bash
+mkdir -p /root/.hydro/addons/swpu-calendar/templates
+cp /root/swpu-oj/plugin-dfacm-calendar/{index.ts,calendar.cjs,calendar.json,package.json} \
+   /root/.hydro/addons/swpu-calendar/
+cp /root/swpu-oj/plugin-dfacm-calendar/{templates/calendar.html} \
+   /root/.hydro/addons/swpu-calendar/templates/
+mkdir -p /root/.hydro/addons/swpu-calendar/node_modules
+ln -sfn /usr/local/share/.config/yarn/global/node_modules/hydrooj \
+        /root/.hydro/addons/swpu-calendar/node_modules/hydrooj
+# 参考 plugin-dfacm-calendar/addon.json.example，把插件路径加入 /root/.hydro/addon.json
+pm2 restart hydrooj
+```
+
+安装后导航栏出现「赛事日历」（`/calendar`，落在「评测记录」旁，游客可见），页面按「进行中 / 即将到来 / 已结束」分组展示并支持 `?type=` 按类型筛选；`GET /calendar/data` 为无鉴权只读 JSON 端点（限速）。赛程数据在 `plugin-dfacm-calendar/calendar.json` 手工维护（字段与流程见 [plugin-dfacm-calendar/README.md](../plugin-dfacm-calendar/README.md)）：**改数据文件后 `bash deploy/deploy.sh --sync-only` 即时生效，无需 pm2 restart**——页面每次请求现读磁盘，数据文件写坏时页面回退上一份好数据并提示，不会 500。
+
 **不要**在 `/root/.hydro/addons/swpu-regcode/` 运行 `npm install` 或 `npm ci`（其他插件同理），避免重建运行目录的 `node_modules` 和 Hydro 软链。开发测试在独立仓库检出目录的插件目录中运行 `npm ci && npm test`，依赖按锁文件安装。
 
 ## 5. 邮件系统
