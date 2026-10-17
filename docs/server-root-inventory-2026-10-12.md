@@ -33,6 +33,34 @@ swpu-rank-deploy / swpu-theme-deploy。
 
 ---
 
+## 执行记录 · 2026-10-17 17:01 CST（站长拍板"做清理"，第二轮）
+
+10-12 大清理后，10-13~10-11 多个会话又把 /root 堆回了 500+ 个顶层文件（数据修复/题面重建/
+审计/蓝桥题解/CF 探测等一次性驱动脚本 + curl-impersonate 全家桶 + install-theme.sh 自动
+备份 7 对）。本轮处置：
+
+- **删除 495 个顶层文件**（白名单守卫先行：先生成候选清单、校验必留项零命中后才执行）。
+- **2 个目录**：`swpu-theme-backups`（14M，install-theme.sh 自动备份，归档最新一对
+  10-17 版本后删——那是品牌重命名部署前的回滚点）；`swpu-oj`（8K 空壳工作区，只剩
+  deploy/shop/ 两个脚本，快照后删）。
+- **保险归档** `/root/backups/archive-20261017/`：`rating.ts.bak-20261005`（rating floor
+  补丁前源码）、`cf-translate-list.json`（CF 中文化延期项的候选清单）、`hw_catalog*.json.gz`
+  两份、10-17 主题备份对、swpu-oj 快照、清理前全量盘点日志。
+- **终态** = 与 10-12 相同的六个必留目录 + 运维脚本（新增依赖见下）。
+- 全程日志 `/root/backups/cleanup-log-2026-10-17.txt`；验证：crontab 三条（03:17/15:37
+  备份 + 每 10 分钟心跳）、pm2 五进程在线、`GET /reg` 200。
+
+**10-12 以后新增的必留运维脚本**（表一原表未收录，清理白名单已含）：
+
+| 路径 | 用途 |
+|---|---|
+| `/root/swpu-heartbeat.sh` | v1.32.0 健康心跳，cron `3-59/10` 依赖 |
+| `/root/switch-smtp-qq.sh` / `switch-smtp-gmail.sh`（+ bak） | 全站发信通道切换脚本（SMTP 手册 `deploy/smtp-switch.md`） |
+| `/root/judge-off.yaml` | CLI 操作时关内嵌 judge 的 OVERRIDE_CONFIG（deployment.md 引用） |
+| `/root/backup.log` | 备份 cron 的旧输出文件（仍有写入，保留） |
+
+---
+
 ## 表一 · OJ 服务器 `/root`（107.151.246.137 / dfacm.website）
 
 ### ✅ 必留（生产依赖或唯一数据源）
