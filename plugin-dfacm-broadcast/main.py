@@ -550,7 +550,14 @@ class DfacmAcmBroadcast(star.Star):
         db = self._mongo()
         hidden = self._db_hidden_pids(db)
         pipeline = [
-            {"$match": {"status": 1, "tid": None, "uid": {"$nin": [0, 1, 3]}}},
+            {
+                "$match": {
+                    "status": 1,
+                    "score": {"$gte": 100},
+                    "tid": None,
+                    "uid": {"$nin": [0, 1, 3]},
+                }
+            },
             {
                 "$group": {
                     "_id": {"u": "$uid", "d": "$domainId", "p": "$pid"},
@@ -622,6 +629,7 @@ class DfacmAcmBroadcast(star.Star):
                 {
                     "$match": {
                         "status": 1,
+                        "score": {"$gte": 100},
                         "tid": None,
                         "uid": {"$in": [int(u) for u in uids]},
                     }
@@ -714,7 +722,7 @@ class DfacmAcmBroadcast(star.Star):
             )
         seen: dict[tuple, list] = {}
         for doc in db.record.find(
-            {"$or": ors, "status": 1},
+            {"$or": ors, "status": 1, "score": {"$gte": 100}},
             {"uid": 1, "domainId": 1, "pid": 1, "tid": 1, "_id": 1},
         ):
             key = (
@@ -745,13 +753,21 @@ class DfacmAcmBroadcast(star.Star):
                 "tid": tid,
                 "pid": doc_id,
                 "status": 1,
+                "score": {"$gte": 100},
                 "_id": {"$lt": ObjectId(rid_hex)},
             }
         )
         solved_rows = list(
             db.record.aggregate(
                 [
-                    {"$match": {"domainId": domain, "tid": tid, "status": 1}},
+                    {
+                        "$match": {
+                            "domainId": domain,
+                            "tid": tid,
+                            "status": 1,
+                            "score": {"$gte": 100},
+                        }
+                    },
                     {"$group": {"_id": {"u": "$uid", "p": "$pid"}}},
                     {"$group": {"_id": "$_id.u", "solved": {"$sum": 1}}},
                 ]
@@ -773,6 +789,7 @@ class DfacmAcmBroadcast(star.Star):
                             "domainId": domain,
                             "tid": ObjectId(tid_hex),
                             "status": 1,
+                            "score": {"$gte": 100},
                         }
                     },
                     {
@@ -1191,6 +1208,8 @@ class DfacmAcmBroadcast(star.Star):
         "pid": 1,
         "domainId": 1,
         "status": 1,
+        "score": 1,
+        "input": 1,
         "lang": 1,
         "tid": 1,
         "time": 1,
@@ -1317,6 +1336,11 @@ class DfacmAcmBroadcast(star.Star):
                 continue
             if uid in self.SERVICE_UIDS:
                 continue
+            if doc.get("input"):
+                # Problem-page custom test: runs the code on self-supplied
+                # input only — status 1 / score 1 means "ran fine", not a
+                # judged submission. Never broadcast, never count.
+                continue
             domain = str(doc.get("domainId") or "system")
             if domain not in self.WATCH_DOMAINS:
                 continue
@@ -1389,6 +1413,7 @@ class DfacmAcmBroadcast(star.Star):
                 {
                     "id": rid,
                     "status": self._status_text(doc.get("status")),
+                    "score": int(doc.get("score") or 0),
                     "problem": problem,
                     "problem_url": problem_url,
                     "hidden": hidden,
@@ -1486,7 +1511,9 @@ class DfacmAcmBroadcast(star.Star):
     def _db_user_records(self, uid: int, limit: int = 5) -> list[dict]:
         db = self._mongo()
         docs = list(
-            db.record.find({"uid": uid}, self._RECORD_PROJECTION)
+            db.record.find(
+                {"uid": uid, "input": {"$exists": False}}, self._RECORD_PROJECTION
+            )
             .sort("_id", -1)
             .limit(limit)
         )
@@ -1529,7 +1556,13 @@ class DfacmAcmBroadcast(star.Star):
             list(
                 db.record.aggregate(
                     [
-                        {"$match": {"uid": uid, "status": 1}},
+                        {
+                            "$match": {
+                                "uid": uid,
+                                "status": 1,
+                                "score": {"$gte": 100},
+                            }
+                        },
                         {"$group": {"_id": {"d": "$domainId", "p": "$pid"}}},
                     ]
                 )
@@ -1607,6 +1640,7 @@ class DfacmAcmBroadcast(star.Star):
             item
             for item in items
             if item["status"] == "Accepted"
+            and item.get("score", 0) >= 100
             and item["ts"] >= self._started_ts
             and (item.get("tid") or not item.get("hidden"))
         ]
@@ -1650,7 +1684,10 @@ class DfacmAcmBroadcast(star.Star):
             self._db.execute(
                 "UPDATE records SET status = ? WHERE rid = ?", (status_text, rid)
             )
-            if int(doc.get("status") or 0) == 1:
+            if (
+                int(doc.get("status") or 0) == 1
+                and int(doc.get("score") or 0) >= 100
+            ):
                 transitions.append(row)
         await self._queue_verdict_cards(transitions)
 
@@ -1837,7 +1874,7 @@ class DfacmAcmBroadcast(star.Star):
         if alert_lines:
             try:
                 await self.context.send_message(
-                    self.GROUP_SESSION, MessageChain().plain("\n".join(alert_lines))
+                    self.GROUP_SESSION, MessageChain().message("\n".join(alert_lines))
                 )
             except Exception:
                 self.logger.exception("health alert delivery failed")
@@ -2156,7 +2193,7 @@ class DfacmAcmBroadcast(star.Star):
         self._db_set_meta(week_key, "1")
         try:
             await self.context.send_message(
-                self.GROUP_SESSION, MessageChain().plain("\n".join(lines))
+                self.GROUP_SESSION, MessageChain().message("\n".join(lines))
             )
         except Exception:
             self.logger.exception("weekly calendar digest delivery failed")
@@ -2187,7 +2224,7 @@ class DfacmAcmBroadcast(star.Star):
                 message += f"\n{event['url']}"
             try:
                 await self.context.send_message(
-                    self.GROUP_SESSION, MessageChain().plain(message)
+                    self.GROUP_SESSION, MessageChain().message(message)
                 )
             except Exception:
                 self.logger.exception("calendar reg reminder delivery failed")
