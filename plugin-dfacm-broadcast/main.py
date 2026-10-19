@@ -37,7 +37,9 @@ class DfacmAcmBroadcast(star.Star):
 
     STATE_SCHEMA_VERSION = 1
 
-    GROUP_SESSION = "qq-onebot:GroupMessage:1128735782"
+    # Official QQ bot platform (qq_official adapter, id "qqbot"): groups are
+    # identified by per-bot group_openid, not the QQ group number.
+    GROUP_SESSION = "qqbot:GroupMessage:E028A2787EEBB8D03234AB3E0C0D763C"
     BASE_URL = "https://dfacm.website"
     # Poll the OJ's MongoDB directly through a read-only account: no web
     # scraping, no login sessions, and the public site keeps its
