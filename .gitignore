@@ -35,3 +35,6 @@ plugin-dfacm-broadcast/mongo_uri.txt
 # Contest calendar runtime cache (platform auto-fetch, written by auto.cjs
 # on the server and by stray test-refresh races locally; never shipped).
 plugin-dfacm-calendar/auto-cache.json
+plugin-dfacm-calendar/auto-cache-*.json
+plugin-dfacm-calendar/clist-cache.json
+plugin-dfacm-calendar/*-cache*.tmp

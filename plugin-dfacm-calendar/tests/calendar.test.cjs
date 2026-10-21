@@ -9,7 +9,7 @@ const path = require('node:path');
 const { test } = require('node:test');
 
 const {
-    TYPES, cstDayDiff, describeEvents, loadCalendar,
+    TYPES, cstDayDiff, describeEvents, loadCalendar, mergeCalendar, selectEvents, selectedTypes,
 } = require('../calendar.cjs');
 
 const SEED = path.join(__dirname, '..', 'calendar.json');
@@ -181,7 +181,7 @@ test('cstDayDiff is calendar-day based across months and years', () => {
 test('empty data renders an empty-but-valid view', () => {
     const view = describeEvents(load({ updated: '', events: [] }), NOW, '');
     assert.equal(view.total, 0);
-    assert.deepEqual(view.filters, [{ key: '', label: '全部', count: 0 }]);
+    assert.deepEqual(view.filters, [{ key: '', label: '全部', count: 0, selected: true, href: '/calendar' }]);
     assert.equal(view.updated, '');
 });
 
@@ -255,4 +255,37 @@ test('the shipped seed carries the CCSP and Lanqiao entries with their verified 
     assert.ok(lqb, 'Lanqiao 18th must be in the seed');
     assert.equal(lqb.approx, true);
     assert.ok(lqb.regDeadline, 'the 12-18 registration deadline is the actionable fact');
+});
+
+test('multiple filters normalize duplicates, preserve search in toggle links and unknown values fall back', () => {
+    const parsed = seasonFixture();
+    assert.deepEqual(selectedTypes({ types: 'icpc, ccpc,icpc,unknown' }), ['icpc', 'ccpc']);
+    assert.equal(selectEvents(parsed.events, { types: 'icpc,ccpc' }).length, 3);
+    assert.deepEqual(selectEvents(parsed.events, { q: '成都' }).map((e) => e.id), ['tomorrow']);
+    const view = describeEvents(parsed, NOW, '', { types: 'icpc,ccpc', q: '赛' });
+    const cf = view.filters.find((f) => f.key === 'ccpc');
+    assert.equal(cf.selected, true);
+    const link = new URL(cf.href, 'https://dfacm.website');
+    assert.equal(link.searchParams.get('types'), 'icpc');
+    assert.equal(link.searchParams.get('q'), '赛');
+    assert.equal(selectEvents(parsed.events, { types: 'unknown' }).length, parsed.events.length);
+});
+
+test('manual events win canonical CF links while meaningful query parameters remain distinct', () => {
+    const raw = { id: 'curated', name: '手工比赛', type: 'cf', form: 'online', start: '2026-10-22T20:00:00+08:00', end: '2026-10-22T22:00:00+08:00', url: 'https://codeforces.com/contest/999' };
+    const manual = load({ events: [raw] });
+    const merged = mergeCalendar(manual, [{ ...raw, id: 'cf-999', url: 'http://www.codeforces.com/contests/999/?utm_source=clist#top' }]);
+    assert.equal(merged.events.length, 1);
+    assert.equal(merged.events[0].id, 'curated');
+    const query = load({ events: [{ ...raw, url: 'https://example.com/event?id=1' }] });
+    assert.equal(mergeCalendar(query, [{ ...raw, id: 'second', url: 'https://example.com/event?id=2' }]).events.length, 2);
+});
+
+test('midnight onsite event without end remains ongoing for the full day; same-day registration can close', () => {
+    const data = load({ events: [{ id: 'day', name: '全天赛事', type: 'school', start: '2026-10-18T00:00:00+08:00', regDeadline: '2026-10-18T11:00:00+08:00' }] });
+    const view = describeEvents(data, NOW, '');
+    assert.equal(view.ongoing.length, 1);
+    assert.match(view.ongoing[0].regText, /报名已截止/);
+    assert.equal(view.ongoing[0].regSoon, false);
+    assert.equal(describeEvents(data, at('2026-10-19T00:00:00+08:00'), '').ended.length, 1);
 });

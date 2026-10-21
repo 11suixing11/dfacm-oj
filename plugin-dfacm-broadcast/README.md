@@ -1,8 +1,10 @@
-# d&f算法网 QQ 播报插件（内部标识：swpu_acm_broadcast v2.3.0）
+# d&f算法网 QQ 播报插件（内部标识：swpu_acm_broadcast v2.4.1）
 
 AstrBot 插件：QQ 群自动播报 [d&f算法网](https://dfacm.website)（Hydro v5）的 AC 提交，附带每日榜单、比赛实时播报、XCPC 赛事周播报（每周日 20:30 下周赛程预告 + 报名截止 D-3/D-1 提醒，数据源为站内 `/calendar/data`）、账号绑定、签到、账号合并等群功能。
 
 品牌寓意：每个人都能在算法竞赛这条路上找到属于自己的 final。
+
+v2.4.1 补齐站内赛事日历的牛客、洛谷、LeetCode、CodeChef 类型标签，沿用 `/calendar/data` 接口；CLIST 凭据在 OJ 后台配置，机器人无需保存该 Key。
 
 ## 架构（v2.1.0：MongoDB 为唯一真相）
 

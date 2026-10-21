@@ -1,7 +1,7 @@
 name: swpu_acm_broadcast
 author: Codex
 description: d&f算法网全站 AC 提交与当日活跃用户排名播报（dfacm.website 数据库直连轮询版，含站点健康监控与告警、算法赛事周播报与报名截止提醒）
-version: 2.4.0
+version: 2.4.1
 support_platforms:
   - aiocqhttp
   - qq_official

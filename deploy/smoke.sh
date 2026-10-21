@@ -44,6 +44,13 @@ if [ "$(code "https://$HOST/calendar")" = "200" ]; then check 0 "GET /calendar =
 req "https://$HOST/calendar" | grep -aF 'swpu-cal-chip' >/dev/null; check $? "calendar page renders the branded schedule"
 if [ "$(code "https://$HOST/calendar/data")" = "200" ]; then check 0 "GET /calendar/data = 200 (bot feed)"; else check 1 "GET /calendar/data = 200 (bot feed)"; fi
 req "https://$HOST/calendar/data" | grep -aF '"events"' >/dev/null; check $? "calendar feed serves the events array"
+req "https://$HOST/calendar" | grep -aF 'dfacm-calendar-boot' >/dev/null; check $? "calendar interactive view boot is present"
+req "https://$HOST/calendar/feed.ics?types=icpc" | grep -aF 'BEGIN:VCALENDAR' >/dev/null; check $? "calendar subscription serves iCalendar"
+hdr "https://$HOST/calendar/feed.ics" 'content-type: text/calendar'; check $? "calendar subscription has the calendar MIME type"
+for asset in fullcalendar-7.1.3.js fullcalendar-7.1.3.css calendar-1.36.0.js calendar-1.36.0.css; do
+    if [ "$(code "https://$HOST/calendar/assets/$asset")" = "200" ]; then check 0 "calendar asset $asset served"; else check 1 "calendar asset $asset served"; fi
+done
+hdr "https://$HOST/calendar/assets/fullcalendar-7.1.3.js" 'content-type: application/javascript'; check $? "calendar script has a JavaScript MIME type"
 
 # --- regcode POST path (validation-only: no mail sent, no rate consumed) ---
 req -X POST -d 'mail=smoke@example.com&purpose=hack' "https://$HOST/reg/code" \

@@ -591,7 +591,9 @@ test('contest-calendar plugin ships its data, template and bot-feed wiring', () 
     documented.push(...match[1].split(',').map((name) => name.trim()));
   }
   assert.deepEqual(documented.sort(), [
-    'auto.cjs', 'calendar.cjs', 'calendar.json', 'index.ts', 'package.json', 'templates/calendar.html',
+    'auto.cjs', 'cache.cjs', 'calendar.cjs', 'calendar.json', 'clist.cjs', 'index.ts', 'package.json', 'presentation.cjs',
+    'public/calendar.css', 'public/calendar.js', 'templates/calendar.html',
+    'vendor/FULLCALENDAR-LICENSE.txt', 'vendor/fullcalendar-7.1.3.css', 'vendor/fullcalendar-7.1.3.js', 'vendor/manifest.json',
   ]);
   for (const name of documented) {
     assert.ok(fs.existsSync(path.join(repo, 'plugin-dfacm-calendar', name)), `missing ${name}`);
@@ -628,11 +630,16 @@ test('contest-calendar plugin ships its data, template and bot-feed wiring', () 
   // The bot feed projects raw events (manual + auto merged) — internal Date
   // fields must not leak, and the merge must actually reach the projection.
   assert.match(index, /events: merged\.events\.map/);
-  assert.match(index, /mergeCalendar\(parsed, await getAutoEvents\(\)\)/);
+  assert.match(index, /mergeCalendar\(parsed, \[\.\.\.auto, \.\.\.extra\]\)/);
+  assert.match(index, /ctx\.Route\('swpu_calendar_feed', '\/calendar\/feed\.ics'/);
+  assert.match(index, /ctx\.Route\('swpu_calendar_asset', '\/calendar\/assets\/:file'/);
+  assert.match(index, /dfacm_calendar\.clist_api_key/);
   // Integration wiring: smoke battery, CI matrix, orchestrator, addon registry.
   const smoke = fs.readFileSync(path.join(repo, 'deploy', 'smoke.sh'), 'utf8');
   assert.match(smoke, /\/calendar"/);
   assert.match(smoke, /calendar\/data/);
+  assert.match(smoke, /calendar\/feed\.ics/);
+  assert.match(smoke, /calendar\/assets/);
   const ci = fs.readFileSync(path.join(repo, '.github', 'workflows', 'ci.yml'), 'utf8');
   assert.match(ci, /plugin-dfacm-calendar/);
   const orchestrator = fs.readFileSync(path.join(repo, 'deploy', 'deploy.sh'), 'utf8');

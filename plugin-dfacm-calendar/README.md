@@ -1,45 +1,73 @@
 # d&f算法网定制插件：赛事日历
 
-给队员一个"作战情报中心"：把 ICPC / CCPC / 省赛 / 邀请赛 / 校级比赛，以及蓝桥杯、天梯赛（CCCC-GPLT）、百度之星、企业赛、CCF CCSP 等全生态算法赛事的赛程收进站内一个页面，按"进行中 / 即将到来 / 已结束"分组展示，带倒计时与报名截止提醒；**Codeforces 与 AtCoder 的平台赛由 `auto.cjs` 每小时自动抓取**，与官方赛共用同一条时间轴。全站对游客可见（赛事情报无登录门槛），导航栏落在「评测记录」旁。
+赛事日历提供 FullCalendar 7.1.3 月视图、周视图和赛事列表，桌面默认月视图，手机默认列表，支持多类型筛选、关键词搜索、详情与 ICS 订阅。所有展示时间为北京时间。官方赛程按通知手工录入，平台赛事自动同步，游客也能使用。
 
-- `GET /calendar` 日历页（`?type=` 按类型筛选，页首 chips 只出现有数据的类型）
-- `GET /calendar/data` 只读 JSON 端点——QQ 播报机器人（swpu-broadcast）抓取同一份数据做每周播报与报名截止提醒
+## 页面与接口
 
-## 分类体系（type 选型指南）
+| 地址 | 用途 |
+|---|---|
+| `/calendar` | 赛事日历，支持 `?types=icpc,cf&q=关键词`，兼容 `?type=icpc` |
+| `/calendar/data` | 只读 JSON，保持 QQ 播报接口兼容，增加 `source` / `allDay` / `sources` |
+| `/calendar/feed.ics` | ICS 订阅和下载，使用与页面相同的类型 / 关键词筛选 |
+| `/calendar/assets/:file` | 固定白名单的版本化 JS / CSS；自行托管，无外部 CDN 依赖 |
 
-| type | 徽章 | 覆盖范围 |
+类型标签可以多选，搜索覆盖名称、地点、备注及分类名称。选择的视图保存在浏览器中。脚本或资源不可用时仍可阅读服务端生成的列表、提交搜索和下载日历。
+
+只公布月份的赛事放在「日期待公布」区域，不放进具体日期格子；已公布的报名截止会在日历中独立显示。
+
+## 数据源与缓存
+
+| 数据源 | 赛事 | 鉴权 |
 |---|---|---|
-| `icpc` | ICPC | ICPC 全体系：网络预选赛 / 区域赛 / EC-Final / 世界总决赛 |
-| `ccpc` | CCPC | CCPC 全体系：网络赛 / 分站赛 / 女生专场 / 高职专场 / 总决赛 |
-| `provincial` | 省赛 | 各省程序设计竞赛（四川省赛、广东省赛 GDCPC 等） |
-| `invitational` | 邀请赛 | 全国邀请赛（西安 / 湘潭 / 深圳 / 南昌邀请赛等） |
-| `school` | 校级赛 | 本校比赛（校内选拔等） |
-| `lqb` | 蓝桥杯 | 蓝桥杯省赛 / 全国决赛 |
-| `ladder` | 天梯赛 | 中国高校计算机大赛-团体程序设计天梯赛（CCCC-GPLT） |
-| `asta` | 百度之星 | Astar 程序设计大赛 |
-| `industry` | 企业赛 | 厂商主办公开赛（华为软件精英挑战赛、字节青训营赛等） |
-| `ccsp` | CCSP | CCF 大学生计算机系统与程序设计竞赛 |
-| `cf` | CF | Codeforces Round 等（`auto.cjs` 自动抓取，不进 calendar.json） |
-| `atcoder` | AtCoder | AtCoder ABC/ARC 等（`auto.cjs` 自动抓取，不进 calendar.json） |
-| `other` | 其他 | 其余算法类赛事（睿抗 RAICOM 程序设计赛道等） |
+| `calendar.json` | ICPC、CCPC、省赛、邀请赛、校赛、蓝桥杯、天梯赛、百度之星、企业赛、CCSP 等官方公告 | 手工维护 |
+| Codeforces 官方 `contest.list` | CF Round 等 | 无 |
+| AtCoder 社区 `kenkoooo` 数据 | ABC、ARC 等 | 无 |
+| [CLIST](https://clist.by) v4 API | 牛客、洛谷、LeetCode、CodeChef | 用户名 + API Key |
 
-## 平台赛自动抓取（auto.cjs）
+平台赛查询未来 **60 天**和最近 **12 小时**，进行中的长赛按结束时间判断。CF、AtCoder、CLIST 独立缓存，正常每小时刷新；失败保留各自最近成功数据最多 24 小时，10 分钟后重试。页面只等待本地磁盘读取，外网请求在后台进行，单一数据源故障不抹去其他来源的赛程。页面显示各源同步状态。
 
-民间高频赛事（CF 每周 2-5 场、AtCoder ABC 每周六一场）手工维护不现实，全部自动：
+运行时缓存 `auto-cache-cf.json`、`auto-cache-atcoder.json`、`clist-cache.json` 不进 Git，也不发货。旧 `auto-cache.json` 可在升级后用于首次读取。手工赛程优先，按 ID 和规范赛事链接去重。
 
-- **数据源**：Codeforces 官方 API（`codeforces.com/api/contest.list`）+ AtCoder 社区数据源（`kenkoooo.com/atcoder/resources/contests.json`，atcoder-problems 同款），零鉴权零注册
-- **抓取窗口**：`[now-12h, now+14d]`——刚结束的场次保留片刻方便补题，只看未来两周
-- **缓存纪律**：磁盘缓存（插件目录 `auto-cache.json`，发货清单之外）+ 每小时最多一次真实外网请求；页面渲染只等本地磁盘水合（毫秒级），外网刷新永远在后台；抓取失败回退上一份缓存（≤24 小时），全源不可用只是平台区块缺席，**官方日历完全不受影响**
-- **运行时开关**：`SWPU_CALENDAR_AUTO_OFF=1` 整条管线关闭；`SWPU_CALENDAR_AUTO_CACHE` 指定缓存文件路径（测试/排障用）
-- 自动条目永远不与手工条目撞 id（撞了以手工为准）；牛客/洛谷没有公开 API，想接需要爬页面（反爬变动要维护），另行评估
+环境变量用于排障：
 
-## 数据维护（站长操作手册）
+| 变量 | 作用 |
+|---|---|
+| `SWPU_CALENDAR_FILE` | 手工数据文件路径 |
+| `SWPU_CALENDAR_AUTO_OFF=1` | 关闭 CF / AtCoder 抓取 |
+| `SWPU_CALENDAR_AUTO_CACHE` | CF / AtCoder 缓存文件基名（自动附加来源后缀） |
+| `SWPU_CALENDAR_CLIST_CACHE` | CLIST 缓存文件路径 |
+| `DFACM_CLIST_USERNAME` / `DFACM_CLIST_API_KEY` | 覆盖后台 CLIST 配置 |
 
-数据就是本目录的 `calendar.json`，纯手工维护，没有任何后台界面——赛事信息以官方通知为准，站长从 ICPC 北京总部（icpc.pku.edu.cn）、ccpc.io、蓝桥杯官网（dasai.lanqiao.cn）、CCF（ccf.org.cn）等官方渠道核对后录入。
+## 配置 CLIST
+
+管理员进入 **控制面板 → 系统设置 → 赛事日历**（`/manage/setting#setting_swpu_calendar`），填写：
+
+- `dfacm_calendar.clist_username`：CLIST 账号用户名。
+- `dfacm_calendar.clist_api_key`：CLIST API Key。
+
+保存后访问日历即可触发后台同步，稍后刷新能看到牛客等新增平台。Key 使用密码输入框，保存后不回显；编辑设置时留空保留原 Key，清空用户名可关闭同步。只在服务器向 `https://clist.by/api/v4/contest/` 请求时的 `Authorization: ApiKey 用户名:Key` 头内使用，不放进公开页面、订阅 URL、错误文案或缓存。未配置成对凭据时不请求 CLIST；更换配置触发立即刷新。环境变量优先于后台设置。
+
+API 不可用时显示上次赛程及状态；暂未配置时显示「CLIST · 尚未启用」。页面和订阅说明保留 CLIST 数据来源标注。
+
+## 日历订阅
+
+「订阅赛程」会生成当前类型与关键词的订阅 URL，可复制进 Apple 日历、Google 日历、Outlook 等应用，也可以下载 `.ics` 手工导入。
+
+- 定时赛事输出 UTC 时间，包含赛前 **30 分钟**显示提醒。
+- 报名截止独立成事件，包含提前 **3 天、1 天**显示提醒。
+- 全天现场赛事输出 `VALUE=DATE`，结束日期为次日的排他边界，确保多日赛事包含最后一天。
+- 仅确定月份的比赛不导出猜测的日期，其精确报名截止仍能订阅。
+- UID 根据赛事 ID 稳定生成，刷新不会重复建事件；中文 / 特殊字符按 RFC 5545 转义和 UTF-8 75 字节折行。
+
+URL 订阅才会随赛程更新；单次下载导入不会自动刷新。是否发出通知、同步频率取决于日历应用设置。
+
+## 手工赛程维护
+
+修改 `calendar.json` 后执行 `bash deploy/deploy.sh --sync-only`，每次请求现读文件，**无需重启**。JSON 文件解析失败时回退上一份好数据并提示；坏行只跳过自身。
 
 ```json
 {
-  "updated": "2026-10-18",
+  "updated": "2026-10-21",
   "events": [
     {
       "id": "icpc51-chengdu",
@@ -49,21 +77,17 @@
       "location": "成都",
       "start": "2026-10-24T00:00:00+08:00",
       "end": "2026-10-25T23:59:59+08:00",
-      "regDeadline": "2026-10-08T23:59:59+08:00",
-      "url": "https://icpc.pku.edu.cn/tzgg/....htm",
-      "note": "可选的一行备注"
+      "url": "https://icpc.pku.edu.cn/",
+      "note": "以最终通知为准"
     },
     {
       "id": "lqb-18",
-      "name": "第十八届蓝桥杯（软件赛 / 电子赛 / 人工智能赛）",
+      "name": "第十八届蓝桥杯",
       "type": "lqb",
       "approx": true,
       "start": "2027-04-01T00:00:00+08:00",
-      "end": "2027-04-30T23:59:59+08:00",
       "regDeadline": "2026-12-18T14:00:00+08:00",
-      "location": "各省赛点",
-      "url": "https://dasai.lanqiao.cn/",
-      "note": "省赛定于 2027年4月（具体日期待官方公布）"
+      "url": "https://dasai.lanqiao.cn/"
     }
   ]
 }
@@ -71,46 +95,43 @@
 
 | 字段 | 必填 | 说明 |
 |---|---|---|
-| `id` | ✅ | 全局唯一字符串，QQ 机器人防重发的键 |
-| `name` | ✅ | 赛事名称 |
-| `type` | ✅ | 见上方分类表（11 类） |
-| `form` | — | `onsite`（默认）/ `online` / `hybrid` |
-| `location` | — | 城市 / 承办高校 |
-| `start` | ✅ | ISO 8601（**带 +08:00 偏移**）；多日现场赛写首日 `T00:00:00+08:00` |
-| `end` | — | 多日赛事写末日 `T23:59:59+08:00`；不写则按当天赛事处理 |
-| `approx` | — | `true` = 日期只精确到月（官方只公布"2027年4月"这类窗口时用）：`start`/`end` 圈出月份窗口，页面与播报显示"2027年4月（日期待公布）"、不显示倒计时，机器人不把它算进"下周开赛"；`end` 可省略（自动补足月末）。**报名截止等精确时间不受影响** |
-| `regDeadline` | — | 报名截止时间；机器人会在 D-3 / D-1 播报提醒 |
-| `url` | — | 官方/报名链接，必须 `http(s)://` 开头 |
-| `note` | — | 一行备注（页面与播报都会带出） |
+| `id` | 是 | 稳定、全局唯一，QQ 防重发和 ICS UID 的依据 |
+| `name` | 是 | 赛事名称 |
+| `type` | 是 | 下方分类键 |
+| `start` | 是 | ISO 8601，显式带时区；北京时间建议 `+08:00` |
+| `end` | 否 | 多日全天赛填最后一天 `23:59:59+08:00` |
+| `form` | 否 | `onsite` 默认 / `online` / `hybrid` |
+| `allDay` | 否 | 显式指定全天；现场赛午夜开始并在末日 23:59 结束也会识别为全天 |
+| `approx` | 否 | `true` 表示只精确到月，`start/end` 圈出月份；不写 end 时自动补月末 |
+| `regDeadline` | 否 | 精确报名截止，日历和 QQ 可提醒 |
+| `location` / `note` | 否 | 地点 / 备注 |
+| `url` | 否 | 合法 `http(s)` 官方或报名链接 |
 
-**时间约定**：所有时间字符串显式带 `+08:00`，服务端全部按北京时间换算，不依赖服务器时区。
+分类键：
 
-**更新流程**：改 `calendar.json` → `bash deploy/deploy.sh --sync-only`。页面每次请求现读磁盘，**无需重启进程**。JSON 写坏不会 500——服务端回退上一份好数据并在页面提示，坏行会以 `数据行被忽略：…` 显示出来方便定位。
+| 类型 | 覆盖 |
+|---|---|
+| `icpc` / `ccpc` | ICPC / CCPC 全体系 |
+| `provincial` / `invitational` / `school` | 省赛 / 邀请赛 / 校级赛 |
+| `lqb` / `ladder` / `asta` | 蓝桥杯 / 天梯赛 / 百度之星 |
+| `industry` / `ccsp` | 企业赛 / CCF CCSP |
+| `cf` / `atcoder` | Codeforces / AtCoder |
+| `nowcoder` / `luogu` / `leetcode` / `codechef` | 牛客 / 洛谷 / LeetCode / CodeChef |
+| `other` | 其余算法赛事 |
 
-**已结束条目**：长期保留有价值（补题/复盘线索），也可以定期裁剪，页面无数量上限。
+JSON 端点保留 `ok`、`updated`、`generatedAt`、`events`；事件保留原始 ISO 字段，内部 Date 字段不输出。消费方对 `approx` 仅显示年月，不制造具体比赛日期。
 
-## 接口约定（/calendar/data）
-
-```json
-{
-  "ok": true,
-  "updated": "2026-10-18",
-  "generatedAt": "2026-10-18T00:00:00.000Z",
-  "events": [
-    { "id": "...", "name": "...", "type": "icpc", "form": "onsite", "approx": false, "location": "成都",
-      "start": "2026-10-24T00:00:00+08:00", "end": "2026-10-25T23:59:59+08:00",
-      "regDeadline": null, "url": "...", "note": "" }
-  ]
-}
-```
-
-状态（进行中/即将到来/已结束）由消费方按 `generatedAt` 与 `start/end` 自行计算，端点不做判定——机器人重算成本为零，页面端由 handler 在服务端算好。`approx: true` 的条目消费方只应展示"年月（日期待公布）"，不要渲染具体日期或倒计时。
-
-## 测试
+## 开发与部署
 
 ```bash
-npm ci --include=dev && npm test     # 本机注意全局 omit=dev 配置
+npm ci --include=dev
+npm test
+npm run preview          # 本地模板预览，默认 127.0.0.1:4174
+npm run build:vendor     # 从校验通过的 npm 归档重建 FullCalendar 资源
 ```
 
-- `tests/calendar.test.cjs`：数据校验、状态分桶、倒计时/日期文案、类型筛选、approx 月份窗口，含对仓库内 `calendar.json` 本身的回归锁
-- `tests/handlers.test.cjs`：路由/导航注入/i18n 注册、页面与数据端点的 handler 行为、坏数据回退
+依赖都是开发 / 测试依赖，生产 addon 不执行 npm 安装。`vendor/manifest.json` 记录固定 npm 归档的 SHA-512 和资源 SHA-256，`vendor/FULLCALENDAR-LICENSE.txt` 保留 FullCalendar、Preact、temporal-polyfill 的 MIT 声明。构建使用锁定的 esbuild 0.25.12；部署直接使用提交的资源。
+
+测试覆盖数据校验、单源故障和缓存回退、固定时钟、CLIST 密钥轮换、ICS 独立解析，以及生产模板搭配真实 FullCalendar 浏览器包的离线 DOM 交互。安装清单见 [deploy/deployment.md](../deploy/deployment.md)，修改代码后用标准 `deploy.sh` 完成校验、发货和重启。
+
+本次上线与验收范围见 [v1.36.0 部署记录](../docs/calendar-release-2026-10-21.md)。

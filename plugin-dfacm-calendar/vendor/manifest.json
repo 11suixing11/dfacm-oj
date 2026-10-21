@@ -1,0 +1,11 @@
+{
+  "version": "7.1.3",
+  "source": "https://registry.npmjs.org/fullcalendar/-/fullcalendar-7.1.3.tgz",
+  "integrity": "sha512-Mn8VNqLX80C93UFh0s9aKqhHUSh0BwK8pczyQ+nNDKutJeM0/SVLkJoizTfX9sdmwGiS6+hkAHAg9YC10Us0gg==",
+  "esbuild": "0.25.12",
+  "sha256": {
+    "fullcalendar-7.1.3.js": "0ae567ff5aa7577cab2526d10d18c4f447a49293fdc992ad30fd55e3676578cd",
+    "fullcalendar-7.1.3.css": "bc908b742899c180eb1a82ba324ad67c90ec9d4b2f68227891ce72fe71c7e943",
+    "FULLCALENDAR-LICENSE.txt": "13bdfd9a7ac00c72d0ce5d5f29ee92c7444418ee5120cbcd593aeff662293624"
+  }
+}

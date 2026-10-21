@@ -203,14 +203,18 @@ mongosh "$(python3 -c "import json;print(json.load(open('/root/.hydro/config.jso
 - `/manage/shop` 域管理员可见，每行价格 + 上架 checkbox 可保存。
 - 兑换成功后跳转 `/mybadge`，佩戴后全站用户名旁出现徽章。
 
-赛事日历可选安装（站内赛事情报页：ICPC / CCPC / 省赛 / 邀请赛 / 校级比赛与蓝桥杯 / 天梯赛 / 百度之星 / 企业赛 / CCF CCSP 等全生态算法赛事的手工维护日历，游客可见；附只读 JSON 端点供 QQ 播报机器人抓取）：
+赛事日历可选安装（FullCalendar 月 / 周视图与赛事列表，支持多类型筛选、搜索、ICS 订阅；官方赛手工维护，CF / AtCoder 自动同步，CLIST 可补充牛客 / 洛谷 / LeetCode / CodeChef；游客可见，JSON 端点继续供 QQ 播报机器人使用）：
 
 ```bash
-mkdir -p /root/.hydro/addons/swpu-calendar/templates
-cp /root/swpu-oj/plugin-dfacm-calendar/{auto.cjs,calendar.cjs,calendar.json,index.ts,package.json} \
+mkdir -p /root/.hydro/addons/swpu-calendar/{templates,public,vendor}
+cp /root/swpu-oj/plugin-dfacm-calendar/{auto.cjs,cache.cjs,calendar.cjs,calendar.json,clist.cjs,presentation.cjs,index.ts,package.json} \
    /root/.hydro/addons/swpu-calendar/
 cp /root/swpu-oj/plugin-dfacm-calendar/{templates/calendar.html} \
    /root/.hydro/addons/swpu-calendar/templates/
+cp /root/swpu-oj/plugin-dfacm-calendar/{public/calendar.js,public/calendar.css} \
+   /root/.hydro/addons/swpu-calendar/public/
+cp /root/swpu-oj/plugin-dfacm-calendar/{vendor/fullcalendar-7.1.3.js,vendor/fullcalendar-7.1.3.css,vendor/FULLCALENDAR-LICENSE.txt,vendor/manifest.json} \
+   /root/.hydro/addons/swpu-calendar/vendor/
 mkdir -p /root/.hydro/addons/swpu-calendar/node_modules
 ln -sfn /usr/local/share/.config/yarn/global/node_modules/hydrooj \
         /root/.hydro/addons/swpu-calendar/node_modules/hydrooj
@@ -218,9 +222,11 @@ ln -sfn /usr/local/share/.config/yarn/global/node_modules/hydrooj \
 pm2 restart hydrooj
 ```
 
-安装后导航栏出现「赛事日历」（`/calendar`，落在「评测记录」旁，游客可见），页面按「进行中 / 即将到来 / 已结束」分组展示并支持 `?type=` 按类型筛选；`GET /calendar/data` 为无鉴权只读 JSON 端点（限速）。赛程数据在 `plugin-dfacm-calendar/calendar.json` 手工维护（字段与流程见 [plugin-dfacm-calendar/README.md](../plugin-dfacm-calendar/README.md)）：**改数据文件后 `bash deploy/deploy.sh --sync-only` 即时生效，无需 pm2 restart**——页面每次请求现读磁盘，数据文件写坏时页面回退上一份好数据并提示，不会 500。
+安装后导航栏出现「赛事日历」（`/calendar`，落在「评测记录」旁，游客可见），桌面默认月视图，手机默认列表，可切换周视图，支持 `?types=icpc,cf&q=关键词`（兼容 `?type=`）。`GET /calendar/data` 继续提供无鉴权 JSON 数据，`GET /calendar/feed.ics` 为可按相同筛选订阅的日历。FullCalendar 7.1.3 的 MIT 浏览器资源已固定版本并随插件发货，`/calendar/assets/:file` 只服务固定白名单，不依赖外部 CDN；无需改 Caddy。手工赛程在 `calendar.json` 维护：**改数据文件后 `bash deploy/deploy.sh --sync-only` 即时生效，无需 pm2 restart**。月份级公告单独展示，日历仅收录其精确报名截止。
 
-平台赛（Codeforces / AtCoder）由 `auto.cjs` 每小时自动抓取合并进同一条时间轴：磁盘缓存 + 后台刷新，抓取失败回退上一份缓存（≤24 小时），全源不可用时只是平台区块缺席、官方日历不受影响；运行时缓存写在与插件同目录的 `auto-cache.json`（发货清单之外，无需部署）。
+平台赛抓取未来 60 天及最近 12 小时（进行中的长赛按结束时间判断）。CF、AtCoder、CLIST 各自独立缓存，每小时刷新；失败时保留自己的上次成功数据（≤24 小时）并退避 10 分钟。页面只等待本地缓存读取，外网抓取在后台。运行时文件 `auto-cache-cf.json` / `auto-cache-atcoder.json` / `clist-cache.json` 不发货，兼容读取旧 `auto-cache.json`。
+
+CLIST 配置：管理员进入 **控制面板 → 系统设置 → 赛事日历**（`/manage/setting`），填写 `dfacm_calendar.clist_username` 和 `dfacm_calendar.clist_api_key`，保存后在下一次访问日历时后台同步。Key 使用密码输入框和 secret 标记，保存后不回显，仅在服务器请求 CLIST 的鉴权头中发送，不写入公开页面、URL 或缓存；编辑时 Key 留空保留原值，清空用户名关闭同步。配置变更会触发刷新，失败时页面显示同步状态。也支持服务器环境变量 `DFACM_CLIST_USERNAME` / `DFACM_CLIST_API_KEY`；环境变量优先。
 
 **不要**在 `/root/.hydro/addons/swpu-regcode/` 运行 `npm install` 或 `npm ci`（其他插件同理），避免重建运行目录的 `node_modules` 和 Hydro 软链。开发测试在独立仓库检出目录的插件目录中运行 `npm ci && npm test`，依赖按锁文件安装。
 

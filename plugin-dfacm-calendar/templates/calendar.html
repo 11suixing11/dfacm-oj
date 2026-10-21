@@ -1,144 +1,123 @@
 {% extends "layout/basic.html" %}
 {% block content %}
-<style>
-/* SWPU contest calendar — scoped to this page, swpu-cal- prefixed, light + dark.
-   All display strings arrive precomputed from the handler (production Nunjucks is
-   a trimmed build), the template only prints. */
-.swpu-cal-chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px;}
-.swpu-cal-chip{display:inline-block;padding:6px 14px;border-radius:999px;border:1px solid rgba(15,34,64,.18);background:#fff;color:#5b6b80;font-size:13px;text-decoration:none;transition:border-color .15s ease,color .15s ease;}
-.swpu-cal-chip:hover{border-color:#2a5caa;color:#2a5caa;}
-.swpu-cal-chip.is-on{background:#2a5caa;border-color:#2a5caa;color:#fff;font-weight:600;}
-.swpu-cal-group{margin:26px 0 12px;font-size:16.5px;font-weight:600;color:#1a2940;}
-.swpu-cal-group__count{font-size:13px;font-weight:400;color:#8a94a6;margin-left:6px;}
-.swpu-cal-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;}
-.swpu-cal-card{display:flex;flex-direction:column;gap:8px;padding:14px 16px;border-radius:12px;background:#fff;border:1px solid rgba(15,34,64,.10);box-shadow:0 8px 22px rgba(15,34,64,.05);}
-.swpu-cal-card.is-live{border-color:rgba(201,162,39,.6);box-shadow:0 0 0 1px rgba(201,162,39,.22);}
-.swpu-cal-card__head{display:flex;align-items:center;justify-content:space-between;gap:8px;}
-.swpu-cal-badge{display:inline-block;font-size:12px;line-height:1;padding:5px 10px;border-radius:999px;font-weight:600;letter-spacing:.04em;white-space:nowrap;}
-.swpu-cal-count{font-size:12.5px;font-weight:600;color:#5b6b80;white-space:nowrap;}
-.swpu-cal-card.is-live .swpu-cal-count{color:#8a6d1f;}
-.swpu-cal-name{font-size:15.5px;font-weight:600;color:#1a2940;text-decoration:none;}
-.swpu-cal-name:hover{text-decoration:underline;}
-.swpu-cal-meta{font-size:13px;color:#5b6b80;}
-.swpu-cal-reg{font-size:12.5px;color:#5b6b80;}
-.swpu-cal-reg.is-soon{color:#b3541e;font-weight:600;}
-.swpu-cal-note{font-size:12.5px;color:#8a94a6;}
-.swpu-cal-empty{padding:26px 10px;text-align:center;color:#8a94a6;}
-html.theme--dark .swpu-cal-chip{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.16);color:#a7b4c7;}
-html.theme--dark .swpu-cal-chip:hover{border-color:#f4f7fb;color:#f4f7fb;}
-html.theme--dark .swpu-cal-chip.is-on{background:#2a5caa;border-color:#2a5caa;color:#fff;}
-html.theme--dark .swpu-cal-group{color:#f4f7fb;}
-html.theme--dark .swpu-cal-group__count{color:#a7b4c7;}
-html.theme--dark .swpu-cal-card{background:#16233d;border-color:rgba(255,255,255,.08);box-shadow:none;}
-html.theme--dark .swpu-cal-card.is-live{border-color:rgba(201,162,39,.6);box-shadow:0 0 0 1px rgba(201,162,39,.2);}
-html.theme--dark .swpu-cal-count{color:#a7b4c7;}
-html.theme--dark .swpu-cal-card.is-live .swpu-cal-count{color:#c9a227;}
-html.theme--dark .swpu-cal-name{color:#f4f7fb;}
-html.theme--dark .swpu-cal-meta{color:#a7b4c7;}
-html.theme--dark .swpu-cal-reg{color:#a7b4c7;}
-html.theme--dark .swpu-cal-reg.is-soon{color:#e0a45e;}
-html.theme--dark .swpu-cal-note{color:#8a94a6;}
-html.theme--dark .swpu-cal-empty{color:#a7b4c7;}
-@media (prefers-reduced-motion: reduce){.swpu-cal-chip{transition:none;}}
-@media (max-width:560px){.swpu-cal-grid{grid-template-columns:1fr;}}
-</style>
+<link rel="stylesheet" href="/calendar/assets/fullcalendar-7.1.3.css">
+<link rel="stylesheet" href="/calendar/assets/calendar-1.36.0.css">
 <div class="section">
-  <div class="section__header">
-    <h1 class="section__title">{{ _('赛事日历') }}</h1>
-    <div class="section__tools">
-      {% if updated %}<span class="typo">{{ _('数据更新') }}：{{ updated }}</span>{% endif %}
+  <div class="section__body dfacm-cal" id="dfacm-calendar">
+    <div class="dfacm-cal__intro">
+      <div>
+        <p class="dfacm-cal__eyebrow">CONTEST CALENDAR</p>
+        <h1>赛事日历</h1>
+        <p class="dfacm-cal__lead">安排下一场比赛，也别错过报名。所有时间均为北京时间。</p>
+      </div>
+      <a class="dfacm-cal__subscribe" id="dfacm-subscribe-open" href="{{ subscribeUrl }}" data-calendar-feed>订阅赛程</a>
     </div>
-  </div>
-  {% if broken %}
-  <div class="section__body">
-    <blockquote class="note typo">{{ _('日历数据文件暂时不可用，正在展示上一份数据，请联系管理员。') }}</blockquote>
-  </div>
-  {% endif %}
-  <div class="section__body">
-    <div class="swpu-cal-chips">
+    {% if broken %}<p class="dfacm-cal__empty" role="status">日历数据文件暂时不可用，正在展示上一份赛程。</p>{% endif %}
+    {% for s in skipped %}<p class="dfacm-cal__meta">数据行被忽略：{{ s }}</p>{% endfor %}
+    <form class="dfacm-cal__search" id="dfacm-calendar-search-form" action="/calendar" method="get" role="search">
+      <input type="hidden" name="types" id="dfacm-calendar-selected-types" value="{{ selectedTypesValue }}">
+      <input type="search" name="q" id="dfacm-calendar-search" value="{{ query }}" maxlength="80" placeholder="搜索比赛名称、地点或关键词" aria-label="搜索赛事" autocomplete="off">
+      <button type="submit" class="dfacm-cal__button">搜索</button>
+    </form>
+    <div class="swpu-cal-chips" aria-label="赛事类型，可选择多项">
       {% for f in filters %}
-      <a class="swpu-cal-chip{% if currentType == f.key %} is-on{% endif %}" href="/calendar{% if f.key %}?type={{ f.key }}{% endif %}">{{ f.label }}（{{ f.count }}）</a>
+      <a class="swpu-cal-chip{% if f.selected %} is-on{% endif %}" href="{{ f.href }}" data-calendar-type="{{ f.key }}" aria-pressed="{% if f.selected %}true{% else %}false{% endif %}">{{ f.label }} <small>{{ f.count }}</small></a>
       {% endfor %}
     </div>
-    {% for s in skipped %}
-    <div class="swpu-cal-note">{{ _('数据行被忽略') }}：{{ s }}</div>
-    {% endfor %}
-
-    {% if ongoing.length %}
-    <div class="swpu-cal-group">{{ _('进行中') }}<span class="swpu-cal-group__count">{{ ongoing.length }}</span></div>
-    <div class="swpu-cal-grid">
-      {% for e in ongoing %}
-      <div class="swpu-cal-card is-live">
-        <div class="swpu-cal-card__head">
-          <span class="swpu-cal-badge" style="background:{{ e.color }};color:{{ e.fg }};">{{ e.typeLabel }}</span>
-          <span class="swpu-cal-count">{{ e.countdownText }}</span>
-        </div>
-        {% if e.url %}
-        <a class="swpu-cal-name" href="{{ e.url }}" target="_blank" rel="noopener">{{ e.name }}</a>
-        {% else %}
-        <span class="swpu-cal-name">{{ e.name }}</span>
-        {% endif %}
-        <div class="swpu-cal-meta">{{ e.dateText }}{% if e.timeText %} · {{ e.timeText }}{% endif %}{% if e.placeText %} · {{ e.placeText }}{% endif %}</div>
-        {% if e.regText %}<div class="swpu-cal-reg{% if e.regSoon %} is-soon{% endif %}">{{ e.regText }}</div>{% endif %}
-        {% if e.note %}<div class="swpu-cal-note">{{ e.note }}</div>{% endif %}
+    <div class="dfacm-cal__toolbar" id="dfacm-calendar-tools" hidden>
+      <div class="dfacm-cal__period">
+        <h2 id="dfacm-calendar-title">近期赛程</h2>
+        <button type="button" class="dfacm-cal__button" data-calendar-nav="prev" aria-label="上一期">‹</button>
+        <button type="button" class="dfacm-cal__button" data-calendar-nav="today">今天</button>
+        <button type="button" class="dfacm-cal__button" data-calendar-nav="next" aria-label="下一期">›</button>
       </div>
-      {% endfor %}
-    </div>
-    {% endif %}
-
-    {% if upcoming.length %}
-    <div class="swpu-cal-group">{{ _('即将到来') }}<span class="swpu-cal-group__count">{{ upcoming.length }}</span></div>
-    <div class="swpu-cal-grid">
-      {% for e in upcoming %}
-      <div class="swpu-cal-card">
-        <div class="swpu-cal-card__head">
-          <span class="swpu-cal-badge" style="background:{{ e.color }};color:{{ e.fg }};">{{ e.typeLabel }}</span>
-          <span class="swpu-cal-count">{{ e.countdownText }}</span>
-        </div>
-        {% if e.url %}
-        <a class="swpu-cal-name" href="{{ e.url }}" target="_blank" rel="noopener">{{ e.name }}</a>
-        {% else %}
-        <span class="swpu-cal-name">{{ e.name }}</span>
-        {% endif %}
-        <div class="swpu-cal-meta">{{ e.dateText }}{% if e.timeText %} · {{ e.timeText }}{% endif %}{% if e.placeText %} · {{ e.placeText }}{% endif %}</div>
-        {% if e.regText %}<div class="swpu-cal-reg{% if e.regSoon %} is-soon{% endif %}">{{ e.regText }}</div>{% endif %}
-        {% if e.note %}<div class="swpu-cal-note">{{ e.note }}</div>{% endif %}
+      <div class="dfacm-cal__views" aria-label="切换日历视图">
+        <button type="button" data-calendar-view="month" aria-pressed="false">月</button>
+        <button type="button" data-calendar-view="week" aria-pressed="false">周</button>
+        <button type="button" data-calendar-view="list" aria-pressed="true" class="is-on">列表</button>
       </div>
+    </div>
+    <div class="dfacm-cal__grid" id="dfacm-calendar-grid" hidden></div>
+    <p class="dfacm-cal__counter" id="dfacm-calendar-count" aria-live="polite">{{ exactCount }} 场赛事 · {{ registrationCount }} 项报名截止</p>
+    <p class="dfacm-cal__empty" id="dfacm-calendar-no-results"{% if exactCount or registrationCount %} hidden{% endif %}>当前筛选没有日期已确定的赛程，请调整类型或搜索关键词。</p>
+    <div id="dfacm-calendar-list">
+      {% for g in groups %}
+      <section class="dfacm-cal__group" data-calendar-group{% if g.hidden %} hidden{% endif %}>
+        <h2>{{ g.label }}<span data-group-count>{{ g.count }}</span></h2>
+        {% if g.key == 'ended' %}
+        <div class="dfacm-cal__table-wrap">
+          <table class="data-table">
+            <thead><tr><th>赛事</th><th>类型</th><th>时间</th></tr></thead>
+            <tbody>
+              {% for e in g.events %}
+              <tr data-calendar-card data-type="{{ e.type }}" data-search="{{ e.searchText }}"{% if e.hidden %} hidden{% endif %}>
+                <td>{% if e.url %}<a href="{{ e.url }}" target="_blank" rel="noopener noreferrer">{{ e.name }}</a>{% else %}{{ e.name }}{% endif %}</td>
+                <td><span class="dfacm-cal__badge" style="background:{{ e.color }};color:{{ e.fg }}">{{ e.typeLabel }}</span></td>
+                <td>{{ e.dateText }}{% if e.timeText %} · {{ e.timeText }}{% endif %}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="dfacm-cal__cards">
+          {% for e in g.events %}
+          <article class="dfacm-cal__card swpu-cal-card{% if e.status == 'ongoing' %} is-live{% endif %}" data-calendar-card data-type="{{ e.type }}" data-search="{{ e.searchText }}"{% if e.hidden %} hidden{% endif %}>
+            <div class="dfacm-cal__card-head">
+              <span class="dfacm-cal__badge" style="background:{{ e.color }};color:{{ e.fg }}">{{ e.typeLabel }}</span>
+              <span class="dfacm-cal__meta">{{ e.countdownText }}</span>
+            </div>
+            <h3>{% if e.url %}<a href="{{ e.url }}" target="_blank" rel="noopener noreferrer">{{ e.name }}</a>{% else %}{{ e.name }}{% endif %}</h3>
+            <p class="dfacm-cal__meta">{{ e.dateText }}{% if e.timeText %} · {{ e.timeText }}{% endif %}{% if e.placeText %}<br>{{ e.placeText }}{% endif %}</p>
+            {% if e.regText %}<p class="dfacm-cal__reg{% if e.regSoon %} is-soon{% endif %}">{{ e.regText }}</p>{% endif %}
+            {% if e.note %}<p class="dfacm-cal__meta">{{ e.note }}</p>{% endif %}
+          </article>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </section>
       {% endfor %}
     </div>
-    {% endif %}
-
-    {% if not ongoing.length and not upcoming.length %}
-    <div class="swpu-cal-empty typo">{{ _('当前筛选下暂无进行中或即将到来的赛事。') }}</div>
-    {% endif %}
-  </div>
-
-  {% if ended.length %}
-  <div class="section__body no-padding">
-    <div class="swpu-cal-group" style="padding:12px 16px 0;">{{ _('已结束') }}<span class="swpu-cal-group__count">{{ ended.length }}</span></div>
-    <table class="data-table">
-      <thead>
-        <tr>
-          <th>{{ _('赛事') }}</th>
-          <th>{{ _('类型') }}</th>
-          <th>{{ _('时间') }}</th>
-        </tr>
-      </thead>
-      <tbody>
-        {%- for e in ended -%}
-        <tr>
-          <td>{% if e.url %}<a href="{{ e.url }}" target="_blank" rel="noopener">{{ e.name }}</a>{% else %}{{ e.name }}{% endif %}</td>
-          <td><span class="swpu-cal-badge" style="background:{{ e.color }};color:{{ e.fg }};">{{ e.typeLabel }}</span></td>
-          <td>{{ e.dateText }}{% if e.timeText %} {{ e.timeText }}{% endif %}</td>
-        </tr>
-        {%- endfor -%}
-      </tbody>
-    </table>
-  </div>
-  {% endif %}
-
-  <div class="section__body typo">
-    <p>{{ _('赛程数据由站长手动维护，全部为北京时间；各赛站时间以官方最终通知为准。发现缺漏或变动，请在群里提醒站长更新。') }}</p>
+    <section class="dfacm-cal__uncertain dfacm-cal__group" data-calendar-group{% if not uncertainCount %} hidden{% endif %}>
+      <h2>日期待公布<span data-group-count>{{ uncertainCount }}</span></h2>
+      <div class="dfacm-cal__cards">
+        {% for e in uncertain %}
+        <article class="dfacm-cal__card" data-calendar-card data-type="{{ e.type }}" data-search="{{ e.searchText }}"{% if e.hidden %} hidden{% endif %}>
+          <div class="dfacm-cal__card-head"><span class="dfacm-cal__badge" style="background:{{ e.color }};color:{{ e.fg }}">{{ e.typeLabel }}</span><span class="dfacm-cal__meta">{{ e.dateText }} · 日期待公布</span></div>
+          <h3>{% if e.url %}<a href="{{ e.url }}" target="_blank" rel="noopener noreferrer">{{ e.name }}</a>{% else %}{{ e.name }}{% endif %}</h3>
+          {% if e.regText %}<p class="dfacm-cal__reg{% if e.regSoon %} is-soon{% endif %}">{{ e.regText }}</p>{% endif %}
+          {% if e.note %}<p class="dfacm-cal__meta">{{ e.note }}</p>{% endif %}
+        </article>
+        {% endfor %}
+      </div>
+    </section>
+    <footer class="dfacm-cal__footer">
+      <div class="dfacm-cal__sources" aria-label="赛程同步状态">
+        {% for s in sources %}<span class="dfacm-cal__source is-{{ s.status }}">{{ s.label }} · {{ s.text }}</span>{% endfor %}
+      </div>
+      <p>官方赛事按通知整理，平台赛事自动同步。{% if updated %}官方赛程更新于 {{ updated }}。{% endif %}时间以赛事最终公告为准。</p>
+      <p>补充赛事数据由 <a href="https://clist.by" target="_blank" rel="noopener noreferrer">CLIST</a> 提供。<a href="{{ subscribeUrl }}" data-calendar-feed download="dfacm-contests.ics">下载当前筛选的日历</a></p>
+    </footer>
+    <dialog class="dfacm-cal__dialog" id="dfacm-calendar-detail" aria-labelledby="dfacm-detail-title">
+      <button class="dfacm-cal__close" type="button" id="dfacm-detail-close" aria-label="关闭赛事详情">×</button>
+      <p id="dfacm-detail-type"></p><h2 id="dfacm-detail-title"></h2>
+      <p id="dfacm-detail-date"></p><p id="dfacm-detail-place"></p><p id="dfacm-detail-reg"></p><p id="dfacm-detail-note"></p><p id="dfacm-detail-source"></p>
+      <div class="dfacm-cal__dialog-actions"><a class="dfacm-cal__subscribe" id="dfacm-detail-link" target="_blank" rel="noopener noreferrer">前往赛事页面 ↗</a></div>
+    </dialog>
+    <dialog class="dfacm-cal__dialog" id="dfacm-calendar-subscribe" aria-labelledby="dfacm-subscribe-title">
+      <button class="dfacm-cal__close" type="button" id="dfacm-subscribe-close" aria-label="关闭订阅说明">×</button>
+      <h2 id="dfacm-subscribe-title">把赛程加入你的日历</h2>
+      <p>订阅会跟随当前选择的赛事类型和关键词，后续赛程更新会由日历应用自动同步。</p>
+      <label for="dfacm-calendar-feed-url" class="dfacm-cal__meta">日历订阅地址</label>
+      <input id="dfacm-calendar-feed-url" type="text" readonly aria-label="日历订阅地址">
+      <div class="dfacm-cal__dialog-actions"><button type="button" class="dfacm-cal__subscribe" id="dfacm-subscribe-copy">复制订阅地址</button><a class="dfacm-cal__button" href="{{ subscribeUrl }}" data-calendar-feed download="dfacm-contests.ics">下载 .ics 文件</a></div>
+      <p>Apple 日历：文件 → 新建日历订阅。Google 日历：其他日历 → 通过网址。Outlook：添加日历 → 从 Web 订阅。</p>
+      <p>定时比赛包含赛前 30 分钟提醒，报名截止包含提前 3 天和 1 天提醒。是否通知和同步频率取决于你的日历应用设置。日期未确定的赛事仅订阅已公布的报名截止。</p>
+      <p id="dfacm-subscribe-message" role="status" aria-live="polite"></p>
+    </dialog>
+    <script id="dfacm-calendar-boot" type="application/json">{{ bootJson | safe }}</script>
   </div>
 </div>
+<script defer src="/calendar/assets/fullcalendar-7.1.3.js"></script>
+<script defer src="/calendar/assets/calendar-1.36.0.js"></script>
 {% endblock %}

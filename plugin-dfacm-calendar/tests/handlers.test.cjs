@@ -31,16 +31,18 @@ const fixtureParent = process.env.TEST_TMPDIR || (process.platform === 'win32' ?
 
 // Each fixture re-evaluates index.ts, so module state (DATA_FILE, lastGood)
 // starts fresh and the env override applies at load time.
-function fixture({ dataFile } = {}) {
+async function fixture({ dataFile, settings = {} } = {}) {
     const saved = process.env.SWPU_CALENDAR_FILE;
     if (dataFile !== undefined) process.env.SWPU_CALENDAR_FILE = dataFile;
     const routes = new Map();
     const nav = [];
     const locales = [];
+    const registeredSettings = [];
     const stub = {
         Handler: class {
             constructor() {
-                this.response = { body: {}, headers: {}, addHeader: () => {} };
+                this.response = { body: {}, headers: {} };
+                this.response.addHeader = (key, value) => { this.response.headers[key] = value; };
                 this.user = { _id: 0, uname: 'Guest', hasPriv: () => false };
                 this.args = {};
             }
@@ -50,6 +52,12 @@ function fixture({ dataFile } = {}) {
         param: () => () => {},
         post: () => () => {},
         Types: { String: [], UnsignedInt: [] },
+        SystemModel: { get: (key) => settings[key] || '' },
+        SettingModel: {
+            FLAG_SECRET: 4,
+            Setting: (family, key, value, type, name, desc, flag) => ({ family, key, value, type, name, desc, flag }),
+            SystemSetting: (...items) => { registeredSettings.push(...items); return () => {}; },
+        },
     };
     const loaded = new Module(pluginPath, module);
     loaded.filename = pluginPath;
@@ -60,7 +68,7 @@ function fixture({ dataFile } = {}) {
         if (saved === undefined) delete process.env.SWPU_CALENDAR_FILE;
         else process.env.SWPU_CALENDAR_FILE = saved;
     }
-    loaded.exports.apply({
+    await loaded.exports.apply({
         Route(name, url, HandlerClass, priv) {
             routes.set(url, { name, HandlerClass, priv });
         },
@@ -68,12 +76,13 @@ function fixture({ dataFile } = {}) {
         i18n: { load: (lang, dict) => locales.push({ lang, dict }) },
         on: () => {},
         addScript: () => {},
+        effect: (fn) => fn(),
     });
     const handler = (url) => {
         const entry = routes.get(url);
         return new entry.HandlerClass();
     };
-    return { routes, nav, locales, handler };
+    return { routes, nav, locales, handler, registeredSettings };
 }
 
 test('routes are registered guest-visible and the nav injection matches a route name', async () => {
@@ -102,6 +111,7 @@ test('the page handler groups the shipped season and narrows by type', async () 
     const h = f.handler('/calendar');
     await h.get('system', 'icpc');
     assert.equal(h.response.template, 'calendar.html');
+    assert.equal(h.response.body.page_name, 'swpu_calendar');
     assert.equal(h.response.body.currentType, 'icpc');
     assert.equal(h.response.body.broken, false);
     assert.ok(h.response.body.total > 0, 'the shipped seed must render something');
@@ -193,7 +203,7 @@ test('platform auto events merge into the page, the feed and the filter chips', 
                     status: 'OK',
                     result: [{
                         id: 1988, name: 'Codeforces Round 999 (Div. 2)', phase: 'BEFORE',
-                        startTimeSeconds: Math.floor(Date.parse('2026-10-22T08:30:00+08:00') / 1000),
+                        startTimeSeconds: Math.floor((Date.now() + 86400000) / 1000),
                         durationSeconds: 9000,
                     }],
                 }),
@@ -229,5 +239,47 @@ test('platform auto events merge into the page, the feed and the filter chips', 
         if (savedCache === undefined) delete process.env.SWPU_CALENDAR_AUTO_CACHE;
         else process.env.SWPU_CALENDAR_AUTO_CACHE = savedCache;
         fs.rmSync(dir, { recursive: true, force: true });
+    }
+});
+
+
+test('system settings register CLIST credentials with a password input', async () => {
+    const f = await fixture();
+    assert.deepEqual(f.registeredSettings.map((s) => s.key), ['dfacm_calendar.clist_username', 'dfacm_calendar.clist_api_key']);
+    for (const s of f.registeredSettings) {
+        assert.equal(s.key.split('.').length, 2, 'Hydro expands dotted form names but only saves one nested level');
+    }
+    assert.equal(f.registeredSettings[1].type, 'password');
+    assert.equal(f.registeredSettings[1].flag, 4);
+    for (const url of ['/calendar/feed.ics', '/calendar/assets/:file']) assert.equal(f.routes.get(url).priv, undefined);
+});
+
+test('ICS handler applies multiple filters, returns raw calendar and rate limits requests', async () => {
+    const f = await fixture();
+    const h = f.handler('/calendar/feed.ics');
+    h.args = { types: 'icpc' };
+    let rateCalls = 0;
+    h.limitRate = async () => { rateCalls++; };
+    await h.get();
+    assert.equal(rateCalls, 1);
+    assert.equal(h.response.type, 'text/calendar; charset=utf-8');
+    assert.match(h.response.body, /^BEGIN:VCALENDAR\r\n/);
+    assert.equal(h.response.headers['Cache-Control'], 'public, max-age=300');
+    assert.match(h.response.disposition, /dfacm-contests\.ics/);
+    assert.ok(!h.response.body.includes('SUMMARY:第十八届蓝桥杯'));
+});
+
+test('asset route serves only pinned files, sets MIME/cache, rejects traversal', async () => {
+    const f = await fixture();
+    for (const [name, mime] of [['calendar-1.36.0.js', 'application/javascript'], ['calendar-1.36.0.css', 'text/css'], ['fullcalendar-7.1.3.js', 'application/javascript'], ['fullcalendar-7.1.3.css', 'text/css']]) {
+        const h = f.handler('/calendar/assets/:file'); await h.get('system', name);
+        assert.ok(h.response.body.length > 100);
+        assert.ok(h.response.type.startsWith(mime));
+        assert.match(h.response.headers['Cache-Control'], /immutable/);
+    }
+    for (const name of ['../../.env', 'calendar.json', 'clist-cache.json']) {
+        const h = f.handler('/calendar/assets/:file'); await h.get('system', name);
+        assert.equal(h.response.status, 404);
+        assert.equal(h.response.headers['Cache-Control'], undefined);
     }
 });

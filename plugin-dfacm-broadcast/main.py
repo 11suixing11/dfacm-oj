@@ -104,6 +104,10 @@ class DfacmAcmBroadcast(star.Star):
         "ccsp": "CCSP",
         "cf": "CF",
         "atcoder": "AtCoder",
+        "nowcoder": "牛客",
+        "luogu": "洛谷",
+        "leetcode": "LeetCode",
+        "codechef": "CodeChef",
         "other": "其他",
     }
 
