@@ -1,6 +1,6 @@
 {
   "name": "dfacm-calendar",
-  "version": "0.2.0",
+  "version": "0.2.3",
   "private": true,
   "main": "index.ts",
   "engines": {

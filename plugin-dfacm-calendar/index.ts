@@ -1,5 +1,5 @@
 /* swpu-calendar — d&f算法网赛事日历，保留历史 addon 名兼容现网。
- * /calendar 月 / 周 / 列表，/calendar/data 兼容 QQ 只读数据，/calendar/feed.ics 订阅。
+ * /calendar 赛事清单，/calendar/data 兼容 QQ 只读数据，/calendar/feed.ics 订阅。
  * 手工 calendar.json 每次现读，坏文件回退；CF / AtCoder / CLIST 独立缓存和后台刷新。
  * 固定浏览器资源经 /calendar/assets/:file 白名单提供，CLIST 凭据仅留在服务器。
  */
@@ -17,10 +17,8 @@ const logger = new Logger('swpu-calendar');
 // SWPU_CALENDAR_FILE 供运维指向临时数据文件排障（默认随插件目录）。
 const DATA_FILE = process.env.SWPU_CALENDAR_FILE || join(__dirname, 'calendar.json');
 const ASSETS = new Map([
-    ['fullcalendar-7.1.3.js', ['vendor/fullcalendar-7.1.3.js', 'application/javascript; charset=utf-8']],
-    ['fullcalendar-7.1.3.css', ['vendor/fullcalendar-7.1.3.css', 'text/css; charset=utf-8']],
-    ['calendar-1.36.0.js', ['public/calendar.js', 'application/javascript; charset=utf-8']],
-    ['calendar-1.36.0.css', ['public/calendar.css', 'text/css; charset=utf-8']],
+    ['calendar-1.36.3.js', ['public/calendar.js', 'application/javascript; charset=utf-8']],
+    ['calendar-1.36.3.css', ['public/calendar.css', 'text/css; charset=utf-8']],
 ]);
 const clist = createClistSource({ credentials: () => ({
     username: SystemModel.get('dfacm_calendar.clist_username'),

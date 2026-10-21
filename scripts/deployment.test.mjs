@@ -593,7 +593,6 @@ test('contest-calendar plugin ships its data, template and bot-feed wiring', () 
   assert.deepEqual(documented.sort(), [
     'auto.cjs', 'cache.cjs', 'calendar.cjs', 'calendar.json', 'clist.cjs', 'index.ts', 'package.json', 'presentation.cjs',
     'public/calendar.css', 'public/calendar.js', 'templates/calendar.html',
-    'vendor/FULLCALENDAR-LICENSE.txt', 'vendor/fullcalendar-7.1.3.css', 'vendor/fullcalendar-7.1.3.js', 'vendor/manifest.json',
   ]);
   for (const name of documented) {
     assert.ok(fs.existsSync(path.join(repo, 'plugin-dfacm-calendar', name)), `missing ${name}`);
@@ -619,8 +618,9 @@ test('contest-calendar plugin ships its data, template and bot-feed wiring', () 
   assert.match(tpl, /\{% extends "layout\/basic.html" %\}/, 'calendar.html must extend the site layout');
   assert.match(tpl, /class="section"/, 'calendar.html must use the section component');
   assert.match(tpl, /swpu-cal-chip/, 'calendar.html must render the type filter chips');
-  assert.match(tpl, /swpu-cal-card/, 'calendar.html must render event cards');
-  assert.match(tpl, /data-table/, 'ended events must reuse the data-table component');
+  assert.match(tpl, /swpu-cal-card/, 'calendar.html must render contest rows');
+  assert.match(tpl, /<details[^>]+dfacm-cal__archive/, 'ended events must use the native collapsible archive');
+  assert.doesNotMatch(tpl, /fullcalendar-|data-calendar-view|dfacm-calendar-grid/, 'the contest list must not load or render a month/week calendar');
   // Route/injectUI wiring: ui-default resolves nav hrefs via url(item.name),
   // so the injected name must equal the registered route name.
   const index = fs.readFileSync(path.join(repo, 'plugin-dfacm-calendar', 'index.ts'), 'utf8');

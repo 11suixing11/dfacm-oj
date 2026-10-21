@@ -271,13 +271,13 @@ test('ICS handler applies multiple filters, returns raw calendar and rate limits
 
 test('asset route serves only pinned files, sets MIME/cache, rejects traversal', async () => {
     const f = await fixture();
-    for (const [name, mime] of [['calendar-1.36.0.js', 'application/javascript'], ['calendar-1.36.0.css', 'text/css'], ['fullcalendar-7.1.3.js', 'application/javascript'], ['fullcalendar-7.1.3.css', 'text/css']]) {
+    for (const [name, mime] of [['calendar-1.36.3.js', 'application/javascript'], ['calendar-1.36.3.css', 'text/css']]) {
         const h = f.handler('/calendar/assets/:file'); await h.get('system', name);
         assert.ok(h.response.body.length > 100);
         assert.ok(h.response.type.startsWith(mime));
         assert.match(h.response.headers['Cache-Control'], /immutable/);
     }
-    for (const name of ['../../.env', 'calendar.json', 'clist-cache.json']) {
+    for (const name of ['../../.env', 'calendar.json', 'clist-cache.json', 'calendar-1.36.0.js', 'calendar-1.36.1.js', 'calendar-1.36.2.js', 'calendar-1.36.2.css', 'fullcalendar-7.1.3.js', 'fullcalendar-7.1.3.css']) {
         const h = f.handler('/calendar/assets/:file'); await h.get('system', name);
         assert.equal(h.response.status, 404);
         assert.equal(h.response.headers['Cache-Control'], undefined);

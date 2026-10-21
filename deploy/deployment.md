@@ -203,18 +203,16 @@ mongosh "$(python3 -c "import json;print(json.load(open('/root/.hydro/config.jso
 - `/manage/shop` 域管理员可见，每行价格 + 上架 checkbox 可保存。
 - 兑换成功后跳转 `/mybadge`，佩戴后全站用户名旁出现徽章。
 
-赛事日历可选安装（FullCalendar 月 / 周视图与赛事列表，支持多类型筛选、搜索、ICS 订阅；官方赛手工维护，CF / AtCoder 自动同步，CLIST 可补充牛客 / 洛谷 / LeetCode / CodeChef；游客可见，JSON 端点继续供 QQ 播报机器人使用）：
+赛事清单可选安装（按进行中、即将到来、日期待公布、已结束分组，支持多类型筛选、搜索、ICS 订阅；官方赛手工维护，CF / AtCoder 自动同步，CLIST 可补充牛客 / 洛谷 / LeetCode / CodeChef；游客可见，JSON 端点继续供 QQ 播报机器人使用）：
 
 ```bash
-mkdir -p /root/.hydro/addons/swpu-calendar/{templates,public,vendor}
+mkdir -p /root/.hydro/addons/swpu-calendar/{templates,public}
 cp /root/swpu-oj/plugin-dfacm-calendar/{auto.cjs,cache.cjs,calendar.cjs,calendar.json,clist.cjs,presentation.cjs,index.ts,package.json} \
    /root/.hydro/addons/swpu-calendar/
 cp /root/swpu-oj/plugin-dfacm-calendar/{templates/calendar.html} \
    /root/.hydro/addons/swpu-calendar/templates/
 cp /root/swpu-oj/plugin-dfacm-calendar/{public/calendar.js,public/calendar.css} \
    /root/.hydro/addons/swpu-calendar/public/
-cp /root/swpu-oj/plugin-dfacm-calendar/{vendor/fullcalendar-7.1.3.js,vendor/fullcalendar-7.1.3.css,vendor/FULLCALENDAR-LICENSE.txt,vendor/manifest.json} \
-   /root/.hydro/addons/swpu-calendar/vendor/
 mkdir -p /root/.hydro/addons/swpu-calendar/node_modules
 ln -sfn /usr/local/share/.config/yarn/global/node_modules/hydrooj \
         /root/.hydro/addons/swpu-calendar/node_modules/hydrooj
@@ -222,7 +220,7 @@ ln -sfn /usr/local/share/.config/yarn/global/node_modules/hydrooj \
 pm2 restart hydrooj
 ```
 
-安装后导航栏出现「赛事日历」（`/calendar`，落在「评测记录」旁，游客可见），桌面默认月视图，手机默认列表，可切换周视图，支持 `?types=icpc,cf&q=关键词`（兼容 `?type=`）。`GET /calendar/data` 继续提供无鉴权 JSON 数据，`GET /calendar/feed.ics` 为可按相同筛选订阅的日历。FullCalendar 7.1.3 的 MIT 浏览器资源已固定版本并随插件发货，`/calendar/assets/:file` 只服务固定白名单，不依赖外部 CDN；无需改 Caddy。手工赛程在 `calendar.json` 维护：**改数据文件后 `bash deploy/deploy.sh --sync-only` 即时生效，无需 pm2 restart**。月份级公告单独展示，日历仅收录其精确报名截止。
+安装后导航栏出现「赛事日历」（`/calendar`，落在「评测记录」旁，游客可见），页面采用赛事清单，桌面和手机都按状态分组，已结束赛事默认折叠，搜索或类型筛选时展开匹配的往期赛事。支持 `?types=icpc,cf&q=关键词`（兼容 `?type=`）。`GET /calendar/data` 继续提供无鉴权 JSON 数据，`GET /calendar/feed.ics` 为可按相同筛选订阅的日历。页面不加载 FullCalendar，`/calendar/assets/:file` 只服务 `calendar-1.36.3.js` / `calendar-1.36.3.css`，不依赖外部 CDN；无需改 Caddy。手工赛程在 `calendar.json` 维护：**改数据文件后 `bash deploy/deploy.sh --sync-only` 即时生效，无需 pm2 restart**。月份级公告保留年月与日期待公布提示，ICS 仅收录其精确报名截止。
 
 平台赛抓取未来 60 天及最近 12 小时（进行中的长赛按结束时间判断）。CF、AtCoder、CLIST 各自独立缓存，每小时刷新；失败时保留自己的上次成功数据（≤24 小时）并退避 10 分钟。页面只等待本地缓存读取，外网抓取在后台。运行时文件 `auto-cache-cf.json` / `auto-cache-atcoder.json` / `clist-cache.json` 不发货，兼容读取旧 `auto-cache.json`。
 

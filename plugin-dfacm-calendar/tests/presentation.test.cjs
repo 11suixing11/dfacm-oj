@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const { test } = require('node:test');
 const ICAL = require('ical.js');
 const { loadCalendar } = require('../calendar.cjs');
-const { buildIcs, calendarEvent, registrationEvent, pageData, foldLine, serializeBoot } = require('../presentation.cjs');
+const { buildIcs, pageData, foldLine, serializeBoot } = require('../presentation.cjs');
 const NOW = new Date('2026-10-18T12:00:00+08:00');
 const rows = [
     { id: 'timed', name: 'CF 比赛', type: 'cf', form: 'online', start: '2026-10-22T20:00:00+08:00', end: '2026-10-22T22:00:00+08:00', source: 'cf' },
@@ -14,20 +14,25 @@ const rows = [
 const parsed = (events = rows) => loadCalendar(JSON.stringify({ events }));
 const components = (ics) => new ICAL.Component(ICAL.parse(ics)).getAllSubcomponents('vevent');
 
-test('FullCalendar all-day end is exclusive, timed events retain their offset', () => {
-    const events = parsed().events;
-    const multi = calendarEvent(events.find((e) => e.id === 'multi'), NOW);
-    assert.deepEqual([multi.allDay, multi.start, multi.end], [true, '2026-10-24', '2026-10-26']);
-    const single = calendarEvent(events.find((e) => e.id === 'single'), NOW);
-    assert.equal(single.end, '2026-10-29');
-    const timed = calendarEvent(events.find((e) => e.id === 'timed'), NOW);
-    assert.equal(timed.allDay, false);
-    assert.equal(timed.start, '2026-10-22T20:00:00+08:00');
-    assert.equal(timed.extendedProps.timeText, '20:00 – 22:00');
-    assert.equal(calendarEvent(events.find((e) => e.id === 'month'), NOW), null);
-    const registration = registrationEvent(events.find((e) => e.id === 'month'), NOW);
-    assert.equal(registration.start, '2026-12-18T14:00:00+08:00');
-    assert.equal(registration.extendedProps.kind, 'registration');
+test('list dates use Beijing time across year boundaries and do not invent days for month-only races', () => {
+    const data = parsed([
+        { ...rows[0], id: 'cst', start: '2026-12-31T16:30:00Z', end: '2026-12-31T17:30:00Z' },
+        { ...rows[1], id: 'years', start: '2026-12-31T00:00:00+08:00', end: '2027-01-02T23:59:59+08:00' },
+        rows[3],
+    ]);
+    const list = pageData(data, NOW).groups.flatMap((g) => g.events);
+    const timed = list.find((e) => e.id === 'cst');
+    assert.equal(timed.dateValue, '2027-01-01');
+    assert.equal(timed.dateMonth, '2027年1月');
+    assert.equal(timed.dateDay, '01');
+    assert.equal(timed.dateWeekday, '周五');
+    assert.equal(timed.timeText, '00:30 – 01:30');
+    assert.match(list.find((e) => e.id === 'years').scheduleDateText, /2026年12月31日.*2027年1月2日/);
+    const uncertain = list.find((e) => e.id === 'month');
+    assert.equal(uncertain.dateValue, '2027-04');
+    assert.equal(uncertain.scheduleDateText, '2027年4月（日期待公布）');
+    assert.equal(uncertain.timeText, '');
+    assert.equal(uncertain.dateWeekday, '日期待公布');
 });
 
 test('ICS parses in an independent parser with UTC timed events and date-only inclusive ranges', () => {
@@ -80,16 +85,18 @@ test('ICS filters multiple platforms and search; CLIST credit is present', () =>
     assert.match(one[0].getFirstPropertyValue('description'), /CLIST/);
 });
 
-test('page DTO retains unselected SSR rows to restore all filters, omits approximate races from grid', () => {
+test('page DTO retains all list rows while counting and grouping the server selection', () => {
     const view = pageData(parsed(), NOW, { types: 'cf', q: '比赛' });
-    assert.equal(view.exactCount, 1);
-    assert.equal(view.groups.flatMap((g) => g.events).length, 3);
-    assert.equal(view.groups.flatMap((g) => g.events).filter((e) => e.hidden).length, 2);
-    assert.equal(view.uncertain[0].hidden, true);
+    assert.equal(view.total, 1);
+    assert.equal(view.groups.flatMap((g) => g.events).length, 4);
+    assert.equal(view.groups.flatMap((g) => g.events).filter((e) => e.hidden).length, 3);
+    assert.equal(view.groups.find((g) => g.key === 'uncertain').events[0].hidden, true);
     const boot = JSON.parse(view.bootJson);
-    assert.equal(boot.events.length, 4);
-    assert.ok(!boot.events.some((e) => e.id === 'month'));
-    assert.ok(boot.events.some((e) => e.id === 'month:registration'));
+    assert.deepEqual(boot, { selectedTypes: ['cf'], query: '比赛' });
+    const month = pageData(parsed(), NOW, { types: 'lqb' });
+    assert.equal(month.total, 1);
+    assert.equal(month.registrationCount, 1);
+    assert.equal(month.groups.find((g) => g.key === 'uncertain').count, 1);
     assert.equal(new URL(view.subscribeUrl, 'https://dfacm.website').searchParams.get('types'), 'cf');
 });
 

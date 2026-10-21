@@ -12,10 +12,8 @@ const env = new nunjucks.Environment(new nunjucks.FileSystemLoader(path.join(__d
 const template = fs.readFileSync(path.join(__dirname, 'templates/calendar.html'), 'utf8')
     .replace('{% extends "layout/basic.html" %}', '').replace('{% block content %}', '').replace('{% endblock %}', '');
 const assets = new Map([
-    ['fullcalendar-7.1.3.js', ['vendor/fullcalendar-7.1.3.js', 'application/javascript']],
-    ['fullcalendar-7.1.3.css', ['vendor/fullcalendar-7.1.3.css', 'text/css']],
-    ['calendar-1.36.0.js', ['public/calendar.js', 'application/javascript']],
-    ['calendar-1.36.0.css', ['public/calendar.css', 'text/css']],
+    ['calendar-1.36.3.js', ['public/calendar.js', 'application/javascript']],
+    ['calendar-1.36.3.css', ['public/calendar.css', 'text/css']],
 ]);
 const port = Number(process.env.PORT || 4174);
 http.createServer((req, res) => {
@@ -44,5 +42,5 @@ http.createServer((req, res) => {
     ]);
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
     const content = env.renderString(template, view);
-    res.end(`<!doctype html><html lang="zh-CN" class="theme--light"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>赛事日历 · 本地预览</title><style>body{margin:0;background:#f4f7fb;font-family:system-ui,-apple-system,"Microsoft YaHei",sans-serif}.section{max-width:1120px;margin:28px auto;background:#fff;border-radius:12px}.section__body{padding:28px}.data-table{width:100%;border-collapse:collapse;font-size:13px}.data-table td,.data-table th{text-align:left;padding:12px;border-bottom:1px solid #dce4ef}html.theme--dark body{background:#0c1728}html.theme--dark .section{background:#16233d}@media(max-width:680px){.section{margin:0;border-radius:0}.section__body{padding:20px 15px}}</style><body>${content}</body></html>`);
+    res.end(`<!doctype html><html lang="zh-CN" class="theme--light"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>赛事清单 · 本地预览</title><style>body{margin:0;background:#f4f7fb;font-family:system-ui,-apple-system,"Microsoft YaHei",sans-serif}.section{max-width:1120px;margin:28px auto;background:#fff;border-radius:12px}.section__body{padding:28px}html.theme--dark body{background:#0c1728}html.theme--dark .section{background:#16233d}@media(max-width:680px){.section{margin:0;border-radius:0}.section__body{padding:20px 15px}}</style><body>${content}</body></html>`);
 }).listen(port, '127.0.0.1', () => console.log(`日历预览：http://127.0.0.1:${port}/calendar`));
