@@ -39,7 +39,28 @@ class DfacmAcmBroadcast(star.Star):
 
     # Official QQ bot platform (qq_official adapter, id "qqbot"): groups are
     # identified by per-bot group_openid, not the QQ group number.
-    GROUP_SESSION = "qqbot:GroupMessage:E028A2787EEBB8D03234AB3E0C0D763C"
+    # Broadcast channel (2026-10-22): the official QQ platform keeps group
+    # proactive messages enterprise-grey — individually-certified developers
+    # get err 40034105 (主动消息失败, 无权限) — so broadcasts ride the OneBot
+    # channel (NapCat, a club QQ account sitting in the group). The official
+    # bot (qqbot) still serves group commands, owner C2C and the
+    # channel-down watchdog below. Flip GROUP_SESSION back to
+    # "qqbot:GroupMessage:E028A2787EEBB8D03234AB3E0C0D763C" once the
+    # platform opens proactive group messages to individual developers.
+    GROUP_SESSION = "qq-onebot:GroupMessage:1128735782"
+    SESSION_PLATFORM = GROUP_SESSION.split(":", 1)[0]
+    GROUP_OPENID = GROUP_SESSION.rsplit(":", 1)[-1]
+    # Delivery honesty (2026-10-21): the patched qq_official adapter raises
+    # when delivery is impossible, and this side holds broadcasts instead of
+    # losing them — cards stay queued, marks only go down after a send
+    # actually went out, failures cool down, and a stuck channel pages the
+    # owner through the official bot.
+    SEND_FAILURE_COOLDOWN_SECONDS = 120
+    HOLD_LOG_INTERVAL_SECONDS = 600
+    CHANNEL_ALERT_INTERVAL_SECONDS = 3600
+    # Official-bot DM session of the club owner: paging target when the
+    # broadcast channel cannot deliver (e.g. the NapCat session expired).
+    OWNER_C2C_SESSION = "qqbot:FriendMessage:43F956146463570DEC12C6DFBACEFC04"
     BASE_URL = "https://dfacm.website"
     # Poll the OJ's MongoDB directly through a read-only account: no web
     # scraping, no login sessions, and the public site keeps its
@@ -200,6 +221,10 @@ class DfacmAcmBroadcast(star.Star):
         self._calendar_at: float = 0.0
         self._calendar_events: list[dict] | None = None
         self._calendar_next_try: float = 0.0
+        self._group_send_cooldown_until: float = 0.0
+        self._group_hold_logged_at: float = 0.0
+        self._cooldown_logged_at: float = 0.0
+        self._channel_alert_at: float = 0.0
 
     def _load_state(self) -> dict:
         """Load, migrate, and normalize persisted plugin state.
@@ -946,11 +971,8 @@ class DfacmAcmBroadcast(star.Star):
                 image_path = self._render_contest_card(item, Path(temp_dir))
                 for attempt in range(3):
                     try:
-                        sent = bool(
-                            await self.context.send_message(
-                                self.GROUP_SESSION,
-                                MessageChain().file_image(str(image_path)),
-                            )
+                        sent = await self._group_send(
+                            MessageChain().file_image(str(image_path))
                         )
                         if sent:
                             return True
@@ -971,12 +993,7 @@ class DfacmAcmBroadcast(star.Star):
             )
         for attempt in range(2):
             try:
-                sent = bool(
-                    await self.context.send_message(
-                        self.GROUP_SESSION,
-                        MessageChain().message(fallback),
-                    )
-                )
+                sent = await self._group_send(MessageChain().message(fallback))
                 if sent:
                     return True
             except Exception:
@@ -1024,14 +1041,10 @@ class DfacmAcmBroadcast(star.Star):
                 f"共 {len(standings)} 人有产出 · "
                 f"{self._contest_url(contest['domain'], contest['tid'])}"
             )
-            try:
-                await self.context.send_message(
-                    self.GROUP_SESSION,
-                    MessageChain().message("\n".join(lines)),
-                )
-            except Exception:
-                self.logger.exception("Contest end report delivery failed")
-            self._db_set_meta(guard, "1")
+            if await self._group_send(MessageChain().message("\n".join(lines))):
+                # Held (passive window closed): guard stays unset, retried by
+                # the next hourly sweep until it actually goes out.
+                self._db_set_meta(guard, "1")
 
     def _db_fetch_by_rids(self, rids: list[str]) -> list[dict]:
         db = self._mongo()
@@ -1104,7 +1117,16 @@ class DfacmAcmBroadcast(star.Star):
         try:
             while True:
                 try:
-                    await self._maybe_send_ranking()
+                    # Broadcast steps must never starve the poll: between
+                    # 2026-10-20 06:38 and 2026-10-21 15:07 a raising ranking
+                    # send skipped _poll_once on every cycle, so ingestion,
+                    # health checks and card delivery all froze.
+                    try:
+                        await self._maybe_send_ranking()
+                    except asyncio.CancelledError:
+                        raise
+                    except Exception:
+                        self.logger.exception("d&f算法网 ranking step failed")
                     # Any step that wedges (hung Mongo call, exotic sqlite
                     # state) degrades to one error line per cycle instead of a
                     # silently dead worker; the watermark keeps the backlog
@@ -1864,13 +1886,14 @@ class DfacmAcmBroadcast(star.Star):
             }.get(key, key)
             problems.append((key, label))
         alert_lines: list[str] = []
+        remind_updates: dict[str, float] = {}
         for key, label in problems:
             if prev.get(key) != states[key]:
                 alert_lines.append(f"⚠️ OJ 告警：{label}")
-                remind[key] = now_ts
+                remind_updates[key] = now_ts
             elif now_ts - float(remind.get(key) or 0) >= self.HEALTH_ALERT_REMIND_SECONDS:
                 alert_lines.append(f"⚠️ OJ 告警（持续中）：{label}")
-                remind[key] = now_ts
+                remind_updates[key] = now_ts
         names = {"http": "站点 HTTPS", "mongo": "OJ 数据库", "hb": "服务器心跳",
                  "disk": "磁盘使用率", "mem": "可用内存", "pending": "判题队列"}
         for key, state in states.items():
@@ -1878,12 +1901,12 @@ class DfacmAcmBroadcast(star.Star):
                 if prev.get(key) in ("down", "high", "low", "stale"):
                     alert_lines.append(f"✅ OJ 恢复：{names.get(key, key)}已恢复正常")
         if alert_lines:
-            try:
-                await self.context.send_message(
-                    self.GROUP_SESSION, MessageChain().message("\n".join(alert_lines))
-                )
-            except Exception:
-                self.logger.exception("health alert delivery failed")
+            if await self._group_send(
+                MessageChain().message("\n".join(alert_lines))
+            ):
+                remind.update(remind_updates)
+            # Held (passive window closed): remind stays stale, so the alert
+            # regenerates on the next health tick until it actually goes out.
         self._db_set_meta("health_state", json.dumps(states, ensure_ascii=False))
         self._db_set_meta("health_alert_ts", json.dumps(remind, ensure_ascii=False))
         self._health_snap = snap
@@ -2145,8 +2168,9 @@ class DfacmAcmBroadcast(star.Star):
     async def _calendar_weekly(self, now: datetime, events: list[dict]) -> None:
         """Sunday evening: preview every event starting next week plus every
         registration deadline that closes next week. At-most-once per ISO
-        week — the mark goes down before the send, the same trade-off the
-        daily ranking makes, so a failed delivery never spams the group."""
+        week — the mark only goes down after a delivered send, so a held
+        digest (passive window closed) retries on later polls instead of
+        being lost."""
         if now.weekday() != self.CALENDAR_DIGEST_DOW:
             return
         if (now.hour, now.minute) < self.CALENDAR_DIGEST_TIME:
@@ -2196,13 +2220,10 @@ class DfacmAcmBroadcast(star.Star):
             )
         lines.append("")
         lines.append("完整日历：https://dfacm.website/calendar")
-        self._db_set_meta(week_key, "1")
-        try:
-            await self.context.send_message(
-                self.GROUP_SESSION, MessageChain().message("\n".join(lines))
-            )
-        except Exception:
-            self.logger.exception("weekly calendar digest delivery failed")
+        # Held (passive window closed): stays unmarked and retries on the
+        # next poll until it actually goes out.
+        if await self._group_send(MessageChain().message("\n".join(lines))):
+            self._db_set_meta(week_key, "1")
 
     async def _calendar_reg_reminders(self, now: datetime, events: list[dict]) -> None:
         """D-3 / D-1 pings for every future event with a registration
@@ -2218,7 +2239,6 @@ class DfacmAcmBroadcast(star.Star):
             key = f"cal_reg:{event['id']}:d{days_left}"
             if self._db_get_meta(key):
                 continue
-            self._db_set_meta(key, "1")
             message = (
                 f"⏳ 报名提醒：{event['name']}\n"
                 f"报名将于 {self._calendar_fmt_dt(reg)} 截止（还剩 {days_left} 天）。"
@@ -2228,12 +2248,9 @@ class DfacmAcmBroadcast(star.Star):
                 message += f"\n地点：{place}"
             if event["url"]:
                 message += f"\n{event['url']}"
-            try:
-                await self.context.send_message(
-                    self.GROUP_SESSION, MessageChain().message(message)
-                )
-            except Exception:
-                self.logger.exception("calendar reg reminder delivery failed")
+            if await self._group_send(MessageChain().message(message)):
+                # Held: unmarked, retried while the deadline is still ahead.
+                self._db_set_meta(key, "1")
 
     async def _maybe_calendar(self) -> None:
         try:
@@ -2248,6 +2265,135 @@ class DfacmAcmBroadcast(star.Star):
         except Exception:
             self.logger.exception("calendar tick failed")
 
+    def _qq_adapter(self):
+        """Best-effort lookup of the qq_official adapter (pinned v4.28)."""
+        try:
+            adapter = self.context.get_platform_inst("qqbot")
+            if adapter is not None:
+                return adapter
+        except Exception:
+            pass
+        try:
+            for platform in self.context.platform_manager.platform_insts:
+                if platform.meta().name == "qq_official":
+                    return platform
+        except Exception:
+            pass
+        return None
+
+    def _passive_window_open(self) -> bool:
+        """Whether the broadcast group can receive a message right now.
+
+        Only the official-QQ platform restricts sends to passive replies:
+        there, delivery needs a cached trigger msg_id (a member @-mentioned
+        the bot within QQ's 5-minute window). The OneBot channel sends
+        freely; its channel-down state surfaces through send failures and
+        the cooldown instead. Fails open: without adapter visibility we
+        still attempt the send and let failure handling take over — a false
+        hold would starve the queue forever.
+        """
+        if self.SESSION_PLATFORM != "qqbot":
+            return True
+        adapter = self._qq_adapter()
+        if adapter is None:
+            return True
+        try:
+            cache = getattr(adapter, "_session_last_message_id", None)
+            if not isinstance(cache, dict):
+                return True
+            return bool(cache.get(self.GROUP_OPENID))
+        except Exception:
+            return True
+
+    def _group_delivery_ready(self) -> bool:
+        """Delivery possible right now? Logs the hold state throttled."""
+        now = time.time()
+        if now < self._group_send_cooldown_until:
+            if now - self._cooldown_logged_at >= self.HOLD_LOG_INTERVAL_SECONDS:
+                self._cooldown_logged_at = now
+                self.logger.info(
+                    "broadcast channel cooling down after delivery failures; "
+                    "holding queued broadcasts"
+                )
+            return False
+        if not self._passive_window_open():
+            if now - self._group_hold_logged_at >= self.HOLD_LOG_INTERVAL_SECONDS:
+                self._group_hold_logged_at = now
+                self.logger.info(
+                    "group passive window closed; holding broadcasts until a "
+                    "member @-mentions the bot in the group"
+                )
+            return False
+        return True
+
+    async def _owner_dm(self, reason: str) -> None:
+        """Fire-and-forget page to the club owner via the official bot."""
+        try:
+            await self.context.send_message(
+                self.OWNER_C2C_SESSION,
+                MessageChain().message(
+                    f"⚠️ 播报通道异常：{reason}\n"
+                    "AC 卡片与榜单已挂起，不会丢失。请恢复 NapCat 会话"
+                    "（服务器 docker restart napcat 后重新扫码），恢复后积压自动补发。"
+                ),
+            )
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            self.logger.exception("owner page DM failed")
+
+    def _maybe_page_owner(self, reason: str) -> None:
+        """Throttled: tell a human the broadcast channel cannot deliver."""
+        now = time.time()
+        if now - self._channel_alert_at < self.CHANNEL_ALERT_INTERVAL_SECONDS:
+            return
+        self._channel_alert_at = now
+        try:
+            asyncio.create_task(self._owner_dm(reason))
+        except Exception:
+            self.logger.exception("failed to schedule owner page DM")
+
+    async def _group_send(self, message_chain) -> bool:
+        """Send one broadcast to the group with honest delivery reporting.
+
+        Context.send_message returns True as soon as the platform matches —
+        even when the adapter cannot deliver — so callers cannot trust it
+        (2026-10-21: three AC cards were marked sent while the adapter
+        silently skipped them). This wrapper holds while the passive window
+        is closed, cools down after real failures so the QQ API is not
+        hammered, and only returns True after a send attempt went out.
+        """
+        if not self._group_delivery_ready():
+            return False
+        try:
+            sent = bool(
+                await self.context.send_message(
+                    self.GROUP_SESSION, message_chain
+                )
+            )
+        except Exception as exc:
+            self._group_send_cooldown_until = (
+                time.time() + self.SEND_FAILURE_COOLDOWN_SECONDS
+            )
+            self.logger.warning(
+                "group broadcast delivery failed (%s); cooling down %ds",
+                exc,
+                self.SEND_FAILURE_COOLDOWN_SECONDS,
+            )
+            self._maybe_page_owner(f"群播报投递失败（{exc}）")
+            return False
+        if not sent:
+            self._group_send_cooldown_until = (
+                time.time() + self.SEND_FAILURE_COOLDOWN_SECONDS
+            )
+            self.logger.warning(
+                "group broadcast reported undelivered; cooling down %ds",
+                self.SEND_FAILURE_COOLDOWN_SECONDS,
+            )
+            self._maybe_page_owner("群播报未被投递（发送适配器不可用）")
+            return False
+        return True
+
     async def _drain_pending_cards(self) -> None:
         """Broadcast queued cards, oldest first.
 
@@ -2255,6 +2401,8 @@ class DfacmAcmBroadcast(star.Star):
         else the neon AC card. Delivery failures stay queued.
         """
         if self._db is None:
+            return
+        if not self._group_delivery_ready():
             return
         rows = self._db.execute(
             "SELECT * FROM records WHERE card_sent = 0 "
@@ -2474,11 +2622,8 @@ class DfacmAcmBroadcast(star.Star):
                 image_path = self._render_ac_card(item, Path(temp_dir))
                 for attempt in range(3):
                     try:
-                        sent = bool(
-                            await self.context.send_message(
-                                self.GROUP_SESSION,
-                                MessageChain().file_image(str(image_path)),
-                            )
+                        sent = await self._group_send(
+                            MessageChain().file_image(str(image_path))
                         )
                         if sent:
                             return True
@@ -2495,12 +2640,7 @@ class DfacmAcmBroadcast(star.Star):
             self.logger.exception("AC card rendering failed; sending text fallback")
         for attempt in range(2):
             try:
-                sent = bool(
-                    await self.context.send_message(
-                        self.GROUP_SESSION,
-                        MessageChain().message(fallback),
-                    )
-                )
+                sent = await self._group_send(MessageChain().message(fallback))
                 if sent:
                     return True
             except Exception:
@@ -2515,28 +2655,40 @@ class DfacmAcmBroadcast(star.Star):
     async def _maybe_send_ranking(self) -> None:
         # ranking_sent_day guards against duplicates, so the daily leaderboard
         # simply goes out on the first poll after midnight — even if the bot
-        # was restarting at 00:00 or offline for hours.
+        # was restarting at 00:00 or offline for hours. Each message carries
+        # its own mark so a held send (passive window closed) retries on the
+        # next poll instead of being lost for the day.
         now = datetime.now()
         today = now.strftime("%Y-%m-%d")
-        if self._state.get("ranking_sent_day") == today:
+        if (
+            self._state.get("ranking_sent_day") == today
+            and self._state.get("ranking_daily_sent_day") == today
+        ):
             return
-        await self._send_ranking(mark_sent=True)
-        yesterday = (now.date().fromordinal(now.date().toordinal() - 1)).strftime(
-            "%Y-%m-%d"
-        )
-        await self._send_daily_ranking(yesterday, "")
+        if not self._group_delivery_ready():
+            return
+        if self._state.get("ranking_sent_day") != today:
+            await self._send_ranking(mark_sent=True)
+        if (
+            self._state.get("ranking_sent_day") == today
+            and self._state.get("ranking_daily_sent_day") != today
+        ):
+            yesterday = (now.date().fromordinal(now.date().toordinal() - 1)).strftime(
+                "%Y-%m-%d"
+            )
+            if await self._send_daily_ranking(yesterday, ""):
+                self._state["ranking_daily_sent_day"] = today
+                self._save_state()
 
-    async def _send_daily_ranking(self, target_day: str, until_note: str) -> None:
+    async def _send_daily_ranking(self, target_day: str, until_note: str) -> bool:
         """Publish the per-day AC leaderboard for a YYYY-MM-DD day."""
         day_start = self._day_epoch(target_day)
         users = await self._stats_from_db(day_start, day_start + 86400)
         header = f"📊 {target_day} AC 榜单{until_note}"
         if not users:
-            await self.context.send_message(
-                self.GROUP_SESSION,
-                MessageChain().message(f"{header}\n当日暂无 AC 记录"),
+            return await self._group_send(
+                MessageChain().message(f"{header}\n当日暂无 AC 记录")
             )
-            return
         ranking = sorted(users.items(), key=lambda item: (-item[1], item[0]))
         lines = [
             header,
@@ -2547,9 +2699,7 @@ class DfacmAcmBroadcast(star.Star):
             f"{index}. {user} —— {count} 题"
             for index, (user, count) in enumerate(ranking, 1)
         )
-        await self.context.send_message(
-            self.GROUP_SESSION, MessageChain().message("\n".join(lines))
-        )
+        return await self._group_send(MessageChain().message("\n".join(lines)))
 
     async def _send_ranking(
         self, target_day: str | None = None, mark_sent: bool = False
@@ -2558,13 +2708,12 @@ class DfacmAcmBroadcast(star.Star):
         counting_since = self._state.get("counting_since") or target_day or today
         users = await self._stats_from_db()
         if not users:
-            await self.context.send_message(
-                self.GROUP_SESSION,
+            sent = await self._group_send(
                 MessageChain().message(
                     f"📊 累计 AC 排名（自 {counting_since}）\n当前暂无已播报 AC 的用户"
-                ),
+                )
             )
-            if mark_sent:
+            if sent and mark_sent:
                 self._state["ranking_sent_day"] = today
                 self._save_state()
             return
@@ -2578,12 +2727,10 @@ class DfacmAcmBroadcast(star.Star):
             f"{index}. {user} —— {count} 题"
             for index, (user, count) in enumerate(ranking, 1)
         )
-        await self.context.send_message(
-            self.GROUP_SESSION, MessageChain().message("\n".join(lines))
-        )
-        if mark_sent:
-            self._state["ranking_sent_day"] = today
-            self._save_state()
+        if await self._group_send(MessageChain().message("\n".join(lines))):
+            if mark_sent:
+                self._state["ranking_sent_day"] = today
+                self._save_state()
 
     @staticmethod
     def _font(size: int, bold: bool = False):
@@ -3106,6 +3253,7 @@ class DfacmAcmBroadcast(star.Star):
         if not contests:
             yield event.plain_result("当前没有进行中的比赛。")
             return
+        delivered = 0
         for contest in contests[:3]:
             standings = await asyncio.to_thread(
                 self._db_contest_standings, contest["domain"], contest["tid"], 10
@@ -3126,14 +3274,15 @@ class DfacmAcmBroadcast(star.Star):
                 lines.append(f"{index}. {name} —— {solved} 题")
             if not standings:
                 lines.append("暂无人解出题目，等你来开张！")
-            try:
-                await self.context.send_message(
-                    self.GROUP_SESSION,
-                    MessageChain().message("\n".join(lines)),
-                )
-            except Exception:
-                self.logger.exception("Contest ranking delivery failed")
-        yield event.plain_result("已发送比赛排名。")
+            if await self._group_send(MessageChain().message("\n".join(lines))):
+                delivered += 1
+        if delivered:
+            yield event.plain_result("已发送比赛排名。")
+        else:
+            yield event.plain_result(
+                "播报群被动窗口未开启，未能发送排名；"
+                "请先在播报群里 @ 机器人任意发一条消息，再重试本指令。"
+            )
 
     @filter.command("oj题目")
     async def problem_lookup(self, event: AstrMessageEvent, problem_id: str = ""):

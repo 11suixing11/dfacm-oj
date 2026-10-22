@@ -1,10 +1,31 @@
-# d&f算法网 QQ 播报插件（内部标识：swpu_acm_broadcast v2.4.1）
+# d&f算法网 QQ 播报插件（内部标识：swpu_acm_broadcast v2.4.3）
 
 AstrBot 插件：QQ 群自动播报 [d&f算法网](https://dfacm.website)（Hydro v5）的 AC 提交，附带每日榜单、比赛实时播报、XCPC 赛事周播报（每周日 20:30 下周赛程预告 + 报名截止 D-3/D-1 提醒，数据源为站内 `/calendar/data`）、账号绑定、签到、账号合并等群功能。
 
 品牌寓意：每个人都能在算法竞赛这条路上找到属于自己的 final。
 
 v2.4.1 补齐站内赛事日历的牛客、洛谷、LeetCode、CodeChef 类型标签，沿用 `/calendar/data` 接口；CLIST 凭据在 OJ 后台配置，机器人无需保存该 Key。
+
+## QQ 官方通道发送约束（v2.4.2，2026-10-21）
+
+官方 QQ 机器人（qq_official 平台）对**未上架**的机器人只开放**被动回复**：群成员 @ 机器人一条消息后 5 分钟内、每条消息最多 5 条回复；群**主动消息**要等机器人过审上架、平台授予主动消息权限后才可用（未开通时 QQ API 直接拒绝，err 40034105「主动消息失败, 无权限」）。
+
+v2.4.1 及之前存在**静默丢失**：AstrBot 适配器在无缓存 msg_id 时静默跳过发送，而 `Context.send_message` 只要平台匹配就恒返回 True——AC 卡片/榜单被标记"已发"但群里什么都没收到（2026-10-21 实锤：3 张过题卡全丢，且上游群场景硬编码走主动发送、被动回复通道被旁路）。v2.4.2 三层修复：
+
+1. **适配器补丁**：`patches/patch-qqofficial-adapter.py` 在 167 上生成 compose 卷挂载的覆盖文件（三处 SWPU patch 锚点）——有缓存 msg_id 就走被动回复；无 msg_id 时抛异常而非静默跳过；群会话不把 bot 自己的消息 id 写进 msg_id 缓存（防止缓存污染）。
+2. **插件层诚实投递**：全部群播报（AC 卡/比赛卡/累计榜/每日榜/周报/健康告警/报名提醒/终榜战报/`/比赛排名`）统一走 `_group_send`——只在真实发出后才落"已发"标记；被动窗口关闭时挂起不丢（卡片留队列、榜单标记不落），群里有人 @ 机器人后 ≤15 秒自动补发；发送失败进入 120 秒冷却防打爆 QQ API；`_maybe_send_ranking` 异常隔离，不再掐死轮询（10-20 06:38 至 10-21 15:07 曾冻结摄入 32 小时）。
+3. **上架前后的行为**：上架前，积压播报在群成员 @ 机器人后的下一个轮询自动补发，无人 @ 时安全挂起；上架获得主动权限后无需改动即恢复完全实时推送（无 msg_id 时仍尝试主动接口，陈旧 msg_id 也会自动回退主动接口）。
+
+**运维**：astrbot 镜像升级后必须在 167 重跑 `python3 /opt/swpu-acm/patches/patch-qqofficial-adapter.py`（锚点漂移会响亮失败），compose 卷挂载行见 `/opt/swpu-acm/compose.yml` 的 `PATCH(swpu-acm 2026-10-21)` 注释。
+
+## 双通道架构（v2.4.3，2026-10-22）
+
+站长确认 q.qq.com 的**群主动消息能力仅对企业主体灰度开放**（个人认证开发者"敬请期待"），官方通道短期内拿不到真正的主动推送。v2.4.3 起：
+
+- **播报通道 = NapCat（qq-onebot / aiocqhttp）**：AC 卡、每日榜单、累计榜、周报、健康告警、报名提醒等一切主动播报走小号所在的 OneBot 通道——协议层无被动回复限制，真·主动推送。挂起队列继续兜底：NapCat 掉线不丢卡，恢复后自动补发。
+- **官方 bot（qqbot）继续值守**：群内 @ 指令、站长 C2C、以及**通道掉线看门狗**——播报投递失败/适配器不可用时，每小时最多一条私信提醒站长"通道异常 + 恢复步骤"（`OWNER_C2C_SESSION`）。
+- **回切开关**：将来个人开发者灰度开放后，把 `GROUP_SESSION` 改回 `qqbot:GroupMessage:E028A2787EEBB8D03234AB3E0C0D763C` 即可恢复单官方通道（`_passive_window_open` 按平台自动切换判定逻辑），届时可退役 NapCat。
+- NapCat 运维铁律（沿用）：镜像钉死 `mlikiowa/napcat-docker:v4.18.37`、`o3HookMode=0`、机器人小号禁止在任何电脑登录 PC 版 QQ、容器重启后须重新扫码（WebUI token 见 167 备忘，`docker exec napcat base64 /app/napcat/cache/qrcode.png` 可拉二维码，约 2 分钟过期）。
 
 ## 架构（v2.1.0：MongoDB 为唯一真相）
 
