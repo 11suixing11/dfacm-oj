@@ -1,0 +1,12 @@
+{% extends "home_settings.html" %}
+{% block home_content %}
+{{ super() }}
+<section class="section dfacm-ai-settings" id="ai" data-heading-extract-to="#menu-item-home_account">
+  <div class="section__header"><h1 class="section__title" data-heading id="ai-provider">AI 设置</h1></div>
+  <div class="section__body">
+    <p class="dfacm-ai-settings__intro">为你的账户设置 AI 供应商，题目助手及后续 AI 功能共用。保存后，换题、刷新或换设备登录都能复用。</p>
+    <div data-dfacm-ai-settings><p>正在加载账户 AI 配置…</p></div>
+    <noscript><p>请启用 JavaScript 后管理 AI 设置。</p></noscript>
+  </div>
+</section>
+{% endblock %}

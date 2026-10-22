@@ -22,6 +22,7 @@ OJ 内核使用开源的 Hydro，本仓库收录的是我们围绕它做的**全
 | [`plugin-dfacm-train/`](plugin-dfacm-train/) | 个人训练工作台 `/workbench` + 错题本 `/mistakes`：当前路线与下一题、本周进度、最近未通过；判题结束自动收集未 AC 题，记录错误原因、复盘笔记与补题状态 |
 | [`plugin-dfacm-shop/`](plugin-dfacm-shop/) | 积分商店：每道题首次 AC 按难度（Hydro RP 同源算法）入账 1~10 积分，`/shop` 花积分兑徽章（复用 badge-for-hydrooj 持有链路），`/shop/history` 积分流水，`/manage/shop` 徽章定价上下架；`{uid, ref}` 唯一键幂等防双花，兑换失败自动退款。称号工坊 `/shop/title`：500 分解锁（含首次铸造）+ 50 分/次修改，学生自铸 ≤4 字专属称号（合成徽章复用全站展示链路，改名经 `badgeEdit` 即时热更新），先显后管——预设色板 + 字符白名单 + 保留词拦截，管理端一键停用/恢复 |
 | [`plugin-dfacm-calendar/`](plugin-dfacm-calendar/) | 赛事清单 `/calendar`：桌面与手机按状态分组，每场比赛一行，往期赛事默认折叠，多赛事类型筛选、关键词搜索、ICS 订阅和报名提醒；官方赛手工维护，CF / AtCoder 自动同步，CLIST 可补充牛客 / 洛谷 / LeetCode / CodeChef。各源独立缓存并显示同步状态，未来 60 天窗口，所有时间按北京时间。月份级公告保留年月并单独展示；`/calendar/data` 保持 QQ 播报兼容。浏览器资源固定版本并自行托管；CLIST Key 由管理员在系统设置填写；手工数据更新 `deploy --sync-only` 无需重启 |
+| [`plugin-dfacm-assistant/`](plugin-dfacm-assistant/README.md) | 桌面点击展开浮窗，手机使用底部抽屉；提示、思路、完整题解可直接选择，诊断结合 WA/CE/TLE/RE 与实际编译日志定位原行。显示真实生成阶段、耗时、供应商 tokens 和缓存复用；支持流式的自定义接口提前显示已完成段落。供应商与加密 Key 跟随账户，保留 AgentRouter（官方 Codex、gpt-5.6-sol）和自定义供应商及邀请链接；真实模型联调待验证 |
 | [`plugin-dfacm-broadcast/`](plugin-dfacm-broadcast/) | QQ 群播报（AstrBot 插件，Python，部署在机器人服务器）：只读直连 OJ MongoDB 轮询，AC 卡片、每日榜单、比赛零配置直播（赛中实时发卡 + 终榜战报）、账号绑定 / 签到 / 账号合并；不抓网页、不动站点权限，与 Hydro 分离部署 |
 | [`theme/`](theme/) | Hydro 原生 Light / Dark 双主题 + `00-brand.css` 品牌薄层；默认 light，保留用户偏好；01-05 为旧版回退 |
 | [`deploy/`](deploy/) | Caddy 配置范例 + 一键部署编排器 `deploy.sh`（staged 上传 → 双端 sha256 对账 → 安装 → 唯一一次重启 → 就绪等待 → 冒烟电池）+ 门面/主题安装器 + 两个上游补丁（排名 own-row 去重与自己行高亮、单题 RP 保底）+ 脱敏部署清单 `deployment.md` |
@@ -68,6 +69,7 @@ bash deploy/deploy.sh --stage-only   # 只上传并对账，不动线上任何�
 5. **邮件**：系统设置配好 `smtp.host/user/pass/from/secure`，找回密码与验证码邮件即刻可用。
 6. **反向代理**：设置 `server.xproxy: true`，让 Caddy 覆盖客户端 XFF（Cloudflare 接入见 deployment.md 第 6/14 节）。
 7. **QQ 播报（可选）**：见 [plugin-dfacm-broadcast/README.md](plugin-dfacm-broadcast/README.md)——OJ 侧建只读 Mongo 账号 + UFW 放行机器人服务器，机器人侧装 AstrBot 插件；不在 `deploy.sh` 的发货清单里。
+8. **题目助手（可选）**：当前站点已单独注册 addon 并开启浮窗，新版供应商配置位于账户设置的 AI 区域，保存一次后跨设备共用；首次安装、账户配置与主密钥备份见 [安装与配置步骤](plugin-dfacm-assistant/README.md)。不在当前 `deploy.sh` 的发货清单里。
 
 ## 文件结构
 
@@ -78,6 +80,7 @@ bash deploy/deploy.sh --stage-only   # 只上传并对账，不动线上任何�
 ├── plugin-dfacm-train/       训练工作台与错题本（Hydro addon）
 ├── plugin-dfacm-shop/        积分商店（Hydro addon）
 ├── plugin-dfacm-calendar/    赛事日历（Hydro addon）
+├── plugin-dfacm-assistant/   题目题解与代码诊断（Hydro addon，默认关闭）
 ├── plugin-dfacm-broadcast/   QQ 群播报（AstrBot 插件，Python）
 ├── theme/                   双主题品牌薄层 + 旧版回退 overlay
 ├── deploy/                  Caddyfile / 部署编排器 / 安装器 / 上游补丁 / 部署清单

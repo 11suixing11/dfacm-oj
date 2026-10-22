@@ -1,0 +1,651 @@
+{
+  "_meta": {
+    "说明": "考点→同类题映射。⚠️ 题号由 AI（Codely）于 2026-10-20 凌晨凭记忆预填，全部待开发者人工核实后方可用于推荐（PRD-v2 §7 要求人工核实题号）。模型只允许引用本表内的题，禁止编造表外题号。",
+    "版本": "v1.2（24 考点、61 条待人工核实；5 条来源字段纠正）",
+    "待核实清单": "项目 dev-records/2026-10-21-M4-题单人工核验清单.md",
+    "推荐规则": "仅使用 verified=true 且附 verification 核验记录的条目；AI 记忆预填不构成核验。无已核实条目时给练习方向，不输出具体推荐题号。",
+    "核验格式": "references/topic-verification.md；scripts/topic_catalog.py 只校验声明与筛选，不自动批准"
+  },
+  "二分": [
+    {
+      "source": "洛谷",
+      "id": "P2440",
+      "title": "木材加工",
+      "难度": "基础",
+      "推荐理由": "二分答案入门标准题",
+      "verified": false,
+      "url": "https://www.luogu.com.cn/problem/P2440"
+    },
+    {
+      "source": "洛谷",
+      "id": "P2678",
+      "title": "跳石头",
+      "难度": "基础",
+      "推荐理由": "NOIP2015 经典二分答案",
+      "verified": false,
+      "url": "https://www.luogu.com.cn/problem/P2678"
+    },
+    {
+      "source": "洛谷",
+      "id": "P1873",
+      "title": "砍树",
+      "难度": "基础",
+      "推荐理由": "二分答案 + 验证函数写法",
+      "verified": false,
+      "url": "https://www.luogu.com.cn/problem/P1873"
+    }
+  ],
+  "贪心": [
+    {
+      "source": "洛谷",
+      "id": "P1090",
+      "title": "[NOIP2004] 合并果子",
+      "难度": "入门",
+      "推荐理由": "优先队列贪心最经典入门",
+      "verified": false,
+      "url": "https://www.luogu.com.cn/problem/P1090"
+    },
+    {
+      "source": "洛谷",
+      "id": "P1223",
+      "title": "排队接水",
+      "难度": "入门",
+      "推荐理由": "排序贪心（交换论证）标准题",
+      "verified": false,
+      "url": "https://www.luogu.com.cn/problem/P1223"
+    },
+    {
+      "source": "洛谷",
+      "id": "P1803",
+      "title": "凌乱的yyy / 线段覆盖",
+      "难度": "入门",
+      "推荐理由": "区间调度（最多不相交区间）",
+      "verified": false,
+      "url": "https://www.luogu.com.cn/problem/P1803"
+    }
+  ],
+  "前缀和与差分": [
+    {
+      "source": "洛谷",
+      "id": "P2367",
+      "title": "语文成绩",
+      "难度": "入门",
+      "推荐理由": "差分模板应用题",
+      "verified": false,
+      "url": "https://www.luogu.com.cn/problem/P2367"
+    },
+    {
+      "source": "洛谷",
+      "id": "P3406",
+      "title": "海底高铁",
+      "难度": "基础",
+      "推荐理由": "差分 + 统计经过次数",
+      "verified": false,
+      "url": "https://www.luogu.com.cn/problem/P3406"
+    },
+    {
+      "source": "洛谷",
+      "id": "P8218",
+      "title": "【深进1.例1】求区间和",
+      "难度": "入门",
+      "推荐理由": "静态区间和：前缀和预处理与区间查询",
+      "verified": false,
+      "url": "https://www.luogu.com.cn/problem/P8218",
+      "source_audit": {
+        "status": "fetched_pending_developer_review",
+        "retrieved_at": "2026-10-21T03:50:17.940304+00:00",
+        "http_status": 200,
+        "url": "https://www.luogu.com.cn/problem/P8218",
+        "official_title": "【深进1.例1】求区间和",
+        "response_sha256": "a512b5f503349f64ec64f0c1f18c66fb93de2595878638ed751182680cb73b94",
+        "evidence": "benchmark/M4/source-audit-20261021/P8218.problem.md"
+      }
+    }
+  ],
+  "双指针与滑动窗口": [
+    {
+      "source": "洛谷",
+      "id": "P1638",
+      "title": "逛画展",
+      "难度": "基础",
+      "推荐理由": "滑动窗口最短覆盖经典",
+      "verified": false,
+      "url": "https://www.luogu.com.cn/problem/P1638"
+    },
+    {
+      "source": "洛谷",
+      "id": "P1102",
+      "title": "A-B 数对",
+      "难度": "基础",
+      "推荐理由": "哈希/双指针统计数对",
+      "verified": false,
+      "url": "https://www.luogu.com.cn/problem/P1102"
+    }
+  ],
+  "并查集": [
+    {
+      "source": "洛谷",
+      "id": "P3367",
+      "title": "【模板】并查集",
+      "难度": "入门",
+      "推荐理由": "模板题，巩固路径压缩",
+      "verified": false,
+      "url": "https://www.luogu.com.cn/problem/P3367"
+    },
+    {
+      "source": "洛谷",
+      "id": "P1551",
+      "title": "亲戚",
+      "难度": "入门",
+      "推荐理由": "并查集连通性判断最直白应用",
+      "verified": false,
+      "url": "https://www.luogu.com.cn/problem/P1551"
+    },
+    {
+      "source": "洛谷",
+      "id": "P1525",
+      "title": "[NOIP 2010 提高组] 关押罪犯",
+      "难度": "提高",
+      "推荐理由": "怨气从大到小处理，敌对关系并查集检查冲突",
+      "verified": false,
+      "url": "https://www.luogu.com.cn/problem/P1525",
+      "source_audit": {
+        "status": "fetched_pending_developer_review",
+        "retrieved_at": "2026-10-21T03:50:18.321426+00:00",
+        "http_status": 200,
+        "url": "https://www.luogu.com.cn/problem/P1525",
+        "official_title": "[NOIP 2010 提高组] 关押罪犯",
+        "response_sha256": "ef89ebd6cdcab94a3a72e245052ff7ce41aee2869fd268cdf0bd2debe05b7ac0",
+        "evidence": "benchmark/M4/source-audit-20261021/P1525.problem.md"
+      }
+    }
+  ],
+  "树状数组": [
+    {
+      "source": "洛谷",
+      "id": "P3374",
+      "title": "【模板】树状数组 1",
+      "难度": "模板",
+      "推荐理由": "单点修改区间求和模板",
+      "verified": false,
+      "url": "https://www.luogu.com.cn/problem/P3374"
+    },
+    {
+      "source": "洛谷",
+      "id": "P3368",
+      "title": "【模板】树状数组 2",
+      "难度": "模板",
+      "推荐理由": "区间修改单点查询（差分 BIT）",
+      "verified": false,
+      "url": "https://www.luogu.com.cn/problem/P3368"
+    },
+    {
+      "source": "洛谷",
+      "id": "P1908",
+      "title": "逆序对",
+      "难度": "提高",
+      "推荐理由": "BIT/归并求逆序对经典",
+      "verified": false,
+      "url": "https://www.luogu.com.cn/problem/P1908"
+    }
+  ],
+  "线段树": [
+    {
+      "source": "洛谷",
+      "id": "P3372",
+      "title": "【模板】线段树 1",
+      "难度": "模板",
+      "推荐理由": "区间加区间和模板",
+      "verified": false,
+      "url": "https://www.luogu.com.cn/problem/P3372"
+    },
+    {
+      "source": "洛谷",
+      "id": "P3373",
+      "title": "【模板】线段树 2",
+      "难度": "模板",
+      "推荐理由": "区间乘加双标记进阶",
+      "verified": false,
+      "url": "https://www.luogu.com.cn/problem/P3373"
+    },
+    {
+      "source": "洛谷",
+      "id": "P1198",
+      "title": "[JSOI2008] 最大数",
+      "难度": "提高",
+      "推荐理由": "线段树最值经典",
+      "verified": false,
+      "url": "https://www.luogu.com.cn/problem/P1198"
+    }
+  ],
+  "ST表": [
+    {
+      "source": "洛谷",
+      "id": "P3865",
+      "title": "【模板】ST 表",
+      "难度": "模板",
+      "推荐理由": "静态 RMQ 模板",
+      "verified": false,
+      "url": "https://www.luogu.com.cn/problem/P3865"
+    },
+    {
+      "source": "洛谷",
+      "id": "P2880",
+      "title": "[USACO07JAN] Balanced Lineup",
+      "难度": "基础",
+      "推荐理由": "区间最值直接应用",
+      "verified": false,
+      "url": "https://www.luogu.com.cn/problem/P2880"
+    }
+  ],
+  "单调栈队列": [
+    {
+      "source": "洛谷",
+      "id": "P5788",
+      "title": "【模板】单调栈",
+      "难度": "模板",
+      "推荐理由": "单调栈模板",
+      "verified": false,
+      "url": "https://www.luogu.com.cn/problem/P5788"
+    },
+    {
+      "source": "洛谷",
+      "id": "P1901",
+      "title": "发射站",
+      "难度": "提高",
+      "推荐理由": "单调栈左右扩展经典",
+      "verified": false,
+      "url": "https://www.luogu.com.cn/problem/P1901"
+    },
+    {
+      "source": "洛谷",
+      "id": "P4147",
+      "title": "玉蟾宫",
+      "难度": "提高",
+      "推荐理由": "直方图最大矩形（悬线法/单调栈）",
+      "verified": false,
+      "url": "https://www.luogu.com.cn/problem/P4147"
+    }
+  ],
+  "最短路": [
+    {
+      "source": "洛谷",
+      "id": "P4779",
+      "title": "【模板】单源最短路径（标准版）",
+      "难度": "模板",
+      "推荐理由": "Dijkstra 堆优化模板",
+      "verified": false,
+      "url": "https://www.luogu.com.cn/problem/P4779"
+    },
+    {
+      "source": "洛谷",
+      "id": "P3371",
+      "title": "【模板】单源最短路径（弱化版）",
+      "难度": "模板",
+      "推荐理由": "SPFA/堆优化练手",
+      "verified": false,
+      "url": "https://www.luogu.com.cn/problem/P3371"
+    },
+    {
+      "source": "洛谷",
+      "id": "P1144",
+      "title": "最短路计数",
+      "难度": "提高",
+      "推荐理由": "最短路 + 计数 DP 经典",
+      "verified": false,
+      "url": "https://www.luogu.com.cn/problem/P1144"
+    }
+  ],
+  "最小生成树": [
+    {
+      "source": "洛谷",
+      "id": "P3366",
+      "title": "【模板】最小生成树",
+      "难度": "模板",
+      "推荐理由": "Kruskal/Prim 模板",
+      "verified": false,
+      "url": "https://www.luogu.com.cn/problem/P3366"
+    },
+    {
+      "source": "洛谷",
+      "id": "P2330",
+      "title": "[SCOI2005] 繁忙的都市",
+      "难度": "提高",
+      "推荐理由": "MST 最小化最大边经典",
+      "verified": false,
+      "url": "https://www.luogu.com.cn/problem/P2330"
+    }
+  ],
+  "拓扑排序": [
+    {
+      "source": "洛谷",
+      "id": "P1113",
+      "title": "[USACO02FEB] 杂务",
+      "难度": "提高",
+      "推荐理由": "依赖任务的 DAG 最长路 DP（输入已按拓扑顺序）",
+      "verified": false,
+      "url": "https://www.luogu.com.cn/problem/P1113",
+      "source_audit": {
+        "status": "fetched_pending_developer_review",
+        "retrieved_at": "2026-10-21T03:50:18.352605+00:00",
+        "http_status": 200,
+        "url": "https://www.luogu.com.cn/problem/P1113",
+        "official_title": "[USACO02FEB] 杂务",
+        "response_sha256": "36804e6b6d495702b2a62cf67aff9c2f5c0b71d6f753713e54cb03b5210c17fd",
+        "evidence": "benchmark/M4/source-audit-20261021/P1113.problem.md"
+      }
+    },
+    {
+      "source": "洛谷",
+      "id": "P4017",
+      "title": "最大食物链计数",
+      "难度": "普及",
+      "推荐理由": "拓扑排序 + 路径计数",
+      "verified": false,
+      "url": "https://www.luogu.com.cn/problem/P4017"
+    }
+  ],
+  "Tarjan连通性": [
+    {
+      "source": "洛谷",
+      "id": "P3387",
+      "title": "【模板】缩点",
+      "难度": "提高",
+      "推荐理由": "SCC 缩点 + DAG 最长链",
+      "verified": false,
+      "url": "https://www.luogu.com.cn/problem/P3387"
+    },
+    {
+      "source": "洛谷",
+      "id": "P2341",
+      "title": "[USACO03FALL] 受欢迎的牛",
+      "难度": "提高",
+      "推荐理由": "SCC 出度判断经典",
+      "verified": false,
+      "url": "https://www.luogu.com.cn/problem/P2341"
+    },
+    {
+      "source": "洛谷",
+      "id": "P3388",
+      "title": "【模板】割点",
+      "难度": "提高",
+      "推荐理由": "无向图割点模板",
+      "verified": false,
+      "url": "https://www.luogu.com.cn/problem/P3388"
+    }
+  ],
+  "线性DP": [
+    {
+      "source": "洛谷",
+      "id": "P1115",
+      "title": "最大子段和",
+      "难度": "入门",
+      "推荐理由": "线性 DP 第一题",
+      "verified": false,
+      "url": "https://www.luogu.com.cn/problem/P1115"
+    },
+    {
+      "source": "洛谷",
+      "id": "P1020",
+      "title": "[NOIP1999] 导弹拦截",
+      "难度": "普及",
+      "推荐理由": "LIS + 贪心二分，双考点",
+      "verified": false,
+      "url": "https://www.luogu.com.cn/problem/P1020"
+    },
+    {
+      "source": "洛谷",
+      "id": "P1091",
+      "title": "[NOIP2004] 合唱队形",
+      "难度": "普及",
+      "推荐理由": "双向 LIS 综合",
+      "verified": false,
+      "url": "https://www.luogu.com.cn/problem/P1091"
+    }
+  ],
+  "背包": [
+    {
+      "source": "洛谷",
+      "id": "P1048",
+      "title": "[NOIP2005] 采药",
+      "难度": "入门",
+      "推荐理由": "01 背包第一题",
+      "verified": false,
+      "url": "https://www.luogu.com.cn/problem/P1048"
+    },
+    {
+      "source": "洛谷",
+      "id": "P1616",
+      "title": "疯狂的采药",
+      "难度": "普及",
+      "推荐理由": "完全背包对照题",
+      "verified": false,
+      "url": "https://www.luogu.com.cn/problem/P1616"
+    },
+    {
+      "source": "洛谷",
+      "id": "P1060",
+      "title": "[NOIP2006] 开心的金明",
+      "难度": "入门",
+      "推荐理由": "01 背包变形",
+      "verified": false,
+      "url": "https://www.luogu.com.cn/problem/P1060"
+    }
+  ],
+  "区间DP": [
+    {
+      "source": "洛谷",
+      "id": "P1880",
+      "title": "[NOI1995] 石子合并",
+      "难度": "提高",
+      "推荐理由": "区间 DP 模板题（环形变体）",
+      "verified": false,
+      "url": "https://www.luogu.com.cn/problem/P1880"
+    },
+    {
+      "source": "洛谷",
+      "id": "P1063",
+      "title": "能量项链",
+      "难度": "提高",
+      "推荐理由": "区间 DP + 断环",
+      "verified": false,
+      "url": "https://www.luogu.com.cn/problem/P1063"
+    }
+  ],
+  "树形DP": [
+    {
+      "source": "洛谷",
+      "id": "P1352",
+      "title": "没有上司的舞会",
+      "难度": "普及",
+      "推荐理由": "树形 DP 入门经典",
+      "verified": false,
+      "url": "https://www.luogu.com.cn/problem/P1352"
+    },
+    {
+      "source": "洛谷",
+      "id": "P2014",
+      "title": "[CTSC1997] 选课",
+      "难度": "提高",
+      "推荐理由": "树上背包经典",
+      "verified": false,
+      "url": "https://www.luogu.com.cn/problem/P2014"
+    }
+  ],
+  "状压DP": [
+    {
+      "source": "洛谷",
+      "id": "P1896",
+      "title": "[SCOI2005] 互不侵犯",
+      "难度": "提高",
+      "推荐理由": "棋盘状压 DP 第一题",
+      "verified": false,
+      "url": "https://www.luogu.com.cn/problem/P1896"
+    },
+    {
+      "source": "洛谷",
+      "id": "P2704",
+      "title": "[NOI2001] 炮兵阵地",
+      "难度": "提高",
+      "推荐理由": "状压 + 滚动数组进阶",
+      "verified": false,
+      "url": "https://www.luogu.com.cn/problem/P2704"
+    }
+  ],
+  "数位DP": [
+    {
+      "source": "洛谷",
+      "id": "P2602",
+      "title": "[ZJOI2010] 数字计数",
+      "难度": "提高",
+      "推荐理由": "数位 DP 统计数字出现次数经典",
+      "verified": false,
+      "url": "https://www.luogu.com.cn/problem/P2602"
+    },
+    {
+      "source": "洛谷",
+      "id": "P2657",
+      "title": "[SCOI2009] windy 数",
+      "难度": "提高",
+      "推荐理由": "数位 DP 相邻位约束经典",
+      "verified": false,
+      "url": "https://www.luogu.com.cn/problem/P2657"
+    }
+  ],
+  "KMP": [
+    {
+      "source": "洛谷",
+      "id": "P3375",
+      "title": "【模板】KMP",
+      "难度": "模板",
+      "推荐理由": "KMP 字符串匹配模板",
+      "verified": false,
+      "url": "https://www.luogu.com.cn/problem/P3375"
+    },
+    {
+      "source": "洛谷",
+      "id": "P4391",
+      "title": "[BalticOI 2009] Radio Transmission 无线传输",
+      "难度": "普及",
+      "推荐理由": "KMP border 求最小周期，末尾可以是不完整周期，不要求串长整除周期",
+      "verified": false,
+      "url": "https://www.luogu.com.cn/problem/P4391",
+      "source_audit": {
+        "status": "fetched_pending_developer_review",
+        "retrieved_at": "2026-10-21T03:50:17.940912+00:00",
+        "http_status": 200,
+        "url": "https://www.luogu.com.cn/problem/P4391",
+        "official_title": "[BalticOI 2009] Radio Transmission 无线传输",
+        "response_sha256": "af81eb94b72bacf957a26b4df9fa8f1863719d61838411a64afaa030632e2567",
+        "evidence": "benchmark/M4/source-audit-20261021/P4391.problem.md"
+      }
+    }
+  ],
+  "字符串Hash": [
+    {
+      "source": "洛谷",
+      "id": "P3370",
+      "title": "【模板】字符串哈希",
+      "难度": "模板",
+      "推荐理由": "字符串哈希判重模板",
+      "verified": false,
+      "url": "https://www.luogu.com.cn/problem/P3370"
+    }
+  ],
+  "Trie": [
+    {
+      "source": "洛谷",
+      "id": "P2580",
+      "title": "于是他错误的点名开始了",
+      "难度": "入门",
+      "推荐理由": "Trie 插入查询经典",
+      "verified": false,
+      "url": "https://www.luogu.com.cn/problem/P2580"
+    },
+    {
+      "source": "洛谷",
+      "id": "P8306",
+      "title": "【模板】字典树 / Trie",
+      "难度": "模板",
+      "推荐理由": "62 字符集 Trie 前缀计数，注意大小写与多测清空",
+      "verified": false,
+      "url": "https://www.luogu.com.cn/problem/P8306",
+      "source_audit": {
+        "status": "fetched_pending_developer_review",
+        "retrieved_at": "2026-10-21T03:50:17.941318+00:00",
+        "http_status": 200,
+        "url": "https://www.luogu.com.cn/problem/P8306",
+        "official_title": "【模板】字典树 / Trie",
+        "response_sha256": "18008ee2989d933e7763ab921b5e2ce4cb7cb3fba789706a31e5b20ae934fa6c",
+        "evidence": "benchmark/M4/source-audit-20261021/P8306.problem.md"
+      }
+    }
+  ],
+  "数论": [
+    {
+      "source": "洛谷",
+      "id": "P1226",
+      "title": "【模板】快速幂",
+      "难度": "模板",
+      "推荐理由": "快速幂模板",
+      "verified": false,
+      "url": "https://www.luogu.com.cn/problem/P1226"
+    },
+    {
+      "source": "洛谷",
+      "id": "P3811",
+      "title": "【模板】乘法逆元",
+      "难度": "模板",
+      "推荐理由": "线性求逆元模板",
+      "verified": false,
+      "url": "https://www.luogu.com.cn/problem/P3811"
+    },
+    {
+      "source": "洛谷",
+      "id": "P3383",
+      "title": "【模板】线性筛素数",
+      "难度": "模板",
+      "推荐理由": "欧拉筛模板",
+      "verified": false,
+      "url": "https://www.luogu.com.cn/problem/P3383"
+    },
+    {
+      "source": "洛谷",
+      "id": "P1313",
+      "title": "计算系数",
+      "难度": "普及",
+      "推荐理由": "组合数 + 快速幂综合",
+      "verified": false,
+      "url": "https://www.luogu.com.cn/problem/P1313"
+    }
+  ],
+  "DFS-BFS搜索": [
+    {
+      "source": "洛谷",
+      "id": "P1443",
+      "title": "马的遍历",
+      "难度": "普及",
+      "推荐理由": "BFS 最短路入门",
+      "verified": false,
+      "url": "https://www.luogu.com.cn/problem/P1443"
+    },
+    {
+      "source": "洛谷",
+      "id": "P1605",
+      "title": "迷宫",
+      "难度": "普及",
+      "推荐理由": "DFS 回溯计数",
+      "verified": false,
+      "url": "https://www.luogu.com.cn/problem/P1605"
+    },
+    {
+      "source": "洛谷",
+      "id": "P1219",
+      "title": "[USACO1.5] 八皇后",
+      "难度": "普及",
+      "推荐理由": "DFS 剪枝思维启蒙",
+      "verified": false,
+      "url": "https://www.luogu.com.cn/problem/P1219"
+    }
+  ]
+}

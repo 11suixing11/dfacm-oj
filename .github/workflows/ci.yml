@@ -226,5 +226,13 @@ jobs:
         run: npm ci --no-audit --no-fund
       - name: Run calendar plugin tests
         run: node --test plugin-dfacm-calendar/tests/*.test.cjs
+      - name: Install assistant test dependencies
+        working-directory: plugin-dfacm-assistant
+        run: npm ci --no-audit --no-fund
+      - name: Run assistant plugin tests and native build check
+        working-directory: plugin-dfacm-assistant
+        run: |
+          npm test
+          npm run check-build
       - name: Run deployment script tests
         run: node --test scripts/deployment.test.mjs scripts/landing.test.cjs scripts/repository.test.cjs

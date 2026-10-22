@@ -1,0 +1,16 @@
+.dfacm-ai-settings { --ai-fg: #29364a; --ai-muted: #69788c; --ai-line: #dce4ed; --ai-bg: #fff; --ai-accent: #2a5caa; }
+html.theme--dark .dfacm-ai-settings, html.dark .dfacm-ai-settings { --ai-fg: #e4ebf4; --ai-muted: #a7b4c7; --ai-line: #3c4b5d; --ai-bg: #202832; --ai-accent: #88b1df; }
+.dfacm-ai-settings__intro { max-width: 680px; color: var(--ai-muted); font-size: 13px; line-height: 1.8; }
+.dfacm-ai-settings__form { max-width: 640px; color: var(--ai-fg); }
+.dfacm-ai-settings__label { display: block; margin: 18px 0 7px; font-size: 13px; font-weight: 500; }
+.dfacm-ai-settings__form input, .dfacm-ai-settings__form select { display: block; box-sizing: border-box; width: 100%; max-width: 100%; height: 40px; margin: 0; border: 1px solid var(--ai-line); border-radius: 8px; padding: 8px 11px; background: var(--ai-bg); color: var(--ai-fg); font: inherit; font-size: 14px; }
+.dfacm-ai-settings__help { margin: 8px 0 0; color: var(--ai-muted); font-size: 12px; line-height: 1.75; overflow-wrap: anywhere; }
+.dfacm-ai-settings__help a { color: var(--ai-accent); }
+.dfacm-ai-settings__model-warning, .dfacm-ai-settings__migration { margin-top: 12px; border-left: 2px solid var(--ai-accent); padding-left: 12px; }
+.dfacm-ai-settings__model-warning button, .dfacm-ai-settings__migration button { margin: 8px 0 0; }
+.dfacm-ai-settings__status { margin: 18px 0 0; font-size: 13px; line-height: 1.8; overflow-wrap: anywhere; }
+.dfacm-ai-settings__actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; border-top: 1px solid var(--ai-line); padding-top: 16px; }
+.dfacm-ai-settings__actions .button { box-sizing: border-box; min-width: 0; margin: 0; white-space: normal; overflow-wrap: anywhere; }
+.dfacm-ai-settings [hidden] { display: none !important; }
+.dfacm-ai-settings__form input:focus-visible, .dfacm-ai-settings__form select:focus-visible, .dfacm-ai-settings__form button:focus-visible { outline: 2px solid var(--ai-accent); outline-offset: 2px; }
+@media (max-width: 480px) { .dfacm-ai-settings__actions { display: grid; grid-template-columns: minmax(0, 1fr); } .dfacm-ai-settings__form input, .dfacm-ai-settings__form select { font-size: 16px; } }

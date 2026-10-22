@@ -1,0 +1,55 @@
+<div class="dfacm-assistant__answer" data-answer-mode="{{ answer.mode }}" data-answer-level="{{ answer.level or 'solution' }}">
+{% if answer.status != 'ok' %}
+  <p class="dfacm-assistant__message">{{ answer.message }}</p>
+  {% if answer.missing.length %}<ul>{% for item in answer.missing %}<li>{{ item }}</li>{% endfor %}</ul>{% endif %}
+{% elif answer.mode == 'solve' %}
+  <section class="dfacm-assistant__part"><h3>题目大意</h3><div class="typo">{{ answer.meaning|markdown|safe }}</div></section>
+  <section class="dfacm-assistant__part"><h3>{{ '提示' if answer.level == 'hint' else '思路' }}</h3><div class="typo">{{ answer.approach|markdown|safe }}</div></section>
+  {% if answer.level == 'solution' or not answer.level %}
+  <section class="dfacm-assistant__part"><div class="dfacm-assistant__heading"><h3>题解</h3><button type="button" class="dfacm-assistant__copy" data-copy-solution>复制代码</button></div><pre class="dfacm-assistant__code"><code data-solution-code>{{ answer.code }}</code></pre></section>
+  {% endif %}
+  {% if answer.complexity or answer.commentary %}
+  <section class="dfacm-assistant__part"><h3>点评</h3><div class="typo">{{ answer.complexity|markdown|safe }}{{ answer.commentary|markdown|safe }}</div></section>
+  {% endif %}
+{% else %}
+  <section class="dfacm-assistant__part"><h3>诊断{% if verdict %}<span class="dfacm-assistant__verdict">{{ verdict }}</span>{% endif %}</h3><div class="typo">{{ answer.summary|markdown|safe }}</div></section>
+  <p class="dfacm-assistant__diagnostic-context">{{ '使用评测提交的原始代码' if diagnostic.origin == 'record' else '使用你粘贴的原始代码' }}{% if verdict == 'CE' %} · {{ '已结合编译日志' if diagnostic.hasCompilerOutput else '未提供编译日志，依据代码做静态检查' }}{% elif verdict == 'WA' %} · 检查逻辑与边界{% elif verdict == 'TLE' %} · 检查复杂度与循环{% elif verdict == 'RE' %} · 检查运行时异常{% endif %}</p>
+  {% for issue in answer.issues %}
+  <section class="dfacm-assistant__issue">
+    <div class="dfacm-assistant__heading"><h4>{{ issue.title }}</h4><span class="dfacm-assistant__confidence">{{ {'syntax':'语法','implementation':'实现','algorithm':'算法','complexity':'复杂度'}[issue.kind] }} · {{ '可确定' if issue.confidence == 'confirmed' else '可能' }}</span></div>
+    <div class="dfacm-assistant__locations">
+    {% for location in issue.locations %}
+      <button type="button" data-jump-line="{{ location.startLine }}">第 {{ location.startLine }}{% if location.endLine != location.startLine %}–{{ location.endLine }}{% endif %} 行</button>
+      <pre class="dfacm-assistant__quote"><code>{{ location.quote }}</code></pre>
+    {% endfor %}
+    </div>
+    <div class="typo">{{ issue.explanation|markdown|safe }}</div>
+    <p class="dfacm-assistant__label">怎么改</p><div class="typo">{{ issue.fix|markdown|safe }}</div>
+    <p class="dfacm-assistant__label">依据</p><div class="typo">{{ issue.evidence|markdown|safe }}</div>
+  </section>
+  {% endfor %}
+  {% if source.length %}
+  <details class="dfacm-assistant__part dfacm-assistant__source-details" open><summary>原始代码 · {{ source.length }} 行</summary>
+    <button type="button" class="dfacm-assistant__copy" data-copy-original>复制原代码</button>
+    <div class="dfacm-assistant__source" aria-label="原始提交代码与行号">
+    {% for line in source %}<div data-source-line="{{ line.line }}" tabindex="-1"><span class="dfacm-assistant__line-number" aria-hidden="true">{{ line.line }}</span><code>{{ line.text or ' ' }}</code></div>{% endfor %}
+    </div>
+  </details>
+  {% endif %}
+  {% for example in answer.counterexamples %}
+  <section class="dfacm-assistant__part"><h3>构造反例 {{ loop.index }}</h3>
+    <p class="dfacm-assistant__label">输入</p><pre>{{ example.input }}</pre>
+    <p class="dfacm-assistant__label">正确输出</p><pre>{{ example.expected }}</pre>
+    {% if example.actual != null %}<p class="dfacm-assistant__label">原代码的手工推演输出</p><pre>{{ example.actual }}</pre>{% endif %}
+    <div class="typo">{{ example.explanation|markdown|safe }}</div>
+  </section>
+  {% endfor %}
+  {% if answer.code %}<section class="dfacm-assistant__part"><div class="dfacm-assistant__heading"><h3>修正代码</h3><button type="button" class="dfacm-assistant__copy" data-copy-solution>复制代码</button></div><pre class="dfacm-assistant__code"><code data-solution-code>{{ answer.code }}</code></pre></section>{% endif %}
+  {% if answer.changes.length %}<section class="dfacm-assistant__part"><h3>改动点</h3><ul>{% for item in answer.changes %}<li>{{ item }}</li>{% endfor %}</ul></section>{% endif %}
+  {% if answer.complexity %}<section class="dfacm-assistant__part"><h3>复杂度与点评</h3><div class="typo">{{ answer.complexity|markdown|safe }}{{ answer.commentary|markdown|safe }}</div></section>{% endif %}
+{% endif %}
+{% if answer.status == 'ok' %}
+  <p class="dfacm-assistant__verification">{{ answer.verification }}</p>
+  {% if answer.notice %}<p class="dfacm-assistant__notice">{{ answer.notice }}</p>{% endif %}
+{% endif %}
+</div>
