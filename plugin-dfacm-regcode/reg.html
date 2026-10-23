@@ -5,86 +5,98 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>登录 / 注册 · d&amp;f算法网</title>
 <meta name="description" content="登录或注册 d&amp;f算法网：一个邮箱地址加验证码即可，无需密码。每个人都能在算法竞赛这条路上找到属于自己的 final。">
-<meta name="theme-color" content="#070d18">
+<meta name="theme-color" content="#f4f7fb">
 <link rel="icon" type="image/png" href="/favicon.png">
 <link rel="preload" href="/swpu-display.woff2" as="font" type="font/woff2" crossorigin>
 <script>/* 服务端注入初始视图/管理员标记/内嵌模式/第三方登录方式/CSRF token（Caddy rewrite 后浏览器 URL 不带 query，见 RegPageHandler） */window.__SWPU_BOOT={tab:null,canPwd:false,embed:false,oauth:[],csrf:''};/*__SWPU_BOOT__*/</script>
+<script>/* 共用首页的本机主题偏好，首帧前应用。 */(function(){var t='light';try{t=localStorage.getItem('swpu-theme')==='dark'?'dark':'light'}catch(e){}var r=document.documentElement;if(r)r.classList.toggle('dark',t==='dark')})();</script>
 <style>
 @font-face{font-family:'SWPU Display';src:url('/swpu-display.woff2') format('woff2');font-weight:400;font-style:normal;font-display:swap}
 @font-face{font-family:'SWPU Mono';src:url('/swpu-mono.woff2') format('woff2');font-weight:100 800;font-style:normal;font-display:swap}
-:root{--ink:#070d18;--panel:rgba(16,27,46,.58);--line:rgba(198,216,240,.10);--line-strong:rgba(198,216,240,.18);--txt:#e8edf5;--txt-2:#a7b4c7;--txt-3:#94a4bb;--blue:#2a5caa;--gold:#c9a227;--gold-hi:#e9c455;--ac:#3fb950;--font-d:'SWPU Display','PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif;--font-b:-apple-system,'PingFang SC','Microsoft YaHei','Segoe UI','Noto Sans CJK SC',sans-serif;--font-m:'SWPU Mono','JetBrains Mono',Consolas,'PingFang SC',monospace}
+:root{color-scheme:light;--ink:#f4f7fb;--panel:#ffffff;--soft:#e9eef6;--selected:rgba(42,92,170,.10);--line:rgba(15,34,64,.10);--line-strong:rgba(15,34,64,.20);--txt:#1a2940;--txt-2:#44577a;--txt-3:#4a5f85;--brand:#2a5caa;--brand-hi:#2a5caa;--brand-hover:#1e4488;--on-brand:#fff;--gold:#b8901f;--accent:#755c18;--accent-bg:rgba(184,144,31,.10);--focus:#2a5caa;--ac:#18794e;--fail:#b42318;--fail-bg:#fff0ed;--pass-bg:#e5f1e8;--font-d:'SWPU Display','PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif;--font-b:-apple-system,'PingFang SC','Microsoft YaHei','Segoe UI','Noto Sans CJK SC',sans-serif;--font-m:'SWPU Mono','JetBrains Mono',Consolas,'PingFang SC',monospace}
+html.dark{color-scheme:dark;--ink:#070d18;--panel:#0d182a;--soft:#0a1322;--selected:rgba(42,92,170,.18);--line:rgba(198,216,240,.10);--line-strong:rgba(198,216,240,.18);--txt:#e8edf5;--txt-2:#a7b4c7;--txt-3:#94a4bb;--brand-hi:#6fa3e0;--gold:#c9a227;--accent:#e9c455;--accent-bg:rgba(201,162,39,.10);--focus:#e9c455;--ac:#3fb950;--fail:#f85149;--fail-bg:rgba(248,81,73,.12);--pass-bg:rgba(63,185,80,.12)}
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:radial-gradient(1100px 600px at 50% -200px,rgba(42,92,170,.16),transparent 60%),var(--ink);color:var(--txt);font-family:var(--font-b);font-size:15px;line-height:1.7;min-height:100svh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 16px;-webkit-font-smoothing:antialiased}
-::selection{background:rgba(201,162,39,.32);color:#fff}
-:focus-visible{outline:2px solid var(--gold-hi);outline-offset:2px;border-radius:6px}
+::selection{background:var(--selected);color:var(--txt)}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px;border-radius:6px}
 .wrap{width:min(430px,100%)}
 .brand{display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:26px;text-decoration:none}
 .brand svg{width:38px;height:38px}
 .brand .bt b{display:block;font-family:var(--font-d);font-weight:400;font-size:18px;letter-spacing:.08em;color:var(--txt);line-height:1.2}
 .brand .bt span{display:block;font-family:var(--font-m);font-size:11px;letter-spacing:.14em;color:var(--txt-3)}
-.card{background:linear-gradient(165deg,rgba(19,31,53,.92),rgba(10,19,34,.94));border:1px solid var(--line-strong);border-radius:20px;padding:30px 32px 28px;box-shadow:0 30px 90px rgba(2,6,14,.55),inset 0 1px 0 rgba(198,216,240,.08)}
+.card{background:var(--panel);border:1px solid var(--line-strong);border-radius:12px;padding:30px 32px 28px;box-shadow:0 16px 48px rgb(15 34 64 / 8%)}
+html.dark .card{background:linear-gradient(165deg,rgba(19,31,53,.92),rgba(10,19,34,.94))}
 h1{font-family:var(--font-b);font-size:25px;font-weight:600;letter-spacing:0}
-h1 i{font-style:normal;color:var(--gold-hi)}
+h1 i{font-style:normal;color:var(--accent)}
 .sub{color:var(--txt-3);font-size:13px;margin-bottom:22px}
 .field{margin-bottom:16px}
 .field label{display:block;font-size:12.5px;color:var(--txt-2);margin-bottom:7px;letter-spacing:.04em}
 .row{display:flex;gap:10px}
 .row input{flex:1;min-width:0}
-input{width:100%;background:rgba(7,13,24,.55);border:1px solid var(--line-strong);border-radius:12px;padding:12px 14px;color:var(--txt);font-size:14.5px;font-family:var(--font-b);transition:border-color .25s,box-shadow .25s}
-input::placeholder{color:#4a586e}
-input:focus{outline:none;border-color:rgba(233,196,85,.55);box-shadow:0 0 0 3px rgba(201,162,39,.12)}
+input{width:100%;background:var(--panel);border:1px solid var(--line-strong);border-radius:12px;padding:12px 14px;color:var(--txt);font-size:14.5px;font-family:var(--font-b);transition:border-color .25s,box-shadow .25s}
+input::placeholder{color:var(--txt-3)}
+input:focus{outline:none;border-color:var(--focus);box-shadow:0 0 0 3px var(--selected)}
 input.codein{font-family:var(--font-m);letter-spacing:.5em;font-size:17px;text-align:center;padding-left:14px}
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:12px;padding:12px 18px;font-size:14px;letter-spacing:.04em;cursor:pointer;transition:transform .3s cubic-bezier(.22,1,.36,1),box-shadow .3s,background .3s,color .3s,border-color .3s;border:1px solid transparent}
-.btn-code{background:none;border:1px solid rgba(233,196,85,.45);color:var(--gold-hi);white-space:nowrap;min-width:118px}
-.btn-code:hover:not(:disabled){background:rgba(201,162,39,.12)}
+.btn-code{background:none;border:1px solid var(--line-strong);color:var(--accent);white-space:nowrap;min-width:118px}
+.btn-code:hover:not(:disabled){background:var(--selected)}
 .btn-code:disabled{opacity:.45;cursor:not-allowed}
-.btn-go{width:100%;background:linear-gradient(160deg,#3568b3,#2a5caa);color:#fff;font-size:15px;padding:13px;box-shadow:0 10px 30px rgba(42,92,170,.35),inset 0 1px 0 rgba(255,255,255,.18);margin-top:8px}
-.btn-go:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 14px 40px rgba(42,92,170,.45)}
+.btn-go{width:100%;background:linear-gradient(160deg,#3568b3,var(--brand));color:var(--on-brand);font-size:15px;padding:13px;box-shadow:none;margin-top:8px}
+.btn-go:hover:not(:disabled){background:var(--brand-hover);box-shadow:none}
 .btn-go:disabled{opacity:.6;cursor:wait}
 .link-back{display:inline-flex;align-items:center;min-height:36px;margin-top:10px;background:none;border:none;color:var(--txt-3);font:inherit;font-size:13px;cursor:pointer;text-underline-offset:4px}
-.link-back:hover{color:var(--gold-hi)}
+.link-back:hover{color:var(--accent)}
 .msg{min-height:22px;margin-top:14px;font-size:12.5px;display:flex;align-items:center;gap:7px;opacity:0;transform:translateY(4px);transition:opacity .3s,transform .3s}
 .msg.show{opacity:1;transform:none}
-.msg.err{color:#f85149}.msg.ok{color:var(--ac)}
+.msg.err{color:var(--fail)}.msg.ok{color:var(--ac)}
 .ft{margin-top:22px;display:flex;justify-content:space-between;align-items:center;font-size:12.5px}
 .ft a{color:var(--txt-3);text-decoration:none;transition:color .25s}
-.ft a:hover{color:var(--gold-hi)}
+.ft a:hover{color:var(--accent)}
 .ft .mono{font-family:var(--font-m);font-size:11px;letter-spacing:.08em;color:var(--txt-3)}
 .pane{display:none}
 .pane.on{display:block}
 .remember{display:flex;align-items:center;gap:9px;min-height:24px;font-size:13.5px;color:var(--txt-2);cursor:pointer;-webkit-user-select:none;user-select:none;margin-top:2px}
-.remember input[type="checkbox"]{width:16px;height:16px;min-height:16px;padding:0;accent-color:var(--blue);cursor:pointer;flex-shrink:0}
+.remember input[type="checkbox"]{width:16px;height:16px;min-height:16px;padding:0;accent-color:var(--brand);cursor:pointer;flex-shrink:0}
 .password-field{position:relative}.password-field:has(.password-toggle:not([hidden])) input{padding-right:64px}
 .password-toggle{position:absolute;right:4px;top:3px;min-height:44px;min-width:52px;border:0;border-radius:8px;background:none;color:var(--txt-2);font:inherit;font-size:13px;cursor:pointer}
-.password-toggle:hover{color:var(--gold-hi);background:rgba(198,216,240,.06)}
+.password-toggle:hover{color:var(--accent);background:var(--soft)}
 .password-toggle[hidden]{display:none}
 .field-hint{font-size:12px;line-height:1.7;color:var(--txt-3);margin-top:8px}
-input[aria-invalid="true"]{border-color:#ff8d87}
+input[aria-invalid="true"]{border-color:var(--fail)}
 [hidden]{display:none!important}
 .oauth-row{display:flex;align-items:center;gap:12px;margin-top:20px;color:var(--txt-3);font-size:12px}
 .oauth-row::before,.oauth-row::after{content:"";flex:1;height:1px;background:var(--line-strong)}
 .oauth-list{display:flex;flex-direction:column;gap:10px;margin-top:14px}
-.btn-oauth{width:100%;background:rgba(7,13,24,.55);color:var(--txt);font-size:14px;letter-spacing:0;padding:12px;gap:10px}
-.btn-oauth:hover:not(:disabled){background:rgba(42,92,170,.25);border-color:rgba(42,92,170,.5)}
+.btn-oauth{width:100%;background:var(--panel);color:var(--txt);font-size:14px;letter-spacing:0;padding:12px;gap:10px}
+.btn-oauth:hover:not(:disabled){background:var(--selected);border-color:var(--line-strong)}
 .btn-oauth svg{width:18px;height:18px;flex-shrink:0;fill:currentColor}
 .native-login{display:block;margin-top:18px;color:var(--txt-2);font-size:14px;line-height:1.8}
-.native-login a{display:inline-flex;align-items:center;min-height:44px;color:var(--gold-hi);text-underline-offset:4px}
-.noscript-hint{color:var(--gold-hi);margin-top:16px;font-size:13px}
-.noscript-hint a{color:var(--gold-hi);text-underline-offset:4px}
-.admin-note{font-size:12px;color:var(--txt-3);margin-bottom:14px;padding:8px 12px;border-radius:8px;background:rgba(42,92,170,.12);border:1px solid rgba(42,92,170,.25)}
+.native-login a{display:inline-flex;align-items:center;min-height:44px;color:var(--accent);text-underline-offset:4px}
+.noscript-hint{color:var(--accent);margin-top:16px;font-size:13px}
+.noscript-hint a{color:var(--accent);text-underline-offset:4px}
+.admin-note{font-size:12px;color:var(--txt-3);margin-bottom:14px;padding:8px 12px;border-radius:8px;background:var(--soft);border:1px solid var(--line)}
 
 /* 内嵌模式：作为登录弹层承载页时只保留卡片本体 */
 body.embed{padding:18px 14px;min-height:100svh}
 body.embed .wrap{display:block;max-width:470px;margin:0 auto}
 body.embed .brand{justify-content:center;margin:0 0 18px}
-.embed-close{display:none;position:fixed;top:10px;right:10px;width:34px;height:34px;align-items:center;justify-content:center;border:1px solid var(--line-strong);border-radius:10px;background:rgba(7,13,24,.55);color:var(--txt-2);font-size:15px;line-height:1;cursor:pointer;z-index:10}
-.embed-close:hover{color:var(--txt);border-color:rgba(233,196,85,.45)}
+.embed-close{display:none;position:fixed;top:10px;right:10px;width:34px;height:34px;align-items:center;justify-content:center;border:1px solid var(--line-strong);border-radius:10px;background:var(--panel);color:var(--txt-2);font-size:15px;line-height:1;cursor:pointer;z-index:10}
+.embed-close:hover{color:var(--txt);border-color:var(--brand-hi)}
 body.embed .embed-close{display:flex}
 @media(max-width:420px){.card{padding:26px 22px}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;animation:none!important}}
 
 @media(max-width:720px){body{padding:24px 16px;justify-content:flex-start}.wrap{max-width:460px}.card{padding:26px 24px}}
 @media(max-width:360px){body{padding-inline:12px}.card{padding-inline:18px}.row{gap:8px}.btn-code{min-width:108px;padding-inline:8px}input{padding-inline:10px}}
+
+/* Summit 控件与阅读节奏 */
+.theme-toggle{display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;padding:8px 12px;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--txt-2);font:inherit;font-size:13px;cursor:pointer}
+.theme-toggle:hover{color:var(--accent);border-color:var(--line-strong)}
+.btn,input,textarea,select{border-radius:8px}
+.btn{min-height:44px;font-family:var(--font-b)}
+::selection{background:var(--selected)}
+input{min-height:48px}.remember{min-height:44px}
+@media(max-width:560px){input:not([type="checkbox"]),textarea,select{font-size:16px}.tabs{display:flex;flex-wrap:wrap}.tabs button{padding-inline:12px}.btn.small{min-height:44px}.top{gap:12px}.nav{width:100%}.nav a{padding-inline:9px}.theme-toggle{margin-left:auto}}
 </style>
 </head>
 <body>
@@ -161,7 +173,8 @@ body.embed .embed-close{display:flex}
     <div class="ft">
       <span id="ft-admin-links" hidden><a id="ft-pwd" href="/reg?tab=pwd">密码登录</a>&nbsp;·&nbsp;<a href="/lostpass" target="_top">找回密码</a></span>
       <a class="mono" href="/">dfacm.website</a>
-    </div>
+      <button type="button" class="theme-toggle" id="theme-toggle" aria-label="切换到夜间模式" aria-pressed="false">夜间</button>
+  </div>
   </main>
 </div>
 <script>
@@ -418,6 +431,24 @@ body.embed .embed-close{display:flex}
       clearTimeout(timeout);
     });
   }
+})();
+</script>
+<script>
+(function(){
+  var root=document.documentElement,button=document.getElementById('theme-toggle');
+  if(!root||!button)return;
+  function apply(t,save){
+    var dark=t==='dark';root.classList.toggle('dark',dark);
+    button.textContent=dark?'白天':'夜间';
+    button.setAttribute('aria-label',dark?'切换到白天模式':'切换到夜间模式');
+    button.setAttribute('aria-pressed',String(dark));
+    var meta=document.querySelector('meta[name="theme-color"]');
+    if(meta)meta.setAttribute('content',dark?'#070d18':'#f4f7fb');
+    if(save)try{localStorage.setItem('swpu-theme',t)}catch(e){}
+  }
+  apply(root.classList.contains('dark')?'dark':'light',false);
+  button.addEventListener('click',function(){apply(root.classList.contains('dark')?'light':'dark',true)});
+  window.addEventListener('storage',function(e){if(e.key==='swpu-theme')apply(e.newValue,false)});
 })();
 </script>
 </body>

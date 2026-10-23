@@ -58,17 +58,27 @@ async function fixture({ env = {} } = {}) {
         Handler: class {
             constructor() {
                 this.response = { body: {}, headers: {}, addHeader: (k, v) => { this.response.headers[k] = v; } };
-                this.user = { _id: 42, uname: 'student' };
+                this.user = { _id: 42, uname: 'student', hasPriv: () => true, hasPerm: () => true };
                 this.session = stub.session;
                 // The real framework resolves route params from this.args;
                 // undecorated methods must read this.args.domainId themselves.
                 this.args = { domainId: 'system' };
+                this.request = { query: {}, json: false };
+                this.UiContext = {};
+                this.ctx = { parallel: async () => {} };
+            }
+            url(name, args = {}) {
+                const base = ({ training_detail: `/training/${args.tid}`, problem_detail: `/p/${args.pid}`,
+                    problem_submit: `/p/${args.pid}/submit`, swpu_workbench: '/workbench', swpu_training_context: '/workbench/context' })[name];
+                return base + (args.query ? '?' + new URLSearchParams(args.query).toString() : '');
             }
             async limitRate(...args) { limits.push(args); }
         },
         Logger: class { info() {} error() {} },
         param: () => () => {}, post: () => () => {},
         PRIV: { PRIV_USER_PROFILE: 4 },
+        PERM: { PERM_VIEW_TRAINING: 8, PERM_VIEW_PROBLEM_HIDDEN: 16 },
+        ObjectId: class { constructor(value) { this.value = value; } toString() { return this.value; } },
         Types: { String: [], UnsignedInt: [], Boolean: [] },
         Time: { getObjectID: (d) => `oid-${d.toISOString()}` },
         RecordModel: {
@@ -78,6 +88,7 @@ async function fixture({ env = {} } = {}) {
             },
         },
         ProblemModel: {
+            canViewBy: (pdoc) => !pdoc.hidden,
             getListStatus: async () => ({ 1002: { status: 1 } }),
             getList: async (domainId, pids) => Object.fromEntries(pids.map((pid) => [
                 pid,
@@ -124,7 +135,7 @@ async function fixture({ env = {} } = {}) {
 
 test('routes require login, pages are served no-store, nav and locales are registered', async () => {
     const f = await fixture();
-    for (const url of ['/workbench', '/workbench/data', '/workbench/recent', '/mistakes', '/mistakes/data', '/mistakes/update', '/mistakes/remove', '/mistakes/sync']) {
+    for (const url of ['/workbench', '/workbench/data', '/workbench/recent', '/workbench/context', '/mistakes', '/mistakes/data', '/mistakes/update', '/mistakes/remove', '/mistakes/sync']) {
         assert.ok(f.routes.has(url), url);
         assert.equal(f.routes.get(url).priv, 4, url);
     }
@@ -154,6 +165,66 @@ test('workbench data is assembled for the signed-in user with rate limits', asyn
     assert.equal(h.response.body.data.user.uname, 'student');
     assert.equal(Array.isArray(f.recordQueries), true);
     assert.ok(f.limits.some((l) => l[0] === 'swpu_train_data' && l[3] === 'u42'));
+});
+
+test('catalog hooks constrain native pagination and keep independent list permissions in facet queries', async () => {
+    const f = await fixture();
+    const h = f.handler('/workbench');
+    h.request.query = { category: '入门', view: 'enrolled', page: '1', q: '基础' };
+    const own = [{ docId: 'foundation', enroll: 1 }, { docId: 'topic', enroll: 1, done: true }];
+    f.stub.TrainingModel.getMultiStatus = (domain, query) => {
+        assert.equal(domain, 'system'); assert.deepEqual(query, { uid: 42, enroll: 1 });
+        return { toArray: async () => own };
+    };
+    const visibility = { owner: { $in: [1, 42] } };
+    const query = { title: /基础/i, $and: [visibility] };
+    await f.listeners['training/list'](query, h);
+    assert.equal(query.title.test('一本通基础'), true, 'native search stays present');
+    assert.equal(query.$and[1].title.$regex.test('【入门】一本通基础'), true);
+    assert.equal(query.$and[1].title.$regex.test('【专题】算法基础'), false);
+    assert.deepEqual(query.$and[2].docId.$in, ['foundation', 'topic']);
+    // An independent listener adds a restriction after this addon's listener.
+    query.hidden = false;
+    const docs = [{ docId: 'foundation', title: '【入门】一本通基础', dag: [{ pids: [1] }] },
+        { docId: 'topic', title: '【专题】算法基础', dag: [{ pids: [2] }] }];
+    f.stub.TrainingModel.getMulti = (domain, scope) => {
+        assert.equal(domain, 'system'); assert.equal(scope.hidden, false);
+        assert.equal(scope.title, query.title); assert.deepEqual(scope.$and, [visibility]);
+        return { project(fields) { assert.deepEqual(fields, { docId: 1, title: 1 }); return this; }, toArray: async () => docs };
+    };
+    h.url = () => '/training';
+    h.response.template = 'training_main.html';
+    h.response.body = { tdocs: docs.slice(0, 1), tsdict: Object.fromEntries(own.map((s) => [s.docId, s])), q: '基础', page: 1, tpcount: 1,
+        qs: 'group=camp&page=8&q=old&category=obsolete&view=completed' };
+    h.UiContext.existingAddon = 'preserved';
+    await f.listeners['handler/after/TrainingMain#get'](h);
+    assert.equal(h.response.template, 'training_main.html');
+    assert.equal(h.UiContext.existingAddon, 'preserved');
+    assert.equal(h.UiContext.dfacmCatalog.total, 1);
+    assert.equal(h.UiContext.dfacmCatalog.categories.length, 2);
+    assert.equal(h.response.headers['Cache-Control'], 'private, no-store');
+    assert.deepEqual(Object.fromEntries(new URLSearchParams(h.response.body.qs)), {
+        group: 'camp', q: '基础', category: '入门', view: 'enrolled',
+    }, 'native pagination keeps search, current filters and independent addon parameters');
+    assert.equal(query.$and.length, 3, 'facet construction does not modify native list filters');
+});
+
+test('catalog guests have no personal filter and failures retain native list output', async () => {
+    const f = await fixture();
+    const h = f.handler('/workbench'); h.user.hasPriv = () => false;
+    h.request.query = { view: 'enrolled', category: '专题' };
+    const query = {};
+    f.stub.TrainingModel.getMultiStatus = () => { throw new Error('guest must not query enrollment'); };
+    await f.listeners['training/list'](query, h);
+    assert.equal(query.$and.length, 1);
+    const original = { tdocs: [], tsdict: {}, q: '', page: 1, tpcount: 0 };
+    h.response.template = 'training_main.html'; h.response.body = original;
+    f.stub.TrainingModel.getMulti = () => { throw new Error('unavailable'); };
+    await f.listeners['handler/after/TrainingMain#get'](h);
+    assert.equal(h.response.body, original);
+    assert.equal(h.UiContext.dfacmCatalog, undefined);
+    assert.deepEqual(Object.fromEntries(new URLSearchParams(h.response.body.qs)), { category: '专题' },
+        'fallback pagination retains the selected direction without a guest personal filter');
 });
 
 test('/workbench/recent ranks plans by the newest submission inside them', async () => {
@@ -422,4 +493,124 @@ test('manual sync is rate limited and writes the marker', async () => {
     assert.equal(h.response.body.collected, 2);
     assert.ok(f.limits.some((l) => l[0] === 'swpu_train_sync' && l[2] === 1));
     assert.equal(f.collection.docs.some((d) => d.pid === 0), true);
+});
+
+async function trainingFixture() {
+    const f = await fixture();
+    const tid = '6abf5251aaa235606eedfb84';
+    const rid = 'aaaaaaaaaaaaaaaaaaaaaaaa';
+    const tdoc = { domainId: 'system', docId: tid, title: '基础路线', dag: [
+        { _id: 1, title: '循环', requireNids: [], pids: [1001, 1002] },
+    ] };
+    const pdoc = { domainId: 'system', docId: 1001, pid: 'P1001', title: '求和' };
+    const record = { domainId: 'system', _id: rid, uid: 42, pid: 1001, status: 1 };
+    f.stub.TrainingModel.get = async (domainId, id) => {
+        assert.equal(domainId, 'system'); assert.equal(String(id), tid); return tdoc;
+    };
+    f.stub.TrainingModel.getStatus = async (_domain, _id, uid) => {
+        assert.equal(uid, 42); return { enroll: 1 };
+    };
+    f.stub.ProblemModel.get = async () => pdoc;
+    f.stub.ProblemModel.getListStatus = async () => ({ 1001: { status: 2 } });
+    f.stub.ProblemModel.getList = async () => ({ 1001: pdoc, 1002: { domainId: 'system', docId: 1002, pid: 'P1002', title: '下一题' } });
+    f.stub.RecordModel.get = async () => record;
+    const h = f.handler('/workbench/context');
+    h.request.query = { training: tid, trainingNode: '1', rid };
+    h.response.template = 'problem_detail.html';
+    h.response.body = { pdoc };
+    return { ...f, h, tdoc, pdoc, record, tid, rid };
+}
+
+test('page hooks retain native templates and assistant configuration with validated training navigation', async () => {
+    const f = await trainingFixture();
+    f.h.UiContext.dfacmAssistant = { csrf: 'existing' };
+    await f.listeners['handler/after/ProblemDetail#get'](f.h);
+    assert.equal(f.h.response.template, 'problem_detail.html');
+    assert.equal(f.h.UiContext.dfacmAssistant.csrf, 'existing');
+    assert.equal(f.h.UiContext.dfacmTraining.page, 'problem');
+    assert.equal(f.h.UiContext.dfacmTraining.chapterUrl, `/training/${f.tid}#node-1`);
+    assert.equal(f.h.response.headers['Cache-Control'], 'private, no-store');
+    f.h.response.template = 'problem_submit.html';
+    await f.listeners['handler/after/ProblemSubmit#get'](f.h);
+    assert.equal(f.h.UiContext.dfacmTraining.page, 'submit');
+    f.h.response.template = 'training_detail.html';
+    f.h.response.body = { tdoc: f.tdoc, tsdoc: { enroll: 1 }, psdict: {}, pdict: { 1001: f.pdoc } };
+    await f.listeners['handler/after/TrainingDetail#get'](f.h);
+    assert.equal(f.h.UiContext.dfacmTraining.page, 'training');
+    f.h.UiContext = {};
+    f.h.args.uid = 99;
+    await f.listeners['handler/after/TrainingDetail#get'](f.h);
+    assert.equal(f.h.UiContext.dfacmTraining, undefined);
+});
+
+test('context is absent for guests, contest pages, unjoined routes, invisible problems and denied training hooks', async () => {
+    const scenarios = [
+        (f) => { f.h.user.hasPriv = () => false; },
+        (f) => { f.h.user.hasPerm = () => false; },
+        (f) => { f.h.args.tid = 'contest'; },
+        (f) => { f.h.request.json = true; },
+        (f) => { f.stub.TrainingModel.getStatus = async () => ({ enroll: 0 }); },
+        (f) => { f.pdoc.hidden = true; },
+        (f) => { f.pdoc.domainId = 'other'; },
+        (f) => { f.h.ctx.parallel = async () => { throw new Error('denied'); }; },
+        (f) => { f.tdoc.dag[0].pids = [999]; },
+    ];
+    for (const mutate of scenarios) {
+        const f = await trainingFixture(); mutate(f);
+        await f.listeners['handler/after/ProblemDetail#get'](f.h);
+        assert.equal(f.h.UiContext.dfacmTraining, undefined);
+        assert.equal(f.h.response.template, 'problem_detail.html');
+    }
+});
+
+test('record refresh uses own noncontest result and immediate AC while retaining the source chapter', async () => {
+    const f = await trainingFixture();
+    await f.h.get();
+    assert.equal(f.h.response.body.ok, true);
+    assert.equal(f.h.response.body.data.next.pid, 1002, 'new AC overrides the lagging status document');
+    assert.equal(f.h.response.body.data.done, 1);
+    assert.equal(f.h.response.headers['Cache-Control'], 'private, no-store');
+    assert.match(f.h.response.body.data.refreshUrl, /rid=aaaaaaaaaaaaaaaaaaaaaaaa&training=/);
+    assert.ok(f.limits.some((item) => item[0] === 'swpu_train_context'));
+    for (const patch of [{ uid: 99 }, { domainId: 'other' }, { contest: 'contest' }, { files: { hack: 'input' } }]) {
+        f.stub.RecordModel.get = async () => ({ ...f.record, ...patch });
+        await f.h.get();
+        assert.equal(f.h.response.body.data, null);
+    }
+});
+
+test('record navigation and its refresh endpoint respect addon problem access hooks', async () => {
+    const f = await trainingFixture();
+    const hooks = [];
+    f.h.ctx.parallel = async (name) => { hooks.push(name); if (name === 'problem/get') throw new Error('restricted problem'); };
+    await f.h.get();
+    assert.equal(f.h.response.body.ok, false);
+    assert.equal(f.h.response.body.data, null);
+    f.h.response.template = 'record_detail.html';
+    f.h.response.body = { pdoc: f.pdoc, rdoc: f.record };
+    await f.listeners['handler/after/RecordDetail#get'](f.h);
+    assert.equal(f.h.UiContext.dfacmTraining, undefined);
+    assert.deepEqual(hooks, ['problem/get', 'problem/get']);
+    assert.equal(f.h.response.template, 'record_detail.html');
+});
+
+test('submit redirect carries only explicit context; pretests and foreign/historical records keep native behavior', async () => {
+    const f = await trainingFixture();
+    f.h.pdoc = f.pdoc;
+    f.h.response.body = { rid: f.rid };
+    f.h.response.redirect = '/record/' + f.rid;
+    await f.listeners['handler/after/ProblemSubmit#post'](f.h);
+    assert.equal(f.h.response.redirect, `/record/${f.rid}?training=${f.tid}&trainingNode=1`);
+    f.h.args.pretest = true;
+    f.h.response.redirect = '/record/pretest';
+    await f.listeners['handler/after/ProblemSubmit#post'](f.h);
+    assert.equal(f.h.response.redirect, '/record/pretest');
+    f.h.response.template = 'record_detail.html';
+    f.h.response.body = { pdoc: f.pdoc, rdoc: f.record };
+    await f.listeners['handler/after/RecordDetail#get'](f.h);
+    assert.equal(f.h.UiContext.dfacmTraining.status, 1);
+    f.h.UiContext = {};
+    f.h.args.rev = 'old';
+    await f.listeners['handler/after/RecordDetail#get'](f.h);
+    assert.equal(f.h.UiContext.dfacmTraining, undefined);
 });

@@ -5,71 +5,83 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>错题本 · d&amp;f算法网</title>
 <meta name="description" content="错题复习：自动收集未通过的题目，记录错误原因、复盘笔记与补题状态。">
-<meta name="theme-color" content="#070d18">
+<meta name="theme-color" content="#f4f7fb">
 <link rel="icon" type="image/png" href="/favicon.png">
+<script>/* 共用首页的本机主题偏好，首帧前应用。 */(function(){var t='light';try{t=localStorage.getItem('swpu-theme')==='dark'?'dark':'light'}catch(e){}var r=document.documentElement;if(r)r.classList.toggle('dark',t==='dark')})();</script>
 <style>
 @font-face{font-family:'SWPU Display';src:url('/swpu-display.woff2') format('woff2');font-weight:400;font-style:normal;font-display:swap}
 @font-face{font-family:'SWPU Mono';src:url('/swpu-mono.woff2') format('woff2');font-weight:100 800;font-style:normal;font-display:swap}
-:root{--ink:#070d18;--panel:#0d182a;--line:rgba(198,216,240,.10);--line-strong:rgba(198,216,240,.18);--txt:#e8edf5;--txt-2:#a7b4c7;--txt-3:#94a4bb;--blue:#2a5caa;--gold:#c9a227;--gold-hi:#e9c455;--ac:#3fb950;--font-d:'SWPU Display','PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif;--font-b:-apple-system,'PingFang SC','Microsoft YaHei','Segoe UI','Noto Sans CJK SC',sans-serif;--font-m:'SWPU Mono','JetBrains Mono',Consolas,'PingFang SC',monospace;color-scheme:dark}
+:root{color-scheme:light;--ink:#f4f7fb;--panel:#ffffff;--soft:#e9eef6;--selected:rgba(42,92,170,.10);--line:rgba(15,34,64,.10);--line-strong:rgba(15,34,64,.20);--txt:#1a2940;--txt-2:#44577a;--txt-3:#4a5f85;--brand:#2a5caa;--brand-hi:#2a5caa;--brand-hover:#1e4488;--on-brand:#fff;--gold:#b8901f;--accent:#755c18;--accent-bg:rgba(184,144,31,.10);--focus:#2a5caa;--ac:#18794e;--fail:#b42318;--fail-bg:#fff0ed;--pass-bg:#e5f1e8;--font-d:'SWPU Display','PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif;--font-b:-apple-system,'PingFang SC','Microsoft YaHei','Segoe UI','Noto Sans CJK SC',sans-serif;--font-m:'SWPU Mono','JetBrains Mono',Consolas,'PingFang SC',monospace}
+html.dark{color-scheme:dark;--ink:#070d18;--panel:#0d182a;--soft:#0a1322;--selected:rgba(42,92,170,.18);--line:rgba(198,216,240,.10);--line-strong:rgba(198,216,240,.18);--txt:#e8edf5;--txt-2:#a7b4c7;--txt-3:#94a4bb;--brand-hi:#6fa3e0;--gold:#c9a227;--accent:#e9c455;--accent-bg:rgba(201,162,39,.10);--focus:#e9c455;--ac:#3fb950;--fail:#f85149;--fail-bg:rgba(248,81,73,.12);--pass-bg:rgba(63,185,80,.12)}
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:radial-gradient(1100px 600px at 50% -200px,rgba(42,92,170,.16),transparent 60%),var(--ink);color:var(--txt);font-family:var(--font-b);font-size:15px;line-height:1.7;min-height:100svh;-webkit-font-smoothing:antialiased}
-:focus-visible{outline:2px solid var(--gold-hi);outline-offset:2px;border-radius:6px}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px;border-radius:6px}
 a{color:var(--txt-2);text-decoration:none}
-a:hover{color:var(--gold-hi)}
+a:hover{color:var(--accent)}
 .top{display:flex;align-items:center;justify-content:space-between;gap:16px;max-width:960px;margin:0 auto;padding:18px 20px;flex-wrap:wrap}
 .brand{display:flex;align-items:center;gap:10px;text-decoration:none}
 .brand svg{width:30px;height:30px}
-.brand b{font-family:var(--font-d);font-weight:400;font-size:15px;letter-spacing:.08em;color:var(--txt)}
-.brand span{display:block;font-family:var(--font-m);font-size:9.5px;letter-spacing:.14em;color:var(--txt-3)}
+.brand b{font-family:var(--font-d);font-weight:400;font-size:15px;letter-spacing:0;color:var(--txt)}
+.brand span{display:block;font-family:var(--font-m);font-size:11px;letter-spacing:.14em;color:var(--txt-3)}
 .nav{display:flex;gap:4px;flex-wrap:wrap}
 .nav a{padding:8px 12px;border-radius:9px;font-size:13.5px;min-height:40px;display:inline-flex;align-items:center}
-.nav a:hover{background:rgba(198,216,240,.06)}
-.nav a.on{color:var(--gold-hi);background:rgba(201,162,39,.10)}
+.nav a:hover{background:var(--soft)}
+.nav a.on{color:#755c18;background:var(--accent-bg)}
+html.dark .nav a.on{color:var(--accent)}
 main{max-width:960px;margin:0 auto;padding:10px 20px 60px}
-h1{font-size:22px;font-weight:600;margin:14px 0 4px}
-h1 i{font-style:normal;color:var(--gold-hi)}
+h1{font-size:28px;font-weight:600;margin:14px 0 4px}
+h1 i{font-style:normal;color:var(--accent)}
 .sub{color:var(--txt-3);font-size:13px;margin-bottom:18px}
 .toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px}
-.tabs{display:inline-flex;gap:6px;background:rgba(7,13,24,.5);border:1px solid var(--line);border-radius:12px;padding:4px}
+.tabs{display:inline-flex;gap:6px;background:var(--soft);border:1px solid var(--line);border-radius:12px;padding:4px}
 .tabs button{border:none;background:none;color:var(--txt-2);font-size:13.5px;padding:8px 16px;border-radius:9px;cursor:pointer;font-family:var(--font-b);min-height:40px}
-.tabs button.on{background:#23477a;color:#fff}
+.tabs button.on{background:var(--brand);color:var(--on-brand)}
 .tabs button .n{font-family:var(--font-m);font-size:11px;opacity:.75;margin-left:4px}
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:10px;padding:9px 16px;font-size:13.5px;font-weight:600;cursor:pointer;border:1px solid transparent;min-height:40px;background:var(--blue);color:#fff;font-family:var(--font-b);transition:background .25s,border-color .25s,color .25s}
-.btn:hover:not(:disabled){background:#3568b3}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:10px;padding:9px 16px;font-size:13.5px;font-weight:600;cursor:pointer;border:1px solid transparent;min-height:40px;background:var(--brand);color:var(--on-brand);font-family:var(--font-b);transition:background .25s,border-color .25s,color .25s}
+.btn:hover:not(:disabled){background:var(--brand-hover)}
 .btn:disabled{opacity:.55;cursor:not-allowed}
 .btn.ghost{background:none;border-color:var(--line-strong);color:var(--txt-2)}
-.btn.ghost:hover:not(:disabled){border-color:rgba(233,196,85,.45);color:var(--gold-hi);background:none}
+.btn.ghost:hover:not(:disabled){border-color:var(--accent);color:var(--accent);background:none}
 .btn.small{padding:6px 12px;min-height:36px;font-size:12.5px}
-.item{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px 20px;margin-bottom:14px}
+.item{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin-bottom:14px}
 .item.done{opacity:.82}
 .item .hd{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 .item .hd .tt{flex:1;min-width:180px;font-size:15.5px;font-weight:600}
 .item .hd .tt a{color:var(--txt)}
-.item .hd .tt a:hover{color:var(--gold-hi)}
+.item .hd .tt a:hover{color:var(--accent)}
 .item .hd .tt .off{color:var(--txt-3);font-weight:400}
-.badge{font-family:var(--font-m);font-size:11px;padding:2px 8px;border-radius:6px;background:rgba(248,81,73,.12);color:#ff9a94;flex-shrink:0}
-.badge.ok{background:rgba(63,185,80,.14);color:#76d98b}
+.badge{font-family:var(--font-m);font-size:11px;padding:2px 8px;border-radius:6px;background:var(--fail-bg);color:var(--fail);flex-shrink:0}
+.badge.ok{background:var(--pass-bg);color:var(--ac)}
 .meta{font-size:12.5px;color:var(--txt-3);margin-top:6px;display:flex;gap:14px;flex-wrap:wrap}
 .meta a{font-size:12.5px}
 .editor{display:grid;gap:10px;margin-top:14px;border-top:1px solid var(--line);padding-top:14px}
 .editor .rowline{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .editor label{font-size:12.5px;color:var(--txt-3);flex-shrink:0}
-select{background:rgba(7,13,24,.55);border:1px solid var(--line-strong);border-radius:9px;padding:8px 10px;color:var(--txt);font-size:13px;font-family:var(--font-b);min-height:38px}
-textarea{width:100%;background:rgba(7,13,24,.55);border:1px solid var(--line-strong);border-radius:10px;padding:10px 12px;color:var(--txt);font-size:13.5px;font-family:var(--font-b);line-height:1.7;resize:vertical;min-height:64px}
-textarea:focus,select:focus{outline:none;border-color:rgba(233,196,85,.55)}
+select{background:var(--panel);border:1px solid var(--line-strong);border-radius:9px;padding:8px 10px;color:var(--txt);font-size:13px;font-family:var(--font-b);min-height:38px}
+textarea{width:100%;background:var(--panel);border:1px solid var(--line-strong);border-radius:10px;padding:10px 12px;color:var(--txt);font-size:13.5px;font-family:var(--font-b);line-height:1.7;resize:vertical;min-height:64px}
+textarea:focus,select:focus{outline:none;border-color:var(--focus)}
 .itemmsg{font-size:12.5px;min-height:18px}
-.itemmsg.err{color:#ff9a94}.itemmsg.ok{color:#76d98b}
+.itemmsg.err{color:var(--fail)}.itemmsg.ok{color:var(--ac)}
 .pager{display:flex;align-items:center;justify-content:center;gap:14px;margin-top:18px;font-size:13px;color:var(--txt-3)}
 .state{padding:40px 0;text-align:center;color:var(--txt-3);font-size:14px}
-.state.err{color:#ff9a94}
+.state.err{color:var(--fail)}
 .state button{margin-top:12px}
-.empty{background:var(--panel);border:1px dashed var(--line-strong);border-radius:16px;padding:34px 22px;text-align:center;color:var(--txt-3);font-size:13.5px}
-.empty a{color:var(--gold-hi);text-underline-offset:4px}
+.empty{background:var(--panel);border:1px dashed var(--line-strong);border-radius:12px;padding:34px 22px;text-align:center;color:var(--txt-3);font-size:13.5px}
+.empty a{color:var(--accent);text-underline-offset:4px}
 .foot{max-width:960px;margin:0 auto;padding:0 20px 30px;color:var(--txt-3);font-size:12px;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
 .foot .mono{font-family:var(--font-m);letter-spacing:.08em}
 [hidden]{display:none!important}
 @media(max-width:560px){.item .hd .tt{min-width:120px}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;animation:none!important}}
+
+/* Summit 控件与阅读节奏 */
+.theme-toggle{display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;padding:8px 12px;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--txt-2);font:inherit;font-size:13px;cursor:pointer}
+.theme-toggle:hover{color:var(--accent);border-color:var(--line-strong)}
+.btn,input,textarea,select{border-radius:8px}
+.btn{min-height:44px;font-family:var(--font-b)}
+::selection{background:var(--selected)}
+.top{padding-block:20px;border-bottom:1px solid var(--line)}main{padding-top:22px}.sub{font-size:14px}.panel>h2{font-size:16px}.nav{align-items:center}.nav a{min-height:44px}.rowitem .tt{white-space:normal;overflow-wrap:anywhere}.stats b{font-family:var(--font-m);font-size:30px;font-variant-numeric:tabular-nums}
+@media(max-width:560px){input:not([type="checkbox"]),textarea,select{font-size:16px}.tabs{display:flex;flex-wrap:wrap}.tabs button{padding-inline:12px;min-height:44px}.btn.small{min-height:44px}.top{gap:12px}.nav{width:100%}.nav a{padding-inline:9px}.theme-toggle{margin-left:auto}}
 </style>
 </head>
 <body>
@@ -88,10 +100,11 @@ textarea:focus,select:focus{outline:none;border-color:rgba(233,196,85,.55)}
   </a>
   <nav class="nav" aria-label="站点导航">
     <a href="/">首页</a>
-    <a href="/training">训练</a>
-    <a href="/p">题目</a>
     <a href="/workbench">工作台</a>
+    <a href="/p">题库</a>
+    <a href="/training">训练</a>
     <a href="/mistakes" class="on" aria-current="page">错题本</a>
+    <button type="button" class="theme-toggle" id="theme-toggle" aria-label="切换到夜间模式" aria-pressed="false">夜间</button>
   </nav>
 </header>
 <main>
@@ -253,6 +266,24 @@ textarea:focus,select:focus{outline:none;border-color:rgba(233,196,85,.55)}
     else{btn.disabled=false}
   });
   setTab('open');
+})();
+</script>
+<script>
+(function(){
+  var root=document.documentElement,button=document.getElementById('theme-toggle');
+  if(!root||!button)return;
+  function apply(t,save){
+    var dark=t==='dark';root.classList.toggle('dark',dark);
+    button.textContent=dark?'白天':'夜间';
+    button.setAttribute('aria-label',dark?'切换到白天模式':'切换到夜间模式');
+    button.setAttribute('aria-pressed',String(dark));
+    var meta=document.querySelector('meta[name="theme-color"]');
+    if(meta)meta.setAttribute('content',dark?'#070d18':'#f4f7fb');
+    if(save)try{localStorage.setItem('swpu-theme',t)}catch(e){}
+  }
+  apply(root.classList.contains('dark')?'dark':'light',false);
+  button.addEventListener('click',function(){apply(root.classList.contains('dark')?'light':'dark',true)});
+  window.addEventListener('storage',function(e){if(e.key==='swpu-theme')apply(e.newValue,false)});
 })();
 </script>
 </body>

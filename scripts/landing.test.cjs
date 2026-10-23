@@ -181,6 +181,7 @@ async function runPage({ page, pages, cached } = {}) {
         '.hero-help': new El('', undefined),
         '#hero .hero-cta': new El('', undefined),
         '#go': Object.assign(new El('', undefined), { hidden: false }),
+        '#start': Object.assign(new El('', undefined), { hidden: false }),
     };
     els['.hero-help'].innerHTML = GUEST_HELP;
     els['#hero .hero-cta'].innerHTML = HERO_CTA;
@@ -281,6 +282,7 @@ test('logged-in SSR page swaps nav to username + workbench and caches the sessio
     assert.ok(els['#hero .hero-cta'].toHTML().includes('开始登顶训练'), 'malformed recent payload keeps the static CTA');
     // Register-pitch content hides for members.
     assert.equal(els['#go'].hidden, true, 'the register CTA section must hide for members');
+    assert.equal(els['#start'].hidden, true, 'the first-visit guide must hide for members');
     assert.ok(qa['.ft-col a[href="/reg?tab=pwd"], .ft-col a[href="/reg"]'].every((l) => l.hidden === true), 'footer auth links must hide for members');
     const saved = JSON.parse(store.get('swpu-me'));
     assert.equal(saved.uid, 5);
@@ -535,6 +537,7 @@ test('a guest probe after a cached member visit restores the static CTA', async 
     assert.equal(els['#nav a.login'].textContent, '登录');
     assert.ok(els['#hero .hero-cta'].toHTML().includes('开始登顶训练'), 'member cards must not leak into the guest view');
     assert.equal(els['#go'].hidden, false, 'member paint must not leave the register section hidden for a guest');
+    assert.equal(els['#start'].hidden, false, 'first-visit guidance must return for guests');
     assert.ok(qa['.ft-col a[href="/reg?tab=pwd"], .ft-col a[href="/reg"]'].every((l) => l.hidden === false), 'footer auth links must be restored for a guest');
     assert.ok(!store.has('swpu-me'));
 });

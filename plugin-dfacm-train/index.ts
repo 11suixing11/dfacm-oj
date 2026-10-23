@@ -11,6 +11,8 @@
 import fs from 'fs';
 import { join } from 'path';
 import { randomBytes, timingSafeEqual } from 'crypto';
+import { registerTrainingContext } from './training-hooks';
+import { registerTrainingCatalog } from './catalog-hooks';
 import {
     Context, db, Handler, Logger, param, post, PRIV, ProblemModel, RecordModel, Time, TrainingModel, Types,
 } from 'hydrooj';
@@ -143,6 +145,7 @@ class WorkbenchDataHandler extends Handler {
             records: {
                 weekly: (weekStart: Date) => weeklyRecords(domainId, this.user._id, weekStart),
                 recentFailed: () => recentFailedRecords(domainId, this.user._id),
+                recentActivity: () => recentSubmissionTimes(domainId, this.user._id),
             },
             openMistakes: await mistakes.countOpen(domainId, this.user._id),
             now,
@@ -150,6 +153,7 @@ class WorkbenchDataHandler extends Handler {
             recentLimit: RECENT_LIMIT,
         });
         this.response.body = { ok: true, data };
+        this.response.addHeader('Cache-Control', 'private, no-store');
     }
 }
 
@@ -169,6 +173,7 @@ class RecentTrainingsHandler extends Handler {
             maxTrainings: HOME_MAX_TRAININGS,
         });
         this.response.body = { ok: true, data };
+        this.response.addHeader('Cache-Control', 'private, no-store');
     }
 }
 
@@ -295,6 +300,8 @@ export async function apply(ctx: Context) {
         { key: { domainId: 1, uid: 1, resolved: 1, lastAt: -1 }, name: 'list' },
     );
     ctx.Route('swpu_workbench', '/workbench', WorkbenchPageHandler, PRIV.PRIV_USER_PROFILE);
+    registerTrainingContext(ctx);
+    registerTrainingCatalog(ctx);
     ctx.Route('swpu_workbench_data', '/workbench/data', WorkbenchDataHandler, PRIV.PRIV_USER_PROFILE);
     ctx.Route('swpu_workbench_recent', '/workbench/recent', RecentTrainingsHandler, PRIV.PRIV_USER_PROFILE);
     ctx.Route('swpu_mistakes', '/mistakes', MistakesPageHandler, PRIV.PRIV_USER_PROFILE);

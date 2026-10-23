@@ -481,9 +481,13 @@ test('a post-write verification failure rolls every file back', () => {
 test('documented addon installations contain every module and asset the entries load', () => {
   const instructions = fs.readFileSync(path.join(repo, 'deploy', 'deployment.md'), 'utf8');
   for (const addon of ['plugin-dfacm-ops', 'plugin-dfacm-train', 'plugin-dfacm-calendar']) {
-    const names = instructions.match(new RegExp(`cp /root/swpu-oj/${addon}/\\{([^}]+)\\}`))[1].split(',');
+    const names = [...instructions.matchAll(new RegExp(`cp /root/swpu-oj/${addon}/\\{([^}]+)\\}`, 'g'))]
+      .flatMap((match) => match[1].split(','));
     const installed = fs.mkdtempSync(path.join(root, 'installed-addon-'));
-    for (const name of names) fs.copyFileSync(path.join(repo, addon, name), path.join(installed, name));
+    for (const name of names) {
+      fs.mkdirSync(path.dirname(path.join(installed, name)), { recursive: true });
+      fs.copyFileSync(path.join(repo, addon, name), path.join(installed, name));
+    }
     const entry = path.join(installed, 'index.ts');
     const source = fs.readFileSync(entry, 'utf8');
     const requireInstalled = createRequire(entry);
@@ -492,6 +496,11 @@ test('documented addon installations contain every module and asset the entries 
     }
     for (const match of source.matchAll(/readFileSync\(join\(__dirname, '([^']+)'\)/g)) {
       assert.ok(fs.existsSync(path.join(installed, match[1])), `deployment omitted ${match[1]}`);
+    }
+    if (addon === 'plugin-dfacm-train') {
+      for (const name of ['training-hooks.ts', 'training-context.cjs', 'catalog-hooks.ts', 'catalog.cjs', 'frontend/training.page.ts', 'frontend/training.js', 'frontend/training.css', 'frontend/catalog.js', 'frontend/catalog.css']) {
+        assert.ok(fs.existsSync(path.join(installed, name)), `deployment omitted ${name}`);
+      }
     }
   }
 });

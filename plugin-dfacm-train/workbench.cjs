@@ -41,6 +41,7 @@ function analyzeTraining(tdoc, psdocs) {
         const touched = (node.pids || []).some((pid) => donePids.has(pid) || progPids.has(pid));
         if (done) doneNids.add(node._id);
         return {
+            nid: node._id,
             title: node.title || '',
             state: done ? 'done' : !unlocked ? 'locked' : touched ? 'active' : 'open',
             nextPids: (node.pids || []).filter((pid) => !donePids.has(pid)),
@@ -54,6 +55,7 @@ function analyzeTraining(tdoc, psdocs) {
         done: donePids.size,
         percent: pids.length ? Math.round((donePids.size / pids.length) * 100) : 0,
         completed: dag.length > 0 && nodes.every((node) => node.state === 'done'),
+        currentNid: current ? current.nid : null,
         currentTitle: current ? current.title : null,
         nextPid: current && current.nextPids.length ? current.nextPids[0] : null,
     };
@@ -85,10 +87,11 @@ function summarizeWeek(entries, now = new Date()) {
 
 // entries: newest-first [{ pid, status, rid, at }]; dedupes by pid.
 function summarizeRecentFailed(entries, limit = 8) {
+    if (limit <= 0) return [];
     const seen = new Set();
     const out = [];
     for (const entry of entries) {
-        if (!entry || seen.has(entry.pid)) continue;
+        if (!entry || !Number.isSafeInteger(entry.pid) || !FAILED_STATUSES.includes(entry.status) || seen.has(entry.pid)) continue;
         seen.add(entry.pid);
         out.push({
             pid: entry.pid,
@@ -101,6 +104,20 @@ function summarizeRecentFailed(entries, limit = 8) {
         if (out.length >= limit) break;
     }
     return out;
+}
+
+function trainingUrl(tid, nid) {
+    const anchor = nid === null || nid === undefined ? '' : `#node-${encodeURIComponent(nid)}`;
+    return `/training/${encodeURIComponent(tid)}${anchor}`;
+}
+
+// "tid" is reserved for Hydro contests. Training context uses its own query key.
+function trainingProblemUrl(url, tid, nid) {
+    if (!url) return null;
+    const [base, hash] = url.split('#');
+    const query = `training=${encodeURIComponent(tid)}`
+        + (nid === null || nid === undefined ? '' : `&trainingNode=${encodeURIComponent(nid)}`);
+    return `${base}${base.includes('?') ? '&' : '?'}${query}${hash ? `#${hash}` : ''}`;
 }
 
 // --- recent trainings for the landing page ---------------------------------
@@ -206,19 +223,37 @@ async function buildWorkbench({
     const tsdocs = await trainingModel.getMultiStatus(domainId, { uid, enroll: 1 }).toArray();
     const tids = tsdocs.map((doc) => doc.docId);
     const tdict = tids.length ? await trainingModel.getList(domainId, tids) : {};
-    const enrolled = tids.map((tid) => tdict[String(tid)]).filter(Boolean)
-        .sort((a, b) => (b.pin || 0) - (a.pin || 0) || String(b.docId).localeCompare(String(a.docId)))
-        .slice(0, maxTrainings);
-    const trainings = [];
-    for (const tdoc of enrolled) {
-        const pids = [...new Set((tdoc.dag || []).flatMap((node) => node.pids || []))];
-        const psdocs = pids.length ? await problemModel.getListStatus(domainId, uid, pids) : {};
-        trainings.push(analyzeTraining(tdoc, psdocs));
-    }
-    const [weekly, recent] = await Promise.all([records.weekly(weekStartShanghai(now)), records.recentFailed()]);
-    const recentFailed = summarizeRecentFailed(recent, recentLimit);
+    const [weekly, recent, activity] = await Promise.all([
+        records.weekly(weekStartShanghai(now)),
+        records.recentFailed(),
+        records.recentActivity ? records.recentActivity() : [],
+    ]);
+    const plans = tids.map((tid) => tdict[String(tid)]).filter(Boolean);
+    const lastActive = lastActiveByPlan(activity, indexPlanPids(plans));
+    const ranked = plans
+        .sort((a, b) => (lastActive.get(b)?.getTime() || 0) - (lastActive.get(a)?.getTime() || 0)
+            || (b.pin || 0) - (a.pin || 0) || String(b.docId).localeCompare(String(a.docId)));
+    // Read shared problem statuses once for all joined routes, then choose the
+    // workbench shortlist. Completed recent routes cannot hide an unfinished
+    // route beyond the first three, and totals describe all existing enrollments.
+    const planPids = [...new Set(ranked.flatMap((tdoc) => (tdoc.dag || []).flatMap((node) => node.pids || [])))];
+    const planStatuses = planPids.length ? await problemModel.getListStatus(domainId, uid, planPids) : {};
+    const summaries = ranked.map((tdoc) => ({
+            ...analyzeTraining(tdoc, planStatuses),
+            lastActiveAt: lastActive.has(tdoc) ? lastActive.get(tdoc).toISOString() : null,
+        }));
+    const shortlist = [...summaries.filter((item) => !item.completed), ...summaries.filter((item) => item.completed)];
+    const trainings = shortlist.slice(0, maxTrainings);
+    // The record scan contains historical failures. Resolve current problem
+    // status BEFORE applying the display limit, including AC outside this week.
+    const candidates = summarizeRecentFailed(recent, recent.length);
+    const candidatePids = candidates.map((item) => item.pid);
+    const statuses = candidatePids.length ? await problemModel.getListStatus(domainId, uid, candidatePids) : {};
+    const accepted = (item) => statuses[item.pid]?.status === STATUS_ACCEPTED;
+    const recentFailed = candidates.filter((item) => !accepted(item)).slice(0, recentLimit);
+    const recentlyResolved = candidates.filter(accepted).slice(0, recentLimit);
 
-    const needPids = new Set(recentFailed.map((item) => item.pid));
+    const needPids = new Set([...recentFailed, ...recentlyResolved].map((item) => item.pid));
     for (const training of trainings) if (training.nextPid) needPids.add(training.nextPid);
     const pdocs = needPids.size
         ? await problemModel.getList(domainId, [...needPids], uid, false)
@@ -229,24 +264,33 @@ async function buildWorkbench({
         return {
             ...item,
             title: available ? pdoc.title : `#${item.pid}（不可见或已删除）`,
-            url: available ? `/p/${pdoc.pid || item.pid}` : null,
+            url: available ? `/p/${encodeURIComponent(pdoc.pid || item.pid)}` : null,
         };
     };
     return {
         user: { uid, uname },
         generatedAt: now.toISOString(),
         week: summarizeWeek(weekly, now),
-        trainings: trainings.map((training) => ({
-            ...training,
-            url: `/training/${training.tid}`,
-            next: training.nextPid
-                ? attach({ pid: training.nextPid })
-                : null,
-        })),
+        trainingOverview: {
+            enrolled: summaries.length,
+            completed: summaries.filter((item) => item.completed).length,
+            inProgress: summaries.filter((item) => !item.completed).length,
+            shown: trainings.length,
+        },
+        trainings: trainings.map((training) => {
+            const next = training.nextPid ? attach({ pid: training.nextPid }) : null;
+            return {
+                ...training,
+                url: trainingUrl(training.tid),
+                currentUrl: trainingUrl(training.tid, training.currentNid),
+                next: next ? { ...next, url: trainingProblemUrl(next.url, training.tid, training.currentNid) } : null,
+            };
+        }),
         recentFailed: recentFailed.map((item) => ({
             ...attach(item),
             recordUrl: item.rid ? `/record/${item.rid}` : null,
         })),
+        recentlyResolved: recentlyResolved.map((item) => ({ ...attach(item), resolved: true })),
         mistakes: { open: openMistakes },
     };
 }
@@ -257,6 +301,8 @@ module.exports = {
     indexPlanPids,
     lastActiveByPlan,
     analyzeTraining,
+    trainingUrl,
+    trainingProblemUrl,
     summarizeWeek,
     summarizeRecentFailed,
     weekStartShanghai,

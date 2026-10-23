@@ -211,9 +211,13 @@ jobs:
       - name: Install train test dependencies
         working-directory: plugin-dfacm-train
         run: npm ci --no-audit --no-fund
-      - name: Run train plugin tests
+      - name: Run train plugin tests and native build check
         working-directory: plugin-dfacm-train
-        run: npm test
+        run: |
+          npm test
+          npm run check:build
+      - name: Check the local preview training flow
+        run: node --test scripts/preview.test.cjs
       - name: Run ops plugin tests
         run: node --test plugin-dfacm-ops/tests/*.test.cjs
       - name: Install shop test dependencies

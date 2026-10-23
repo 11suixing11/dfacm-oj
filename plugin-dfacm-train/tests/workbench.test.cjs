@@ -3,7 +3,7 @@
 const assert = require('node:assert/strict');
 const { test } = require('node:test');
 const {
-    analyzeTraining, buildWorkbench, summarizeRecentFailed, summarizeWeek, weekStartShanghai,
+    analyzeTraining, buildWorkbench, summarizeRecentFailed, summarizeWeek, trainingProblemUrl, weekStartShanghai,
 } = require('../workbench.cjs');
 
 test('weekStartShanghai returns Monday 00:00 in Asia/Shanghai', () => {
@@ -144,7 +144,8 @@ test('buildWorkbench assembles routes, next problems, week stats and recent fail
     assert.deepEqual(data.trainings.map((t) => t.title), ['进阶路线', '入门路线']);
     assert.equal(data.trainings[0].url, '/training/bbb');
     assert.equal(data.trainings[0].next.title, '树上差分');
-    assert.equal(data.trainings[0].next.url, '/p/P201');
+    assert.equal(data.trainings[0].next.url, '/p/P201?training=bbb&trainingNode=1');
+    assert.equal(data.trainings[0].currentUrl, '/training/bbb#node-1');
     assert.equal(data.trainings[1].next.title, 'A+B 问题');
     assert.equal(data.trainings[1].percent, 20);
     assert.equal(data.week.submissions, 1);
@@ -156,6 +157,64 @@ test('buildWorkbench assembles routes, next problems, week stats and recent fail
     assert.equal(data.recentFailed[1].title, '#999（不可见或已删除）');
     assert.equal(data.recentFailed[1].url, null);
     assert.equal(data.mistakes.open, 3);
+});
+
+test('workbench checks current AC before limiting failures, even when AC is outside the weekly scan', async () => {
+    const models = fakeModels();
+    models.records.weekly = async () => [];
+    models.records.recentFailed = async () => [
+        { pid: 101, status: 2, rid: 'old-failure' },
+        { pid: 103, status: 3, rid: 'latest-failure' },
+        { pid: 103, status: 2, rid: 'duplicate' },
+        { pid: 201, status: 7 },
+    ];
+    const data = await buildWorkbench({ domainId: 'system', uid: 42, ...models, recentLimit: 2 });
+    assert.deepEqual(data.recentFailed.map((item) => item.pid), [103, 201]);
+    assert.equal(data.recentFailed[0].rid, 'latest-failure');
+    assert.deepEqual(data.recentlyResolved.map((item) => item.pid), [101]);
+    assert.equal(data.recentlyResolved[0].resolved, true);
+    assert.equal(data.week.accepted, 0);
+});
+
+test('real recent activity takes priority over pinned routes', async () => {
+    const models = fakeModels();
+    models.records.recentActivity = async () => [
+        { pid: 201, at: new Date('2026-10-19T03:00:00Z') },
+        { pid: 102, at: new Date('2026-10-20T03:00:00Z') },
+    ];
+    const data = await buildWorkbench({ domainId: 'system', uid: 42, ...models, maxTrainings: 1 });
+    assert.equal(data.trainings[0].tid, 'aaa');
+    assert.equal(data.trainings[0].lastActiveAt, '2026-10-20T03:00:00.000Z');
+});
+
+test('context links preserve existing query and anchor without using contest tid', () => {
+    assert.equal(trainingProblemUrl('/p/P1?lang=zh#description', 'plan', 2), '/p/P1?lang=zh&training=plan&trainingNode=2#description');
+    assert.equal(trainingProblemUrl(null, 'plan', 2), null);
+    assert.deepEqual(summarizeRecentFailed([{ pid: 1, status: 2 }], 0), []);
+    assert.deepEqual(summarizeRecentFailed([{ pid: 1, status: 1 }, { pid: 'x', status: 2 }]), []);
+});
+
+test('many joined trainings remain counted and an unfinished route survives completed recent ones', async () => {
+    const plans = Array.from({ length: 12 }, (_, i) => ({ docId: 'route-' + i, title: '训练 ' + i,
+        dag: [{ _id: 1, title: '第一章', pids: [i + 1], requireNids: [] }] }));
+    let statusReads = 0;
+    const result = await buildWorkbench({ domainId: 'system', uid: 42, maxTrainings: 3,
+        trainingModel: {
+            getMultiStatus: () => ({ toArray: async () => [...plans.map((p) => ({ docId: p.docId })), { docId: 'deleted' }] }),
+            getList: async () => Object.fromEntries(plans.map((p) => [p.docId, p])),
+        },
+        problemModel: {
+            getListStatus: async (_domain, _uid, pids) => { statusReads++; return Object.fromEntries(pids.filter((pid) => pid <= 11).map((pid) => [pid, { status: 1 }])); },
+            getList: async (_domain, pids) => Object.fromEntries(pids.map((pid) => [pid, { docId: pid, pid: 'P' + pid, title: '题 ' + pid }])),
+        },
+        records: { weekly: async () => [], recentFailed: async () => [],
+            recentActivity: async () => [1, 2, 3, 4].map((pid) => ({ pid, at: new Date('2026-10-23T00:00:00Z') })) },
+    });
+    assert.equal(result.trainings.length, 3);
+    assert.equal(result.trainings[0].tid, 'route-11', 'unfinished route must remain the next-step candidate');
+    assert.equal(result.trainings[0].next.url, '/p/P12?training=route-11&trainingNode=1');
+    assert.deepEqual(result.trainingOverview, { enrolled: 12, completed: 11, inProgress: 1, shown: 3 });
+    assert.equal(statusReads, 1, 'shared problem status is fetched once across routes');
 });
 
 test('buildWorkbench handles a newcomer without enrollments or submissions', async () => {

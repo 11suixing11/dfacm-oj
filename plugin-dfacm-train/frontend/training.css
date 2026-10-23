@@ -1,0 +1,40 @@
+.dfacm-training-wrap { margin-bottom: 18px; }
+.dfacm-training {
+  --train-surface: var(--df-surface, #ffffff); --train-text: var(--df-text, #1a2940);
+  --train-muted: var(--df-muted, #44577a); --train-line: var(--df-line, rgba(15, 34, 64, .10));
+  --train-brand: var(--df-brand, #2a5caa); --train-on: var(--df-on-brand, #ffffff);
+  --train-link: var(--df-link, #2a5caa); --train-focus: var(--df-focus, #2a5caa); --train-hover: var(--df-hover, #1e4488);
+  display: flex; align-items: center; justify-content: space-between; gap: 20px;
+  padding: 20px 24px; border: 1px solid var(--train-line); border-radius: 12px;
+  background: var(--train-surface); color: var(--train-text); line-height: 1.6;
+}
+.theme--dark .dfacm-training {
+  --train-surface: var(--df-surface, #0d182a); --train-text: var(--df-text, #e8edf5);
+  --train-muted: var(--df-muted, #a7b4c7); --train-line: var(--df-line, rgba(198, 216, 240, .10));
+  --train-link: var(--df-link, #6fa3e0); --train-focus: var(--df-focus, #e9c455);
+}
+.dfacm-training__content { min-width: 0; flex: 1; overflow-wrap: anywhere; }
+.dfacm-training .dfacm-training__content a.dfacm-training__route { color: var(--train-link); font-size: 13px; }
+.dfacm-training__title { color: var(--train-text); font-size: 18px; font-weight: 600; margin: 4px 0; line-height: 1.5; }
+.dfacm-training__meta, .dfacm-training__message { margin: 4px 0 0; font-size: 13px; color: var(--train-muted); }
+.dfacm-training__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; max-width: 52%; }
+.dfacm-training .dfacm-training__actions a.dfacm-training__link, .dfacm-training__refresh {
+  display: inline-flex; justify-content: center; align-items: center; min-height: 44px; box-sizing: border-box;
+  padding: 9px 14px; border: 1px solid var(--train-line); border-radius: 8px;
+  background: transparent; color: var(--train-text); font: inherit; font-size: 13px; line-height: 1.6;
+  text-decoration: none; overflow-wrap: anywhere; cursor: pointer; max-width: 100%;
+}
+.dfacm-training .dfacm-training__actions a.dfacm-training__link:hover, .dfacm-training__refresh:hover { border-color: var(--train-link); color: var(--train-link); text-decoration: none; }
+.dfacm-training .dfacm-training__actions a.dfacm-training__link--primary { background: var(--train-brand); color: var(--train-on); border-color: var(--train-brand); }
+.dfacm-training .dfacm-training__actions a.dfacm-training__link--primary:hover { background: var(--train-hover); color: var(--train-on); border-color: var(--train-hover); }
+.dfacm-training__refresh { padding-inline: 8px; border-color: transparent; color: var(--train-muted); }
+.dfacm-training__refresh:disabled { cursor: wait; opacity: .65; }
+.dfacm-training :focus-visible { outline: 2px solid var(--train-focus); outline-offset: 3px; }
+.dfacm-training-wrap[hidden] { display: none; }
+.training__section [id^="node-"] { scroll-margin-top: 80px; }
+@media (max-width: 760px) {
+  .dfacm-training { align-items: stretch; flex-direction: column; padding: 18px; gap: 12px; }
+  .dfacm-training__actions { max-width: none; }
+  .dfacm-training .dfacm-training__actions a.dfacm-training__link--primary { width: 100%; }
+  .dfacm-training__title { font-size: 17px; }
+}

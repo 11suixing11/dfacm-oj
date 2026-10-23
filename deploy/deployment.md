@@ -146,8 +146,11 @@ pm2 restart hydrooj
 
 ```bash
 mkdir -p /root/.hydro/addons/swpu-train
-cp /root/swpu-oj/plugin-dfacm-train/{index.ts,mistakes.cjs,workbench.cjs,workbench.html,mistakes.html,package.json} \
+cp /root/swpu-oj/plugin-dfacm-train/{index.ts,mistakes.cjs,workbench.cjs,training-context.cjs,training-hooks.ts,catalog.cjs,catalog-hooks.ts,workbench.html,mistakes.html,package.json} \
    /root/.hydro/addons/swpu-train/
+mkdir -p /root/.hydro/addons/swpu-train/frontend
+cp /root/swpu-oj/plugin-dfacm-train/{frontend/training.page.ts,frontend/training.js,frontend/training.css,frontend/catalog.js,frontend/catalog.css} \
+   /root/.hydro/addons/swpu-train/frontend/
 mkdir -p /root/.hydro/addons/swpu-train/node_modules
 ln -sfn /usr/local/share/.config/yarn/global/node_modules/hydrooj \
         /root/.hydro/addons/swpu-train/node_modules/hydrooj
@@ -156,6 +159,10 @@ pm2 restart hydrooj
 ```
 
 安装后 `/workbench` 与 `/mistakes` 出现在登录用户导航中（经 `injectUI` 的 `before: 'ranking'` 定位在内置「评测记录」项之后、「排名」之前，而非默认追加的导航末尾）。另有无界面的 JSON 端点 `GET /workbench/recent`（最近使用的训练集，落地页首页卡片数据源，每用户 30 次/分钟）。错题收集只在 pm2 instance 0 运行；设置 `SWPU_TRAIN_MISTAKES=0` 并重启可关闭收集（页面仍可用）。数据口径与限制见 [plugin-dfacm-train/README.md](../plugin-dfacm-train/README.md)。
+
+`frontend/` 中的训练导航由 ui-default **4.58.5** 在重启时打包；须与后端文件一同更新。它在训练、普通题目、提交与本人评测页面保留 `training` / `trainingNode` 查询参数，使用 `GET /workbench/context` 更新评测后的训练进度。保留 Hydro 原模板与编辑器；上线验收应在同版本测试实例检查报名、章节解锁、实际提交与实时结果。
+
+训练目录增强需要同时发布 `catalog-hooks.ts`、`catalog.cjs`、`frontend/catalog.js` 和 `frontend/catalog.css`。它在原生 `/training` 上增加方向和个人状态筛选，保留全目录搜索、分页以及其他插件的访问约束。验收需包括第二页训练、分类加搜索、我加入的训练和新增分类；不需要修改或重建任何训练计划。
 
 积分商店可选安装（做题赚积分、花积分兑徽章，徽章能力由服务器已装的 badge-for-hydrooj 提供）：
 
