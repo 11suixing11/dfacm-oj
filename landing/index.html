@@ -324,6 +324,9 @@ section{position:relative}
 .live-status--live{color:var(--ac)}
 @media(max-width:860px){.live-grid{grid-template-columns:1fr}}
 @media(max-width:560px){.live-n{display:none}}
+.live-empty{display:block;padding:14px 0 12px;font-size:13.5px;color:var(--txt-3)}
+.live-empty a{color:var(--brand-hi);transition:color .2s}
+.live-empty a:hover{color:var(--txt)}
 
 /* ---------- 判题引擎 ---------- */
 .feat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
@@ -1217,16 +1220,18 @@ int main() {
 })();
 </script>
 <script>
-/* ============ 最新动态：数据种子与渲染 ============
-   数据接缝：字段与 Hydro 的题目 / 比赛模型对齐——
-   problems[].{pid,title,url,at} ← pdoc.pid / pdoc.title / 题目页路径 / 更新时间
-   contests[].{title,rule,beginAt,endAt,n} ← cdoc.title / cdoc.rule / beginAt / endAt / 报名人数
-   接入时把接口结果映射成同样形状，覆写 window.DFACM_LIVE.seed 后调用 render()。
-   渲染只走 createElement/textContent，接口字段即使被塞入标记也不会执行；
-   种子为空或字段非法的行直接跳过，保留 HTML 里的静态兜底，绝不留半成品。 */
+/* ============ 最新动态：数据加载与渲染 ============
+   数据源（同源、只读、游客可用），保证与站内页面一致：
+   - 比赛：解析 /contest 服务端渲染的 li.contest__item（标题、data-timestamp、
+     赛制标签），即将到来的按时间正序在前、最近的已结束在后，共 3 条；只有
+     开始时间，没有结束时间，开始 12 小时内视为进行中。无赛程时显示空态。
+   - 题目：/p 按题号升序分页，末页即最新收录，取末页最后 5 题。
+   任一步失败保留 HTML 静态兜底，绝不留半成品。渲染只走
+   createElement / textContent，接口字段被塞入标记也不会执行。 */
 (function(){
   'use strict';
   var doc=document;
+  /* 无 JS 与加载失败时的兜底种子，形状与真实数据一致 */
   var seed={
     problems:[
       {pid:'P1107',title:'字典序最小的字符串',url:'/p/P1107',at:'2026-10-22T20:11:00+08:00'},
@@ -1236,9 +1241,9 @@ int main() {
       {pid:'P1103',title:'状态压缩 DP：棋盘放车',url:'/p/P1103',at:'2026-10-18T16:22:00+08:00'}
     ],
     contests:[
-      {title:'新手热身赛：A 到 D',rule:'ICPC',beginAt:'2026-10-25T19:00:00+08:00',endAt:'2026-10-25T21:00:00+08:00',n:132},
-      {title:'十月月赛 · 混合难度',rule:'ICPC',beginAt:'2026-10-31T14:00:00+08:00',endAt:'2026-10-31T17:00:00+08:00',n:86},
-      {title:'蓝桥杯冲刺 · 模拟赛 #3',rule:'OI',beginAt:'2026-11-05T19:00:00+08:00',endAt:'2026-11-05T21:30:00+08:00',n:54}
+      {title:'新手热身赛：A 到 D',rule:'ICPC',beginAt:'2026-10-25T19:00:00+08:00',endAt:'2026-10-25T21:00:00+08:00',n:132,url:'/contest'},
+      {title:'十月月赛 · 混合难度',rule:'ICPC',beginAt:'2026-10-31T14:00:00+08:00',endAt:'2026-10-31T17:00:00+08:00',n:86,url:'/contest'},
+      {title:'蓝桥杯冲刺 · 模拟赛 #3',rule:'OI',beginAt:'2026-11-05T19:00:00+08:00',endAt:'2026-11-05T21:30:00+08:00',n:54,url:'/contest'}
     ]
   };
   function el(tag,cls,text){var n=doc.createElement(tag);if(cls)n.className=cls;if(text!=null)n.textContent=text;return n}
@@ -1256,22 +1261,24 @@ int main() {
     function p(n){return (n<10?'0':'')+n}
     return p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes());
   }
-  /* 状态由当下时间算出：未开始=报名中（品牌蓝），赛中=进行中（AC 绿），过期=已结束（灰） */
+  /* 优先用加载时算好的状态；否则按开始/结束时间推算 */
   function cStatus(c){
+    if(c.status)return c.status;
     var now=Date.now(),b=Date.parse(c.beginAt),e=Date.parse(c.endAt);
-    if(!(b>0&&e>0))return null;
+    if(!(b>0))return null;
     if(now<b)return['live-status--soon','报名中'];
-    if(now<e)return['live-status--live','进行中'];
+    if(e>now)return['live-status--live','进行中'];
     return['','已结束'];
   }
-  /* 形状校验：url 只收站内题目路径，标题收敛为字符串，脏行整行丢弃 */
-  function safeUrl(u){return typeof u==='string'&&/^\/p\/[A-Za-z0-9_]+$/.test(u)?u:''}
+  /* 形状校验：只放行站内路径，标题收敛为字符串，脏行整行丢弃 */
+  function safeProblemUrl(u){return typeof u==='string'&&/^\/p\/[A-Za-z0-9_]+$/.test(u)?u:''}
+  function safeContestUrl(u){return typeof u==='string'&&/^\/contest\/[0-9a-fA-F]+$/.test(u)?u:''}
   function render(){
     var pl=doc.getElementById('live-problems');
     if(pl&&seed.problems&&seed.problems.length){
       pl.textContent='';
       seed.problems.forEach(function(p){
-        var url=safeUrl(p.url);
+        var url=safeProblemUrl(p.url);
         if(!url||typeof p.title!=='string'||!p.title)return;
         var li=el('li'),a=el('a','live-item');a.setAttribute('href',url);
         a.appendChild(el('span','live-pid',p.pid));
@@ -1283,11 +1290,21 @@ int main() {
       });
     }
     var cl=doc.getElementById('live-contests');
-    if(cl&&seed.contests&&seed.contests.length){
+    if(cl&&Object.prototype.toString.call(seed.contests)==='[object Array]'){
       cl.textContent='';
+      if(!seed.contests.length){
+        var li0=el('li'),s0=el('span','live-empty');
+        s0.appendChild(doc.createTextNode('近期没有安排比赛——外面的赛程在'));
+        var ca=el('a',null,'赛事日历');ca.setAttribute('href','/calendar');
+        s0.appendChild(ca);
+        s0.appendChild(doc.createTextNode('，站内比赛开赛后会出现在这里。'));
+        li0.appendChild(s0);cl.appendChild(li0);
+        return;
+      }
       seed.contests.forEach(function(c){
         var st=cStatus(c);if(!st)return;
-        var li=el('li'),a=el('a','live-item live-item--c');a.setAttribute('href','/contest');
+        var li=el('li'),a=el('a','live-item live-item--c');
+        a.setAttribute('href',safeContestUrl(c.url)||'/contest');
         var wrap=el('span','live-c');
         wrap.appendChild(el('b','live-title',c.title));
         var meta=el('span','live-meta');
@@ -1304,8 +1321,81 @@ int main() {
       });
     }
   }
+  /* ---------- 真实数据加载 ---------- */
+  function parseProblems(html){
+    var out=[];
+    var d=new DOMParser().parseFromString(html,'text/html');
+    d.querySelectorAll('tr[data-pid]').forEach(function(tr){
+      var a=tr.querySelector('td.col--name a[href^="/p/"]');
+      if(!a)return;
+      var b=a.querySelector('b');
+      var pid=b?b.textContent.trim():a.textContent.trim();
+      var title=a.textContent.replace(pid,'').replace(/^[\s\u00a0]+|[\s\u00a0]+$/g,'');
+      if(pid&&title)out.push({pid:pid,title:title,url:a.getAttribute('href')});
+    });
+    return out;
+  }
+  function lastPage(d){
+    var m=1;
+    d.querySelectorAll('a.pager__item[href*="page="]').forEach(function(a){
+      var v=/[?&]page=(\d+)/.exec(a.getAttribute('href'));
+      if(v&&+v[1]>m)m=+v[1];
+    });
+    return m;
+  }
+  function parseContests(html){
+    var out=[];
+    var d=new DOMParser().parseFromString(html,'text/html');
+    d.querySelectorAll('li.contest__item').forEach(function(li){
+      var a=li.querySelector('.contest__title a');
+      if(!a)return;
+      var t=li.querySelector('.contest__date .time[data-timestamp]');
+      var start=t?parseInt(t.getAttribute('data-timestamp'),10)*1000:0;
+      if(!(start>0))return;
+      var tag=li.querySelector('.contest-type-tag');
+      out.push({
+        title:a.textContent.trim(),
+        url:a.getAttribute('href'),
+        rule:tag?tag.textContent.replace(/\s+/g,''):'',
+        start:start
+      });
+    });
+    return out;
+  }
+  function loadLive(){
+    fetch('/contest',{credentials:'same-origin',cache:'no-store'}).then(function(r){
+      if(!r.ok)throw 0;return r.text();
+    }).then(function(h){
+      var list=parseContests(h);
+      var now=Date.now();
+      var up=list.filter(function(c){return c.start>now});
+      var past=list.filter(function(c){return c.start<=now}).reverse();
+      seed.contests=up.concat(past).slice(0,3).map(function(c){
+        var st=c.start>now?['live-status--soon','报名中']
+              :(now-c.start<12*3600e3?['live-status--live','进行中']:['','已结束']);
+        return {title:c.title,rule:c.rule,url:c.url,beginAt:new Date(c.start).toISOString(),status:st};
+      });
+      render();
+    }).catch(function(){/* 拉取失败：保留种子兜底 */});
+    fetch('/p',{credentials:'same-origin',cache:'no-store'}).then(function(r){
+      if(!r.ok)throw 0;return r.text();
+    }).then(function(h){
+      var d=new DOMParser().parseFromString(h,'text/html');
+      var page=lastPage(d);
+      if(page<=1)throw 0; /* 单页站没有"最新"问题，兜底即可 */
+      return fetch('/p?page='+page,{credentials:'same-origin',cache:'no-store'}).then(function(r){
+        if(!r.ok)throw 0;return r.text();
+      }).then(function(h2){
+        var rows=parseProblems(h2);
+        if(!rows.length)throw 0;
+        seed.problems=rows.slice(-5);
+        render();
+      });
+    }).catch(function(){/* 拉取失败：保留种子兜底 */});
+  }
   render();
-  window.DFACM_LIVE={seed:seed,render:render};
+  loadLive();
+  window.DFACM_LIVE={seed:seed,render:render,load:loadLive};
 })();
 </script>
 <noscript><style>#burger{display:none}#theme-btn{display:none}#nav .login{display:block;margin-left:auto}.rc-map{display:none}</style></noscript>
