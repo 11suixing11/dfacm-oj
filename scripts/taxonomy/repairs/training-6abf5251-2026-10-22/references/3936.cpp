@@ -1,0 +1,3 @@
+#include <bits/stdc++.h>
+using namespace std;
+int main(){int n;cin>>n;vector<vector<long long>>a(n,vector<long long>(n));for(auto&r:a)for(auto&x:r)cin>>x;const long long INF=LLONG_MAX/4;vector<long long>d(n,INF);vector<int>p(n,-1),seen(n);d[0]=0;for(int turn=0;turn<n;turn++){int u=-1;for(int i=0;i<n;i++)if(!seen[i]&&(u<0||d[i]<d[u]))u=i;if(u<0||d[u]==INF)break;seen[u]=1;for(int v=0;v<n;v++)if(a[u][v]>0&&d[u]+a[u][v]<d[v]){d[v]=d[u]+a[u][v];p[v]=u;}}vector<int>path;for(int u=n-1;u>=0;u=p[u])path.push_back(u+1);reverse(path.begin(),path.end());cout<<"minlong="<<d[n-1]<<"\n";for(int u:path)cout<<u<<' ';cout<<"\n";}

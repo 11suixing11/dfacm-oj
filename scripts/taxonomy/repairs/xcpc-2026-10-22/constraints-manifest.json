@@ -1,0 +1,170 @@
+{
+  "sources": [
+    "https://www.luogu.com.cn/problem/P2822",
+    "https://loj.ac/p/2361",
+    "https://www.luogu.com.cn/problem/P3263",
+    "https://loj.ac/p/2106"
+  ],
+  "problems": [
+    {
+      "order": 86,
+      "pid": 753,
+      "reason": "Correct NOIP lower bounds to include zero and cover n/m=0,1,2",
+      "expectedCases": 26,
+      "contentBeforeSha256": "2f6bcdce2e65be7aa7ed1af21fe93b88cc214ce4a3822f7fad2aa6cbf80a4361",
+      "contentAfterSha256": "9eacc3b09b51ef1503ee605381fd9ac5d838cd939ec6dfd257c99ffb830ada7d",
+      "files": [
+        {
+          "name": "24.in",
+          "expectedSha256": null,
+          "sha256": "07bef8191260226f3accf182a3798ce7c882c9007d91771b1084682c77f2ea87"
+        },
+        {
+          "name": "24.out",
+          "expectedSha256": null,
+          "sha256": "b2fe6c7dd198c80c6edc2207975b2d0d11fa99e35553abf340882897f318a89a"
+        },
+        {
+          "name": "25.in",
+          "expectedSha256": null,
+          "sha256": "0131373c44b0dc08abec4b697ff956583eb03a921261a9e0954437a71c5f1d26"
+        },
+        {
+          "name": "25.out",
+          "expectedSha256": null,
+          "sha256": "534f84f70e37497daa6d2dce87a5866e1f4f18f15546c8bd22def6b70b6222c1"
+        },
+        {
+          "name": "26.in",
+          "expectedSha256": null,
+          "sha256": "b33953dcf19f4ae46d7527ed4be8bfa107f1cd3765452ae4e285c12c82ad768b"
+        },
+        {
+          "name": "26.out",
+          "expectedSha256": null,
+          "sha256": "6e3f2199b513fb0c40ab85ac7efb9718ab28b9817f3d14fb220664af001842b2"
+        }
+      ]
+    },
+    {
+      "order": 92,
+      "pid": 681,
+      "reason": "Repair eleven out-of-range legacy d values and replace the invalid inherited sample with Luogu P3263 sample",
+      "expectedCases": 25,
+      "contentBeforeSha256": "06b6f5cf5a0716bfdfec5c7f16ff7fc9e4841009e5dd3c482a66693d309ee1f2",
+      "contentAfterSha256": "db41fa41535d18ab04bcbc48ced86af906bd2fa05c787b970c51ce1c1a74675a",
+      "files": [
+        {
+          "name": "2.in",
+          "expectedSha256": "cda760d217051a45ca88d25fc0436b8409409a507d4dbed61d4cadfbc0f78211",
+          "sha256": "dfc41df9606251687ee11a5216175f9d093594c55221ff243abfe14c674e2082"
+        },
+        {
+          "name": "2.out",
+          "expectedSha256": "84e2ea54259ba97659da95b92d0a77b7255de045b29e4eef90a99f375c486bc9",
+          "sha256": "38c2ecf19c1e659ac93126cf4eaab83a7145802d28f81bd88cf17dc32fec5aa6"
+        },
+        {
+          "name": "3.in",
+          "expectedSha256": "18a3d1148c44a67920a67fe4a6521924c985b6d1defd371e448ec32fc7ff3ff6",
+          "sha256": "fb1e61e51f1b803ccc33716190b746cdb99924b0cd2ca2b5ef2048fae8ef0db3"
+        },
+        {
+          "name": "3.out",
+          "expectedSha256": "e717c86d70d729aabb7a645778c55d3a941a6904c25ac1414f3300d0c7edef17",
+          "sha256": "bbd4376facc86bb3e18832ae37d1640f9c12ec5dddf97c4d3ea00f31cbc8e492"
+        },
+        {
+          "name": "5.in",
+          "expectedSha256": "976df6660c0580a86de6a3258d4f5fe94bbf28a3467cf05bc532857877fc9e28",
+          "sha256": "b050844c6174900b104dbb360ee7a2d5164395d6548ac9079f9160521b3d508d"
+        },
+        {
+          "name": "5.out",
+          "expectedSha256": "0c0d8de00027cf342d2179dfc72f0aa57125d2538e11a336c1a9d144dcb980c1",
+          "sha256": "3bb5b37b58fdc69dcf65121dd6179c5cbf1243c8634cd56a1d60b310c31c8368"
+        },
+        {
+          "name": "8.in",
+          "expectedSha256": "0283edbceffb2da261ef20a3607c0ee7d4e149b617d7a88bd9e8a2f853dace0b",
+          "sha256": "3fc67778b6bc904a967d59c66ff36bce473049ade18b0e67b3cc245a46df58f7"
+        },
+        {
+          "name": "8.out",
+          "expectedSha256": "92c81a7ec91d1b081816a2774e8b9bcc23953511b4f562fb8a2564d028af311f",
+          "sha256": "c1e2fb01e7d98852fc31590712f7bc4cfbc1f88ab7998227a01f5a66cda9ffe1"
+        },
+        {
+          "name": "6.in",
+          "expectedSha256": "4cfbebda380d9eeafcd11e31bdfc2c42947a749b7821a9cd1e28fa7733f24c72",
+          "sha256": "4aafc117e897e80e728a29ea27500f6f9e5db897b82e0b7f5b7deccf0d2d4caf"
+        },
+        {
+          "name": "6.out",
+          "expectedSha256": "e0dcfe5dc5e3285879340216b812dc4e11efc079b5a193bbb1916550dbbfe746",
+          "sha256": "927dc6ca639ab36b43696cc47c9d17300285e95d74e18d561139abdda47c76d2"
+        },
+        {
+          "name": "7.in",
+          "expectedSha256": "635fc035cb7c5617f69aab25169ac29babae909a519b5bf1e953cee0b3ff1078",
+          "sha256": "fe13210cc8700653ac1ddc8f193b88f74761fb7fe9f6b426994379aa94d52b9c"
+        },
+        {
+          "name": "7.out",
+          "expectedSha256": "9121a35ab386f25572493841d341503417fc791d7f4b045b060dc42eaceecb5a",
+          "sha256": "f9c526c691bd275f84ffd2ae35549a45fac146c05de22c19c86cccefd988a136"
+        },
+        {
+          "name": "12.in",
+          "expectedSha256": "5bde36725d375e4be507efdffb3fff8d12705d5697688bbfa8dcb285f8a1d551",
+          "sha256": "325a71a111dcdd21364e2dfbcb526993544e53c524d80239119f404b6514bac4"
+        },
+        {
+          "name": "12.out",
+          "expectedSha256": "6d5eaeea22ed72c0077a5d5768a40da6b06d8a8186dc55170d59d7d440a11a73",
+          "sha256": "ce7d792eb8fd4b8c2ff09399f38cd13be7885dbea4b9a6efcbb35f2c427460a8"
+        },
+        {
+          "name": "13.in",
+          "expectedSha256": "0a57c1f4d48a7c22c58a2432cd5edb37fc16b9f248b4899a46af8a2b059f0121",
+          "sha256": "f6e082fcd75405df466eeac19e8c656457c6fdd34d46fbfd2c705616c2a08ce6"
+        },
+        {
+          "name": "13.out",
+          "expectedSha256": "92f498766655203408c9f620b9603e03d4b61d2548566ce6a3d15fd5fc5eecae",
+          "sha256": "e1d16260774d6d093295fcbc98ad28048cb48ee00af53962f6c6dd3a81a0c28d"
+        },
+        {
+          "name": "15.in",
+          "expectedSha256": "06a522b04d71193179031426ee9ce220f5d1a79bd4c6f2fd55ef354564cd04a1",
+          "sha256": "b0f4fef6a9f18069d9bde512620ba71a38d763c77fb8dae5afdb2ff717b8d17b"
+        },
+        {
+          "name": "15.out",
+          "expectedSha256": "027e971513be9e2b598ce640828264f77d8c1567f4f2e8f28886caa0f80c0ce3",
+          "sha256": "e7e88d7ab51dab19189b73257191e2d55ce8d68194d8ee2400cac4a497de5d01"
+        },
+        {
+          "name": "18.in",
+          "expectedSha256": "ccd7844b036a5a7866851b238772c1194c64382343d79c8de936b32bad5c6b75",
+          "sha256": "4ad3d4fee1369ca78bd9af97dd0e309bc886de6e5b25169afe09139a8869f3ea"
+        },
+        {
+          "name": "18.out",
+          "expectedSha256": "030ae95885e368d78bbc05e418c36cf7eec2828226612aefda4a6f5834bdab79",
+          "sha256": "b287dffde311181c126c628db29d2d398f2474259c68e917679570c8812adee1"
+        },
+        {
+          "name": "16.in",
+          "expectedSha256": "977874c9b21324a2b9a24ec8331e72cc4af69f0f0d77c5514add12499ba58669",
+          "sha256": "6749728fbaa59bb7535e0c0fe776f8b23066f959bf866f637859a6467df5d8ad"
+        },
+        {
+          "name": "16.out",
+          "expectedSha256": "f33a9c77559176b0e97d3febd85932376e8be258121bd4982d8f8c164baa0888",
+          "sha256": "90094bea882c02b51aaa2a81306cc3dfcd272657226769507c0babc72e5b99e4"
+        }
+      ]
+    }
+  ]
+}

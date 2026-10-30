@@ -1,0 +1,171 @@
+{
+  "seed": 20261022,
+  "oracleChecks": {
+    "917": 8,
+    "918": 87,
+    "986": 7,
+    "3923": 3,
+    "4129": 4,
+    "4159": 4,
+    "4161": 36,
+    "4189": 4,
+    "4218": 4,
+    "4303": 4,
+    "4310": 4,
+    "4312": 3,
+    "4207": 3
+  },
+  "legacyChecks": {
+    "917": "matches independent oracle and C++ reference",
+    "918": "matches independent oracle and C++ reference",
+    "986": "matches independent oracle and C++ reference",
+    "3923": "matches independent oracle and C++ reference",
+    "4129": "matches independent oracle and C++ reference",
+    "4159": "matches independent oracle and C++ reference",
+    "4161": {
+      "declaredCount": 100000,
+      "actualCount": 99999,
+      "min": -52919,
+      "max": 33227197,
+      "reason": "Missing delimiters, count mismatch, values outside statement bounds; regenerate legal case"
+    },
+    "4189": "matches independent oracle and C++ reference",
+    "4218": "matches independent oracle and C++ reference",
+    "4303": "matches independent oracle and C++ reference",
+    "4310": "matches independent oracle and C++ reference",
+    "4312": "matches independent oracle and C++ reference",
+    "4207": {
+      "input": "4095 subsets lacked their count lines",
+      "outputMismatches": 1606
+    }
+  },
+  "cases": {
+    "917": {
+      "before": 1,
+      "after": 8,
+      "labels": [
+        "two nodes, self paths, both edge updates",
+        "descendant return edge beats direct return, shuffled IDs",
+        "Dijkstra random 0",
+        "Dijkstra random 1",
+        "Dijkstra random 2",
+        "maximum tree depth, 64-bit paths",
+        "maximum query count"
+      ]
+    },
+    "918": {
+      "before": 1,
+      "after": 7,
+      "labels": [
+        "uniformity and padding boundary",
+        "uniformity and padding boundary",
+        "uniformity and padding boundary",
+        "uniformity and padding boundary",
+        "random padded grids",
+        "maximum image, analytical checkerboard oracle"
+      ]
+    },
+    "986": {
+      "before": 1,
+      "after": 7,
+      "labels": [
+        "empty army, duplicates, deletion, strict XOR boundary",
+        "top bit and maximum values",
+        "brute multiset random 0",
+        "brute multiset random 1",
+        "maximum event count with duplicates",
+        "wide trie and large populations"
+      ]
+    },
+    "3923": {
+      "before": 1,
+      "after": 3,
+      "labels": [
+        "adjacent cells, trap, corridor",
+        "multiple mazes and maximum dimensions"
+      ]
+    },
+    "4129": {
+      "before": 1,
+      "after": 4,
+      "labels": [
+        "different real and string; existing display convention",
+        "different real and string; existing display convention",
+        "different real and string; existing display convention"
+      ]
+    },
+    "4159": {
+      "before": 1,
+      "after": 4,
+      "labels": [
+        "short chain and case-sensitive names",
+        "shuffled unique order and redundant relations 0",
+        "shuffled unique order and redundant relations 1"
+      ]
+    },
+    "4161": {
+      "before": 1,
+      "after": 6,
+      "labels": [
+        "nonempty maximum segment and bound",
+        "nonempty maximum segment and bound",
+        "nonempty maximum segment and bound",
+        "nonempty maximum segment and bound",
+        "nonempty maximum segment and bound"
+      ]
+    },
+    "4189": {
+      "before": 1,
+      "after": 4,
+      "labels": [
+        "signed products and zero",
+        "all permutations checked",
+        "maximum groups and lengths"
+      ]
+    },
+    "4207": {
+      "before": 1,
+      "after": 3,
+      "labels": [
+        "original Word sample",
+        "zero cuts, one cut, unordered sets"
+      ]
+    },
+    "4218": {
+      "before": 1,
+      "after": 4,
+      "labels": [
+        "one record at midnight",
+        "second, minute, hour, final day boundary",
+        "maximum number of records"
+      ]
+    },
+    "4303": {
+      "before": 1,
+      "after": 4,
+      "labels": [
+        "one cell and signed cancellation",
+        "one row, no trailing spaces",
+        "maximum matrix dimensions"
+      ]
+    },
+    "4310": {
+      "before": 1,
+      "after": 4,
+      "labels": [
+        "equal velocities and distance five",
+        "noninteger distance",
+        "multiple flights with signed displacement"
+      ]
+    },
+    "4312": {
+      "before": 1,
+      "after": 3,
+      "labels": [
+        "exact threshold and extremes",
+        "every legal hundredth checked in Decimal"
+      ]
+    }
+  },
+  "cubeAllSubsets": 4096
+}

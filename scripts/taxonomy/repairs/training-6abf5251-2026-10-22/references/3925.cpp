@@ -1,0 +1,3 @@
+#include <bits/stdc++.h>
+using namespace std;
+int main(){int r,c;cin>>r>>c;vector<vector<int>>a(r,vector<int>(c)),seen(r,vector<int>(c));for(auto&row:a)for(int&x:row)cin>>x;int count=0,best=0;for(int i=0;i<r;i++)for(int j=0;j<c;j++)if(!seen[i][j]){count++;int total=0;queue<pair<int,int>>q;q.push({i,j});seen[i][j]=1;while(!q.empty()){auto[x,y]=q.front();q.pop();total++;for(auto[dx,dy,bit]:vector<tuple<int,int,int>>{{0,-1,1},{-1,0,2},{0,1,4},{1,0,8}}){int u=x+dx,v=y+dy;if(u>=0&&u<r&&v>=0&&v<c&&!(a[x][y]&bit)&&!seen[u][v]){seen[u][v]=1;q.push({u,v});}}}best=max(best,total);}cout<<count<<"\n"<<best<<"\n";}

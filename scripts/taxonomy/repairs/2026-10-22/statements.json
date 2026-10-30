@@ -1,0 +1,845 @@
+{
+  "version": 1,
+  "date": "2026-10-22",
+  "problems": [
+    {
+      "domainId": "system",
+      "docId": 629,
+      "pid": null,
+      "title": "#113. 最大异或和",
+      "category": "loj-math",
+      "source": "https://loj.ac/p/113",
+      "expected": {
+        "contentSha256": "81963e7e07d6a8c4b522bae2062c0379b08b2429d067896e15ddf7e3bfb0043c",
+        "html": "true"
+      },
+      "content": "## 题目描述\n\n这是一道模板题。\n\n给由 $ n $ 个数组成的一个可重集 $ S $，求一个集合 $ T \\subseteq S $，使 $ T_1 \\mathbin{\\text{xor}} T_2 \\mathbin{\\text{xor}} \\ldots \\mathbin{\\text{xor}} T_{|T|} $ 最大。\n\n## 输入格式\n\n第一行一个数 $ n $。  \n第二行 $ n $ 个数，表示集合 $ S $。\n\n## 输出格式\n\n$ T_1 \\mathbin{\\text{xor}} T_2 \\mathbin{\\text{xor}} \\ldots \\mathbin{\\text{xor}} T_{|T|} $ 的最大值。\n\n## 样例\n\n```input1\n3\n5 2 8\n```\n\n```output1\n15\n```\n\n## 数据范围与提示\n\n$ 1 \\leq n \\leq 50, 0 \\leq S_i \\leq 2 ^ {50} $\n\n## 来源\n\n[LibreOJ #113](https://loj.ac/p/113)\n",
+      "html": false,
+      "newContentSha256": "977b402fbeb0530598866c029c256baee3ba3587f0c72f8d8d12162ab8058e73"
+    },
+    {
+      "domainId": "system",
+      "docId": 640,
+      "pid": null,
+      "title": "#526. 「LibreOJ β Round #4」子集",
+      "category": "loj-math",
+      "source": "https://loj.ac/p/526",
+      "expected": {
+        "contentSha256": "599609dc20c733e2814f1a394043ccecb567616c633521eff1097baf27a6252f",
+        "html": "true"
+      },
+      "content": "## 题目描述\n\n一个可重集合中包含 $n$ 个元素 $a_1,a_2,\\cdots ,a_n$，你需要选择一个子集，使得这个子集中任意两个元素 $a_i,a_j$ 均满足条件 $\\gcd(a_i,a_j)\\gcd(a_i+1,a_j+1)\\neq 1$，且这个子集的元素个数是所有满足上述条件的子集中最多的。输出这个子集的元素个数。\n\n## 输入格式\n\n输入的第一行包含一个正整数 $n$。  \n随后 $n$ 行，每行一个正整数 $a_i$。\n\n## 输出格式\n\n输出一个整数代表符合条件的元素最多的子集的元素个数。\n\n## 样例 1\n\n```input1\n3\n4\n6\n9\n```\n\n```output1\n3\n```\n\n## 样例 2\n\n```input2\n41\n71\n3\n5\n50\n75\n2\n19\n47\n88\n95\n92\n110\n111\n117\n58\n124\n130\n57\n129\n168\n161\n29\n39\n206\n79\n10\n142\n107\n209\n210\n222\n221\n223\n242\n104\n264\n265\n202\n279\n314\n315\n```\n\n```output2\n22\n```\n\n## 数据范围与提示\n\n$1 \\leq n \\leq 500$\n\n$1 \\leq a_i \\leq 10^{18}$\n\n## 来源\n\n[LibreOJ #526](https://loj.ac/p/526)\n",
+      "html": false,
+      "newContentSha256": "d4b62e15c7b7a46f557752126d97a10d993e555ef96342ea9f0802488cf949dd"
+    },
+    {
+      "domainId": "system",
+      "docId": 641,
+      "pid": null,
+      "title": "#528. 「LibreOJ β Round #4」求和",
+      "category": "loj-math",
+      "source": "https://loj.ac/p/528",
+      "expected": {
+        "contentSha256": "11e51c5f5c5f4e10e96fb3ad41944319557a04cfc8c4eee9bc3f6f5979b0cb6f",
+        "html": "true"
+      },
+      "content": "## 题目描述\n\n给定两个正整数 $N,M$，你需要计算 $(\\sum\\limits_{i=1}^N\\sum\\limits_{j=1}^M \\mu^2(\\gcd(i,j))) \\bmod 998244353$ 的结果。\n\n## 输入格式\n\n输入一行两个空格隔开的正整数，分别为 $N,M$。\n\n## 输出格式\n\n输出一行一个正整数表示求和取模后的结果。\n\n## 样例 1\n\n```input1\n2 3\n```\n\n```output1\n6\n```\n\n## 样例 2\n\n```input2\n57 71\n```\n\n```output2\n3763\n```\n\n## 数据范围与提示\n\n$1 \\leq N,M \\leq 10^{13}$\n\n## 来源\n\n[LibreOJ #528](https://loj.ac/p/528)\n",
+      "html": false,
+      "newContentSha256": "5090757d70a57f8fe87f8c472bc22d50b5ed449407c723c8ef7a574e56b77dfd"
+    },
+    {
+      "domainId": "system",
+      "docId": 643,
+      "pid": null,
+      "title": "#541. 「LibreOJ NOIP Round #1」七曜圣贤",
+      "category": "loj-math",
+      "source": "https://loj.ac/p/541",
+      "expected": {
+        "contentSha256": "6f917c3cd958514fcdf00e0bc488f343e3353edabb4d0607b44b0d17d4fad687",
+        "html": "true"
+      },
+      "content": "## 题目描述\n\n**本题 C/C++ 时限 2.5 秒，Pascal 时限 5 秒。最后将改时限重测所有 Pascal 提交。**\n\n不知道大家有没有听过物凄系列的一首歌，帕秋莉用卡车给博丽老板运货的故事。  \n   \n又一次，卡车司机帕秋莉被拜托。红魔馆之主蕾米莉亚喜欢喝红茶，一天她要求帕秋莉开卡车帮她运红茶过来。\n  \n红茶其实是编好号了的，每个红茶都用一个非负整数来编号，从 $0$ 开始一直到正无穷。帕秋莉请来好朋友魔理沙，帮她一起运红茶。  \n\n一开始卡车上已经有了编号为 $0$ 到 $a$ 的红茶（注意 $a=-1$ 就表示初始卡车上没有任何红茶），然后接下来到红魔馆的路上有 $m$ 个时刻，每个时刻都会发生一种事件。\n\n> * 第一种事件，帕秋莉到了一个红茶店，买了一个编号为 $x$ 的红茶（卡车上初始没有这种编号的红茶，之前也不会买过相同编号的红茶）。  \n> * 第二种事件，一个目前在卡车上的编号为 $x$ 的红茶飞出了卡车。  \n> * 第三种事件，魔理沙把目前不在卡车上的最早飞出去的红茶捡回了卡车上（如果一个红茶曾经飞出去被捡回来过然后再飞出去，这里认为其飞出去的时间为最近一次飞出去的时间）。  \n\n\n由于描述这些事件实在是太麻烦了，聪明的魔理沙用了一个长度为 $m$ 的整数序列 $p$ 来描述每个时刻发生的事件。\n\n> * 这个序列 $p$ 里所有元素均为 $[-1,b)$ 的整数。  \n> * 若 $p_i=-1$ 则表示时刻 $i$ 发生了第三种事件，如果此时并不存在满足条件的飞出去的红茶，则代表魔理沙脑子没转过来，忽视此次事件。  \n> * 否则，如果在时刻 $i$ 编号为 $p_i$ 的红茶初始不在卡车上也从来没有通过第一种事件买过，则表示时刻 $i$ 发生了一个买编号为 $p_i$ 的红茶的第一种事件。\n> * 否则，如果在时刻 $i$ 编号为 $p_i$ 的红茶在卡车上，则表示时刻 $i$ 发生了一个编号为 $p_i$ 的红茶飞出卡车的第二种事件。\n> * 否则，表示时刻 $i$ 发生了第三种事件，如果此时并不存在满足条件的飞出去的红茶，则忽视此次事件。  \n\n如果某个时刻的事件被忽视，那么我们**不执行对应的操作，也不计算此时的答案**。  \n\n帕秋莉是一个勤奋的人，每个时刻过后，如果这个时刻 $i$ 发生了事件（如果一个时刻发生的事件被忽视了，就不认为这个时刻发生了事件），令 $ans_i$ 表示时刻 $i$ 过后卡车上所有编号小于 $ans_i$ 的红茶都出现了，而编号为 $ans_i$ 的红茶没有出现（很显然这个值是唯一的）。当然如果时刻 $i$ 没有发生事件，则令 $ans_i=0$ 。  \n\n请你对于 $1 \\leq i \\leq m$ 计算出 $ans_i\\times (i^2+7i)\\ mod\\ 998244353$ 的异或和。\n\n## 输入格式\n\n第一行一个整数 $T$ ，表示数据组数。  \n\n接下来有 $T$ 行，每行表示一组数据。  \n\n每组数据依次有 $m,\\mathrm{seed},a,b,c,d$ 六个整数，其中 $m,a,b$ 的意义与题面中相同；  \n$d$ 表示是否只考虑第一种事件：$d$ 的取值为 $0$ 或 $1$ ，为特殊参数。当 $d=1$ 时，请忽视所有的第二种事件与第三种事件（忽视的含义见题面描述）。  \n$\\mathrm{seed},c$ 是随机数生成器的参数。\n\n我们使用如下实现的随机数生成器 $\\mathrm{randnum}()$。每组数据输入该组数据中 $\\mathrm{seed}$ 的初始值。\n\n```\nunsigned 32bit integer seed\n\nfunction randnum()\n\tseed = seed xor (seed lsh 13)\n\tseed = seed xor (seed rsh 17)\n\tseed = seed xor (seed lsh 5)\n\treturn seed\nend function\n```\n\n计算 $p[]$ 的代码如下：\n\n```\nfor i = 1 to m by step 1\n\tif randnum() mod c == 0 then\n\t\tp[i] = -1\n\telse\n\t\tp[i] = randnum() mod b\n\tend if\nend for\n```\n\n我们在「数据范围与提示」的最后提供了这道题的一个输入输出模板，如果你不需要，请忽视它。\n\n## 输出格式\n\n每组数据输出一行表示答案。\n\n## 样例\n\n```input1\n1\n7 327711436 4 6 3 0\n```\n\n```output1\n292\n```\n\n$p$ 序列为$[5,-1,2,-1,2,5,4]$ 。初始时卡车上已经有了编号为 $[0,4]$ 的红茶。\n\n第一个时刻，发生第一种事件，编号为 $5$ 的红茶加入卡车，此时卡车上编号为 $[0,5]$ 的红茶都有，而编号为 $6$ 的红茶没有，因此 $ans_1=6$ 。\n\n第二个时刻，理论上应该发生第三种事件，但是并没有红茶飞出了卡车，因此该事件被忽视， $ans_2=0$ 。\n\n第三个时刻，发生第二种事件，编号为 $2$ 的红茶飞出卡车，此时卡车上编号为 $[0,1]$ 的红茶都有，而编号为 $2$ 的红茶没有，因此 $ans_3=2$ 。\n\n第四个时刻，发生第三种事件，魔理沙捡回编号为 $2$ 的红茶回卡车，此时与第一个时刻后情况一致，因此 $ans_4=6$ 。\n\n第五个时刻和第三个时刻一致，因此 $ans_5=2$ 。\n\n第六个时刻，发生第二种事件，编号为 $5$ 的红茶飞出卡车，此时卡车上编号为 $0,1,3,4$ 的红茶都有，而编号为 $2,5$ 的红茶没有，因此 $ans_6=2$ 。\n\n第七个时刻，发生第二种事件，编号为 $4$ 的红茶飞出卡车，此时卡车上编号为 $0,1,3$ 的红茶都有，而编号为 $2,4,5$ 的红茶没有，因此 $ans_7=2$ 。\n\n\n\n\n\n## 数据范围与提示\n\n**本题 C/C++ 时限 2.5 秒，Pascal 时限 5 秒。最后将改时限重测所有 Pascal 提交。**\n\n对于所有数据，$1 \\leq m \\leq 10^6$，$1 \\leq T \\leq 50$ ， $-1 \\leq a \\leq m$ ，  $1 \\leq b \\leq 2\\times m$ ， $1 \\leq c \\leq 10^7$ ， $0 \\leq d \\leq 1$ 。\n\n$d$ 表示是否只考虑第一种事件：$d$ 的取值为 $0$ 或 $1$ ，为特殊参数。当 $d=1$ 时，请忽视所有的第二种事件与第三种事件（忽视的含义见题面描述）。  \n注意，$d=1$ 时原本合法的事件也要被忽视，故即使你没有用到这个性质，也要记得判断 $d=1$ 的情况。除测试点 $7$ 以外的测试点也有可能出现 $d=1$ 的数据。\n\n|测试点 #|$m$ 的限制|$T$的限制|特殊限制|\n|:-:|:-:|:-:|:-:|\n|$1$|$m \\leq 3000$|$T \\leq 20$|-|\n|$2$|$m \\leq 3000$|$T \\leq 25$|-|\n|$3$|$m \\leq 3000$|$T \\leq 30$|-|\n|$4$|$m \\leq 10^5$|$T \\leq 20$|-|\n|$5$|$m \\leq 10^5$|$T \\leq 30$|-|\n|$6$|$m \\leq 10^5$|$T \\leq 50$|-|\n|$7$|$m \\leq 10^6$|$T \\leq 50$|$d=1$|\n|$8$|$m \\leq 8\\times 10^5$|$T \\leq 50$|-|\n|$9$|$m \\leq 10^6$|$T \\leq 50$|-|\n|$10$|$m \\leq 10^6$|$T \\leq 50$|-|\n\n#### 输入输出模板\n**输入输出模板的最大运行时间分别为：C/C++约 400 ms，Pascal 约 2000 ms**\n\n```c++\n//C++\n#include<cstdio>\n\nnamespace IO{\n\tint c;\n\tunsigned int seed;\n\tunsigned int randnum(){\n\t\tseed^=seed<<13;\n\t\tseed^=seed>>17;\n\t\tseed^=seed<<5;\n\t\treturn seed;\n\t}\n\n\tinline int read(int &x){scanf(\"%d\",&x);return x;}\n\tinline void init_case(int &m,int &a,int &b,int &d,int p[]){\n\t\tscanf(\"%d%u%d%d%d%d\",&m,&seed,&a,&b,&c,&d);\n\t\tfor(int i=1;i<=m;i++){\n\t\t\tif(randnum()%c==0)p[i]=-1;\n\t\t\telse p[i]=randnum()%b;\n\t\t}\n\t}\n\n\tinline void update_ans(unsigned int &ans_sum,unsigned int cur_ans,int no){\n\t\tconst static unsigned int mod=998244353;\n\t\tans_sum^=(long long)no*(no+7)%mod*cur_ans%mod;\n\t}\n}\nusing IO::read;\nusing IO::init_case;\nusing IO::update_ans;\n/*\n一开始请调用read(T)读入数据组数T\n接下来每组数据开始时请调用init_case(m,a,b,d,p)读入m,a,b,d,p[]\n每组数据开始时请用一个初始化为0的32位无符号整形变量ans_sum存储答案，然后对于每个i，\n用32位无符号整形变量cur_ans存储第i次答案，并调用update_ans(ans_sum,cur_ans,i)更新。最后输出ans_sum即可。\n*/\n\n//示例代码：\n/*\nint main(){\n\tstatic int p[2000005];\n\tint T;read(T);\n\tint m,a,b,d;\n\twhile(T--){\n\t\tunsigned int ans_sum=0,cur_ans=0;\n\t\tinit_case(m,a,b,d,p);\n\t\tfor(int i=1;i<=m;i++){\n\t\t\t......//处理操作\n\t\t\tupdate_ans(ans_sum,cur_ans,i);\n\t\t}\n\t\tprintf(\"%u\\n\",ans_sum);\n\t}\n\treturn 0;\n}\n*/\n```\n```c\n//C\n#include<stdio.h>\n\nint _IO_c;\nunsigned int seed;\nunsigned int randnum(){\n\tseed^=seed<<13;\n\tseed^=seed>>17;\n\tseed^=seed<<5;\n\treturn seed;\n}\n\ninline int read(int *x){scanf(\"%d\",x);return *x;}\ninline void init_case(int *m,int *a,int *b,int *d,int p[]){\n\tint i;\n\tscanf(\"%d%u%d%d%d%d\",m,&seed,a,b,&_IO_c,d);\n\tfor(i=1;i<=*m;i++){\n\t\tif(randnum()%_IO_c==0)p[i]=-1;\n\t\telse p[i]=randnum()%*b;\n\t}\n}\n\ninline void update_ans(unsigned int *ans_sum,unsigned int cur_ans,int no){\n\tconst static unsigned int mod=998244353;\n\t*ans_sum^=(long long)no*(no+7)%mod*cur_ans%mod;\n}\n\n/*\n一开始请调用read(&T)读入数据组数T\n接下来每组数据开始时请调用init_case(&m,&a,&b,&d,p)读入m,a,b,d,p[]\n每组数据开始时请用一个初始化为0的32位无符号整形变量ans_sum存储答案，然后对于每个i，\n用32位无符号整形变量cur_ans存储第i次答案，并调用update_ans(&ans_sum,cur_ans,i)更新。最后输出ans_sum即可。\n*/\n\n//示例代码：\n/*\nint main(){\n\tstatic int p[2000005];\n\tint T;int m,a,b,d,i;\n\tread(&T);\n\twhile(T--){\n\t\tunsigned int ans_sum=0,cur_ans=0;\n\t\tinit_case(&m,&a,&b,&d,p);\n\t\tfor(i=1;i<=m;i++){\n\t\t\t......//处理操作\n\t\t\tupdate_ans(&ans_sum,cur_ans,i);\n\t\t}\n\t\tprintf(\"%u\\n\",ans_sum);\n\t}\n\treturn 0;\n}\n*/\n```\n```pascal\n//Pascal\n\ntype\n\tpointer_32=^longint;\nvar\n\t_IO_c:longint;\n\tseed:Cardinal;\n\tp:array[0..2000004]of longint;\n\tT,m,a,b,d,i:longint;\n\tans_sum,cur_ans:Cardinal;\n\nfunction randnum():Cardinal;\nbegin\n\tseed:=seed xor (seed shl 13);\n\tseed:=seed xor (seed shr 17);\n\tseed:=seed xor (seed shl 5);\n\texit(seed);\nend;\n\nprocedure init_case(var m,a,b,d:longint;p:pointer_32);inline;\nvar\n\ti:longint;\nbegin\n\tread(m,seed,a,b,_IO_c,d);\n\tfor i:=1 to m do begin\n\t\tif randnum() mod _IO_c=0 then p[i]:=-1\n\t\telse p[i]:=randnum() mod b;\n\tend;\nend;\n\nprocedure update_ans(var ans_sum:Cardinal;cur_ans:Cardinal;no:longint);inline;\nconst\n\tmod_val:Cardinal=998244353;\n\tcalc:int64=1;\nbegin\n\tans_sum:=ans_sum xor (calc*no*(no+7) mod mod_val*cur_ans mod mod_val);\nend;\n\n{\n一开始请调用read(T)读入数据组数T\n接下来每组数据开始时请调用init_case(m,a,b,d,p)读入m,a,b,d,p[]\n每组数据开始时请用一个初始化为0的32位无符号整形变量ans_sum存储答案，然后对于每个i，\n用32位无符号整形变量cur_ans存储第i次答案，并调用update_ans(ans_sum,cur_ans,i)更新。最后输出ans_sum即可。\n}\n\n//示例代码：\n{\nbegin\n\tread(T);\n\twhile T>0 do begin\n\t\tdec(T);\n\t\tans_sum:=0;cur_ans:=0;\n\t\tinit_case(m,a,b,d,p);\n\t\tfor i:=1 to m do begin\n\t\t\t......//处理操作\n\t\t\tupdate_ans(ans_sum,cur_ans,i);\n\t\tend;\n\t\twriteln(ans_sum);\n\tend;\nend.\n}\n```\n\n## 来源\n\n[LibreOJ #541](https://loj.ac/p/541)\n",
+      "html": false,
+      "newContentSha256": "710815cb5e644f6293769f0f1d2966ee297b56139c8d7b632888d3da7b267eb9"
+    },
+    {
+      "domainId": "system",
+      "docId": 647,
+      "pid": null,
+      "title": "#552. 「LibreOJ Round #8」MIN&MAX I",
+      "category": "loj-math",
+      "source": "https://loj.ac/p/552",
+      "expected": {
+        "contentSha256": "0c2d2645ba0d8f5c055d2f645a2854033182b8f8e71a50a08986cb6a45ba41c0",
+        "html": "true"
+      },
+      "content": "## 题目描述\n\n对于一个 $n$ 阶排列 $p$，我们建立一张**无向简单图** $G(p)$，有 $n$ 个节点，标号从 $1$ 到 $n$，每个点向左右两侧最近的比它大的点以及比它小的点连边。  \n形式化地，在 $G(p)$ 中，$\\forall u<v$，边 $(u,v)$ 存在当且仅当以下四个条件至少一个成立：\n\n* $p_u < p_v$，且不存在 $u < i < v$ 满足 $p_u < p_i$；\n* $p_u > p_v$，且不存在 $u < i < v$ 满足 $p_u > p_i$；\n* $p_u < p_v$，且不存在 $u < i < v$ 满足 $p_i < p_v$；\n* $p_u > p_v$，且不存在 $u < i < v$ 满足 $p_i > p_v$。\n\n现在在所有的 $n$ 阶排列中随机选择一个排列 $p$，请求出 $G(p)$ 中三元简单环的期望个数，答案对 $998244353$ 取模。\n\n## 输入格式\n\n一行一个正整数 $n$。\n\n## 输出格式\n\n一行一个整数 $\\mathrm{ans}$ 表示答案。\n\n## 样例 1\n\n```input1\n3\n```\n\n```output1\n665496236\n```\n\n在所有 $n!$ 种排列中共有 $4$ 个三元简单环（$\\{1,3,2\\},\\{2,3,1\\},\\{2,1,3\\},\\{3,1,2\\}$ 各一个），所以答案为 $\\frac{4}{3!}=\\frac{2}{3}$，即 $2\\times 3^{-1} \\pmod{998244353}=665496236$。\n\n## 样例 2\n\n```input2\n91\n```\n\n```output2\n116578319\n```\n\n## 样例 3\n\n```input3\n3\n```\n\n```output3\n665496236\n```\n\n## 样例 4\n\n```input4\n91\n```\n\n```output4\n116578319\n```\n\n## 数据范围与提示\n\n对于所有数据，$1\\le n < 998244353$。\n\n详细的数据限制及约定如下（留空表示和上述所有数据的约定相同）：\n\n|Subtask #|分值（百分比）|$n$|\n|:-:|:-:|:-:|\n|$1$|$15$|$\\le 10$|\n|$2$|$20$|$\\le 100$|\n|$3$|$40$|$\\le 10^6$|\n|$4$|$15$|$\\ge 998000000$|\n|$5$|$10$|-|\n\n## 来源\n\n[LibreOJ #552](https://loj.ac/p/552)\n",
+      "html": false,
+      "newContentSha256": "e8feca27c361e3e55ab191c12fdea5a6031d98002a1a8f4ca88924ce9b279983"
+    },
+    {
+      "domainId": "system",
+      "docId": 648,
+      "pid": null,
+      "title": "#555. 「LibreOJ Round #8」Moejy0viiiiiv&#39;s Red Envelopes / 抢红包",
+      "category": "loj-math",
+      "source": "https://loj.ac/p/555",
+      "expected": {
+        "contentSha256": "6cb93c5795503f9aa1b029deb2fb2d8242aec4769ebf0242066ee8d954276ee7",
+        "html": "true"
+      },
+      "content": "## 题目描述\n\nMoejy0viiiiiv 在平面直角坐标系上抢红包。从 $(0,0)$ 出发，每天中午有 $A/1996488707$ 的概率向上走一格，有 $B/1996488707$ 的概率向右走一格，有 $1-A/1996488707-B/1996488707$ 的概率立即停止行动（之后也不再行动），三种事件两两不会同时发生；Moejy0viiiiiv 在第 $N$ 天傍晚离开平面直角坐标系（总共至多走 $N$ 格）。\n\n已知一个常数 $D$，在所有 $(xD, yD)(0 \\leq x, y)$ 处有一个红包；还有 $K$ 个坑，分别在 $(x_1, y_1), (x_2, y_2), (x_3, y_3), \\cdots, (x_K, y_K)$，走入坑中将在接下来的回合中无法行动。\n\nMoejy0viiiiiv 会抢走所有她经过的红包（包含 $(0,0)$）问最终期望抢到的红包数量，输出这个值 $\\bmod 998244353$，注意 $1996488707 \\bmod 998244353 = 1$。\n\n## 输入格式\n\n第一行两个整数 $A, B$。\n\n第二行四个整数 $N, D, M, K$。\n\n接下来 $K$ 行，每行两个整数，第 $i + 2$ 行两个数为 $x_i, y_i$。\n\n## 输出格式\n\n一行一个数，表示期望抢的红包数量。\n\n## 样例 1\n\n```input1\n1 1\n2 2 5 1\n1 0\n```\n\n```output1\n2\n```\n\n共有 $3 $个地方有红包，$(0, 0), (0, 2), (2, 0)$。\n由于 $(1, 0)$ 处是坑，所以无法抢 $(2, 0)$ 处的红包，而抢到其余两处红包的概率均为 $1$。\n\n注意，在本题中 $A+B$ 不必为 $1$。\n\n## 样例 2\n\n```input2\n1 2\n2 2 5 0\n```\n\n```output2\n6\n```\n\n## 数据范围与提示\n\n对于所有数据，$1 \\leq N \\leq 10^{18}, 0 \\leq K \\leq 50, 1 \\leq D, M \\leq 1000, 0 \\leq x_1, x_2, ..., x_K \\leq M$，\n$\\forall i \\in \\{1, 2, 3, ..., K\\}, D \\nmid x_i \\vee D \\nmid y_i, x_i + y_i \\leq N, 0 \\leq A, B < 998244353$。\n\n详细的数据限制及约定如下（留空表示和上述所有数据的约定相同）：\n\n|Subtask #|分值（百分比）|$N$|$D$|$M$|$K$|\n|:-:|:-:|:-:|:-:|:-:|:-:|\n|$1$|$9$|$\\le 10^4$|-|-|-|\n|$2$|$12$|$\\le 10^5$|$\\le 10$|$\\le 10$|$0$|\n|$3$|$27$|-|-|-|$0$|\n|$4$|$8$|$\\le 10^5$|$\\le  10$|$\\le 10$|-|\n|$5$|$44$|-|-|-|-|\n\n## 来源\n\n[LibreOJ #555](https://loj.ac/p/555)\n",
+      "html": false,
+      "newContentSha256": "384bb30b0cf5dfcb4616d952574a58c5d80246e2fa3b609e55fbbee10376dcd6"
+    },
+    {
+      "domainId": "system",
+      "docId": 659,
+      "pid": null,
+      "title": "#2031. 「SDOI2016」数字配对",
+      "category": "loj-math",
+      "source": "https://loj.ac/p/2031",
+      "expected": {
+        "contentSha256": "73583bc7f0799ae4d6e941e1b43749b52b22342774f61ab0a1f465e061f6a7ef",
+        "html": "true"
+      },
+      "content": "## 题目描述\n\n有 $ n $ 种数字，第 $ i $ 种数字是 $ a_i $、有 $ b_i $ 个，权值是 $ c_i $。  \n若两个数字 $ a_i $、$ a_j $ 满足，$ a_i $ 是 $ a_j $ 的倍数，且 $ a_i / a_j $ 是一个质数，那么这两个数字可以配对，并获得 $ c_i \\cdot c_j $ 的价值。  \n一个数字只能参与一次配对，可以不参与配对。  \n在获得的价值总和不小于 $ 0 $ 的前提下，求最多进行多少次配对。\n\n## 输入格式\n\n第一行一个整数 $n$。  \n第二行 $n$ 个整数 $a_1,a_2,\\dots,a_n$。  \n第三行 $n$ 个整数 $b_1,b_2,\\dots,b_n$。  \n第四行 $n$ 个整数 $c_1,c_2,\\dots,c_n$。\n\n## 输出格式\n\n一行一个整数，表示最多进行多少次配对。\n\n## 样例\n\n```input1\n3\n2 4 8\n2 200 7\n-1 -2 1\n```\n\n```output1\n4\n```\n\n## 数据范围与提示\n\n测试点 1 ~ 3：$ n \\leq 10 $，$ a_i \\leq 10 ^ 9 $，$ b_i = 1 $，$ \\left| c_i \\right| \\leq 10 ^ 5 $；  \n测试点 4 ~ 5：$ n \\leq 200 $，$ a_i \\leq 10 ^ 9 $，$ b_i \\leq 10 ^ 5 $，$ c_i = 0 $；  \n测试点 6 ~ 10：$ n \\leq 200 $，$ a_i \\leq 10 ^ 9 $，$ b_i \\leq 10 ^ 5 $，$ \\left| c_i \\right| \\leq 10 ^ 5 $。\n\n## 来源\n\n[LibreOJ #2031](https://loj.ac/p/2031)\n",
+      "html": false,
+      "newContentSha256": "5fa916c0b37b5b8740587fd20590fd1640cc0ebfb9e51c638a2329db445ad698"
+    },
+    {
+      "domainId": "system",
+      "docId": 662,
+      "pid": null,
+      "title": "#2042. 「CQOI2016」不同的最小割",
+      "category": "loj-math",
+      "source": "https://loj.ac/p/2042",
+      "expected": {
+        "contentSha256": "2f17ebb2cf8d2fc2f43413d2d2c4e4a0e9fa3e0ab6457a0dd5a3a83bbf07f17a",
+        "html": "true"
+      },
+      "content": "## 题目描述\n\n学过图论的同学都知道最小割的概念：对于一个图，某个对图中结点的划分将图中所有结点分成两个部分，如果结点 $s, t$ 不在同一个部分中，则称这个划分是关于 $s, t$ 的割。对于带权图来说，将所有顶点处在不同部分的边的权值相加所得到的值定义为这个割的容量，而 $s, t$ 的最小割指的是在关于 $s, t$ 的割中容量最小的割。\n\n而对冲刺 NOI 竞赛的选手而言，求带权图中两点的最小割已经不是什么难事了。我们可以把视野放宽，考虑有 $N$ 个点的无向连通图中所有点对的最小割的容量，共能得到 $\\frac {N(N−1)} {2}$ 个数值。这些数值中互不相同的有多少个呢？这似乎是个有趣的问题。\n\n## 输入格式\n\n输入文件第一行包含两个数 $N, M$，表示点数和边数。  \n接下来 $M$ 行，每行三个数 $u, v, w$，表示点 $u$ 和点 $v$（从 $1$ 开始标号）之间有一条权值是 $w$ 的边。\n\n## 输出格式\n\n输出文件第一行为一个整数，表示不同的最小割容量的个数。\n\n## 样例\n\n```input1\n4 4\n1 2 3\n1 3 6\n2 4 5\n3 4 4\n```\n\n```output1\n3\n```\n\n## 数据范围与提示\n\n| Case # | $N$ | $M$ |\n|:---:|:---:|:---:|\n| 1 | $25$ | $150$ |\n| 2 | $50$ | $500$ |\n| 3 | $100$ | $1000$ |\n| 4 | $150$ | $1500$ |\n| 5 | $200$ | $2000$ |\n| 6 | $300$ | $3000$ |\n| 7 | $400$ | $4000$ |\n| 8 | $500$ | $5000$ |\n| 9 | $700$ | $7000$ |\n| 10 | $850$ | $8500$ |\n\n对于所有测试点，$w \\leq 100000$。\n\n## 来源\n\n[LibreOJ #2042](https://loj.ac/p/2042)\n",
+      "html": false,
+      "newContentSha256": "0d67855cdb6a41b91c2ac0f809aae7edeff5906c2477ea9f40c667d54c217aea"
+    },
+    {
+      "domainId": "system",
+      "docId": 664,
+      "pid": null,
+      "title": "#2045. 「CQOI2016」密钥破解",
+      "category": "loj-math",
+      "source": "https://loj.ac/p/2045",
+      "expected": {
+        "contentSha256": "f891a3ca3c150319c15e1c7ddd8bccc0dc2e2dccf020b3cef4d7c404c7c4001c",
+        "html": "true"
+      },
+      "content": "## 题目描述\n\n一种非对称加密算法的密钥生成过程如下：\n1. 任选两个不同的质数 $p, q$；\n2. 计算 $N = pq, r=(p-1)(q-1)$；\n3. 选取小于 $r$，且与 $r$ 互质的整数 $e$；\n4. 计算整数 $d$，使得 $ed \\equiv 1 \\pmod r$；\n5. 二元组 $(N, e)$ 称为**公钥**，二元组 $(N, d)$ 称为**私钥**。\n\n当需要加密消息 $n$ 时（假设 $n$ 是一个小于 $N$ 的整数，因为任何格式的消息都可转为整数表示），使用公钥 $(N, e)$，按照\n$$n^e \\equiv c \\pmod N$$\n运算，可得到密文 $c$。\n\n对密文 $c$ 解密时，用私钥 $(N, d)$，按照\n$$c^d \\equiv n \\pmod N$$\n运算，可得到原文 $n$。算法正确性证明省略。\n\n由于用公钥加密的密文仅能用对应的私钥解密，而不能用公钥解密，因此称为非对称加密算法。通常情况下，公钥由消息的接收方公开，而私钥由消息的接收方自己持有。这样任何发送消息的人都可以用公钥对消息加密，而只有消息的接收方自己能够解密消息。\n\n现在，你的任务是寻找一种可行的方法来破解这种加密算法，即根据公钥破解出私钥，并据此解密密文。\n\n## 输入格式\n\n输入文件内容只有一行，为空格分隔的三个正整数 $e, N, c$。\n\n## 输出格式\n\n输出文件内容只有一行，为空格分隔的两个整数 $d, n$。\n\n## 样例\n\n```input1\n3 187 45\n```\n\n```output1\n107 12\n```\n\n样例中 $p = 11, q = 17$。\n\n## 数据范围与提示\n\n对于 $30\\%$ 的数据，$e, N, c \\leq 2^{20}$；  \n对于 $100\\%$ 的数据，$1 \\leq e, N, c \\leq 2^{62}, c < N$。\n\n## 来源\n\n[LibreOJ #2045](https://loj.ac/p/2045)\n",
+      "html": false,
+      "newContentSha256": "19bdb5fb5ee9fcbef8daa887065e8ebf9e5085b051c02c468717f3f76bfcf13f"
+    },
+    {
+      "domainId": "system",
+      "docId": 667,
+      "pid": null,
+      "title": "#2058. 「TJOI / HEOI2016」求和",
+      "category": "loj-math",
+      "source": "https://loj.ac/p/2058",
+      "expected": {
+        "contentSha256": "5f0dd40e6e8333d2b9f3e8ea884ee031f370829f9331f15a8eca40e7584b45c8",
+        "html": "true"
+      },
+      "content": "## 题目描述\n\n在2016年，佳媛姐姐刚刚学习了第二类斯特林数，非常开心。\n\n现在他想计算这样一个函数的值:\n\n$$f(n)=\\sum_{i=0}^n \\sum_{j=0}^i S(i, j) \\cdot 2^j \\cdot j!$$\n\n$S(i, j)$表示第二类斯特林数，递推公式为: $S(i, j) = j \\cdot S(i − 1, j) + S(i − 1, j − 1), \\ 1 \\leq j \\leq i − 1$。\n\n边界条件为：$S(i, i) = 1(0 \\leq i), \\ S(i, 0) = 0(1 \\leq i)$\n\n你能帮帮她吗?\n\n## 输入格式\n\n输入只有一个正整数。\n\n## 输出格式\n\n输出 $f(n)$。由于结果会很大，输出 $ f(n) $ 对 $998244353 \\ (7 × 17 × 2^{23} + 1)$ 取模的结果即可。\n\n## 样例\n\n```input1\n3\n```\n\n```output1\n87\n```\n\n## 数据范围与提示\n\n$1 \\leq n \\leq 100000$\n\n## 来源\n\n[LibreOJ #2058](https://loj.ac/p/2058)\n",
+      "html": false,
+      "newContentSha256": "94b1a6946602f72d0e86b67f92998496f6f2cd24c4daa9d0f657c16578506574"
+    },
+    {
+      "domainId": "system",
+      "docId": 672,
+      "pid": null,
+      "title": "#2083. 「NOI2016」优秀的拆分",
+      "category": "loj-math",
+      "source": "https://loj.ac/p/2083",
+      "expected": {
+        "contentSha256": "49a8634f754cfb70e7b0268e7cf9835302ef565e1ff64ef2d6085e7bcdcad0f1",
+        "html": "true"
+      },
+      "content": "## 题目描述\n\n如果一个字符串可以被拆分为 $\\text{AABB}$ 的形式，其中 $\\text{A}$ 和 $\\text{B}$ 是任意**非空**字符串，则我们称该字符串的这种拆分是优秀的。  \n例如，对于字符串 $ \\texttt{aabaabaa} $ ，如果令 $\\text{A}=\\texttt{aab}$，$\\text{B}=\\texttt{a}$，我们就找到了这个字符串拆分成 $\\text{AABB}$ 的一种方式。\n\n一个字符串可能没有优秀的拆分，也可能存在不止一种优秀的拆分。  \n比如我们令 $\\text{A}=\\texttt{a}$，$\\text{B}=\\texttt{baa}$，也可以用 $\\text{AABB}$ 表示出上述字符串；但是，字符串 $\\texttt{abaabaa}$ 就没有优秀的拆分。\n\n现在给出一个长度为 $n$ 的字符串 $S$，我们需要求出，在它所有子串的所有拆分方式中，优秀拆分的总个数。这里的子串是指字符串中连续的一段。\n\n以下事项需要注意：\n\n1. 出现在不同位置的相同子串，我们认为是不同的子串，它们的优秀拆分均会被记入答案。\n2. 在一个拆分中，允许出现 $\\text{A}=\\text{B}$。例如 $\\texttt{cccc}$ 存在拆分 $\\text{A}=\\text{B}=\\texttt{c}$。\n3. 字符串本身也是它的一个子串。\n\n## 输入格式\n\n每个输入文件包含多组数据。  \n输入文件的第一行只有一个整数 $T$，表示数据的组数。  \n接下来 $T$ 行，每行包含一个仅由英文小写字母构成的字符串 $S$，意义如题所述。\n\n## 输出格式\n\n输出 $T$ 行，每行包含一个整数，表示字符串 $S$ 所有子串的所有拆分中，总共有多少个是优秀的拆分。\n\n## 样例\n\n```input1\n4\naabbbb\ncccccc\naabaabaabaa\nbbaabaababaaba\n```\n\n```output1\n3\n5\n4\n7\n```\n\n我们用 $S[i, j]$ 表示字符串 $S$ 第 $i$ 个字符到第 $j$ 个字符的子串（从 $1$ 开始计数）。\n\n第一组数据中，共有三个子串存在优秀的拆分：\n$S[1,4]=\\texttt{aabb}$，优秀的拆分为 $\\text{A}=\\texttt{a}$，$\\text{B}=\\texttt{b}$；\n$S[3,6]=\\texttt{bbbb}$，优秀的拆分为 $\\text{A}=\\texttt{b}$，$\\text{B}=\\texttt{b}$；\n$S[1,6]=\\texttt{aabbbb}$，优秀的拆分为 $\\text{A}=\\texttt{a}$，$\\text{B}=\\texttt{bb}$。\n而剩下的子串不存在优秀的拆分，所以第一组数据的答案是 $3$。\n\n第二组数据中，有两类，总共四个子串存在优秀的拆分：\n对于子串 $S[1,4]=S[2,5]=S[3,6]=\\texttt{cccc}$，它们优秀的拆分相同，均为 $\\text{A}=\\texttt{c}$，$\\text{B}=\\texttt{c}$，但由于这些子串位置不同，因此要计算三次；\n对于子串 $S[1,6]=\\texttt{cccccc}$，它优秀的拆分有两种：$\\text{A}=\\texttt{c}$，$\\text{B}=\\texttt{cc}$ 和 $\\text{A}=\\texttt{cc}$，$\\text{B}=\\texttt{c}$，它们是相同子串的不同拆分，也都要计入答案。\n所以第二组数据的答案是 $3+2=5$。\n\n第三组数据中，$S[1,8]$ 和 $S[4,11]$ 各有两种优秀的拆分，其中 $S[1,8]$ 是问题描述中的例子，所以答案是 $2+2=4$。\n\n第四组数据中，$S[1,4]$，$S[6,11]$，$S[7,12]$，$S[2,11]$，$S[1,8]$ 各有一种优秀的拆分，$S[3,14]$ 有两种优秀的拆分，所以答案是 $5+2=7$。\n\n## 数据范围与提示\n\n对于全部的测试点，$1 \\leq T \\leq 10, \\ n \\leq 30000$。\n\n各测试点具体限制如下：\n\n|测试点|$n\\le$|特殊性质|\n|:-:|:-:|:-:|\n|$1,~2$|$300$|$S$ 中所有字符相同|\n|$3,~4$|$2000$|$S$ 中所有字符相同|\n|$5,~6$|$10$|无特殊限制|\n|$7,~8$|$20$|无特殊限制|\n|$9,~10$|$30$|无特殊限制|\n|$11,~12$|$50$|无特殊限制|\n|$13,~14$|$100$|无特殊限制|\n|$15$|$200$|无特殊限制|\n|$16$|$300$|无特殊限制|\n|$17$|$500$|无特殊限制|\n|$18$|$1000$|无特殊限制|\n|$19$|$2000$|无特殊限制|\n|$20$|$30000$|无特殊限制|\n\n## 来源\n\n[LibreOJ #2083](https://loj.ac/p/2083)\n",
+      "html": false,
+      "newContentSha256": "c1aa8b2544660ecc3bfc19868b51f11a5b8293fea7dd39d2bda687504ade4b98"
+    },
+    {
+      "domainId": "system",
+      "docId": 673,
+      "pid": null,
+      "title": "#2085. 「NOI2016」循环之美",
+      "category": "loj-math",
+      "source": "https://loj.ac/p/2085",
+      "expected": {
+        "contentSha256": "6d034d50896f733cb3490fa418bfabb51450319ce3492e44970c4cac976049e2",
+        "html": "true"
+      },
+      "content": "## 题目描述\n\n牛牛是一个热爱算法设计的高中生。在他设计的算法中，常常会使用带小数的数进行计算。牛牛认为，如果在 $k$ 进制下，一个数的小数部分是**纯循环**的，那么它就是美的。\n\n现在，牛牛想知道：对于已知的十进制数 $n$ 和 $m$，在 $k$ 进制下，有多少个数值上**互不相等**的纯循环小数，可以用分数 $\\frac x y$ 表示，其中 $1\\le x\\le n,1\\le y\\le m$，且 $x,y$ 是整数。\n\n一个数是纯循环的，当且仅当其可以写成以下形式：\n$$a.\\dot{c_1} c_2 c_3 \\ldots c_{p - 1} \\dot{c_p}$$\n其中，$a$ 是一个整数，$p\\ge1$；对于 $1\\le i\\le p$，$c_i$ 是 $k$ 进制下的一位数字。\n\n例如，在十进制下，$0.45454545\\dots=0.\\dot{4}\\dot{5}$ 是纯循环的，它可以用 $\\frac 5 {11}$、$\\frac{10}{22}$ 等分数表示；在十进制下，$0.1666666\\dots=0.1\\dot{6}$ 则不是纯循环的，它可以用 $\\frac 1 6$ 等分数表示。\n\n需要特别注意的是，我们认为一个整数是纯循环的，因为它的小数部分可以表示成 $0$ 的循环或是 $k-1$ 的循环；而一个小数部分非 $0$ 的有限小数不是纯循环的。\n\n## 输入格式\n\n输入文件只有一行，包含三个十进制数 $n,m,k$，意义如题所述。\n\n## 输出格式\n\n只输出一行一个整数，表示满足条件的美的数的个数。\n\n## 样例 1\n\n```input1\n2 6 10\n```\n\n```output1\n4\n```\n\n满足条件的数分别是：\n$$1/1 = 1.0000 \\ldots \\ldots$$\n$$1/3 = 0.3333 \\ldots \\ldots$$\n$$2/1 = 2.0000 \\ldots \\ldots$$\n$$2/3 = 0.6666 \\ldots \\ldots$$\n$1/1$ 和 $2/2$ 虽然都是纯循环小数，但因为它们相等，因此只计数一次；同样，$1/3$ 和 $2/6$ 也只计数一次。\n\n## 样例 2\n\n```input2\n23333 666666 310\n```\n\n```output2\n5089564081\n```\n\n## 数据范围与提示\n\n对于所有的测试点，保证 $1\\le n\\le 10^9$，$1\\le m\\le 10^9$，$2\\le k\\le2000$。\n\n对于每个测试点，有以下约束（其中留空的表示没有特殊的约束）：\n\n| 测试点编号 | $n$ | $m$ | $k$ |\n| :-: | :-: | :-: | :-: |\n| 1 | $\\le 10$ | $\\le 20$ | $=2$ |\n| 2 | $\\le 100$ | $\\le 10^4$ | $=2$ |\n| 3 | $\\le 1000$ | | $=2$ |\n| 4 | $\\le 10000$ | | $=2$ |\n| 5 | $\\le 10$ | $\\le 20$ | $=3$ |\n| 6 | $\\le 100$ | $\\le 10^4$ | $=3$ |\n| 7 | $\\le 1000$ |  | $=3$ |\n| 8 | $\\le 10000$ |  | $=3$ |\n| 9 | $\\le 10$ | $\\le 20$ | $\\le 100$ |\n| 10 | $\\le 100$ | $\\le 10^4$ | $\\le 100$ |\n| 11 | $\\le 1000$ | | $\\le 1000$ |\n| 12 | $\\le 10000$ | | |\n| 13 | $\\le 10^5$ | $\\le 10^8$ | $\\le 100$ |\n| 14 | $\\le 2\\times 10^5$ | | $\\le 1000$ |\n| 15 | $\\le 5\\times 10^5$ | | |\n| 16 | $\\le 10^6$ | $\\le 10^8$ | $\\le 100$ |\n| 17 | $\\le 2\\times 10^6$ | | $\\le 1000$ |\n| 18 | $\\le 5\\times 10^6$ | | |\n| 19 | $\\le 10^7$ | $\\le 10^8$ | $\\le 100$ |\n| 20 | $\\le 2\\times 10^7$ | | $\\le 1000$ |\n| 21 | $\\le 2\\times 10^7$ | | |\n| 22 | $\\le 10^8$ | $\\le 10^8$ | |\n| 23 | $\\le 10^8$ | $\\le 10^8$ | |\n| 24 | | | |\n| 25 | | | |\n\n## 来源\n\n[LibreOJ #2085](https://loj.ac/p/2085)\n",
+      "html": false,
+      "newContentSha256": "4140716a230b5495fba6e39b2046e222cf42fcaac413f2c0c01395706f1e52f2"
+    },
+    {
+      "domainId": "system",
+      "docId": 675,
+      "pid": null,
+      "title": "#2093. 「ZJOI2016」线段树",
+      "category": "loj-math",
+      "source": "https://loj.ac/p/2093",
+      "expected": {
+        "contentSha256": "4deb3ce2a362d397275a3fb7046535e1fc9ac08459d725250071e2f50ea67a21",
+        "html": "true"
+      },
+      "content": "## 题目描述\n\n小 Yuuka 遇到了一个题目：有一个序列 $a_1, a_2, \\ldots , a_n$，对其进行$q$次操作，每次把一个区间内的数改成区间内的最大值，问最后每个数是多少。\n\n小 Yuuka 很快地就使用了线段树解决了这个问题。于是充满智慧的小 Yuuka 想，如果操作是随机的，即在这 $q$ 次操作中每次等概率随机地选择一个区间 $[l,r]$ $(1 \\leq l \\leq r \\leq n)$，然后将这个区间内的数改成区间内最大值（注意这样的区间共有 $\\frac{n(n+1)}{2}$ 个），最后每个数的期望大小是多少呢？小 Yuuka 非常热爱随机，所以她给出的输入序列也是随机的（随机方式见数据规模和约定）。对于每个数，输出它的期望乘 $(\\frac{n(n+1)}{2})^q$ 再对 $10^9+7$ 取模的值。\n\n## 输入格式\n\n第一行包含两个正整数 $n,q$，表示序列里数的个数和操作的个数。\n\n接下来一行，包含 $n$ 个非负整数 $a_1, a_2, \\ldots, a_n$。\n\n## 输出格式\n\n输出共一行，包含 $n$ 个整数，表示每个数的答案\n\n## 样例\n\n```input1\n5 5\n1 5 2 3 4\n```\n\n```output1\n3152671 3796875 3692207 3623487 3515626\n```\n\n## 数据范围与提示\n\n对于所有的测试数据，保证序列中数的大小不超过 $10^9$，即 $a_i≤10^9$，并且每个数是 $0$ 到 $10^9$ 之间的随机整数。\n\n| 测试点编号 |    $n$    |    $q$     |\n| :--------: | :-------: | :--------: |\n|    $1$     |  $\\le 5$  |  $\\le 5 $  |\n|    $2$     |  $\\le 8$  | $\\le 400 $ |\n|    $3$     | $\\le 12$  | $\\le 400 $ |\n|    $4$     | $\\le 30$  | $\\le 400 $ |\n|    $5$     | $\\le 50$  | $\\le 400 $ |\n|    $6$     | $\\le 100$ | $\\le 400 $ |\n|    $7$     | $\\le 100$ | $\\le 400 $ |\n|    $8$     | $\\le 400$ | $\\le 400 $ |\n|    $9$     | $\\le 400$ | $\\le 400 $ |\n|    $10$    | $\\le 400$ | $\\le 400 $ |\n\n## 来源\n\n[LibreOJ #2093](https://loj.ac/p/2093)\n",
+      "html": false,
+      "newContentSha256": "407320fb58ceb9aa8907a8fb54f314157bcf9f65492386cc2497a0540e381b29"
+    },
+    {
+      "domainId": "system",
+      "docId": 677,
+      "pid": null,
+      "title": "#2098. 「CQOI2015」多项式",
+      "category": "loj-math",
+      "source": "https://loj.ac/p/2098",
+      "expected": {
+        "contentSha256": "e1f6c1902db000e5e5c0e56d4641db8aa128ab39f57f1c5a2a16179d2a26f9f7",
+        "html": "true"
+      },
+      "content": "## 题目描述\n\n在学习完二项式定理后，数学老师给出了一道题目：已知整数 $ n $、$ t $ 和 $ a_k $（$ 0 \\leq k \\leq n $），求 $ b_k $（$ 0 \\leq k \\leq n $）的表达式使得\n\n$$ \\sum\\limits_{k = 0} ^ n a_k x ^ k = \\sum\\limits_{k = 0} ^ n b_k (x - t) ^ k $$\n\n同学们很快算出了答案。见大家这么快就搞定了，老师便布置了一个更 BT 的作业：计算某个 $ b_m $ 的具体数值！接着便在黑板上写下了 $ n $、$ t $ 的数值，由于 $ a_k $ 实在太多，不能全写在黑板上，老师只给出了一个 $ a_k $ 的递推式，让学生自行计算 $ a_k $：\n\n$$\na_k = \\begin{cases}\n(1234 \\cdot a_{k - 1} + 5678) \\bmod 3389 & k > 0 \\\\\n1 & k = 0\n\\end{cases}\n$$\n\n## 输入格式\n\n输入文件共三行，第一行为一个正整数 $ n $，第二行为一个非负整数 $t $，第三行为一个非负整数\n $ m $。\n\n## 输出格式\n\n输出一行，为 $ b_m $ 的值。\n\n## 样例\n\n```input1\n3\n2\n2\n```\n\n```output1\n10536\n```\n\n## 数据范围与提示\n\n对于 $ 100\\% $ 的数据，$ 0 < n \\leq 10 ^ {3000}, 0 \\leq t \\leq 10000, 0 \\leq n - m \\leq 5 $。\n\n## 来源\n\n[LibreOJ #2098](https://loj.ac/p/2098)\n",
+      "html": false,
+      "newContentSha256": "51ffb10ffbee75125c37bae1bab3c38f9c853b44792d9dbd0aac0124e3dc2af9"
+    },
+    {
+      "domainId": "system",
+      "docId": 679,
+      "pid": null,
+      "title": "#2104. 「TJOI2015」棋盘",
+      "category": "loj-math",
+      "source": "https://loj.ac/p/2104",
+      "expected": {
+        "contentSha256": "6e491a5826eefaaf30db4abbde8e8eb71a8bd67ef96676399a3947627b39cbc1",
+        "html": "true"
+      },
+      "content": "## 题目描述\n\n为了提高智商，ZJY 去新世界旅游了。可是旅游过后的 ZJY 杯具地发现，要打开通往原来世界的门，必须要解开门上面画的谜题。\n\n谜题是这样的：有一个 $n$ 行 $m$ 列的棋盘，棋盘上可以放很多特殊的棋子，每个棋子的攻击范围是 $3$ 行 $p$ 列。输入数据用一个 $3 \\times p$ 的矩阵给出了棋子攻击范围的模板，棋子被默认在模板中的第一行，第 $k$ 列，模板中棋子能攻击到的位置标记为 ``1``，不能攻击到的位置是 ``0`` $(1 \\leq p \\leq m, 0 \\leq k <p)$。输入数据保证模板中的第一行第 $k$ 列是 ``1``。\n\n打开门的密码是这样的：在要求棋子互相不能攻击到的前提下，摆放棋子的方案数。注意什么棋子都不摆也算作一种可行方案。由于方案数可能很大，而密码为 $32$ 位的二进制密码，所以 ZJY 仅需要知道方案对 $2^{32}$ 取余的结果即可。\n\n## 输入格式\n\n输入数据的第一行为两个整数 $n$，$m$ 表示棋盘大小。  \n第二行为两个整数 $p$，$k$，表示攻击范围模板的大小，以及棋子在模板中的位置。  \n接下来三行，每行 $p$ 个数，表示攻击范围的模版。每个数字后面一个空格。\n\n## 输出格式\n\n一个整数，表示可行方案 $\\bmod 2^{32}$ 的结果。\n\n## 样例\n\n```input1\n2 2\n3 1\n0 1 0\n1 1 1\n0 1 0\n```\n\n```output1\n7\n```\n\n## 数据范围与提示\n\n$1 \\leq n \\leq 10^6, \\ 1 \\leq m \\leq 6$\n\n## 来源\n\n[LibreOJ #2104](https://loj.ac/p/2104)\n",
+      "html": false,
+      "newContentSha256": "b6fa45b299373ba3588a422addc0fcbbc9aeb80d1e9b61d7bb2f75ad224274e4"
+    },
+    {
+      "domainId": "system",
+      "docId": 685,
+      "pid": null,
+      "title": "#2117. 「HNOI2015」实验比较",
+      "category": "loj-math",
+      "source": "https://loj.ac/p/2117",
+      "expected": {
+        "contentSha256": "2e3443ad3dbc89c5b2c6e1fd311cac785b8c873b0aeb286aa38a62e97a1076b8",
+        "html": "true"
+      },
+      "content": "## 题目描述\n\n小 D 被邀请到实验室，做一个跟图片质量评价相关的主观实验。\n\n实验用到的图片集一共有 $N$ 张图片，编号为 $1$ 到 $N$。实验分若干轮进行，在每轮实验中，小 D 会被要求观看某两张随机选取的图片， 然后小 D 需要根据他自己主观上的判断确定这两张图片谁好谁坏，或者这两张图片质量差不多。 \n\n用符号 ”$<$”、“$>$” 和 “$=$” 表示图片 $x$ 和 $y$（$x$、$y$ 为图片编号）之间的比较：如果上下文中 $x$ 和 $y$ 是图片编号，则 $x<y$ 表示图片 $x$「质量优于」$y$，$x>y$ 表示图片 $x$「质量差于」$y$，$x=y$ 表示图片 $x$ 和 $y$ 「质量相同」；也就是说，这种上下文中，“$<$”、“$>$”、“$=$” 分别是质量优于、质量差于、质量相同的意思；在其他上下文中，这三个符号分别是小于、大于、等于的含义。\n\n图片质量比较的推理规则（在 $x$ 和 $y$ 是图片编号的上下文中）：\n1. $x < y$ 等价于 $y > x$。\n2. 若 $x < y$ 且 $y = z$，则 $x < z$。\n3. 若 $x < y$ 且 $x = z$，则 $z < y$。\n4. $x=y$ 等价于 $y=x$。\n5. 若 $x=y$ 且 $y=z$，则 $x=z$。 \n\n实验中，小 D 需要对一些图片对 $(x, y)$，给出 $x < y$ 或 $x = y$ 或 $x > y$ 的主观判断。小 D 在做完实验后， 忽然对这个基于局部比较的实验的一些全局性质产生了兴趣。\n\n在主观实验数据给定的情形下，定义这 $N$ 张图片的一个合法质量序列为形如 “$x_1 R_1 x_2 R_2 x_3 R_3 …x_{N-1} R_{N-1} x_N$” 的串，也可看作是集合 $\\{ x_i R_i x_{i+1}|1 \\leq i \\leq N-1 \\}$，其中  $x_i$ 为图片编号，$x_1,x_2, \\ldots ,x_N$ 两两互不相同（即不存在重复编号），$R_i$ 为 $<$ 或 $=$，「合法」是指这个图片质量序列与任何一对主观实验给出的判断不冲突。 \n\n例如： 质量序列 $3 < 1 = 2$ 与主观判断 “$3 > 1$，$3 = 2$” 冲突（因为质量序列中 $3<1$ 且 $1=2$，从而 $3<2$，这与主观判断中的 $3=2$ 冲突；同时质量序列中的 $3<1$ 与主观判断中的 $3>1$ 冲突） ，但与主观判断 “$2 = 1$，$3 < 2$”  不冲突；因此给定主观判断 “$3>1$，$3=2$” 时，$1<3=2$ 和 $1<2=3$ 都是合法的质量序列，$3<1=2$ 和 $1<2<3$ 都是非法的质量序列。\n\n由于实验已经做完一段时间了，小 D 已经忘了一部分主观实验的数据。对每张图片 $X_i$，小 D 都最多只记住了某一张质量不比 $X_i$ 好的另一张图片 $K_{X_i}$。这些小 D 仍然记得的质量判断一共有 $M$ 条（$0 \\leq M \\leq N$），其中第 $i$ 条涉及的图片对为 $(K_{X_i}, X_i)$，判断要么是 $K_{X_i} < X_i$，要么是 $K_{X_i} = X_i$，而且所有的 $X_i$ 互不相同。小 D 打算就以这 M 条自己还记得的质量判断作为他的所有主观数据。\n\n现在，基于这些主观数据，我们希望你帮小 D 求出这 $N$ 张图片一共有多少个不同的合法质量序列。我们规定：如果质量序列中出现 “$x = y$”，那么序列中交换 $x$ 和 $y$ 的位置后仍是同一个序列。因此： $1<2=3=4<5$ 和 $1<4=2=3<5$ 是同一个序列， $1 < 2 = 3$ 和 $1 < 3 = 2$ 是同一个序列，而 $1 < 2 < 3$ 与 $1 < 2 = 3$ 是不同的序列，$1<2<3$ 和 $2<1<3$ 是不同的序列。\n\n由于合法的图片质量序列可能很多， 所以你需要输出答案对 $10^9 + 7$ 取模的结果\n\n## 输入格式\n\n第一行两个正整数 $N,M$，分别代表图片总数和小 $D$ 仍然记得的判断的条数；\n接下来 $M$ 行，每行一条判断，每条判断形如「$x < y$」或者「$x = y$」。\n\n## 输出格式\n\n输出仅一行，包含一个正整数，表示合法质量序列的数目对 $10^9+7$ 取模的结果。\n\n## 样例\n\n```input1\n5 4\n1 < 2\n1 < 3\n2 < 4\n1 = 5\n```\n\n```output1\n5\n```\n\n## 数据范围与提示\n\n不同的合法序列共五个，如下所示： \n\n$1 = 5 < 2 < 3 < 4$\n \n$1 = 5 < 2 < 4 < 3$ \n\n$1 = 5 < 2 < 3 = 4$\n\n$1 = 5 < 3 < 2 < 4$\n\n$1 = 5 < 2 = 3 < 4$\n\n$100 \\%$ 的数据满足 $N \\leq 100$。\n\n## 来源\n\n[LibreOJ #2117](https://loj.ac/p/2117)\n",
+      "html": false,
+      "newContentSha256": "fe847eadf39d7b499c6befa7bed3aa275b19d20c40978ed9056cf07b95c5793e"
+    },
+    {
+      "domainId": "system",
+      "docId": 687,
+      "pid": null,
+      "title": "#2122. 「HEOI2015」小Z的房间",
+      "category": "loj-math",
+      "source": "https://loj.ac/p/2122",
+      "expected": {
+        "contentSha256": "39669846f4bc7c46e8f04a634d2ac10e9fdc3dfa0884ecb91601b739be137156",
+        "html": "true"
+      },
+      "content": "## 题目描述\n\n小 Z 突然有了一个大房子，房子里面有一些房间。事实上，小 Z 的房子可以看做是一个包含 $n \\times m$ 个格子的格状矩形，每个格子是一个房间或者是一个柱子。在一开始的时候，相邻的格子之间都有墙隔着。\n\n小 Z 想要打通一些相邻房间的墙，使得所有房间能够互相到达。在此过程中，小 Z 不能把房子给打穿，或者打通柱子（以及柱子旁边的墙）。同时，小 Z 不希望在房子中有小偷的时候会很难抓，所以你希望任意两个房间之间都只有一条通路。现在，小 Z 希望统计一共有多少种可行的方案。你能帮帮他吗？\n\n## 输入格式\n\n第一行两个数分别表示 $n$ 和 $m$。  \n接下来 $n$ 行，每行 $m$ 个字符，每个字符都会是 ``.`` 或者 ``*``，其中 ``.`` 代表房间，``*`` 代表柱子。\n\n## 输出格式\n\n一行一个整数，表示合法的方案数 $\\mod 10^9$。\n\n## 样例\n\n```input1\n3 3\n...\n...\n.*.\n```\n\n```output1\n15\n```\n\n## 数据范围与提示\n\n对于 $100 \\%$ 的数据，$n, m \\leq 9$。\n\n## 来源\n\n[LibreOJ #2122](https://loj.ac/p/2122)\n",
+      "html": false,
+      "newContentSha256": "4046de73156b8b8a5d611e968dfe2f0b1282749925457b6b898ed1a34409fa72"
+    },
+    {
+      "domainId": "system",
+      "docId": 691,
+      "pid": null,
+      "title": "#2128. 「HAOI2015」数字串拆分",
+      "category": "loj-math",
+      "source": "https://loj.ac/p/2128",
+      "expected": {
+        "contentSha256": "6a9d5e3b6f5d930b67580f80e66d5e47bfc8b7d6e2776944592863b0a41fc72d",
+        "html": "true"
+      },
+      "content": "## 题目描述\n\n你有一个长度为 $n$ 的数字串。定义 $f(S)$ 为将 $S$ 拆分成若干个 $1\\sim m$ 的数的和的方案数，比如 $m=2$ 时，$f(4)=5$，分别为\n\n$$\\begin{align}\n4 &= 1+1+1+1 \\\\\n&= 2+1+1 \\\\\n&= 1+2+1 \\\\\n&= 1+1+2 \\\\\n&= 2+2\n\\end{align}$$\n\n你可以将这个数字串分割成若干个数字（允许前导 $0$），将他们加起来，求 $f$，并求和。比如 $g(123)=f(1+2+3)+f(1+23)+f(12+3)+f(123)$。已知字符串和 $m$ 后求答案对 $998244353$（$7 \\times 17 \\times 2^{23}+1$，一个质数）取模后的值。\n\n## 输入格式\n\n第一行输入一个字符串，第二行输入 $m$。\n\n## 输出格式\n\n仅输出一个数表示答案。\n\n## 样例\n\n```input1\n123\n3\n```\n\n```output1\n394608467\n```\n\n## 数据范围与提示\n\n对于 $100 \\%$ 的数据，字符串长度不超过 $500$，$m \\leq 5$ 。\n\n## 来源\n\n[LibreOJ #2128](https://loj.ac/p/2128)\n",
+      "html": false,
+      "newContentSha256": "ba8d52b93d31910e8d26b674170d35508e13dc661480dd7ca275ec35ad5cacb7"
+    },
+    {
+      "domainId": "system",
+      "docId": 692,
+      "pid": null,
+      "title": "#2131. 「NOI2015」寿司晚宴",
+      "category": "loj-math",
+      "source": "https://loj.ac/p/2131",
+      "expected": {
+        "contentSha256": "797991073c9fae98c6fc9f5cecf78427fbaf64dd0c8f8467430410fe2aa64a7b",
+        "html": "true"
+      },
+      "content": "## 题目描述\n\n为了庆祝 NOI 的成功开幕，主办方为大家准备了一场寿司晚宴。小 G 和小 W 作为参加 NOI 的选手，也被邀请参加了寿司晚宴。\n\n在晚宴上，主办方为大家提供了 $n−1$ 种不同的寿司，编号 $1,2,3, \\ldots , n−1$，其中第 $i$ 种寿司的美味度为 $i+1$ （即寿司的美味度为从 $2$ 到 $n$）。\n\n现在小 G 和小 W 希望每人选一些寿司种类来品尝，他们规定一种品尝方案为不和谐的当且仅当：小 G 品尝的寿司种类中存在一种美味度为 $x$ 的寿司，小 W 品尝的寿司中存在一种美味度为 $y$ 的寿司，而 $x$ 与 $y$ 不互质。\n\n现在小 G 和小 W 希望统计一共有多少种和谐的品尝寿司的方案（对给定的正整数 $p$ 取模）。注意一个人可以不吃任何寿司。\n\n## 输入格式\n\n输入文件的第一行包含两个正整数 $n,p$，中间用单个空格隔开，表示共有 $n$ 种寿司，最终和谐的方案数要对 $p$ 取模。\n\n## 输出格式\n\n输出一行包含一个整数，表示所求的方案模 $p$ 的结果。\n\n## 样例\n\n```input1\n3 10000\n```\n\n```output1\n9\n```\n\n## 数据范围与提示\n\n$2 \\leq n \\leq 500, \\ 0 < p \\leq 1000000000$\n\n## 来源\n\n[LibreOJ #2131](https://loj.ac/p/2131)\n",
+      "html": false,
+      "newContentSha256": "7de420f361aeff482b4fbd59ce822b98f621a22715aa2a450df18f27d1d27248"
+    },
+    {
+      "domainId": "system",
+      "docId": 708,
+      "pid": null,
+      "title": "#2183. 「SDOI2015」序列统计",
+      "category": "loj-math",
+      "source": "https://loj.ac/p/2183",
+      "expected": {
+        "contentSha256": "1f63bd761551e294577aaf5db33f94dc923676d05e871684eb14dc5adea4a9b0",
+        "html": "true"
+      },
+      "content": "## 题目描述\n\n小 C 有一个集合 $S$，里面的元素都是小于 $M$ 的非负整数。他用程序编写了一个数列生成器，可以生成一个长度为 $N$ 的数列，数列中的每个数都属于集合 $S$。\n\n小 C 用这个生成器生成了许多这样的数列。但是小 C 有一个问题需要你的帮助：给定整数 $x$，求所有可以生成出的，且满足数列中所有数的乘积 $\\bmod M$ 的值等于 $x$ 的不同的数列的有多少个。小 C 认为，两个数列 $\\{A_i\\}$ 和 $\\{B_i\\}$ 不同，当且仅当至少存在一个整数 $i$，满足 $A_i \\neq B_i$。另外，小 C 认为这个问题的答案可能很大，因此他只需要你帮助他求出答案 $\\mod 1004535809$ 的值就可以了。\n\n## 输入格式\n\n第一行，四个整数，$N$、$M$、$x$、$|S|$，其中 $|S|$ 为集合 $S$ 中元素个数。  \n第二行，$|S|$ 个整数，表示集合 $S$ 中的所有元素。\n\n## 输出格式\n\n一行，一个整数，表示你求出的种类数 $\\mod 1004535809$ 的值。\n\n## 样例\n\n```input1\n4 3 1 2\n1 2\n```\n\n```output1\n8\n```\n\n可以生成的满足要求的不同的数列有 $(1,1,1,1)$、$(1,1,2,2)$、$(1,2,1,2)$、$(1,2,2,1)$、$(2,1,1,2)$、$(2,1,2,1)$、$(2,2,1,1)$、$(2,2,2,2)$。\n\n## 数据范围与提示\n\n对于 $10\\%$ 的数据，$1 \\leq N \\leq 1000$；  \n对于 $30\\%$ 的数据，$3 \\leq M \\leq 100$；  \n对于 $60\\%$ 的数据，$3 \\leq M \\leq 800$；  \n对于全部的数据，$1 \\leq N \\leq 10^9,\\ 3 \\leq M \\leq 8000$，$M$为质数，$1 \\leq x \\leq M-1$，输入数据保证集合 $S$ 中元素不重复。\n\n## 来源\n\n[LibreOJ #2183](https://loj.ac/p/2183)\n",
+      "html": false,
+      "newContentSha256": "fc5e37a5ff27122d83a116703bef3089b68af67b01657325a0cd4f3ddcbba6f6"
+    },
+    {
+      "domainId": "system",
+      "docId": 710,
+      "pid": null,
+      "title": "#2191. 「SHOI2014」超能粒子炮",
+      "category": "loj-math",
+      "source": "https://loj.ac/p/2191",
+      "expected": {
+        "contentSha256": "0c495e21ebad49f930d5724a136d86c5e2eee2d38b848dce89696e63f64a0439",
+        "html": "true"
+      },
+      "content": "## 题目描述\n\n邪恶的巨型宇宙怪物 CCM (Crazy Code Monster) 即将对美丽的地球发动攻击！\n\n在这千钧一发的时刻,地球联合军决定使用地球最先进的能量武器——由发明家 SHTSC 设计的超能粒子炮彻底摧毁 CCM。\n\n超能粒子炮由垂直方向从上到下共 $n$ 个超能粒子发射管构成,编号 $1 \\sim n$。所有的发射管都会在开火的一瞬间同时发射出强大的超能粒子流。  \n为了彻底摧毁再生能力极强的邪恶宇宙怪物 CCM，地球联合军将 CCM 从上到下分为 $m$ 个区域，编号 $1 \\sim m$，分别进行打击。其中超能粒子炮的第 $i$ 号发射管将会对准 $f(i)$ 号区域发射。$f(i)$ 的公式如下：\n$$f(i) = (ai + b) \\bmod m \\mathrel{+} 1$$\n其中 $a, b$ 都是给定的常数。\n\n然而，出于某种不可告人的目的，N 财团不希望 CCM 被超能粒子炮彻底消灭。于是 N 财团以远程精神控制了超能粒子炮的操作员——你来阻止地球军消灭 CCM。\n\n你发现，超能粒子炮的开火模式会使得不同的粒子流的运动轨迹发生交叉，而在所有这些交叉点处部署一种名为折跃棱镜的能量反射装置就能使得超能粒子炮因过载而自爆。这样，你就可以阻止地球联合军使用超能粒子炮摧毁 CCM 而成为下一代 N 财团金牌的获得者。\n\n为了实现这个计划,你需要知道有多少对粒子流 $i, j$，满足 $i<j$ 且 $f(i) > f(j)$。\n\n## 输入格式\n\n第一行四个整数 $n, m, a, b$。分别为超能粒子炮的发射管数目、CCM 被分成的区域数、以及题目描述中的 $f$ 公式中的常数。\n\n## 输出格式\n\n输出一行一个整数，为运动轨迹交叉的粒子流的对数。\n\n## 样例 1\n\n```input1\n2 3 2 2\n```\n\n```output1\n1\n```\n\n## 样例 2\n\n```input2\n5 5 2 0\n```\n\n```output2\n7\n```\n\n## 数据范围与提示\n\n对于 $100\\%$ 的数据，$n \\leq m \\leq 10^9$，存在 $a’$ 满足 $aa’=1 \\pmod m$，且 $\\mathrm{min}\\{a,a’\\} \\leq 1000,\\ a,b<m$，$m$ 是质数。\n\n## 来源\n\n[LibreOJ #2191](https://loj.ac/p/2191)\n",
+      "html": false,
+      "newContentSha256": "634f4efccd6033a76b1cdb6bd3a12c1b8186917b0736c2eb04e1c29fd98c627f"
+    },
+    {
+      "domainId": "system",
+      "docId": 717,
+      "pid": null,
+      "title": "#2213. 「SCOI2014」方伯伯打扑克",
+      "category": "loj-math",
+      "source": "https://loj.ac/p/2213",
+      "expected": {
+        "contentSha256": "dc746f053d7c8017e24685d018024638a3ca867e32c3b5a8d5f814aeae01c677",
+        "html": "true"
+      },
+      "content": "## 题目描述\n\n方伯伯有一些空白的扑克（？）牌。方伯伯想要用这些牌来玩一个数学游戏。\n\n方伯伯首先决定好他要用这些空白的扑克牌组成 $m$ 个牌堆，每一堆牌的张数都是 $2$ 的整数次幂。确切地说，第 $i$ 堆（**注意**：从 $0$ 开始计数）牌将会有 $2^{n_i}$ 张牌。方伯伯首先决定好第 $0$ 堆牌要有 $2^{n_0}$ 张牌，然后将这堆牌从上到下按次序标记 $1 \\sim 2^{n_0}$ 的十进制数字。\n\n方伯伯开始游戏前决定要先洗牌，他决定好要洗 $x_0$ 次牌。他洗牌有一个固定的模式，每次洗牌操作等同于以下两个步骤的操作：\n\n1. 将所有奇数位上的牌依次取出组成新的一堆牌。\n2. 将新的一堆牌放在旧有的牌前面。\n\n如当 $n_0=3$ 时，第 $0$ 堆牌从上到下一开始为 ``12345678``，洗一次牌得到 ``13572468``，洗两次牌得到 ``15263748``。\n\n洗完牌后，方伯伯在心中决定好把其中从上往下数第 $l_0$ 到第 $r_0$ 张牌上的数字均加上一个数字 $t_0$，并依次（转换成二进制）异或之后得到一个异或值；方伯伯把第 $0$ 堆牌的这个异或值取模 $\\bmod 2^{n_0-1}$ 的值记作 $\\mathrm{ans}_0$。\n\n类似地，方伯伯将按同样的方式用剩下的 $m-1$ 个牌堆。具体地说，他决定按照如下几个公式来对每一堆牌组进行游戏：\n1. 对于第 $i$ 堆牌，牌堆中将会有 $2^{n_i-1}$ 张牌，并从上到下标有 $1\\sim 2^{n_i-1}$ 的十进制整数。其中，$n_i=(\\mathrm{ans}_{i-1}+i-1) \\bmod 5 \\mathrel{+} \\mathrm{base}$， $\\mathrm{base}$ 是一个方伯伯事先决定好的正整数。\n2. 方伯伯将会先决定好自己用来游戏的牌处于牌堆中的什么位置。方伯伯首先决定好他要看的第一张牌应该是第 $l_i$ 张，其中 $l_i=(2\\mathrm{ans}_{i-1}+l_{i-1}+i-1)\\bmod 2^{n_i} \\mathrel{+} 1$。\n3. 方伯伯接着决定他要看的最后一张牌应该是第 $r_i$ 张，其中 $r_i=(\\mathrm{ans}_{i-1}+1+l_1\\bmod 2^{\\lfloor n_i/2 \\rfloor} \\cdot 2^{\\lfloor n_i/2 \\rfloor})\\bmod 2^{n_i} \\mathrel{+}1$。\n4. 因为上面两个式子并不简单，有可能会产生 $l_i>r_i$ 的结果，此时将它们的值互换。\n5. 想好自己要看什么牌后，方伯伯就会以此决定自己要洗 $x_i$ 次牌，其中 $x_i=(r_i-l_i+t_{i-1}+i-1)\\bmod 2^{n_i}$。\n6. 方伯伯同时还会想好他要给每张牌要加上数字的是 $t_i$，其中 $t_i=(l_i+r_i)\\bmod 2^{n_i}$。\n7. 方伯伯洗完牌后，把其中从上往下数第 $l_i$ 到第 $r_i$ 张牌上的数字均加上数字 $t_i$，并依次（转换成二进制）异或之后得到一个异或值；方伯伯把第 $i$ 堆牌的这个异或值取模 $\\bmod 2^{n_i-1}$ 的值记作 $\\mathrm{ans}_i$，接着回到第一步玩下一个牌堆。\n\n方伯伯听说你有高超的信息学能力，他想知道你能否在他完成游戏前就算出最后一个牌堆，即第 $m-1$ 个牌堆，得到的游戏结果 $\\mathrm{ans}_{m-1}$。你能做到吗？\n\n## 输入格式\n\n第一行包含一个整数 $m$，表示牌组的个数。\n接下来一行包含六个整数，分别为 $n_0, x_0 ,l_0 ,r_0, t_0 , \\mathrm{Base}$。\n\n## 输出格式\n\n输出为一个数，表示最后的答案。\n\n## 样例\n\n```input1\n2\n5 1 4 27 3 15\n```\n\n```output1\n2700\n```\n\n## 数据范围与提示\n\n对于所有数据，$m \\leq 5000000,\\ n_i \\leq 60,\\ 0<l_i \\leq r_i \\leq 2^{n_i},\\ 0<x_i,t_i<10^9,\\ \\mathrm{Base} \\leq 55$。\n\n**备注**：喵酱（_modal_cat）脑补版题面。未验证题面题意与样例是否相符。\n\n## 来源\n\n[LibreOJ #2213](https://loj.ac/p/2213)\n",
+      "html": false,
+      "newContentSha256": "8a7d355bf1fbe20951918af139ce18d202319d127b1e30c1daf5182841d20663"
+    },
+    {
+      "domainId": "system",
+      "docId": 722,
+      "pid": null,
+      "title": "#2220. 「HEOI2014」平衡",
+      "category": "loj-math",
+      "source": "https://loj.ac/p/2220",
+      "expected": {
+        "contentSha256": "0af8043854287f68f513a8e29967f03ad474b5d6c18f4f14580a7a13c04b8978",
+        "html": "true"
+      },
+      "content": "## 题目描述\n\n下课了，露露、花花和萱萱在课桌上用正三棱柱教具和尺子摆起了一个「跷跷板」。\n\n这个「跷跷板」的结构是这样的：底部是一个侧面平行于地平面的正三棱柱教具，上面摆着一个尺子，尺子上摆着若干个相同的橡皮。尺子有 $2n + 1$ 条等距的刻度线，第 $n + 1$ 条刻度线恰好在尺子的中心，且与正三棱柱的不在课桌上的棱完全重合。\n\n露露发现这个「跷跷板」是不平衡的（尺子不平行于地平面）。于是，她又在尺子上放了几个橡皮，并移动了一些橡皮的位置，使得尺子的 $2n + 1$ 条刻度线上都恰有一块相同质量的橡皮。「跷跷板」平衡了，露露感到很高兴。\n\n花花觉得这样太没有意思，于是从尺子上随意拿走了 $k$ 个橡皮。令她惊讶的事情发生了： 尺子依然保持着平衡！\n\n萱萱是一个善于思考的孩子，她当然不对尺子依然保持平衡感到吃惊，因为这只是一个偶然的事件罢了。令她感兴趣的是，花花有多少种拿走 $k$ 个橡皮的方法，使得尺子依然保持平衡？\n\n当然，为了简化问题，她不得不做一些牺牲——假设所有橡皮都是拥有相同质量的质点。但即使是这样，她也没能计算出这个数目。放学后，她把这个问题交给了她的哥哥/ 姐姐——Hibarigasaki 学园学生会会长，也就是你。当然，由于这个问题的答案也许会过于庞大，你只需要告诉她答案 $\\bmod p$ 的值。\n\n## 输入格式\n\n第一行，一个正整数，表示数据组数 $T$（萱萱向你询问的次数）。  \n接下来 $T$ 行，每行三个正整数 $n, k, p$。\n\n## 输出格式\n\n共 $T$ 行，每行一个正整数，代表你得出的对应问题的答案。\n\n## 样例\n\n```input1\n10\n6 5 10000\n4 1 10000\n9 6 10000\n4 6 10000\n5 1 10000\n8318 10 9973\n9862 9 9973\n8234 9 9973\n9424 9 9973\n9324 9 9973\n```\n\n```output1\n73\n1\n920\n8\n1\n4421\n2565\n0\n446\n2549\n```\n\n## 数据范围与提示\n\n对于所有的数据，$T \\leq 20,\\ 1 \\leq n \\leq 10000,\\ 1 \\leq k \\leq 10,\\ 2 \\leq p \\leq 10000$，且 $k \\leq 2n+1$。\n\n## 来源\n\n[LibreOJ #2220](https://loj.ac/p/2220)\n",
+      "html": false,
+      "newContentSha256": "a98903ef2325e53d67e432604784eb961f9c7880364b92c4b6263b713b427d94"
+    },
+    {
+      "domainId": "system",
+      "docId": 732,
+      "pid": null,
+      "title": "#2253. 「SNOI2017」礼物",
+      "category": "loj-math",
+      "source": "https://loj.ac/p/2253",
+      "expected": {
+        "contentSha256": "3593492b1b2b32672e621eb9cabf2873b8012a99eaba29fad7084c64aaa137ff",
+        "html": "true"
+      },
+      "content": "## 题目描述\n\n热情好客的🐒请森林中的朋友们吃饭，他的朋友被编号为 $1\\sim N$，每个到来的朋友都会带给他一些礼物：🍌。其中，第一个朋友会带给他 $1$ 个🍌，之后，每一个朋友到来以后，都会带给他之前所有人带来的礼物个数再加他的编号的 $K$ 次方那么多个。所以，假设 $K=2$，前几位朋友带来的礼物个数分别是：\n\n$1,5,15,37,83,\\ldots$\n\n假设 $K=3$，前几位朋友带来的礼物个数分别是：\n\n$1,9,37,111,\\ldots$\n\n现在，🐒好奇自己到底能收到第 $N$ 个朋友多少礼物，因此拜托于你了。\n\n已知 $N,K$，请输出第 $N$ 个朋友送的礼物个数 $\\bmod 1000000007$。\n\n## 输入格式\n\n第一行，两个整数 $N,K$。\n\n## 输出格式\n\n一个整数，表示第 $N$ 个朋友送的礼物个数 $\\bmod 1000000007$。\n\n## 样例 1\n\n```input1\n4 2\n```\n\n```output1\n37\n```\n\n## 样例 2\n\n```input2\n2333333 2\n```\n\n```output2\n514898185\n```\n\n## 样例 3\n\n```input3\n1234567890000 3\n```\n\n```output3\n891659731\n```\n\n## 样例 4\n\n```input4\n66666666 10\n```\n\n```output4\n32306309\n```\n\n## 数据范围与提示\n\n$20\\%$ 的数据：$N\\leq 10^6$。  \n另外 $10\\%$ 的数据：$K=1$。  \n另外 $20\\%$ 的数据：$K=2$。  \n另外 $20\\%$ 的数据：$K=3$。  \n$100\\%$ 的数据：$N\\leq 10^{18}$，$K\\leq 10$。\n\n数据范围与原题相同，但测试数据由本站会员自制，并非原数据。  \n时限已按照评测机速度调整，原题时限为 $2000\\,\\texttt{ms}$。\n\n## 来源\n\n[LibreOJ #2253](https://loj.ac/p/2253)\n",
+      "html": false,
+      "newContentSha256": "e0109ca5070ec4932a91d0771fd64a7dd7711d3a2cf642b38d68bbdd82594911"
+    },
+    {
+      "domainId": "system",
+      "docId": 735,
+      "pid": null,
+      "title": "#2273. 「JXOI2017」数列",
+      "category": "loj-math",
+      "source": "https://loj.ac/p/2273",
+      "expected": {
+        "contentSha256": "3ddd93388e392d547af63e1568265379f28fc318439af707c344b06acf2221a8",
+        "html": "true"
+      },
+      "content": "## 题目描述\n\n九条可怜手上有一个长度为 $n$ 的整数数列 $r_i$ ，她现在想要构造一个长度为 $n$ 的，满足如下条件的整数数列 $A$：\n\n* $1\\leq  A_i \\leq r_i$。\n* 对于任意 $3 \\leq i \\leq n$，令 $R$ 为 $A_1$ 至 $A_{i-2}$ 中大于等于 $A_{i-1}$ 的最小值，$L$ 为 $A_1$ 至 $A_{i-2}$ 中小于等于 $A_{i-1}$ 的最大值。$A_i$ 必须满足 $L \\leq A_i \\leq R$。如果不存在大于等于 $A_{i-1}$ 的，那 么 $R = +\\infty$；如果不存在小于等于 $A_{i-1}$ 的，那么 $L = −\\infty$。\n\n现在可怜想要知道共有多少不同的数列满足这个条件。两个数列 $A$ 和 $B$ 是不同的当且仅当至少存在一个位置 $i$ 满足 $A_i \\neq B_i$。\n\n## 输入格式\n\n第一行输入一个整数 $n$，第二行输入 $n$ 个整数 $r_i$。\n\n## 输出格式\n\n输出一个整数表示方案数，答案可能很大，对 $998244353$ 取模后输出。\n\n## 样例\n\n```input1\n3\n2 2 2\n```\n\n```output1\n6\n```\n\n满足条件的序列有 $[1, 1, 1], [1, 2, 1], [1, 2, 2], [2, 1, 1], [2, 1, 2], [2, 2, 2]$ 。\n\n## 数据范围与提示\n\n<!-- BEGIN: Migrated markdown table -->\n\n| 测试点编号 | $n$ | $r_i$ |\n|:-:|:-:|:-:|\n| $1$ | $\\leq 7$ | $\\leq 7$ |\n| $2$ | $\\leq 7$ | $\\leq 7$ |\n| $3$ | $\\leq 50$ | $\\leq 10$ |\n| $4$ | $\\leq 50$ | $\\leq 10$ |\n| $5$ | $\\leq 50$ | $\\leq 16$ |\n| $6$ | $\\leq 50$ | $\\leq 16$ |\n| $7$ | $\\leq 50$ | $\\leq 50$ |\n| $8$ | $\\leq 50$ | $\\leq 50$ |\n| $9$ | $\\leq 50$ | $\\leq 150$ |\n| $10$ | $\\leq 50$ | $\\leq 150$ |\n\n<!-- Migrated from original HTML table:\n<table><thead>\n\t<tr>\n\t\t<th style='text-align:center'>测试点编号</th>\n\t\t<th style='text-align:center'> $n$ </th>\n\t\t<th style='text-align:center'> $r_i$ </th>\n\t</tr></thead><tbody>\n\t<tr>\n\t\t<td style='text-align:center'> $1$ </td>\n\t\t<td rowspan=2 style='text-align:center'> $\\leq 7$ </td>\n\t\t<td rowspan=2 style='text-align:center'> $\\leq 7$ </td>\n\t</tr>\n\t<tr>\n\t\t<td style='text-align:center'> $2$ </td>\n\t</tr>\n\t<tr>\n\t\t<td style='text-align:center'> $3$ </td>\n\t\t<td rowspan=8 style='text-align:center'> $\\leq 50$ </td>\n\t\t<td rowspan=2 style='text-align:center'> $\\leq 10$ </td>\n\t</tr>\n\t<tr>\n\t\t<td style='text-align:center'> $4$ </td>\n\t</tr>\n\t<tr>\n\t\t<td style='text-align:center'> $5$ </td>\n\t\t<td rowspan=2 style='text-align:center'> $\\leq 16$ </td>\n\t</tr>\n\t<tr>\n\t\t<td style='text-align:center'> $6$ </td>\n\t</tr>\n\t<tr>\n\t\t<td style='text-align:center'> $7$ </td>\n\t\t<td rowspan=2 style='text-align:center'> $\\leq 50$ </td>\n\t</tr>\n\t<tr>\n\t\t<td style='text-align:center'> $8$ </td>\n\t</tr>\n\t<tr>\n\t\t<td style='text-align:center'> $9$ </td>\n\t\t<td rowspan=2 style='text-align:center'> $\\leq 150$ </td>\n\t</tr>\n\t<tr>\n\t\t<td style='text-align:center'> $10$ </td>\n\t</tr></tbody>\n</table>\n-->\n\n<!-- END: Migrated markdown table -->\n\n对于全部数据，保证 $n\\ge 1,r_i\\ge 1$。\n\n## 来源\n\n[LibreOJ #2273](https://loj.ac/p/2273)\n",
+      "html": false,
+      "newContentSha256": "3cca91bceaafd6954c181769a3c912dbee7e7460bc72584f77015bc91596172a"
+    },
+    {
+      "domainId": "system",
+      "docId": 736,
+      "pid": null,
+      "title": "#2280. 「FJOI2017」矩阵填数",
+      "category": "loj-math",
+      "source": "https://loj.ac/p/2280",
+      "expected": {
+        "contentSha256": "1a3b189f368f06e2b9bc7d1b4d439ffa1ca49f360973b017231988d5eb83f736",
+        "html": "true"
+      },
+      "content": "## 题目描述\n\n给定一个 $h \\times w$ 的矩阵，矩阵的行编号从上到下依次为 $1,\\ldots,h$，列编号从左到右依次 $1,\\ldots,w$。\n\n在这个矩阵中你需要在每个格子中填入 $1,\\ldots,m$ 中的某个数。给这个矩阵填数的时候有一些限制，给定 $n$ 个该矩阵的子矩阵，以及该子矩阵的最大值 $v$，要求你所填的方案满足该子矩阵的最大值为 $v$。\n\n现在，你的任务是求出有多少种填数的方案满足这 $n$ 个限制。\n\n两种方案是不一样的当且仅当两个方案至少存在一个格子上有不同的数。由于答案可能很大，你只需要输出答案 $\\! {\\bmod} 1000000007$。\n\n## 输入格式\n\n输入数据的第一行为一个数 $T$，表示数据组数。  \n对于每组数据，第一行为四个数 $h,w,m,n$。  \n接下来 $n$ 行，每一行描述一个子矩阵的最大值 $v$。每行为五个整数 $x_1,y_1,x_2,y_2,v$，表示一个左上角为 $(x_1,y_1)$，右下角为 $(x_2,y_2)$ 的子矩阵的最大值为 $v$（$1\\leq x_1\\leq x_2\\leq h,\\ 1\\leq y_1\\leq y_2\\leq w$）。\n\n## 输出格式\n\n对于每组数据输出一行，表示填数方案 $\\! \\bmod 1000000007$ 后的值。\n\n## 样例\n\n```input1\n2\n3 3 2 2\n1 1 2 2 2\n2 2 3 3 1\n4 4 4 4\n1 1 2 3 3\n2 3 4 4 2\n2 1 4 3 2\n1 2 3 4 4\n```\n\n```output1\n28\n76475\n```\n\n## 数据范围与提示\n\n对于 20%的数据：$n \\leq 2$。  \n另有 20% 的数据：$1 \\leq h, w\\leq 50$。  \n对于 100%的数据：$T \\leq 5,1 \\leq h, w, m \\leq 10000,1 \\leq v \\leq m, 1 \\leq n \\leq 10$。\n\n## 来源\n\n[LibreOJ #2280](https://loj.ac/p/2280)\n",
+      "html": false,
+      "newContentSha256": "d85a8e569248ad85f44da4440b26b979343610580699a03a200162722c6be656"
+    },
+    {
+      "domainId": "system",
+      "docId": 737,
+      "pid": null,
+      "title": "#2290. 「THUWC 2017」随机二分图",
+      "category": "loj-math",
+      "source": "https://loj.ac/p/2290",
+      "expected": {
+        "contentSha256": "48389ed79a12f358d7018f117de59948f8b9645d3961ab4edd7f335b88ce8143",
+        "html": "true"
+      },
+      "content": "## 题目描述\n\n某人在玩一个非常神奇的游戏。这个游戏中有一个左右各 $n$ 个点的二分图，图中的边会按照一定的规律随机出现。\n\n为了描述这些规律，某人将这些边分到若干个组中。每条边或者不属于任何组 （这样的边一定不会出现），或者只属于一个组。\n\n有且仅有以下三类边的分组：\n\n0.  这类组每组只有一条边，该条边恰好有 $50\\%$ 的概率出现。\n\n1.  这类组每组恰好有两条边，这两条边有 $50\\%$ 的概率同时出现，有 $50\\%$ 的概率同时不出现。\n2.  这类组每组恰好有两条边，这两条边恰好出现一条，各有 $50\\%$ 的概率出现。\n\n组和组之间边的出现都是完全独立的。\n\n某人现在知道了边的分组和组的种类，想要知道完美匹配数量的期望是多少。你能帮助她解决这个问题吗？\n\n#### 定义解释\n\n如果你对完美匹配和期望的定义很熟悉，那么你可以跳过本段。\n\n对于一个左右各 $n$ 个点的二分图，它的一个完美匹配是指 $n$ 条没有公共点的边构成的匹配。\n\n两个完美匹配不同，当且仅当它们至少含有一条不同的边。一个二分图完美匹配的数量定义为这张图能找到的两两不同的完美匹配的数量。\n\n在题目的图中，边都是随机出现的，因此这个图中完美匹配的数量是一个随机变量。一个（离散型）随机变量 $X$ 的期望定义为以概率为权，$X$ 所有可能取值的加权平均数，即\n$$\n\\sum_{x \\in V(X)}P[X=x]\\cdot x\n$$\n其中 $V(X)$ 表示 $X$ 所有可能的取值集合，$P[X=x]$ 表示 $X$ 取值为 $x$ 的概率。\n\n## 输入格式\n\n从标准输入读入数据。\n\n第一行两个数 $n$ 和 $m$，表示图左右点数的数量和边的组的个数。我们用 $(a,b)$ （其中 $1 \\le a,b \\le n$）表示一条左端点为二分图左侧第 $a$ 个点，右端点为二分图右侧第 $b$ 个点的边。\n\n接下来 $m$ 行，每行描述一个组。开头第一个数 $t$ 表示组的种类，$t=0$ 表示是一条边的组，$t=1$ 表示是两条边的组中的第一种，$t=2$ 表示是两条边的组中的第二种。如果 $t=0$， 接下来两个数 $a_1,b_1$ 表示组内的第一条边；否则，接下来四个数 $a_1,b_1,a_2,b_2$， 表示该组内的两条边分别为 $(a_1,b_1)$  和 $(a_2,b_2)$。保证每条边至多出现一次。\n\n## 输出格式\n\n输出到标准输出。\n\n假设期望的完美匹配数量是$E$。输出一行表示\n$$\n(2^{n} E) \\bmod (10^9 + 7)\n$$\n可以看出上式一定是一个整数。\n\n## 样例 1\n\n```input1\n2 2\n1 2 1 2 2\n2 1 2 1 1\n```\n\n```output1\n2\n```\n\n## 样例 2\n\n```input2\n3 5\n1 1 2 3 3\n1 3 2 2 2\n1 1 1 1 3\n1 2 1 3 1\n0 2 3\n```\n\n```output2\n7\n```\n\n## 数据范围与提示\n\n对于 $5\\%$ 的数据 $n \\le 5$ 。\n\n对于另 $5\\%$ 的数据 $n \\le 8$ 。\n\n对于另 $10\\%$ 的数据 $n \\le 10$ 。\n\n对于另 $15\\%$ 的数据，只有$t = 0$ 的情况。\n\n对于另 $5\\%$ 的数据，只有$t = 0$ 的情况，且$m = n^2$，也就是该图为一个完全图。\n\n对于另 $20\\%$ 的数据，只有 $t =0$ 或者 $t=1$ 的情况。\n\n对于另 $20\\%$ 的数据，只有 $t =0$ 或者 $t=2$ 的情况。\n\n对于 $100\\%$ 的数据，$n \\le 15$。\n\n## 来源\n\n[LibreOJ #2290](https://loj.ac/p/2290)\n",
+      "html": false,
+      "newContentSha256": "e15e776cd85bb79b430b87bc9ea89d11311ae53af1e3f2f78ecaac975b4f5c91"
+    },
+    {
+      "domainId": "system",
+      "docId": 739,
+      "pid": null,
+      "title": "#2304. 「NOI2017」泳池",
+      "category": "loj-math",
+      "source": "https://loj.ac/p/2304",
+      "expected": {
+        "contentSha256": "ef9795602269e952364e972bf6fd930b5291af4e0283ede87c17784462010336",
+        "html": "true"
+      },
+      "content": "## 题目描述\n\n久莲是个爱玩的女孩子。\n\n暑假终于到了，久莲决定请她的朋友们来游泳，她打算先在她家的私人海滩外圈一块长方形的海域作为游泳场。然而大海里有着各种各样的危险，有些地方水太深，有些地方有带毒的水母出没。她想让圈出来的这一块海域都是安全的。\n\n经过初步分析，这块海域可视为一个底边长为 $N$ 米，高为 $1001$ 米的长方形网格。其中网格的底边对应着她家的私人海滩，每一个 $1\\:\\textrm{m}\\times1\\:\\textrm{m}$ 的小正方形都代表着一个单位海域。她拜托了她爸爸明天去测量每一个小正方形是否安全。在得知了信息之后，她要做的就是圈出她想要的游泳场啦。  \n\n她心目中理想的游泳场满足如下三个条件：\n* 必须保证安全性。即游泳场中的每一个单位海域都是安全的。\n* 必须是矩形。即游泳场必须是整个网格中的一个 $a\\times b$ 的子网格。\n* 必须和海滩相邻。即游泳场的下边界必须紧贴网格的下边界。\n\n例如：当 $N = 5$ 时，若测量的结果如下（因为 $1001$ 太大，这儿只画出网格最下面三行的信息，其他部分都是危险的）。      \n\n<img src=\"https://i.loli.net/2017/07/22/5972da918aa3c.png\" alt=\"Screen Shot 2017-07-22 at 4.54.14 PM.png\"  align = \"center\" style=\"display: block; margin: 0 auto;\">\n\n那么她可以选取最下面一行的 $1\\times4$ 的子海域，也可以选择第三列的 $3\\times1$ 的子海域。注意她不能选取最上面一行的 $1\\times5$ 的子海域，因为它没有与海滩相邻。\n\n为了让朋友们玩的开心，她想让游泳场的面积尽可能的大。因此她会选取最下面那一行的 $1\\times4$ 的子海域作为最终方案。\n\n虽然她要明天才能知道每一个单位海域是否安全，但是她现在就想行动起来估计一下她的游泳场面积有多大。经过简单的估计，她假设每一个单位海域都有独立的 $q$ 的概率是安全的，$1 − q$ 的概率是不安全的。她想要知道她能选择的最大的游泳场的面积__恰好__为 $K$ 的概率是多少。\n\n然而久莲对数学并不感兴趣，因此她想让你来帮她计算一下这个数值。\n\n## 输入格式\n\n输入一行四个正整数 $N,K,x,y$，其中 $1 \\leq x < y < 998244353$。$q$ 的取值为 $\\frac{x}{y}$。\n\n## 输出格式\n\n输出一行一个整数表示答案在模 $998244353$ 意义下的取值。\n\n即设答案化为最简分式后的形式为 $\\frac{a}{b}$ ，其中 $a$ 和 $b$ 的互质。输出整数 $x$ 使得 $bx \\equiv a \\mod 998244353$ 且 $0 \\leq x < 998244353$。可以证明这样的整数 $x$ 是唯一的。\n\n## 样例\n\n```input1\n10 5 1 2\n```\n\n```output1\n342025319\n```\n\n## 数据范围与提示\n\n#### 提示\n\n$x^{p-1} \\equiv 1 \\pmod p$，其中 $p$ 为质数，$x \\in [1,p)$。\n\n#### 子任务\n\n <!-- BEGIN: Migrated markdown table -->\n\n| 测试点编号 | $N$ | $K$ |\n|:-:|:-:|:-:|\n| 1,2 | $=1$ | $\\leq 1000$ |\n| 3 | $\\leq 10$ | $\\leq 8$ |\n| 4 | $\\leq 10$ | $\\leq 9$ |\n| 5 | $\\leq 10$ | $\\leq 10$ |\n| 6 | $\\leq 1000$ | $\\leq 7$ |\n| 7 | $\\leq 1000$ | $\\leq 8$ |\n| 8 | $\\leq 1000$ | $\\leq 9$ |\n| 9,10,11 | $\\leq 1000$ | $\\leq 100$ |\n| 12,13,14 | $\\leq 1000$ | $\\leq 1000$ |\n| 15,16 | $\\leq 10^9$ | $\\leq 10$ |\n| 17,18 | $\\leq 10^9$ | $\\leq 100$ |\n| 19,20 | $\\leq 10^9$ | $\\leq 1000$ |\n\n<!-- Migrated from original HTML table:\n<table class=\"ui celled center aligned table\"><thead><tr><th rowspan=\"1\">测试点编号</th><th rowspan=\"1\"> $N$ </th><th rowspan=\"1\"> $K$ </th></tr></thead><tbody><tr><td rowspan=\"1\">1,2</td><td rowspan=\"1\"> $=1$ </td><td rowspan=\"1\"> $\\leq 1000$ </td></tr><tr><td rowspan=\"1\">3</td><td rowspan=\"1\"> $\\leq 10$ </td><td rowspan=\"1\"> $\\leq 8$ </td></tr><tr><td rowspan=\"1\">4</td><td rowspan=\"1\"> $\\leq 10$ </td><td rowspan=\"1\"> $\\leq 9$ </td></tr><tr><td rowspan=\"1\">5</td><td rowspan=\"1\"> $\\leq 10$ </td><td rowspan=\"1\"> $\\leq 10$ </td></tr><tr><td rowspan=\"1\">6</td><td rowspan=\"1\"> $\\leq 1000$ </td><td rowspan=\"1\"> $\\leq 7$ </td></tr><tr><td rowspan=\"1\">7</td><td rowspan=\"1\"> $\\leq 1000$ </td><td rowspan=\"1\"> $\\leq 8$ </td></tr><tr><td rowspan=\"1\">8</td><td rowspan=\"1\"> $\\leq 1000$ </td><td rowspan=\"1\"> $\\leq 9$ </td></tr><tr><td rowspan=\"1\">9,10,11</td><td rowspan=\"1\"> $\\leq 1000$ </td><td rowspan=\"1\"> $\\leq 100$ </td></tr><tr><td rowspan=\"1\">12,13,14</td><td rowspan=\"1\"> $\\leq 1000$ </td><td rowspan=\"1\"> $\\leq 1000$ </td></tr><tr><td rowspan=\"1\">15,16</td><td rowspan=\"1\"> $\\leq 10^9$ </td><td rowspan=\"1\"> $\\leq 10$ </td></tr><tr><td rowspan=\"1\">17,18</td><td rowspan=\"1\"> $\\leq 10^9$ </td><td rowspan=\"1\"> $\\leq 100$ </td></tr><tr><td rowspan=\"1\">19,20</td><td rowspan=\"1\"> $\\leq 10^9$ </td><td rowspan=\"1\"> $\\leq 1000$ </td></tr></tbody></table>\n-->\n\n<!-- END: Migrated markdown table -->\n\n## 来源\n\n[LibreOJ #2304](https://loj.ac/p/2304)\n",
+      "html": false,
+      "newContentSha256": "7e2ac3a4d0c4dfbe0c4ad4189a929c47f9188158ac844c05dac4879d256a7c50"
+    },
+    {
+      "domainId": "system",
+      "docId": 741,
+      "pid": null,
+      "title": "#2314. 「NOIP2017」小凯的疑惑",
+      "category": "loj-math",
+      "source": "https://loj.ac/p/2314",
+      "expected": {
+        "contentSha256": "feeb6ada18af2555f08c69739d6bd74f26671ba422dbe0e918f2885bb1e34a8d",
+        "html": "true"
+      },
+      "content": "## 题目描述\n\n小凯手中有两种面值的金币，两种面值均为正整数且彼此互素。每种金币小凯都有无数个。在不找零的情况下，仅凭这两种金币，有些物品他是无法准确支付的。现在小凯想知道在无法准确支付的物品中，最贵的价值是多少金币？注意：输入数据保证存在小凯无法准确支付的商品。\n\n## 输入格式\n\n输入数据仅一行，包含两个正整数 $a$ 和 $b$，它们之间用一个空格隔开，表示小凯手中金币的面值。\n\n## 输出格式\n\n输出文件仅一行，一个正整数 $N$，表示不找零的情况下，小凯用手中的金币不能准确支付的最贵的物品的价值。\n\n## 样例\n\n```input1\n3 7\n```\n\n```output1\n11\n```\n\n小凯手中有面值为3和7的金币无数个，在不找零的前提下无法准确支付价值为 $1、2、4、5、8、11$的物品，其中最贵的物品价值为11。\n比11贵的物品都能买到，比如：\n- $ 12 = 3 \\times 4 + 7 \\times 0$\n- $13 = 3 \\times 2 + 7 \\times1$\n- $ 14 = 3 \\times 0 + 7 \\times 2 $\n- $ 15 = 3 \\times 5 + 7 \\times 0$\n\n## 数据范围与提示\n\n对于 $30\\%$ 的数据：$ 1 \\le a,b \\le 50$;\n\n对于 $60\\%$ 的数据： $1 \\le a,b \\le 10,000$;\n\n对于 $100\\%$ 的数据：$1 \\le a,b \\le 1,000,000,000$。\n\n## 来源\n\n[LibreOJ #2314](https://loj.ac/p/2314)\n",
+      "html": false,
+      "newContentSha256": "1ba41ebf7c99b29239dffa7aad3dd3385aee860bcc891fcc2ac413814dcf68a0"
+    },
+    {
+      "domainId": "system",
+      "docId": 743,
+      "pid": null,
+      "title": "#2318. 「NOIP2017」宝藏",
+      "category": "loj-math",
+      "source": "https://loj.ac/p/2318",
+      "expected": {
+        "contentSha256": "3a50e4f4b9b5cd46edd646ad6f174d95975433404f65e296835172784cbb7d3b",
+        "html": "true"
+      },
+      "content": "## 题目描述\n\n参与考古挖掘的小明得到了一份藏宝图，藏宝图上标出了 $n$ 个深埋在地下的宝藏屋，也给出了这 $n$ 个宝藏屋之间可供开发的 $m$ 条道路和它们的长度。\n\n小明决心亲自前往挖掘所有宝藏屋中的宝藏。但是，每个宝藏屋距离地面都很远，也就是说，从地面打通一条到某个宝藏屋的道路是很困难的，而开发宝藏屋之间的道路则相对容易很多。\n\n小明的决心感动了考古挖掘的赞助商， 赞助商决定免费赞助他打通一条从地面到某个宝藏屋的通道，通往哪个宝藏屋则由小明来决定。\n\n在此基础上， 小明还需要考虑如何开凿宝藏屋之间的道路。已经开凿出的道路可以任意通行不消耗代价。每开凿出一条新道路，小明就会与考古队一起挖掘出由该条道路所能到达的宝藏屋的宝藏。另外，小明不想开发无用道路，即两个已经被挖掘过的宝藏屋之间的道路无需再开发。\n\n新开发一条道路的代价是：\n\n这条道路的长度 $\\times$ 从赞助商帮你打通的宝藏屋到这条道路起点的宝藏屋所经过的宝藏屋的数量（包括赞助商帮你打通的宝藏屋和这条道路起点的宝藏屋）。\n\n请你编写程序为小明选定由赞助商打通的宝藏屋和之后开凿的道路，使得工程总代价最小，并输出这个最小值。\n\n## 输入格式\n\n第一行两个用空格分离的正整数 $n$ 和 $m$，代表宝藏屋的个数和道路数。\n\n接下来 $m$ 行，每行三个用空格分离的正整数，分别是由一条道路连接的两个宝藏屋的编号（编号为 $1\\sim n$），和这条道路的长度 $v$。\n\n## 输出格式\n\n输出共一行，一个正整数，表示最小的总代价。\n\n## 样例 1\n\n```input1\n4 5\n1 2 1\n1 3 3\n1 4 1\n2 3 4\n3 4 1\n```\n\n```output1\n4\n```\n\n![treasure1.png](https://img.loj.ac.cn/2021/12/29/7de6a14844bf1.png)\n\n## 样例 2\n\n```input2\n4 5\n1 2 1\n1 3 3\n1 4 1\n2 3 4\n3 4 2\n```\n\n```output2\n5\n```\n\n![treasure2.png](https://img.loj.ac.cn/2021/12/29/984854de117a3.png)\n\n## 数据范围与提示\n\n对于 $20\\%$ 的数据：\n\n保证输入是一棵树， $1\\le n\\le8， v\\le 5000$ 且所有的 $v$ 都相等。\n\n对于 $40\\%$ 的数据：\n\n$1\\le n\\le 8， 0\\le m\\le 1000， v\\le 5000$ 且所有的 $v$ 都相等。\n\n对于 $70\\%$ 的数据：\n\n$1\\le n\\le 8， 0\\le m\\le 1000， v\\le  5000$。\n\n对于 $100\\%$ 的数据：\n\n$1\\le n\\le 12， 0\\le m\\le 1000， v\\le  500000$。\n\n## 来源\n\n[LibreOJ #2318](https://loj.ac/p/2318)\n",
+      "html": false,
+      "newContentSha256": "d7f8345da6862a236d52a381f07dde1ea9d7d3b5d9546e7af8a3164313b37c11"
+    },
+    {
+      "domainId": "system",
+      "docId": 746,
+      "pid": null,
+      "title": "#2325. 「清华集训 2017」小 Y 和恐怖的奴隶主",
+      "category": "loj-math",
+      "source": "https://loj.ac/p/2325",
+      "expected": {
+        "contentSha256": "ed54fc3bc4a531bf199f2f29a64f1e3a09fd0476cf58e495ebc7959e98de0bc9",
+        "html": "true"
+      },
+      "content": "## 题目描述\n\n>\"A fight? Count me in!\" 要打架了，算我一个。\n\n>\"Everyone, get in here!\" 所有人，都过来！\n\n小 Y 是一个喜欢玩游戏的 OIer。一天，她正在玩一款游戏，要打一个 Boss。\n\n虽然这个 Boss 有 $10^{100}$ 点生命值，但它只带了一个随从——一个只有 $m$ 点生命值的「恐怖的奴隶主」。\n\n这个「恐怖的奴隶主」有一个特殊的技能：每当它被扣减生命值但没有死亡（死亡即生命值 $\\leq 0$），且 Boss 的随从数量小于上限 \n$k$，便会召唤一个新的具有 $m$ 点生命值的「恐怖的奴隶主」。\n\n现在小 Y 可以进行 $n$ 次攻击，每次攻击时，会从 Boss 以及 Boss 的所有随从中的等概率随机选择一个，并扣减 $1$ 点生命值，她想知道进行 $n$ 次攻击后扣减 Boss 的生命值点数的期望。为了避免精度误差，你的答案需要对 $998244353$ 取模。\n\n## 输入格式\n\n输入第一行包含三个正整数 $T, m, k$，$T$ 表示询问组数，$m, k$ 的含义见题目描述。\n\n接下来 $T$ 行，每行包含一个正整数 $n$，表示询问进行 $n$ 次攻击后扣减 Boss 的生命值点数的期望。\n\n## 输出格式\n\n输出共 $T$ 行，对于每个询问输出一行一个非负整数，表示该询问的答案对 $998244353$ 取模的结果。\n\n可以证明，所求期望一定是一个有理数，设其为 ${p \\over q}$（$\\gcd(p,q) = 1$），那么你输出的数 $x$ 要满足 $p \\equiv qx \\pmod{998244353}$。\n\n## 样例\n\n```input1\n3 2 6\n1\n2\n3\n```\n\n```output1\n499122177\n415935148\n471393168\n```\n\n对于第一次询问，第一次攻击有 $\\frac{1}{2}$ 的概率扣减 Boss 的生命值，有 $\\frac{1}{2}$ 的概率扣减随从的生命值，所以答案为 $\\frac{1}{2}$。$1 \\equiv 2 \\times 499122177 \\pmod{998244353}$。\n\n对于第二次询问，如果第一次攻击扣减了 Boss 的生命值，那么有 $\\frac{1}{2}$ 的概率第二次攻击仍扣减 Boss 的生命值，有 $\\frac{1}{2}$ 的概率第二次攻击扣减随从的生命值；如果第一次攻击扣减了随从的生命值，那么现在又新召唤了一个随从（「恐怖的奴隶主」），于是有 $\\frac{1}{3}$ 的概率第二次攻击扣减 Boss 的生命值，有 $\\frac{2}{3}$ 的概率第二次攻击扣减随从的生命值。所以答案为 $\\frac{1}{2}\\times\\frac{1}{2}\\times2+\\frac{1}{2}\\times\\frac{1}{2}\\times1+\\frac{1}{2}\\times\\frac{1}{3}\\times1+\\frac{1}{2}\\times\\frac{2}{3}\\times0 = \\frac{11}{12}$。$11 \\equiv 12 \\times 415935148\\pmod{998244353}$。\n\n\n\n\n见附加文件下的 *ex_2.in* 与 *ex_2.ans*。\n\n该组样例的数据范围（除询问组数 $T$ 外）同第 7、8 个测试点。\n\n## 数据范围与提示\n\n在所有测试点中，$1 \\leq T \\leq 1000, 1 \\leq n \\leq {10}^{18}, 1 \\leq m \\leq 3, 1 \\leq k \\leq 8$。\n\n各个测试点的分值和数据范围如下：\n\n <!-- BEGIN: Migrated markdown table -->\n\n| 测试点编号 | 分值 | $ T= $ | $ n\\leq $ | $ m= $ | $ k= $ |\n|-|-|-|-|-|-|\n| 1 | 3 | 10 | 10 | 1 | 1 |\n| 2 | 8 | 10 | 10 | 2 | 8 |\n| 3 | 7 | 10 | $ {10}^{18} $ | 2 | 3 |\n| 4 | 12 | 10 | $ {10}^{18} $ | 2 | 7 |\n| 5 | 30 | 20 | $ {10}^{18} $ | 3 | 5 |\n| 6 | 10 | 500 | $ {10}^{18} $ | 3 | 6 |\n| 7 | 10 | 200 | $ {10}^{18} $ | 3 | 7 |\n| 8 | 5 | 1000 | $ {10}^{18} $ | 3 | 7 |\n| 9 | 10 | 100 | $ {10}^{18} $ | 3 | 8 |\n| 10 | 5 | 500 | $ {10}^{18} $ | 3 | 8 |\n\n<!-- Migrated from original HTML table:\n<table><thead><tr><th rowspan=\"1\">测试点编号</th><th rowspan=\"1\">分值</th><th rowspan=\"1\"> $ T= $ </th><th rowspan=\"1\"> $ n\\leq $ </th><th rowspan=\"1\"> $ m= $ </th><th rowspan=\"1\"> $ k= $ </th></tr></thead><tbody><tr><td rowspan=\"1\">1</td><td rowspan=\"1\">3</td><td rowspan=\"4\">10</td><td rowspan=\"2\">10</td><td rowspan=\"1\">1</td><td rowspan=\"1\">1</td></tr><tr><td rowspan=\"1\">2</td><td rowspan=\"1\">8</td><td rowspan=\"3\">2</td><td rowspan=\"1\">8</td></tr><tr><td rowspan=\"1\">3</td><td rowspan=\"1\">7</td><td rowspan=\"8\"> $ {10}^{18} $ </td><td rowspan=\"1\">3</td></tr><tr><td rowspan=\"1\">4</td><td rowspan=\"1\">12</td><td rowspan=\"1\">7</td></tr><tr><td rowspan=\"1\">5</td><td rowspan=\"1\">30</td><td rowspan=\"1\">20</td><td rowspan=\"6\">3</td><td rowspan=\"1\">5</td></tr><tr><td rowspan=\"1\">6</td><td rowspan=\"1\">10</td><td rowspan=\"1\">500</td><td rowspan=\"1\">6</td></tr><tr><td rowspan=\"1\">7</td><td rowspan=\"1\">10</td><td rowspan=\"1\">200</td><td rowspan=\"2\">7</td></tr><tr><td rowspan=\"1\">8</td><td rowspan=\"1\">5</td><td rowspan=\"1\">1000</td></tr><tr><td rowspan=\"1\">9</td><td rowspan=\"1\">10</td><td rowspan=\"1\">100</td><td rowspan=\"2\">8</td></tr><tr><td rowspan=\"1\">10</td><td rowspan=\"1\">5</td><td rowspan=\"1\">500</td></tr></tbody></table>\n-->\n\n<!-- END: Migrated markdown table -->\n\n## 来源\n\n[LibreOJ #2325](https://loj.ac/p/2325)\n",
+      "html": false,
+      "newContentSha256": "7cf5029c320a66952f25bfb6fe94f0dc2c416c5579273c5c0a6baca93e4d01a6"
+    },
+    {
+      "domainId": "system",
+      "docId": 748,
+      "pid": null,
+      "title": "#2331. 「清华集训 2017」某位歌姬的故事",
+      "category": "loj-math",
+      "source": "https://loj.ac/p/2331",
+      "expected": {
+        "contentSha256": "3057706112a6f2ed8d249aada5eaed71d9cf8b20a7e0b3a669e996b2b7d8412d",
+        "html": "true"
+      },
+      "content": "## 题目描述\n\nIA 是一名会唱歌的女孩子。\n\nIOI2018 就要来了，IA 决定给参赛选手们写一首歌，以表达美好的祝愿。这首歌一共有 $n$ 个音符，第 $i$ 个音符的音高为 $h_i$。IA 的音域是 $A$，她只能唱出 $1\\sim A$ 中的正整数音高。因此 $1\\le h_i\\le A$。\n\n在写歌之前，IA 需要确定下这首歌的结构，于是她写下了 $Q​$ 条限制，其中第 $i​$ 条为：编号在 $l_i​$ 到 $r_i​$ 之间的音符的最高音高为 $m_i​$。在确定了结构之后，她就可以开始写歌了。不过她还是想知道，一共有多少种可能的歌曲满足她的所有限制？她听说你还有 9 个月就要去 IOI 了，于是希望你帮她计算一下这个值。\n\n## 输入格式\n\n从标准输入读入数据。\n\n输入的第一行包含一个整数 $T(T\\le 20)$，代表测试数据的组数。\n\n每组数据的第一行包含三个正整数 $n,Q,A$。接下来 $Q$ 行，每行三个整数 $l_i,r_i,m_i$，表示一条限制。保证 $1\\le l_i\\le r_i\\le n, 1\\le m_i\\le A$。\n\n## 输出格式\n\n输出到标准输出。\n\n输出文件只有一行，表示可能的歌曲数目。这个数可能很大，请将答案模 $998244353$ 输出。\n\n## 样例 1\n\n```input1\n1\n3 2 3\n1 2 3\n2 3 2\n```\n\n```output1\n3\n```\n\n以下是三种可能的歌曲：$(3,1,2),(3,2,1),(3,2,2)$。\n\n## 样例 2\n\n```input2\n2\n4 2 4\n1 2 3\n2 3 4\n7 3 74\n3 6 56\n2 5 56\n3 7 70\n```\n\n```output2\n20\n160326468\n```\n\n## 数据范围与提示\n\n<!-- BEGIN: Migrated markdown table -->\n\n| 测试点编号 | $ n $ | $ Q $ | $ A $ | $ m_i $ | 分数 |\n|:-:|:-:|:-:|:-:|:-:|:-:|\n| 1 | $ \\leq 7 $ | $ \\leq 7 $ | $ \\leq 7 $ | $ \\leq A $ | 5 |\n| 2 | $ \\leq 10 $ | $ \\leq 500 $ | $ \\leq 9\\times 10^8 $ | $ \\leq A $ | 10 |\n| 3 | $ \\leq 500 $ | $ \\leq 10 $ | $ \\leq 9\\times 10^8 $ | $ \\leq A $ | 8 |\n| 4 | $ \\leq 500 $ | $ \\leq 500 $ | $ =2 $ | $ =2 $ | 12 |\n| 5 | $ \\leq 9\\times 10^8 $ | $ \\leq 500 $ | $ =2 $ | $ =2 $ | 18 |\n| 6 | $ \\leq 500 $ | $ \\leq 500 $ | $ \\leq 9\\times 10^8 $ | $ \\leq A $ | 28 |\n| 7 | $ \\leq 9\\times 10^8 $ | $ \\leq 500 $ | $ \\leq 9\\times 10^8 $ | $ \\leq A $ | 19 |\n\n<!-- Migrated from original HTML table:\n<table><thead><tr><th rowspan=\"1\">测试点编号</th><th rowspan=\"1\"> $ n $ </th><th rowspan=\"1\"> $ Q $ </th><th rowspan=\"1\"> $ A $ </th><th rowspan=\"1\"> $ m_i $ </th><th rowspan=\"1\">分数</th></tr></thead><tbody><tr><td rowspan=\"1\">1</td><td rowspan=\"1\"> $ \\leq 7 $ </td><td rowspan=\"1\"> $ \\leq 7 $ </td><td rowspan=\"1\"> $ \\leq 7 $ </td><td rowspan=\"1\"> $ \\leq A $ </td><td rowspan=\"1\">5</td></tr><tr><td rowspan=\"1\">2</td><td rowspan=\"1\"> $ \\leq 10 $ </td><td rowspan=\"1\"> $ \\leq 500 $ </td><td rowspan=\"1\"> $ \\leq 9\\times 10^8 $ </td><td rowspan=\"1\"> $ \\leq A $ </td><td rowspan=\"1\">10</td></tr><tr><td rowspan=\"1\">3</td><td rowspan=\"1\"> $ \\leq 500 $ </td><td rowspan=\"1\"> $ \\leq 10 $ </td><td rowspan=\"1\"> $ \\leq 9\\times 10^8 $ </td><td rowspan=\"1\"> $ \\leq A $ </td><td rowspan=\"1\">8</td></tr><tr><td rowspan=\"1\">4</td><td rowspan=\"1\"> $ \\leq 500 $ </td><td rowspan=\"1\"> $ \\leq 500 $ </td><td rowspan=\"1\"> $ =2 $ </td><td rowspan=\"1\"> $ =2 $ </td><td rowspan=\"1\">12</td></tr><tr><td rowspan=\"1\">5</td><td rowspan=\"1\"> $ \\leq 9\\times 10^8 $ </td><td rowspan=\"1\"> $ \\leq 500 $ </td><td rowspan=\"1\"> $ =2 $ </td><td rowspan=\"1\"> $ =2 $ </td><td rowspan=\"1\">18</td></tr><tr><td rowspan=\"1\">6</td><td rowspan=\"1\"> $ \\leq 500 $ </td><td rowspan=\"1\"> $ \\leq 500 $ </td><td rowspan=\"1\"> $ \\leq 9\\times 10^8 $ </td><td rowspan=\"1\"> $ \\leq A $ </td><td rowspan=\"1\">28</td></tr><tr><td rowspan=\"1\">7</td><td rowspan=\"1\"> $ \\leq 9\\times 10^8 $ </td><td rowspan=\"1\"> $ \\leq 500 $ </td><td rowspan=\"1\"> $ \\leq 9\\times 10^8 $ </td><td rowspan=\"1\"> $ \\leq A $ </td><td rowspan=\"1\">19</td></tr></tbody></table>\n-->\n\n<!-- END: Migrated markdown table -->\n\n## 来源\n\n[LibreOJ #2331](https://loj.ac/p/2331)\n",
+      "html": false,
+      "newContentSha256": "361129c590938ede8377799d5f4238f88d731e6393644c8831c0ab7c7398d874"
+    },
+    {
+      "domainId": "system",
+      "docId": 751,
+      "pid": null,
+      "title": "#2340. 「WC2018」州区划分",
+      "category": "loj-math",
+      "source": "https://loj.ac/p/2340",
+      "expected": {
+        "contentSha256": "878d251f6ea5ed9d50b2ae2e1f4a7a54790b2f56d4d5dc4b414e18877d42b153",
+        "html": "true"
+      },
+      "content": "## 题目描述\n\n小 S 现在拥有 $n$ 座城市，第 $i$ 座城市的人口为 $w_i$，城市与城市之间可能有双向道路相连。\n\n现在小 S 要将这 $n$ 座城市划分成若干个州，每个州由至少一个城市组成，每个城市在恰好一个州内。\n\n假设小 S 将这些城市划分成了 $k$ 个州，设 $V_i$ 是第 $i$ 个州包含的所有城市所组成的集合。定义一条道路是一个州的内部道路，当且仅当这条道路的两个端点城市都在这个州内。如果一个州**内部**存在一条起点终点相同，不经过任何不属于这个州的城市，且经过这个州的所有内部道路都恰好一次并且**经过这个州的所有城市至少一次**的路径（路径长度可以为 $0$），则称这个州是**不合法**的。\n\n定义第 $i$ 个州的满意度为：第 $i$ 个州的人口在前 $i$ 个州的人口中所占比例的 $p$ 次幂，即：\n$$\\left( \\frac {\\sum_{x \\in V_i} w_x} {\\sum_{j=1}^i \\sum_{x \\in V_j} w_x} \\right)^p$$\n\n定义一个划分的满意度为所有州的满意度的**乘积**。\n\n求所有合法的划分方案的满意度之和。\n\n答案对 $998244353$ 取模。\n\n两个划分 $\\{V_1 \\dots V_k\\}$ 和 $\\{C_1 \\dots C_s\\}$ 是不同的，当且仅当 $k \\neq s$，或存在某个 $1 \\leq i \\leq k$，使得 $V_i \\neq C_i$。\n\n## 输入格式\n\n从标准输入中读入数据。\n\n输入第一行包含三个整数 $n, m, p$，表示城市个数、城市之间的道路个数以及题目描述中的常数 $p$；\n\n接下来 $m$ 行，每行两个整数 $u, v$，描述一条无向的道路，保证无重边无自环；\n\n输入第 $m+2$ 行有 $n$ 个正整数，第 $i$ 个正整数表示 $w_i$。\n\n## 输出格式\n\n输出到标准输出中。\n\n输出一行一个整数表示答案在模 $998244353$ 意义下的取值。\n\n即设答案化为最简分式后的形式为 $\\frac a b$，其中 $a$ 和 $b$ 互质。输出整数 $x$ 使得 $bx \\equiv a \\pmod {998244353}$ 且 $0 \\leq x < 998244353$。可以证明这样的整数 $x$ 是唯一的。\n\n## 样例\n\n```input1\n3 2 1\n1 2\n2 3\n1 1 1\n```\n\n```output1\n1\n```\n\n## 数据范围与提示\n\n#### 提示\n\n$x^{p-1} \\equiv 1 \\pmod p$，其中 $p$ 为质数，$x \\in \\left[1, p\\right)$。\n\n#### 子任务\n\n保证对于所有数据有：$0 \\leq n \\leq 21$，$0 \\leq m \\leq \\frac {n(n-1)} 2$，$0 \\leq p \\leq 2$，$1 \\leq w_i \\leq 100$。\n\n|    测试点    | 每个测试点分值 | $n$  | $p$  |\n| :----------: | :------------: | :--: | :--: |\n|     $1$      |      $10$      | $5$  | $2$  |\n|     $2$      |     $10 $      | $10$ | $2$  |\n|     $3$      |      $10$      | $15$ | $0$  |\n|     $4$      |     $10 $      | $15$ | $1$  |\n|     $5$      |      $10$      | $15$ | $2$  |\n|  $6 \\sim 9$  |      $5$       | $21$ | $0$  |\n| $10 \\sim 13$ |      $5 $      | $21$ | $1$  |\n| $14 \\sim 15$ |      $5$       | $21$ | $2$  |\n\n## 来源\n\n[LibreOJ #2340](https://loj.ac/p/2340)\n",
+      "html": false,
+      "newContentSha256": "5d3ee4ac02708337c07d41692f466b93feaa6f1747f3293c229f25515482807c"
+    },
+    {
+      "domainId": "system",
+      "docId": 752,
+      "pid": null,
+      "title": "#2356. 「NOI2007」 生成树计数",
+      "category": "loj-math",
+      "source": "https://loj.ac/p/2356",
+      "expected": {
+        "contentSha256": "f8d350d6797acca24cc06e9f21cd99adf487d0690514c2dfb65c280e9a36b15c",
+        "html": "true"
+      },
+      "content": "## 题目描述\n\n最近，小栋在无向连通图的生成树个数计算方面有了惊人的进展，他发现：\n\n - $n$ 个结点的环的生成树个数为 $n$ 。\n - $n$ 个结点的完全图的生成树个数为 $n^{n-2}$ 。\n\n这两个发现让小栋欣喜若狂，由此更加坚定了他继续计算生成树个数的想法，他要计算出各种各样图的生成树数目。     \n一天，小栋和同学聚会，大家围坐在一张大圆桌周围。小栋看了看，马上想到了生成树问题。如果把每个同学看成一个结点，邻座（结点间距离为 $1$ ）的同\n学间连一条边，就变成了一个环。可是，小栋对环的计数已经十分娴熟且不再感兴趣。于是，小栋又把图变了一下：不仅把邻座的同学之间连一条边，还把相隔\n一个座位（结点间距离为 $2$ ）的同学之间也连一条边，将结点间有边直接相连的这两种情况统称为有边相连，如 图 1 所示。\n\n![count.png](https://img.loj.ac.cn/2021/12/29/94344181076fa.png)\n\n小栋以前没有计算过这类图的生成树个数，但是，他想起了老师讲过的计算任意图的生成树个数的一种通用方法：    \n构造一个 $n \\times n$ 的矩阵 $A=\\{a_{ij}\\}$ ，其中：\n\n$$ \\begin{equation} a_{ij}= \\begin{cases} d_i &i=j \\\\ -1 &(i,j)\\in V \\\\ 0 &(i,j)\\notin V & i \\neq j \\end{cases} \\end{equation}$$ \n\n其中 $d_i$ 表示结点 $i$ 的度数。与 图 1 相应的 $A$ 矩阵如下所示。为了计算 图 1 所对应的生成数的个数，只要去掉矩阵 $A$ 的最后一行和最后一列，得到一个$(n-1) \\times (n-1)$ 的矩阵 $B$ ，计算出矩阵 $B$ 的行列式的值，便可得到 图 1 的生成树的个数。\n\n$$ \\textbf{A}=\\begin{matrix} 4 & -1 & -1 & 0 & 0 & 0 & -1 & -1 \\\\ -1 & 4 & -1 & -1 & 0 & 0 & 0 & -1 \\\\ -1 & -1 & 4 & -1 & -1 & 0 & 0 & 0 \\\\ 0 & -1 & -1 & -4 & -1 & -1 & 0 & 0 \\\\ 0 & 0 & -1 & -1 & 4 & -1 & -1 & 0 \\\\ 0 & 0 & 0 & -1 & -1 & 4 & -1 & -1 \\\\ -1 & 0 & 0 & 0 & -1 & -1 & 4 & -1 \\\\ -1 & -1 & 0 & 0 & 0 & -1 & -1 & 4 \\end{matrix} \\quad \\textbf{B}=\\begin{matrix} 4 & -1 & -1 & 0 & 0 & 0 & -1 \\\\ -1 & 4 & -1 & -1 & 0 & 0 & 0 \\\\ -1 & -1 & -4 & -1 & -1 & 0 & 0 \\\\ 0 & -1 & -1 & 4 & -1 & -1 & 0 \\\\ 0 & 0 & -1 & -1 & -4 & -1 & -1 \\\\ 0 & 0 & 0 & -1 & -1 & -4 & -1 \\\\ -1 & 0 & 0 & 0 & -1 & -1 & -4\\end{matrix}$$ \n\n所以生成树的个数为 $|B|=3528$ 。小栋发现利用通用方法，因计算过于复杂而很难算出来，而且用其他方法也难以找到更简便的公式进行计算。于是，他将图做了简化，从一个地方将圆桌断开，这样所有的同学形成了一条链，连接距离为 $1$ 和距离为 $2$ 的点。例如八个点的情形如下：\n\n![3(2).png](https://i.loli.net/2018/02/12/5a814c7f75f3e.png)\n\n这样生成树的总数就减少了很多。小栋不停的思考，一直到聚会结束，终于找到了一种快捷的方法计算出这个图的生成树个数。可是，如果把距离为 $3$ 的点也连起来，小栋就不知道如何快捷计算了。现在，请你帮助小栋计算这类图的生成树的数目。\n\n## 输入格式\n\n输入中包含两个整数 $k , n$ ，由一个空格分隔。 $k$ 表示要将所有距离不超过 $k$ （含 $k$ ）的结点连接起来， $n$ 表示有 $n$ 个结点。\n\n## 输出格式\n\n输出一个整数，表示生成树的个数。由于答案可能比较大，所以你只要输出答案除 $65521$ 的余数即可。\n\n## 样例\n\n```input1\n3 5\n```\n\n```output1\n75\n```\n\n样例对应的图如下：\n\n![捕获.JPG](https://i.loli.net/2018/02/12/5a814d9247c63.jpg)\n\n$$ \\textbf{A}= \\begin{matrix} 3 & -1 & -1 & -1 & 0 \\\\ -1 & 4 & -1 & -1 & -1 \\\\ -1 & -1 & 4 & -1 & -1 \\\\ -1 & -1 & -1 & 4 & -1 \\\\ 0 & -1 & -1 & -1 & 3 \\end{matrix} \\quad \\textbf{B}= \\begin{matrix} 3 & -1 & -1 & -1 \\\\ -1 & 4 & -1 & -1 \\\\ -1 & -1 & 4 & -1 \\\\ -1 & -1 & -1 & 4 \\end{matrix} \\quad |B|=75 $$\n\n## 数据范围与提示\n\n#### 数据规模和约定\n对于所有的数据， $2 \\le k \\le n$ 。\n<body><!-- BEGIN: Migrated markdown table -->\n\n| 数据编号 | $k$ 范围 | $n$ 范围 | 数据编号 | $k$ 范围 | $n$ 范围 |\n|-|-|-|-|-|-|\n| 1 | $k=2$ | $n \\le 10$ | 6 | $k\\le 5$ | $n \\le 100$ |\n| 2 | $k=3$ | $n=5$ | 7 | $k\\le 3$ | $n \\le 2000$ |\n| 3 | $k=4$ | $n \\le 10$ | 8 | $k\\le 5​$ | $n \\le 10000$ |\n| 4 | $k=5$ | $n=10$ | 9 | $k\\le 3$ | $n \\le 10^{15}$ |\n| 5 | $k\\le 3$ | $n \\le 100$ | 10 | $k\\le 5$ | $n \\le 10^{15}$ |\n\n<!-- Migrated from original HTML table:\n<table>\n<thead>\n<tr><th>数据编号</th><th>$k$ 范围</th><th>$n$ 范围</th><th>数据编号</th><th>$k$ 范围</th><th>$n$ 范围</th></tr></thead>\n<tbody><tr><td>1 </td><td>$k=2$ </td><td>$n \\le 10$ </td><td>6 </td><td>$k\\le 5$ </td><td>$n \\le 100$ </td></tr><tr><td>2 </td><td>$k=3$ </td><td>$n=5$ </td><td>7</td><td>$k\\le 3$ </td><td>$n \\le 2000$ </td></tr><tr><td>3 </td><td>$k=4$ </td><td>$n \\le 10$ </td><td>8 </td><td>$k\\le 5​$ </td><td>$n \\le 10000$ </td></tr><tr><td>4 </td><td>$k=5$ </td><td>$n=10$ </td><td>9</td><td>$k\\le 3$ </td><td>$n \\le 10^{15}$ </td></tr><tr><td>5</td><td>$k\\le 3$ </td><td>$n \\le 100$ </td><td>10</td><td>$k\\le 5$ </td><td>$n \\le 10^{15}$ </td></tr></tbody>\n</table>\n-->\n\n<!-- END: Migrated markdown table -->\n</body>\n\n#### 提示\n\n![1494_5.jpg.gif](https://i.loli.net/2018/02/12/5a8150c147f65.gif)\n\n## 来源\n\n[LibreOJ #2356](https://loj.ac/p/2356)\n",
+      "html": false,
+      "newContentSha256": "36767d8341b869cd250f36c56554aae17d4763a4abb54e427b158823d7b985a3"
+    },
+    {
+      "domainId": "system",
+      "docId": 758,
+      "pid": null,
+      "title": "#2378. 「WC2001」高性能计算机",
+      "category": "loj-math",
+      "source": "https://loj.ac/p/2378",
+      "expected": {
+        "contentSha256": "40c8164319f0d8609cec5ecb4019215947a3fddeed8ba4a6e6dd2df37a0335ac",
+        "html": "true"
+      },
+      "content": "## 题目描述\n\n现在有一项时间紧迫的工程计算任务要交给你——国家高性能并行计算机的主管工程师——来完成。为了尽可能充分发挥并行计算机的优势，我们的计算任务应当划分成若干个小的子任务。\n\n这项大型计算任务包括 $A$ 和 $B$ 两个互不相关的较小的计算任务。为了充分发挥并行计算机的运算能力，这些任务需要进行分解。研究发现，$A$ 和 $B$ 都可以各自划分成很多较小的子任务，所有的 $A$ 类子任务的工作量都是一样的，所有的 $B$ 类子任务也是如此（$A$ 和 $B$ 类的子任务的工作量不一定相同）。$A$ 和 $B$ 两个计算任务之间，以及各子任务之间都没有执行顺序上的要求。\n\n这台超级计算机拥有 $p$ 个计算节点，每个节点都包括一个串行处理器、本地主存和高速 cache。然而由于常年使用和不连贯的升级，各个计算节点的计算能力并不对称。一个节点的计算能力包括如下几个方面：\n\n1. 就本任务来说，每个节点都有三种工作状态：待机、$A$ 类和 $B$ 类。其中，$A$ 类状态下执行 $A$ 类任务；$B$ 类状态下执行 $B$ 类任务；待机状态下不执行计算。所有的处理器在开始工作之前都处于待机状态，而从其它的状态转入 $A$ 或 $B$ 的工作状态（包括 $A$ 和 $B$ 之间相互转换），都要花费一定的启动时间。对于不同的处理节点，这个时间不一定相同。用两个正整数 $t_i^A$ ​和 $t_i^B(i=1,2,\\cdots ,p)$ 分别表示节点i转入工作状态 $A$ 和工作状态 $B$ 的启动时间（单位：ns）。\n\n2. 一个节点在连续处理同一类任务的时候，执行时间——不含状态转换的时间——随任务量（这一类子任务的数目）的平方增长，即：\n\n若节点 $i$ 连续处理 $x$ 个 $A$ 类子任务，则对应的执行时间为：$t=k_i^Ax^2$；  \n类似的，若节点 $i$ 连续处理 $x$ 个 $B$ 类子任务，对应的执行时间为：$t=k_i^Bx^2$。\n\n其中，$k_i^A$ ​和 $k_i^B$ ​是系数，单位是 ns，$i=1,2,\\cdots ,p$。\n\n任务分配必须在所有计算开始之前完成，所谓任务分配，即给每个计算节点设置一个任务队列，队列由一串A类和B类子任务组成。两类子任务可以交错排列。\n\n计算开始后，各计算节点分别从各自的子任务队列中顺序读取计算任务并执行，队列中连续的同类子任务将由该计算节点一次性读出，队列中一串连续的同类子任务不能被分成两部分执行。\n\n现在需要你编写程序，给这 $p$ 个节点安排计算任务，使得这个工程计算任务能够尽早完成。假定任务安排好后不再变动，而且所有的节点都同时开始运行，任务安排的目标是使最后结束计算的节点的完成时间尽可能早。\n\n## 输入格式\n\n第一行是对计算任务的描述，包括两个正整数 $n_A$ 和 $n_B$，分别是 $A$ 类和 $B$ 类子任务的数目，两个整数之间由一个空格隔开。\n\n后面部分是对此计算机的描述：\n\n第二行是一个整数 $p$，即计算节点的数目。\n\n随后连续的 $p$ 行按顺序分别描述各个节点的信息，第 $i$ 个节点由第 $i+2$ 行描述，该行包括下述四个正整数（相邻两个整数之间有一个空格）：$t_i^A,t_i^B,k_i^A,k_i^B$\n\n## 输出格式\n\n只有一行，包含有一个正整数，即从各节点开始计算到任务完成所用的时间。\n\n## 样例\n\n```input1\n5 5\n3\n15 10 6 4\n70 100 7 2\n30 70 1 6\n```\n\n```output1\n93\n```\n\n## 数据范围与提示\n\n对于所有数据：  \n$1≤n_A​≤60,1≤n_B​≤60$  \n$1≤p≤20$  \n$1≤t_A≤1000,1≤t_B≤1000,1≤k_A≤50,1≤k_B≤50$\n\n## 来源\n\n[LibreOJ #2378](https://loj.ac/p/2378)\n",
+      "html": false,
+      "newContentSha256": "970bab6b8a3a5836cdd296dfd017adc940adbbd0c6ced7ff1bf0abc363bc1d7b"
+    },
+    {
+      "domainId": "system",
+      "docId": 770,
+      "pid": null,
+      "title": "#6017. Shlw loves matrix I",
+      "category": "loj-math",
+      "source": "https://loj.ac/p/6017",
+      "expected": {
+        "contentSha256": "6d0e536c6738939ace86075b7e1e5da97107aaea4c3dc374591453322d0b93bb",
+        "html": "true"
+      },
+      "content": "## 题目描述\n\n给定数列 $\\{h_n\\}$ 前 $k$ 项，其后每一项满足\n\n$$h_n = a_1 \\times h_{n-1} + a_2 \\times h_{n-2} + ... + a_k \\times h_{n-k}$$\n\n其中 $a_1,a_2\\cdots a_k$ 为给定数列。请计算 $ h(n)$，并将结果对 $1000000007 $ 取模输出。\n\n## 输入格式\n\n第一行输入两个正整数 $n,k$\n\n第二行输入 $k$ 个正整数表示 $a_1,\\dots, a_k$\n\n第三行输入 $k$ 个正整数表示 $h_0,\\cdots ,h_{k-1}$\n\n## 输出格式\n\n一行输出一个数，表示 $h_n$ 对 $1000000007$ 取模的结果。\n\n## 样例\n\n```input1\n6 4\n3 -1 0 4\n-2 3 1 5\n```\n\n```output1\n73\n```\n\n## 数据范围与提示\n\n$k\\leq 2000,n\\leq 10^9$\n\n## 来源\n\n[LibreOJ #6017](https://loj.ac/p/6017)\n",
+      "html": false,
+      "newContentSha256": "255ff9c3aeab53c181be2d7b8bef5e5a130068dd30ad14cb8376a6047d061fd3"
+    },
+    {
+      "domainId": "system",
+      "docId": 773,
+      "pid": null,
+      "title": "#6024. XLkxc",
+      "category": "loj-math",
+      "source": "https://loj.ac/p/6024",
+      "expected": {
+        "contentSha256": "100173cc8b93b2a15dcff8adf9d7da8372025c17179ed4a4dba3fc611be2f8fe",
+        "html": "true"
+      },
+      "content": "## 题目描述\n\n求 $\\sum_{i=0}^n\\sum_{j=1}^{a+i\\cdot d}\\sum_{l=1}^jl^k \\bmod p$。\n\n## 输入格式\n\n第一行一个数字 $T$ ，表示数据的组数。\n\n接下来每行四个整数，表示 $k$，$a$，$n$，$d$ 。\n\n## 输出格式\n\n每行一个整数，表示答案 。\n\n## 样例\n\n```input1\n5\n5 7 5 7\n6 8 6 8\n70 35 26 72\n90 18 32 64\n123 321 123 321\n```\n\n```output1\n150448172\n1121208122\n276955429\n1024718000\n585044920\n```\n\n## 数据范围与提示\n\n对于 $ 100\\% $ 的数据，$ k \\leq 123, a,n,d< p = 1234567891$。\n\n## 来源\n\n[LibreOJ #6024](https://loj.ac/p/6024)\n",
+      "html": false,
+      "newContentSha256": "fb38545ab7cef0474c39acf0ffe2453562bdc18f7ba724e8567518f9e229b2da"
+    },
+    {
+      "domainId": "system",
+      "docId": 774,
+      "pid": null,
+      "title": "#6026. 「by hzq84621」集合",
+      "category": "loj-math",
+      "source": "https://loj.ac/p/6026",
+      "expected": {
+        "contentSha256": "16f951957ba9aecae6c12adf14d99b412e63f83e8e6a99d1132e0af2c678cdbc",
+        "html": "true"
+      },
+      "content": "## 题目描述\n\n对于一个非空集合 $\\{a_i\\}$，我们称一个集合是 magical 的，当且仅当它满足以下两个条件。\n\n1. $a_1 \\mathbin{\\&} a_2 \\mathbin{\\&} \\cdots \\mathbin{\\&} a_n=0$（$\\&$ 表示按位与）；\n2. ${a_i}$ 的任意一个非空真子集不满足 (1)。\n\n小 A 有一个很大很大的集合。很显然这个集合的子集数量是一个天文数字。\n\n小 A 现在想要知道这个集合的 magical 的非空子集数量是多少。  \n为了防止不必要的麻烦，请将答案模 $10^9+7$ 后输出。\n\n## 输入格式\n\n第一行一个整数 $T$ 表示数据组数。  \n接下来每组数据第一行一个整数 $n$，表示集合元素数量。  \n第二行 $n$ 个整数，表示这个集合中的元素。\n\n## 输出格式\n\n输出共 $T$ 行，每行对应这组数据的答案。\n\n## 样例 1\n\n```input1\n1\n5\n0 1 2 4 4\n```\n\n```output1\n6\n```\n\n$6$ 个 magical 的集合是$\\{0\\},\\{1,2\\},\\{1,4\\},\\{1,4\\},\\{2,4\\},\\{2,4\\}$。\n\n## 样例 2\n\n```input2\n30\n30\n28 11 8 96 92 16 114 126 47 77 82 88 120 46 56 74 113 23 72 126 109 26 24 62 96 110 89 6 32 28\n30\n58 94 109 124 9 102 48 96 27 51 0 15 111 89 106 117 14 73 114 24 53 94 85 78 54 50 17 46 28 54\n30\n39 68 14 2 32 9 118 105 78 17 98 81 84 7 42 65 105 87 83 60 88 42 51 78 75 23 86 100 74 23\n30\n33 97 127 58 53 109 60 25 22 16 63 12 13 1 52 29 74 56 123 60 78 74 44 52 8 118 88 93 62 123\n30\n18 19 47 45 46 104 119 72 73 22 50 4 10 56 100 106 38 57 25 101 42 12 72 28 117 29 125 127 3 8\n30\n55 32 114 10 15 69 62 52 27 59 80 103 18 109 55 124 49 53 53 67 93 113 125 47 9 90 59 79 90 17\n30\n85 0 9 123 112 98 10 79 55 8 107 109 87 116 126 114 78 66 58 9 102 35 95 4 124 13 89 43 6 49\n30\n103 83 85 46 124 51 23 4 102 116 31 75 45 7 105 37 62 59 88 113 72 15 67 65 103 68 48 14 0 55\n30\n95 43 108 110 11 120 88 113 108 88 107 91 0 101 42 48 11 98 25 113 93 112 35 110 83 5 60 92 32 27\n30\n69 39 77 37 48 10 127 71 100 92 121 70 99 45 97 62 42 17 71 19 89 60 99 41 19 79 30 88 40 114\n30\n85 26 113 35 89 7 124 77 58 4 105 29 69 55 20 17 75 62 117 82 36 32 68 67 116 3 96 90 45 32\n30\n113 47 85 117 76 82 10 57 24 98 67 21 47 91 88 17 71 48 69 77 82 26 43 113 35 47 23 102 81 54\n30\n7 71 96 58 42 18 30 93 104 36 76 111 34 100 126 63 59 62 69 49 87 83 10 17 98 110 61 39 85 58\n30\n48 12 52 51 61 60 91 91 47 107 123 46 96 29 96 87 30 113 117 36 83 61 9 56 101 96 83 0 92 84\n30\n52 104 67 3 61 78 80 92 113 54 71 37 76 64 27 19 4 88 86 24 14 45 60 124 100 100 43 47 6 13\n30\n70 94 62 86 83 68 41 126 96 67 115 13 45 51 98 67 70 122 22 78 112 92 15 64 70 21 111 63 36 37\n30\n1 126 68 108 123 109 39 118 0 45 55 24 105 71 42 60 69 29 41 121 30 33 50 103 127 68 59 49 50 50\n30\n24 107 78 60 30 38 114 21 9 66 75 66 27 4 92 76 6 104 126 56 12 57 37 56 101 94 102 35 97 119\n30\n54 35 78 41 117 46 28 53 43 55 63 80 17 37 85 47 83 4 9 97 20 122 55 97 50 125 81 108 76 68\n30\n1 16 2 123 15 6 124 59 6 65 46 57 18 71 90 62 45 64 86 87 122 76 15 77 113 26 78 87 61 55\n30\n58 15 98 35 31 35 35 42 109 77 35 113 4 5 74 80 46 117 106 95 109 45 35 84 120 24 4 12 0 46\n30\n114 103 55 108 78 89 19 1 82 62 79 75 60 110 52 1 47 18 22 50 86 54 33 110 74 31 86 67 54 94\n30\n80 107 57 37 76 67 11 90 104 127 100 106 43 28 25 96 70 23 8 54 25 93 55 106 121 2 56 85 49 53\n30\n80 57 70 116 88 25 0 124 98 77 37 4 32 85 8 42 2 110 66 46 31 99 64 94 86 38 126 81 53 31\n30\n17 88 25 68 107 50 23 106 91 127 27 90 83 119 79 40 110 92 63 64 49 45 58 66 18 29 123 16 54 68\n30\n9 37 127 19 91 40 70 13 64 64 101 52 126 43 121 66 57 10 102 26 23 127 27 126 34 122 23 2 110 80\n30\n43 65 123 14 2 78 92 12 96 110 25 69 39 4 83 101 31 76 38 36 118 76 84 83 6 8 31 52 87 118\n30\n118 15 101 49 84 2 35 113 102 25 63 59 108 31 40 85 97 51 78 125 94 30 41 90 60 99 124 51 121 24\n30\n91 95 92 117 107 125 92 43 105 101 63 118 109 94 127 118 112 17 113 59 12 61 40 31 4 45 24 88 4 103\n30\n119 77 42 39 105 41 68 11 91 46 92 16 47 77 114 61 26 115 8 30 75 37 100 116 78 79 17 43 47 89\n```\n\n```output2\n486\n876\n719\n472\n563\n863\n597\n849\n742\n910\n679\n998\n661\n727\n672\n707\n509\n696\n632\n732\n699\n562\n722\n485\n517\n464\n605\n901\n846\n900\n```\n\n## 数据范围与提示\n\n对于前 $10\\%$ 的数据，$n\\leq 20$；  \n对于前 $30\\%$ 的数据，$n\\leq 30$；  \n对于前 $60\\%$ 的数据，$0\\leq a_i<128,T=1$；  \n对于前 $80\\%$ 的数据，$0\\leq a_i<256,T\\leq 5$；  \n对于前 $100\\%$ 的数据，$T\\leq 30,n\\leq 100,0\\leq a_i<512$。\n\n据说此题是埃及信息竞赛题。\n\n## 来源\n\n[LibreOJ #6026](https://loj.ac/p/6026)\n",
+      "html": false,
+      "newContentSha256": "ff2b33187058d2bdadbd83296eccdf4aa16cf219743fe3280f2e030870bf1cd5"
+    },
+    {
+      "domainId": "system",
+      "docId": 783,
+      "pid": null,
+      "title": "#6053. 简单的函数",
+      "category": "loj-math",
+      "source": "https://loj.ac/p/6053",
+      "expected": {
+        "contentSha256": "43f2664492e18768e009ebbcb9793d3a84f95aba76647475cf991c05cd189402",
+        "html": "true"
+      },
+      "content": "## 题目描述\n\n某一天，你发现了一个神奇的函数$f(x)$，它满足很多神奇的性质：\n\n1. $f(1)=1$。\n2. $f(p^c)=p \\oplus c$（$p$ 为质数，$\\oplus$ 表示异或）。\n3. $f(ab)=f(a)f(b)$（$a$ 与 $b$ 互质）。\n\n你看到这个函数之后十分高兴，于是就想要求出 $\\sum\\limits_{i=1}^n f(i)$。\n\n由于这个数比较大，你只需要输出 $\\sum\\limits_{i=1}^n f(i) \\bmod (10^9+7)$。\n\n## 输入格式\n\n一行一个整数 $n$。\n\n## 输出格式\n\n一行一个整数 $\\sum\\limits_{i=1}^n f(i) \\bmod 1000000007$。\n\n## 样例 1\n\n```input1\n6\n```\n\n```output1\n16\n```\n\n## 样例 2\n\n```input2\n233333\n```\n\n```output2\n179004642\n```\n\n## 样例 3\n\n```input3\n9876543210\n```\n\n```output3\n895670833\n```\n\n## 数据范围与提示\n\n对于$30\\%$的数据，$n \\leq 100$。  \n对于$60\\%$的数据，$n \\leq 10^6$。  \n对于$100\\%$的数据，$1 \\leq n \\leq 10^{10}$。\n\n## 来源\n\n[LibreOJ #6053](https://loj.ac/p/6053)\n",
+      "html": false,
+      "newContentSha256": "68b7810ef06126205ec95c68c5f44ba84b7111ceeb47480dc92a1b18e7b40d03"
+    },
+    {
+      "domainId": "system",
+      "docId": 808,
+      "pid": null,
+      "title": "#6172. Samjia 和大树",
+      "category": "loj-math",
+      "source": "https://loj.ac/p/6172",
+      "expected": {
+        "contentSha256": "48329e7880f80e582590ea58c905bd8bcb3c4c90a31617a02a17b52ee2cdab55",
+        "html": "true"
+      },
+      "content": "## 题目描述\n\nPeter 送给 Samjia 一颗大小为 $n$ 的树， 节点编号从 $1$ 到 $n$ 。  \nSamjia 要给树上的每一个节点赋一个 $[1,m]$ 之间的权值， 并使得有边直接相连的两个节点的权值之差的绝对值 $\\geq k$ 。  \n请你告诉 Samjia 有多少种不同的赋值方案。  \n只用求出答案对 $10^9+7(1000000007)$ 取模得到的结果。\n\n## 输入格式\n\n输入数据的第一行包含一个整数 $T$ , 代表测试数据组数。  \n接下来是 $T$ 组数据。   \n每组数据的第一行包含三个整数 $n$ , $m$ 和 $k$ 。  \n接下来 $n−1$ 行,每行包含两个整数 $u$ 和 $v$ ，代表节点 $u$ 和 $v$ 之间有一条树边。\n\n## 输出格式\n\n对于每组数据， 输出一行， 包含一个整数， 代表所求的答案。\n\n## 样例\n\n```input1\n3\n2 2 0\n1 2\n3 3 2\n1 3\n1 2\n3 3 1\n1 2\n2 3\n```\n\n```output1\n4\n2\n12\n```\n\n## 数据范围与提示\n\n对于所有数据，$ T \\leq 10, n \\leq 100, k \\leq 100, m\\leq 10^9$  \n\n| 测试点编号 | $m\\le$ |                 特殊约定                 |\n| :--------: | :----: | :--------------------------------------: |\n|   $1,2$    | $100$  |                    无                    |\n|   $3,4$    | $10^5$ |                    无                    |\n|   $5,6$    | $10^9$ | 第 $2\\sim n$ 号节点与 $1$ 号节点直接相连 |\n|   $7,8$    | $10^9$ |  第 $i$ 号节点与第 $i+1$ 号节点直接相连  |\n|   $9,10$   | $10^9$ |                    无                    |\n\n## 来源\n\n[LibreOJ #6172](https://loj.ac/p/6172)\n",
+      "html": false,
+      "newContentSha256": "44ab64f5ac217f17e6277ff3e3a6e082e15da71e201030d86e07ff315aacf589"
+    },
+    {
+      "domainId": "system",
+      "docId": 816,
+      "pid": null,
+      "title": "#6206. 迷失的地球",
+      "category": "loj-math",
+      "source": "https://loj.ac/p/6206",
+      "expected": {
+        "contentSha256": "564bba0fad2e2af767152bb39e59135246726b23389e62c7c7b4a43dc0935a75",
+        "html": "true"
+      },
+      "content": "## 题目描述\n\n《迷失的地球》是一款很好玩的塔防类游戏。小B最近就迷上了这款游戏。然而小B又是一个很强势的人，他很不想玩游戏输掉，所以他想让你写一个程序帮忙算一下某一局游戏的结果和详细信息。小B已经知道了游戏的运行规则和相关信息，你能帮帮他吗?\n\n#### **游戏的相关信息:**\n\n**1.地图:**\n\n游戏的地图是一个 $n×m$的矩阵，设左上角坐标为 $(1，1)$。\n\n地图以字符矩阵的形式给出，比如 $n=m=5$ 的情况:\n```plain\nS1###\n001##\n#0###\n#0002\n###0T\n```\n\n矩阵中第 $i$ 行第 $j$ 列的字符表示 $(i,j)$ 的情况。不同的字符对应的情况如下:\n\n- `#`: 普通地图格点。\n\n- `0`: 怪物通过的路线。\n\n- `1`~`9`: 防御塔。\n\n- `S`: 怪物的生成点。\n\n- `T`: 你的基地，即游戏的目的要防止怪物进入基地。\n\n输入数据保证地图合法，即地图上有且只有一个 $S$ 和一个 $T$ ， $ S$ 到 $T$ 有且只有唯一的路线。\n\n**2.怪物:**\n\n小B会给出一个怪物的生成队列，表示怪物的出现顺序。\n\n若队列不为空，则每一秒将会从队头取出一个新的怪物放在 $\\text{S}$ 处。\n\n我们用两个整数来描述怪物的相关信息:\n\n- $\\text{blood}$: 怪物的血量。当血量小于等于 $0$ 时怪物死亡，从地图上消失。\n\n- $\\text{speed}$: 怪物的移动速度。每回合怪物将会沿着行进路线向 $\\text{T}$ 移动 $\\text{speed}$ 个单位。如果 $\\text{speed}=0$ 那么怪物将被定在原地无法移动。如果移动后将超过 $T $处，那么视为到达了 $\\text{T}$ 处。\n\n**3.防御塔:**\n\n整个地图上最多会出现 $\\text{t}$ ( $1\\leq t\\leq 9$)种不同的防御塔，用字符`1`~`9`在地图上表示。\n\n为了简化题目，我们假定小 $\\text{B}$ 不会在游戏过程中建造新的防御塔。所有防御塔在开始前就已经建造好了。我们用三个整数来描述每种防御塔的相关信息:\n\n- $\\text{damage}$: 表示该防御塔击中怪物后将对怪物造成的伤害。\n\n- $\\text{distance}$: 表示该防御塔能攻击到的最远距离。如果怪物与塔之间的直线距离不超过 $\\text{distance}$ ，表示该塔可以攻击到该这个怪物。\n\n- $\\text{type}$: 表示该防御塔的攻击类型。\n\n - 若 $\\text{type}=0​$ 表示该防御塔为普通攻击类型，即对单个怪物造成伤害。\n - 若 $\\text{type}=1$ 表示该防御塔为范围性伤害，在对当前瞄准的怪物造成伤害的同时还会对该怪物周围距离不超过 $1$ 的怪物造成伤害。\n - 若 $\\text{type}=2$ 表示该防御塔为直线型伤害，在攻击时将会生成一条连接该防御塔和当前瞄准的怪物的直线。直线可以向两端无限延伸，并且将对所有与直线距离不超过 $1$ 的怪物造成伤害。值得注意的是，虽然直线能够打到很远处的怪物，但是这种防御塔必须在有怪物离它不超过 $\\text{distance}$ 时才能找到攻击目标发动攻击。\n - 若 $\\text{type}=3$ 表示该防御塔为普通攻击类型，即对单个怪物造成伤害，并且会使命中的怪物的速度永久减少 $1$。但是减速效果在一个怪物身上最多只能生效一次，无法叠加。\n\n\n\n$~​$\n\n为了防止歧义，我们定义防御塔选取目标的方式:\n\n若当前有攻击目标，并且目标没有死亡、在攻击范围之内，那么将保持当前怪物作为目标。\n\n若当前目标不合法(目标怪物死亡、超出攻击范围)或是没有攻击目标，将从攻击范围内的怪物中选取最靠前的一个(此处最靠前的定义为在怪物移动路径上里离 $\\text{T}$ 点最近)，若有多个则选取血量最少的一个，若还有多个则选取最早生成的一个。\n\n\n\n为了简化题目， 我们假定游戏为回合制， 一秒为一个回合。对于每个回合， 严格按照顺序有如下几个阶段:\n\n1. 怪物生成阶段:若队列不为空，则取出怪物生成队列队头处的怪物放在 $\\text{S}$ 处。\n\n2. 防御塔锁定阶段:所有防御塔按照规则选取目标。\n\n3. 防御塔攻击阶段:所有防御塔同时对自己的目标发动攻击。\n4. 伤害结算阶段:将所有怪物的血量减去所受的攻击力，并将死亡的怪物清除。\n\n5. 怪物移动阶段:地图上存在的怪物向前移动。\n\n6. 回合结束阶段:若某个怪物处于 $\\text{T}$ 处，则将该怪物移除并视为基地遭到一次攻击。\n\n你的基地共有 $10$ 点血量，每遭到一次攻击则血量减 $1$ 。如果某回合结束后你的基地血量小于等于 $0$ ，则游戏结束，小B失败。如果场上没有任何怪物并且怪物生成队列为空，那么游戏结束，小 $\\text{B}$ 胜利。输入数据保证不会有游戏无法结束的情况。\n\n## 输入格式\n\n第一行有两个整数 $\\text{n,m}$ ($n,m\\leq 10$)，意义如题目中所述。\n\n接下来的 $\\text{n}$ 行每行有一个长度为 $\\text{m}$ 的字符串,描述地图。\n\n接下来一行有一个整数 $\\text{t}$ ，意义如题目中所述。\n\n接下来 $\\text{t}$ 行，每行三个整数 $\\text{damage,distance,type}$ ，描述防御塔。\n\n接下来一行有一个整数 $\\text{q}$ ($q\\leq 50$) ，表示怪物生成队列的长度。\n\n接下来 $\\text{q}$ 行，每行两个整数 $\\text{blood,speed}$ ，描述队列中的每个怪物。\n\n## 输出格式\n\n第一行两个整数,表示游戏结束时的回合数和游戏结束时基地的剩余血量。\n\n第二行描述游戏的结果。若小B胜利，输出 `Victory!`，否则输出 `Xiao B is SB!`。\n\n接下来 $\\text{q}$ 行,按照输入顺序描述每个怪物的状态:\n\n若该怪物死亡，则输出 `Died in round {死亡的回合数}`。\n\n若该怪物到达你的基地，则输出 `Arrived your base in round {到达的回合数}`。\n\n若该怪物在游戏结束时还未生成或是还在地图中，则输出 `The game has been over!`。\n\n## 样例 1\n\n```input1\n5 5\nS1###\n001##\n#0###\n#0002\n###0T\n2\n1 1 0\n1 2 2\n3\n3 1\n3 1\n5 1\n```\n\n```output1\n10 10\nVictory!\nDied in round 3\nDied in round 4\nDied in round 10\n```\n\n## 样例 2\n\n```input2\n2 2\nS0\n1T\n1\n1 2 0\n10\n10 1\n10 1\n10 1\n10 1\n10 1\n10 1\n10 1\n10 1\n10 1\n10 1\n```\n\n```output2\n11 0\nXiao B is SB!\nArrived your base in round 2\nArrived your base in round 3\nArrived your base in round 4\nArrived your base in round 5\nArrived your base in round 6\nArrived your base in round 7\nArrived your base in round 8\nArrived your base in round 9\nArrived your base in round 10\nArrived your base in round 11\n```\n\n## 来源\n\n[LibreOJ #6206](https://loj.ac/p/6206)\n",
+      "html": false,
+      "newContentSha256": "e43a5802f45c23d44ad67b860eecd6ec16f3db45502e21745fe0a47170f241e9"
+    },
+    {
+      "domainId": "system",
+      "docId": 825,
+      "pid": null,
+      "title": "#6229. 这是一道简单的数学题",
+      "category": "loj-math",
+      "source": "https://loj.ac/p/6229",
+      "expected": {
+        "contentSha256": "dfe445538b7577462458cb9d5b395d7d0d6511dd0f03410cd7c21d28c55a9c93",
+        "html": "true"
+      },
+      "content": "## 题目描述\n\n这是一道非常简单的数学题。\n\n最近 $LzyRapx$ 正在看 *mathematics for computer science* 这本书，在看到数论那一章的时候， $LzyRapx$ 突然想到这样一个问题。\n\n设 \n$$\nF(n)=\\sum_{i=1}^n\\sum_{j=1}^i\\frac{\\mathrm{lcm}(i,j)}{\\mathrm{gcd}(i,j)}\n$$\n\n其中，$\\mathrm{lcm}(a,b)$ 表示 $a$ 和 $b$ 的最小公倍数，$\\mathrm{gcd}(a,b)$ 表示 $a$ 和 $b$ 的最大公约数。\n\n给定 $n$ ，让你求： $F(n) \\bmod1000000007$。\n\n$L$ 同学太菜啦，QAQ，并不会做这道简单题，所以他想请你帮他解决这个问题。\n\n## 输入格式\n\n输入一行，一个正整数 $ n\\,(1 \\le n \\le 10^9)$。\n\n## 输出格式\n\n输出 $F(n)$ ，对 $10^9 + 7$ 取模。\n\n## 样例\n\n```input1\n5\n```\n\n```output1\n84\n```\n\n## 数据范围与提示\n\n对于所有数据，$1 \\le n \\le 10^9$。\n\n## 来源\n\n[LibreOJ #6229](https://loj.ac/p/6229)\n",
+      "html": false,
+      "newContentSha256": "fa16511824844cc7e20d7261d4a0125cd692ef8690421bac00b40ca349825d4b"
+    },
+    {
+      "domainId": "system",
+      "docId": 836,
+      "pid": null,
+      "title": "#6257. 「CodePlus 2017 12 月赛」可做题2",
+      "category": "loj-math",
+      "source": "https://loj.ac/p/6257",
+      "expected": {
+        "contentSha256": "287c7d14e48ee99d023f901fc7a37069b16f60bcd4ddf7e8b0be795e2001a5cd",
+        "html": "true"
+      },
+      "content": "## 题目描述\n\n“CodePlus 比赛的时候在做什么？有没有空？能来解决丢番图方程问题吗？”sublinekelzrip 这样问 qmqmqm。\n\n当然，qmqmqm 并不会丢番图方程问题，所以 sublinekelzrip 改为提出了另一个题目，现在请你帮助 qmqmqm 解决这个题目。\n\n<hr>\n\n这个问题是这样的：\n\n若一个数列 $a$ 满足条件 $a_n=a_{n-1}+a_{n-2},n \\geq 3$，而 $a_1,a_2$ 为任意实数，则我们称这个数列为广义斐波那契数列。\n\n现在请你求出满足条件 $a_1=i$，$a_2$ 为区间 $[l,r]$ 中的整数，且 $a_k \\bmod p=m$ 的广义斐波那契数列有多少个。\n\n## 输入格式\n\n本题包含多组数据，输入第一行包含一个正整数 $T$，表示数据组数。对于每组数据：\n\n一行六个用空格隔开的整数 $i,l,r,k,p,m$，意义如「题目描述」所示。\n\n## 输出格式\n\n输出共 $T$ 行，每行一个数表示该组数据的答案。\n\n## 样例\n\n```input1\n6\n2 17 68 3 23 1\n1 17 68 3 57 1\n5 17 68 10 11 9\n5 17 68 10 71 9\n10 17 68 11 12 3\n10 17 68 8 6 4\n```\n\n```output1\n3\n1\n4\n1\n5\n9\n```\n\n## 数据范围与提示\n\n<!-- BEGIN: Migrated markdown table -->\n\n| 测试点 | $k$ | $r$ | 其他 |\n|-|-|-|-|\n| 1 | $\\leq 100$ | $\\leq 100$ | 无 |\n| 2 | $\\leq 10^5$ | $\\leq 10^5$ | 无 |\n| 3 | $\\leq 10^5$ | $\\leq 10^5$ | 无 |\n| 4 | $\\leq 10^{18}$ | $\\leq 10^5$ | 无 |\n| 5 | $\\leq 10^{18}$ | $\\leq 10^5$ | 无 |\n| 6 | $\\leq 10^5$ | $\\leq 10^{18}$ | $p$为质数 |\n| 7 | $\\leq 10^5$ | $\\leq 10^{18}$ | $p$为质数 |\n| 8 | $\\leq 10^{18}$ | $\\leq 10^{18}$ | $p$为质数 |\n| 9 | $\\leq 10^{18}$ | $\\leq 10^{18}$ | 无 |\n| 10 | $\\leq 10^{18}$ | $\\leq 10^{18}$ | 无 |\n\n<!-- Migrated from original HTML table:\n<table class=\"ui center aligned celled table\"><thead><tr><th rowspan=\"1\">测试点</th><th rowspan=\"1\">$k$ </th><th rowspan=\"1\">$r$ </th><th rowspan=\"1\">其他</th></tr></thead><tbody><tr><td rowspan=\"1\">1</td><td rowspan=\"1\">$\\leq 100$ </td><td rowspan=\"1\">$\\leq 100$ </td><td rowspan=\"5\">无</td></tr><tr><td rowspan=\"1\">2</td><td rowspan=\"2\">$\\leq 10^5$ </td><td rowspan=\"4\">$\\leq 10^5$ </td></tr><tr><td rowspan=\"1\">3</td></tr><tr><td rowspan=\"1\">4</td><td rowspan=\"2\">$\\leq 10^{18}$ </td></tr><tr><td rowspan=\"1\">5</td></tr><tr><td rowspan=\"1\">6</td><td rowspan=\"2\">$\\leq 10^5$ </td><td rowspan=\"5\">$\\leq 10^{18}$ </td><td rowspan=\"3\">$p$为质数</td></tr><tr><td rowspan=\"1\">7</td></tr><tr><td rowspan=\"1\">8</td><td rowspan=\"3\">$\\leq 10^{18}$ </td></tr><tr><td rowspan=\"1\">9</td><td rowspan=\"2\">无</td></tr><tr><td rowspan=\"1\">10</td></tr></tbody></table>\n-->\n\n<!-- END: Migrated markdown table --> \n\n对于所有数据，$0 \\leq l \\leq r$,$1 \\leq p \\leq 10^9$,$0 \\leq m < p$,$T=10$,$0 \\leq i \\leq 10^{18}$,$k \\geq 3$。\n\n<hr>\n\n来自 CodePlus 2017 12 月赛，清华大学计算机科学与技术系学生算法与竞赛协会 荣誉出品。  \nCredit：idea/卢政荣　命题/卢政荣　验题/吕时清，茹逸中，王聿中  \nGit Repo：<a><s>https://git.thusaac.org/publish/CodePlus201712</s></a>  \n感谢腾讯公司对此次比赛的支持。\n\n## 来源\n\n[LibreOJ #6257](https://loj.ac/p/6257)\n",
+      "html": false,
+      "newContentSha256": "19c04a475bf621d85c3c2a9d7eb6f8cf1ff6a48fa6ffb47e6b02f76a0f113c80"
+    },
+    {
+      "domainId": "system",
+      "docId": 838,
+      "pid": null,
+      "title": "#6268. 分拆数",
+      "category": "loj-math",
+      "source": "https://loj.ac/p/6268",
+      "expected": {
+        "contentSha256": "dee8c360785ccbda785ace3cbe36f4275c3b9de70d6deae7fdad0d03fd226c57",
+        "html": "true"
+      },
+      "content": "## 题目描述\n\n令 $f(n)$ 表示将 $n$ 进行分拆的方案数。\n\n例如，$f(4) = 1 + 1 + 1 + 1 = 1 + 1 + 2 = 1 + 3 = 2 + 2 = 4$ ，所以 $f(4) = 5$ 。\n\n给 $n = 100000$ ，求 $f(1), f(2), ..., f(n)$ 对 $998244353$ 取模。\n\n## 输入格式\n\n第一行一个正整数 $n$ 。\n\n## 输出格式\n\n输出共 $n$ 行，第 $i$ 行输出 $f(i) \\bmod 998244353$ 。\n\n## 样例\n\n```input1\n4\n```\n\n```output1\n1\n2\n3\n5\n```\n\n## 来源\n\n[LibreOJ #6268](https://loj.ac/p/6268)\n",
+      "html": false,
+      "newContentSha256": "531e414bda0a4e47177ad6f7d6c22c11d573f9ae7951b29524bb2392ee5d910e"
+    },
+    {
+      "domainId": "poj",
+      "docId": 38,
+      "pid": "P1037",
+      "title": "A decorative fence",
+      "category": "poj-encoding",
+      "source": "http://poj.org/problem?id=1037",
+      "expected": {
+        "contentSha256": "b998e917b266e305e1f551dc62df8df1eef3e1ec4fb43418cda985e3fa60e6e9",
+        "html": null
+      },
+      "content": "{\"en\":\"<h2>Description</h2><p>Richard just finished building his new house. Now the only thing the house misses is a cute little wooden fence. He had no idea how to make a wooden fence, so he decided to order one. Somehow he got his hands on the ACME Fence Catalogue 2002, the ultimate resource on cute little wooden fences. After reading its preface he already knew, what makes a little wooden fence cute.</p><p>A wooden fence consists of N wooden planks, placed vertically in a row next to each other. A fence looks cute if and only if the following conditions are met:</p><ul><li>The planks have different lengths, namely 1, 2, . . . , N plank length units.</li><li>Each plank with two neighbors is either larger than each of its neighbors or smaller than each of them. (Note that this makes the top of the fence alternately rise and fall.)</li></ul><p>It follows, that we may uniquely describe each cute fence with N planks as a permutation a1, . . . , aN of the numbers 1, . . . ,N such that (any i; 1 &lt; i &lt; N) (ai − ai−1)*(ai − ai+1) &gt; 0 and vice versa, each such permutation describes a cute fence.</p><p>It is obvious, that there are many different cute wooden fences made of N planks. To bring some order into their catalogue, the sales manager of ACME decided to order them in the following way: Fence A (represented by the permutation a1, . . . , aN) is in the catalogue before fence B (represented by b1, . . . , bN) if and only if there exists such i, that (any j &lt; i) aj = bj and (ai &lt; bi). (Also to decide, which of the two fences is earlier in the catalogue, take their corresponding permutations, find the first place on which they differ and compare the values on this place.) All the cute fences with N planks are numbered (starting from 1) in the order they appear in the catalogue. This number is called their catalogue number.</p><p><center><img src=\\\"file://V5OYYSDU.png\\\"></center></p><p>After carefully examining all the cute little wooden fences, Richard decided to order some of them. For each of them he noted the number of its planks and its catalogue number. Later, as he met his friends, he wanted to show them the fences he ordered, but he lost the catalogue somewhere. The only thing he has got are his notes. Please help him find out, how will his fences look like.</p><h2>Input</h2><p>The first line of the input file contains the number K (1 &lt;= K &lt;= 100) of input data sets. K lines follow, each of them describes one input data set.</p><p>Each of the following K lines contains two integers N and C (1 &lt;= N &lt;= 20), separated by a space. N is the number of planks in the fence, C is the catalogue number of the fence.</p><p>You may assume, that the total number of cute little wooden fences with 20 planks fits into a 64-bit signed integer variable (long long in C/C++, int64 in FreePascal). You may also assume that the input is correct, in particular that C is at least 1 and it doesn't exceed the number of cute fences with N planks.</p><h2>Output</h2><p>For each input data set output one line, describing the C-th fence with N planks in the catalogue. More precisely, if the fence is described by the permutation a1, . . . , aN, then the corresponding line of the output file should contain the numbers ai (in the correct order), separated by single spaces.</p>\\n\\n<pre><code class=\\\"language-input1\\\">2\\n2 1\\n3 3</code></pre>\\n\\n\\n\\n<pre><code class=\\\"language-output1\\\">1 2\\n2 3 1</code></pre>\\n\\n<h2>Source</h2><p>CEOI 2002</p>\"}",
+      "html": true,
+      "newContentSha256": "ca35b099a250491c3453076cbded31423211f934a89ce298512cba90864685f1"
+    },
+    {
+      "domainId": "poj",
+      "docId": 115,
+      "pid": "P1114",
+      "title": "Chemical Reactions",
+      "category": "poj-encoding",
+      "source": "http://poj.org/problem?id=1114",
+      "expected": {
+        "contentSha256": "779d3ecf816d64e85a2c5dbd17e5a45e9418014df269d2819676b2fc4a10a4d6",
+        "html": null
+      },
+      "content": "{\"en\":\"<h2>Description</h2><p>Bill teaches chemistry in the school and has prepared a number of tests for his students. Each test has a chemical formula and a number of possible reaction outcomes that his students are to choose one correct from. However, Bill wants to make sure that he has not made any typos while entering his tests into a computer and that his students won't easily throw away wrong answers simply by counting a number of chemical elements on the left and on the right side of the equation, which should be always equal in a valid reaction.</p><p>You are to write a program that will help Bill. The program shall read the description of the test for the students that consists of the given left side of the equation and a number of possible right sides, and determines if the number of chemical elements on each right side of the equation is equal to the number of chemical elements on the given left side of the equation.</p><p>To help you, poor computer folks, that are unaware of the complex world of chemistry, Bill has formalized your task. Each side of the equation is represented by a string of characters without spaces, and consists of one or more chemical sequences separated by a '+' (plus) characters. Each sequence has an optional preceding integer multiplier that applies to the whole sequence and a number of elements. Each element is optionally followed by an integer multiplier that applies to it. An element in this equation can be either distinct chemical element or a whole sequence that is placed in round parenthesis. Every distinct chemical element is represented by either one capital letter or a capital letter that is followed by a small letter.</p><p>Even more formally, using notation that is similar to BNF, we can write:</p><pre><code>&lt;formula&gt; ::= [&lt;number&gt;] &lt;sequence&gt; { '+' [&lt;number&gt;] &lt;sequence&gt; }\\n&lt;sequence&gt; ::= &lt;element&gt; [&lt;number&gt;] { &lt;element&gt; [&lt;number&gt;] }\\n&lt;element&gt; ::= &lt;chem&gt; | '(' &lt;sequence&gt; ')'\\n&lt;chem&gt; ::= &lt;uppercase_letter&gt; [ &lt;lowercase_letter&gt; ]\\n&lt;uppercase_letter&gt; ::= 'A'..'Z'\\n&lt;lowercase_letter&gt; ::= 'a'..'z'\\n&lt;number&gt; ::= '1'..'9' { '0'..'9' }</code></pre><p>Every distinct chemical element is said to occur in the given formula for some total number X, if X is the sum of all separate occurrences of this chemical element multiplied to all numbers that apply to it. For example, in the following chemical formula:</p><p>C2H5OH+3O2+3(SiO2)</p><p>C occurs for a total of 2 times.</p><p>H occurs for a total of 6 times (5 + 1).</p><p>O occurs for a total of 13 times (1 + 3*2 + 3*2).</p><p>Si occurs for a total of 3 times.</p><p>All multipliers in the formula are integer numbers that are at least 2 if explicitly specified and are 1 by default. Each chemical formula is at most 100 characters long, and every distinct chemical element is guaranteed to occur for a total of no more than 10000 times in each formula.</p><p></p><h2>Input</h2><p>The first line of the input file represents a chemical formula that is to be tested as the left side of the equation. The second line of the input file contains a single integer number N (1 &lt;= N &lt;= 10), which is the number of right sides of the equation that are to be tested. Each one of the following N lines represents one such formula.</p><h2>Output</h2><p>You are to write to the output file N lines - one line per each possible answer of the chemical test for Bill's students that is given in the input file. For each right-hand side formula that is encountered in the input file, write to the output file:</p><p>&lt; left_formula &gt;==&lt; right_formula &gt;</p><p>if the total number of occurrences of each distinct chemical element on the left-hand side equals to the total number of occurrences of this chemical element on the right-hand side. Otherwise write:</p><p>&lt; left_formula &gt;!=&lt; right_formula &gt;</p><p>Here &lt; left_formula &gt; must be replaced exactly (character by character) with the original left-hand side formula as it is given in the first line of the input file, and &lt; right_formula &gt; must be replaced exactly with each right-hand side formula as they are given in the input file. Do not place any spaces in the lines you write to the output file.</p>\\n\\n<pre><code class=\\\"language-input1\\\">C2H5OH+3O2+3(SiO2)\\n7\\n2CO2+3H2O+3SiO2\\n2C+6H+13O+3Si\\n99C2H5OH+3SiO2\\n3SiO4+C2H5OH\\nC2H5OH+3O2+3(SiO2)+Ge\\n3(Si(O)2)+2CO+3H2O+O2\\n2CO+3H2O+3O2+3Si</code></pre>\\n\\n\\n\\n<pre><code class=\\\"language-output1\\\">C2H5OH+3O2+3(SiO2)==2CO2+3H2O+3SiO2\\nC2H5OH+3O2+3(SiO2)==2C+6H+13O+3Si\\nC2H5OH+3O2+3(SiO2)!=99C2H5OH+3SiO2\\nC2H5OH+3O2+3(SiO2)==3SiO4+C2H5OH\\nC2H5OH+3O2+3(SiO2)!=C2H5OH+3O2+3(SiO2)+Ge\\nC2H5OH+3O2+3(SiO2)==3(Si(O)2)+2CO+3H2O+O2\\nC2H5OH+3O2+3(SiO2)!=2CO+3H2O+3O2+3Si</code></pre>\\n\\n<h2>Source</h2><p>Northeastern Europe 2001</p>\"}",
+      "html": true,
+      "newContentSha256": "90e2ee2873cee2571213928b12d574deddede9a947dc8c036f71accaccee4779"
+    },
+    {
+      "domainId": "poj",
+      "docId": 180,
+      "pid": "P1179",
+      "title": "Polygon",
+      "category": "poj-encoding",
+      "source": "http://poj.org/problem?id=1179",
+      "expected": {
+        "contentSha256": "597d3d87f97992da61b877d5bbb7950bcb276f9894a5ad5b54867b53ba916d0d",
+        "html": null
+      },
+      "content": "{\"en\":\"<h2>Description</h2><p>Polygon is a game for one player that starts on a polygon with N vertices, like the one in Figure 1, where N=4. Each vertex is labelled with an integer and each edge is labelled with either the symbol + (addition) or the symbol * (product). The edges are numbered from 1 to N.</p><p><center><img src=\\\"file://fJrIgMPE.png\\\"></center></p><p>On the first move, one of the edges is removed. Subsequent moves involve the following steps:</p><ul><li>pick an edge E and the two vertices V1 and V2 that are linked by E; and</li><li>replace them by a new vertex, labelled with the result of performing the operation indicated in E on the labels of V1 and V2.</li></ul><p>The game ends when there are no more edges, and its score is the label of the single vertex remaining.</p><p>Consider the polygon of Figure 1. The player started by removing edge 3. After that, the player picked edge 1, then edge 4, and, finally, edge 2. The score is 0.</p><p><center><img src=\\\"file://BQElGpkK.png\\\"></center></p><p>Write a program that, given a polygon, computes the highest possible score and lists all the edges that, if removed on the first move, can lead to a game with that score.</p><h2>Input</h2><p>Your program is to read from standard input. The input describes a polygon with N vertices. It contains two lines. On the first line is the number N. The second line contains the labels of edges 1, ..., N, interleaved with the vertices' labels (first that of the vertex between edges 1 and 2, then that of the vertex between edges 2 and 3, and so on, until that of the vertex between edges N and 1), all separated by one space. An edge label is either the letter t (representing +) or the letter x (representing *).</p><p>3 &lt;= N &lt;= 50</p><p>For any sequence of moves, vertex labels are in the range [-32768,32767].</p><h2>Output</h2><p>Your program is to write to standard output. On the first line your program must write the highest score one can get for the input polygon. On the second line it must write the list of all edges that, if removed on the first move, can lead to a game with that score. Edges must be written in increasing order, separated by one space.</p>\\n\\n<pre><code class=\\\"language-input1\\\">4\\nt -7 t 4 x 2 x 5</code></pre>\\n\\n\\n\\n<pre><code class=\\\"language-output1\\\">33\\n1 2</code></pre>\\n\\n<h2>Source</h2><p>IOI 1998</p>\"}",
+      "html": true,
+      "newContentSha256": "1ef8dfc29029938f1028937423692f7c9b51b1f1663801d7b99ef8f09bf9c33e"
+    },
+    {
+      "domainId": "poj",
+      "docId": 266,
+      "pid": "P1265",
+      "title": "Area",
+      "category": "poj-encoding",
+      "source": "http://poj.org/problem?id=1265",
+      "expected": {
+        "contentSha256": "ee90560a58d2a99b13efb9c042a195505785be076328a7a87fdf69197b1a760b",
+        "html": null
+      },
+      "content": "{\"en\":\"<h2>Description</h2><p>Being well known for its highly innovative products, Merck would definitely be a good target for industrial espionage. To protect its brand-new research and development facility the company has installed the latest system of surveillance robots patrolling the area. These robots move along the walls of the facility and report suspicious observations to the central security office. The only flaw in the system a competitor's agent could find is the fact that the robots radio their movements unencrypted. Not being able to find out more, the agent wants to use that information to calculate the exact size of the area occupied by the new facility. It is public knowledge that all the corners of the building are situated on a rectangular grid and that only straight walls are used. Figure 1 shows the course of a robot around an example area.</p><p><center></center></p><p><img src=\\\"file://HDO5ZuGH.png\\\"></p><p>Figure 1: Example area.</p><p></p><p>You are hired to write a program that calculates the area occupied by the new facility from the movements of a robot along its walls. You can assume that this area is a polygon with corners on a rectangular grid. However, your boss insists that you use a formula he is so proud to have found somewhere. The formula relates the number I of grid points inside the polygon, the number E of grid points on the edges, and the total area A of the polygon. Unfortunately, you have lost the sheet on which he had written down that simple formula for you, so your first task is to find the formula yourself.</p><h2>Input</h2><p>The first line contains the number of scenarios.</p><p>For each scenario, you are given the number m, 3 &lt;= m &lt; 100, of movements of the robot in the first line. The following m lines contain pairs \\\"dx dy\\\" of integers, separated by a single blank, satisfying -100 &lt;= dx, dy &lt;= 100 and (dx, dy) != (0, 0). Such a pair means that the robot moves on to a grid point dx units to the right and dy units upwards on the grid (with respect to the current position). You can assume that the curve along which the robot moves is closed and that it does not intersect or even touch itself except for the start and end points. The robot moves anti-clockwise around the building, so the area to be calculated lies to the left of the curve. It is known in advance that the whole polygon would fit into a square on the grid with a side length of 100 units.</p><h2>Output</h2><p>The output for every scenario begins with a line containing \\\"Scenario #i:\\\" where i is the number of the scenario starting at 1. Then print a single line containing I, E, and A, the area A rounded to one digit after the decimal point. Separate the three numbers by two single blanks. Terminate the output for the scenario with a blank line.</p>\\n\\n<pre><code class=\\\"language-input1\\\">2\\n4\\n1 0\\n0 1\\n-1 0\\n0 -1\\n7\\n5 0\\n1 3\\n-2 2\\n-1 0\\n0 -3\\n-3 1\\n0 -3\\n</code></pre>\\n\\n\\n\\n<pre><code class=\\\"language-output1\\\">Scenario #1:\\n0 4 1.0\\n\\nScenario #2:\\n12 16 19.0</code></pre>\\n\\n<h2>Source</h2><p>Northwestern Europe 2001</p>\"}",
+      "html": true,
+      "newContentSha256": "3d8fffe4fb42ee44116f797a045650e73226fa91f114b77fba4a72da25cd83f8"
+    },
+    {
+      "domainId": "poj",
+      "docId": 347,
+      "pid": "P1346",
+      "title": "Board of Directors Meeting",
+      "category": "poj-encoding",
+      "source": "http://poj.org/problem?id=1346",
+      "expected": {
+        "contentSha256": "7e9cdac3a51b99c3604b6d219dd4d5f52034c7818361dccd16af3fe2a3a48ab6",
+        "html": null
+      },
+      "content": "{\"en\":\"<h2>Description</h2><p>Meetings of board of directors of a company are held in a specially designed room. The room contains a central table in the form of a ring around which revolving chairs are placed. There is an entry to approach the center of the ring where there is a single revolving chair. An outline of the arrangement inside the room is shown in the figure below.</p><p><center><img src=\\\"file://Mcl9vgxb.png\\\"></center></p><p>The following protocol is maintained during the meeting:</p><p>1. The total number of members present in any meeting is an even number, say, 2N, where 5&lt;2N&lt;25. The members are identified by integers 1,2,...,2N.</p><p>2. Around the table N blue and N red chairs are placed alternately for the members to sit. Arrangements of blue and red chairs are considered circular. Thus the entry path does not affect the proximity of chairs on two sides of the path. At the start of the meeting 2N members sit on 2N chairs around the table.</p><p>3. In addition to the N blue and N red chairs one white chair is placed at the center of the table. When the white chair is vacant a member occupying a red chair only, may vacate the red chair and sit on the white chair to address the meeting.</p><p>4. During an address one blue / red chair always remains vacant. A member seated on either side of the vacant chair may vacate her / his chair and occupy the vacant chair. This type of change of chairs may be made by members any number of times during an address.</p><p>5. After completion of an address a member vacates the white chair and occupies the blue / red chair vacant at that time.</p><p>Reporters are briefed at the beginning and at the end of the meeting. However they are not supplied with all the details they wish to know. A reporter is curious to know the total number of addresses delivered in the meeting. He notes down the relative positions of members in anticlockwise order with respect to the member identified by the integer 1, at the beginning as well as at the end of the meeting.</p><p>You are required to write a computer program to find the minimum number of addresses delivered during the meeting.</p><h2>Input</h2><p>The input may contain multiple test cases.</p><p>For each test case there are three input lines. The first line contains two integers, the case number c and the total number of member 2N.</p><p>The next two lines consist of two strings giving the relative position of members at the beginning and at the end of the meeting, in anticlockwise order with respect to the member 1.</p><p>Each input string starts with a letter-integer combination (without any blank between the letter and the integer) either B1 (if member 1 is on a blue chair) or R1 (if member 1 is on a red chair) and is followed by a permutation of integers 2, 3, ..., 2N. A blank character precedes each integer appearing in the string, with the exception of 1. The input is illustrated in sample input.</p><p>The input terminates with an input 0 for c.</p><h2>Output</h2><p>For each test case in the input print in one line two integers c and m separated by a blank character. The integer c is the test case number and m is the minimum number of addresses delivered in the meeting.</p>\\n\\n<pre><code class=\\\"language-input1\\\">1 6 \\nB1 3 6 5 4 2 \\nR1 3 6 5 4 2 \\n2 6 \\nB1 3 6 5 4 2 \\nR1 3 4 6 5 2 \\n0 </code></pre>\\n\\n\\n\\n<pre><code class=\\\"language-output1\\\">1 1 \\n2 2 \\n</code></pre>\\n\\n<h2>Source</h2><p>kanpur 2002</p>\"}",
+      "html": true,
+      "newContentSha256": "93ef17f302ff4e594f4c39c4c27d21a65564eba975a7a2bf9c5323343d0baa89"
+    },
+    {
+      "domainId": "poj",
+      "docId": 452,
+      "pid": "P1451",
+      "title": "T9",
+      "category": "poj-encoding",
+      "source": "http://poj.org/problem?id=1451",
+      "expected": {
+        "contentSha256": "50846e678bf08788ebc16bfbcef4ad97627132d78d70425ea117a4cd0a77265b",
+        "html": null
+      },
+      "content": "{\"en\":\"<h2>Description</h2><p>Background</p><p>A while ago it was quite cumbersome to create a message for the Short Message Service (SMS) on a mobile phone. This was because you only have nine keys and the alphabet has more than nine letters, so most characters could only be entered by pressing one key several times. For example, if you wanted to type \\\"hello\\\" you had to press key 4 twice, key 3 twice, key 5 three times, again key 5 three times, and finally key 6 three times. This procedure is very tedious and keeps many people from using the Short Message Service.</p><p>This led manufacturers of mobile phones to try and find an easier way to enter text on a mobile phone. The solution they developed is called T9 text input. The \\\"9\\\" in the name means that you can enter almost arbitrary words with just nine keys and without pressing them more than once per character. The idea of the solution is that you simply start typing the keys without repetition, and the software uses a built-in dictionary to look for the \\\"most probable\\\" word matching the input. For example, to enter \\\"hello\\\" you simply press keys 4, 3, 5, 5, and 6 once. Of course, this could also be the input for the word \\\"gdjjm\\\", but since this is no sensible English word, it can safely be ignored. By ruling out all other \\\"improbable\\\" solutions and only taking proper English words into account, this method can speed up writing of short messages considerably. Of course, if the word is not in the dictionary (like a name) then it has to be typed in manually using key repetition again.</p><p><center><img src=\\\"file://EZdpEuLY.png\\\"></center></p><p>Figure 8: The Number-keys of a mobile phone.</p><p>More precisely, with every character typed, the phone will show the most probable combination of characters it has found up to that point. Let us assume that the phone knows about the words \\\"idea\\\" and \\\"hello\\\", with \\\"idea\\\" occurring more often. Pressing the keys 4, 3, 5, 5, and 6, one after the other, the phone offers you \\\"i\\\", \\\"id\\\", then switches to \\\"hel\\\", \\\"hell\\\", and finally shows \\\"hello\\\".</p><p>Problem</p><p>Write an implementation of the T9 text input which offers the most probable character combination after every keystroke. The probability of a character combination is defined to be the sum of the probabilities of all words in the dictionary that begin with this character combination. For example, if the dictionary contains three words \\\"hell\\\", \\\"hello\\\", and \\\"hellfire\\\", the probability of the character combination \\\"hell\\\" is the sum of the probabilities of these words. If some combinations have the same probability, your program is to select the first one in alphabetic order. The user should also be able to type the beginning of words. For example, if the word \\\"hello\\\" is in the dictionary, the user can also enter the word \\\"he\\\" by pressing the keys 4 and 3 even if this word is not listed in the dictionary.</p><h2>Input</h2><p>The first line contains the number of scenarios.</p><p>Each scenario begins with a line containing the number w of distinct words in the dictionary (0&lt;=w&lt;=1000). These words are given in the next w lines in ascending alphabetic order. Every line starts with the word which is a sequence of lowercase letters from the alphabet without whitespace, followed by a space and an integer p, 1&lt;=p&lt;=100, representing the probability of that word. No word will contain more than 100 letters.</p><p>Following the dictionary, there is a line containing a single integer m. Next follow m lines, each consisting of a sequence of at most 100 decimal digits 2 through 9, followed by a single 1 meaning \\\"next word\\\".</p><h2>Output</h2><p>The output for each scenario begins with a line containing \\\"Scenario #i:\\\", where i is the number of the scenario starting at 1.</p><p>For every number sequence s of the scenario, print one line for every keystroke stored in s, except for the 1 at the end. In this line, print the most probable word prefix defined by the probabilities in the dictionary and the T9 selection rules explained above. Whenever none of the words in the dictionary match the given number sequence, print \\\"MANUALLY\\\" instead of a prefix.</p><p>Terminate the output for every number sequence with a blank line, and print an additional blank line at the end of every scenario.</p>\\n\\n<pre><code class=\\\"language-input1\\\">2\\n5\\nhell 3\\nhello 4\\nidea 8\\nnext 8\\nsuper 3\\n2\\n435561\\n43321\\n7\\nanother 5\\ncontest 6\\nfollow 3\\ngive 13\\ninteger 6\\nnew 14\\nprogram 4\\n5\\n77647261\\n6391\\n4681\\n26684371\\n77771</code></pre>\\n\\n\\n\\n<pre><code class=\\\"language-output1\\\">Scenario #1:\\ni\\nid\\nhel\\nhell\\nhello\\n\\ni\\nid\\nide\\nidea\\n\\n\\nScenario #2:\\np\\npr\\npro\\nprog\\nprogr\\nprogra\\nprogram\\n\\nn\\nne\\nnew\\n\\ng\\nin\\nint\\n\\nc\\nco\\ncon\\ncont\\nanoth\\nanothe\\nanother\\n\\np\\npr\\nMANUALLY\\nMANUALLY</code></pre>\\n\\n<h2>Source</h2><p>Northwestern Europe 2001</p>\"}",
+      "html": true,
+      "newContentSha256": "f647934010841c1def279098e193083f2fdbc736ef3f52f9ba572d563b7c58d1"
+    },
+    {
+      "domainId": "poj",
+      "docId": 470,
+      "pid": "P1469",
+      "title": "COURSES",
+      "category": "poj-encoding",
+      "source": "http://poj.org/problem?id=1469",
+      "expected": {
+        "contentSha256": "8139868db1f62f82efbbebffe0285119f589132909f33de1feb356d5968fb08c",
+        "html": null
+      },
+      "content": "{\"en\":\"<h2>Description</h2><p>Consider a group of N students and P courses. Each student visits zero, one or more than one courses. Your task is to determine whether it is possible to form a committee of exactly P students that satisfies simultaneously the conditions:</p><ul><li>\\tevery student in the committee represents a different course (a student can represent a course if he/she visits that course)</li><li>\\teach course has a representative in the committee</li></ul><h2>Input</h2><p>Your program should read sets of data from the std input. The first line of the input contains the number of the data sets. Each data set is presented in the following format:</p><p>P   N</p><p>Count1   Student<sub>1 1</sub>   Student<sub>1 2</sub>   ...   Student<sub>1 Count1</sub></p><p>Count2   Student<sub>2 1</sub>   Student<sub>2 2</sub>   ...   Student<sub>2 Count2</sub></p><p>...</p><p>CountP   Student<sub>P 1</sub>   Student<sub>P 2</sub>   ...   Student<sub>P CountP</sub></p><p>The first line in each data set contains two positive integers separated by one blank: P (1 &lt;= P &lt;= 100) - the number of courses and N (1 &lt;= N &lt;= 300) - the number of students. The next P lines describe in sequence of the courses (from course 1 to course P), each line describing a course. The description of course i is a line that starts with an integer Count i (0 &lt;= Count i &lt;= N) representing the number of students visiting course i. Next, after a blank, you'll find the Count i students, visiting the course, each two consecutive separated by one blank. Students are numbered with the positive integers from 1 to N.</p><p>There are no blank lines between consecutive sets of data. Input data are correct.</p><h2>Output</h2><p>The result of the program is on the standard output. For each input data set the program prints on a single line \\\"YES\\\" if it is possible to form a committee and \\\"NO\\\" otherwise. There should not be any leading blanks at the start of the line.</p>\\n\\n<pre><code class=\\\"language-input1\\\">2\\n3 3\\n3 1 2 3\\n2 1 2\\n1 1\\n3 3\\n2 1 3\\n2 1 3\\n1 1</code></pre>\\n\\n\\n\\n<pre><code class=\\\"language-output1\\\">YES\\nNO</code></pre>\\n\\n<h2>Source</h2><p>Southeastern Europe 2000</p>\"}",
+      "html": true,
+      "newContentSha256": "e52b27e8f88d74aa5ce684cd6f47f7c4e6ad3ad1946a9e3aa578d3d92886aa67"
+    },
+    {
+      "domainId": "poj",
+      "docId": 523,
+      "pid": "P1522",
+      "title": "N-Credible Mazes",
+      "category": "poj-encoding",
+      "source": "http://poj.org/problem?id=1522",
+      "expected": {
+        "contentSha256": "c90e4c906c243f4adf62c943d99f2af50610926cea2ee0e6c6b15e146e8eeb62",
+        "html": null
+      },
+      "content": "{\"en\":\"<h2>Description</h2><p>An n-tersection is defined as a location in n-dimensional space, n being a positive integer, having all non-negative integer coordinates. For example, the location (1,2,3) represents an n-tersection in three dimensional space. Two n-tersections are said to be adjacent if they have the same number of dimensions and their coordinates differ by exactly 1 in a single dimension only. For example, (1,2,3) is adjacent to (0,2,3) and (2,2,3) and (1,2,4), but not to (2,3,3) or (3,2,3) or (1,2). An n-teresting space is defined as a collection of paths between adjacent n-tersections.</p><p>Finally, an n-credible maze is defined as an n-teresting space combined with two specific n-tersections in that space, one of which is identified as the starting n-tersection and the other as the ending n-tersection.</p><h2>Input</h2><p>The input file will consist of the descriptions of one or more n-credible mazes. The first line of the description will specify n, the dimension of the n-teresting space. (For this problem, n will not exceed 10, and all coordinate values will be less than 10.) The next line will contain 2n non-negative integers, the first n of which describe the starting n-tersection, least dimension first, and the next n of which describe the ending n-tersection. Next will be a nonnegative number of lines containing 2n non-negative integers each, identifying paths between adjacent n-tersections in the n-teresting space. The list is terminated by a line containing only the value -1. Several such maze descriptions may be present in the file. The end of the input is signalled by space dimension of zero. No further data will follow this terminating zero.</p><h2>Output</h2><p>For each maze output it's position in the input; e.g. the first maze is \\\"Maze #1\\\", the second is \\\"Maze #2\\\", etc. If it is possible to travel through the n-credible maze's n-teresting space from the starting n-tersection to the ending n-tersection, also output \\\"can be travelled\\\" on the same line. If such travel is not possible, output \\\"cannot be travelled\\\" instead.</p>\\n\\n<pre><code class=\\\"language-input1\\\">2 \\n0 0 2 2\\n0 0 0 1\\n0 1 0 2\\n0 2 1 2\\n1 2 2 2\\n-1\\n3\\n1 1 1 1 2 3\\n1 1 2 1 1 3\\n1 1 3 1 2 3\\n1 1 1 1 1 0\\n1 1 0 1 0 0\\n1 0 0 0 0 0\\n-1\\n0</code></pre>\\n\\n\\n\\n<pre><code class=\\\"language-output1\\\">Maze #1 can be travelled\\nMaze #2 cannot be travelled</code></pre>\\n\\n<h2>Source</h2><p>Greater New York 2000</p>\"}",
+      "html": true,
+      "newContentSha256": "bb02ee8521b7a8c79313020a5bed60a917645c0c6b5cd8e09fa2911c9c4fd5ec"
+    },
+    {
+      "domainId": "system",
+      "docId": 4160,
+      "pid": null,
+      "title": "去注释",
+      "category": "lanqiao-encoding",
+      "source": "蓝桥杯原始去注释.docx、input1.txt、input3.txt",
+      "expected": {
+        "contentSha256": "32cee730589a4a9bfdb1e9d0ce8b26f98d3a454f0c0ac79a054a90605f7596b5",
+        "html": true
+      },
+      "content": "## 题目描述\n\n给你一段 C++ 代码，将其中的注释去除后输出剩余的代码。注释有以下两种形式：\n\n1. 行注释：以 `//` 开头，直到该行行尾。\n2. 块注释：以 `/*` 开头，以 `*/` 结束，可以跨越多行。\n\n输入的程序保证合法。除注释部分以外的字符都要保留，包括空格和换行符。行注释后的换行符需要保留；块注释内部的换行符随注释一起去除，块注释前后的换行符保留。\n\n## 输入格式\n\n一段 C++ 程序代码，读至输入结束。\n\n## 输出格式\n\n输出去掉注释部分后的程序。\n\n## 样例\n\n```input1\n/*************\n * @brief 去掉一个程序的注释\n * @author liuyuchen\n * @date 2011//10//26\n */ \n\n#include <stdio.h>\n\nint main() {\n    freopen(\"2.in\", \"r\", stdin);\n    freopen(\"2.out\", \"w\", stdout);\n    \n    char c;\n    int comment = 0; //0不在注释内,1在行注释内,2在block注释内 \n    \n    while ((scanf(\"%c\", &c)) != EOF) {\n          if (comment == 0) {//注释外情况 \n             if (c == '/') {\n                char lc = c;//保存上一个字符\n                            \n                if ((scanf(\"%c\", &c)) == EOF) {\n                   printf(\"%c\", lc);\n                   break;\n                }\n                /*\n                以下是\n                 三种情况\n                */ \n                if (c == '/') comment = 1;\n                else if (c == '*') comment = 2;\n                else printf(\"%c%c\", lc, c);\n             }\n             else printf(\"%c\", c);\n             continue;\n          }\n          if (comment == 1) {//目前处于行注释内 \n             if (c == '\\n') {\n                   printf(\"\\n\");\n                   comment = 0;\n             }\n             continue;\n          }\n          if (comment == 2) {//目前在block注释内 \n             if (c == '*') {\n                char lc = c;\n                if ((scanf(\"%c\", &c)) == EOF) {\n                   break;\n                }\n                if (c == '/') comment = 0;\n             }\n             continue;\n          } \n    }    \n    /*\n    尾巴 \n    */\n    return 0;\n}\n\n/*\n\t注意：中间有一空行是因为注释段前后各有一个换行符，都得保留，换言之，除注释部分以外的字符都要保留输出。输入的程序保证合法。\n\n输入\n\t一段程序，可以看作若干个字符\n\n*/\n```\n\n```output1\n \n\n#include <stdio.h>\n\nint main() {\n    freopen(\"2.in\", \"r\", stdin);\n    freopen(\"2.out\", \"w\", stdout);\n    \n    char c;\n    int comment = 0; \n    \n    while ((scanf(\"%c\", &c)) != EOF) {\n          if (comment == 0) {\n             if (c == '/') {\n                char lc = c;\n                            \n                if ((scanf(\"%c\", &c)) == EOF) {\n                   printf(\"%c\", lc);\n                   break;\n                }\n                 \n                if (c == '/') comment = 1;\n                else if (c == '*') comment = 2;\n                else printf(\"%c%c\", lc, c);\n             }\n             else printf(\"%c\", c);\n             continue;\n          }\n          if (comment == 1) {\n             if (c == '\\n') {\n                   printf(\"\\n\");\n                   comment = 0;\n             }\n             continue;\n          }\n          if (comment == 2) {\n             if (c == '*') {\n                char lc = c;\n                if ((scanf(\"%c\", &c)) == EOF) {\n                   break;\n                }\n                if (c == '/') comment = 0;\n             }\n             continue;\n          } \n    }    \n    \n    return 0;\n}\n\n\n```\n\n## 提示\n\n样例中块注释前后各有一个换行符，因此删除该注释后仍保留空行。\n\n## 来源\n\n蓝桥杯 算法提高：去注释（原始题目文档与测试数据）。\n",
+      "html": false,
+      "newContentSha256": "9ca135bd18f9740c95421004d97e3714f73d125d00b86165be9ba09dff92e3da",
+      "testdata": [
+        {
+          "name": "1.in",
+          "expectedSha256": "5a34824d285262dcc52b29bcdf8658ac5e86738b5f0a811bb8a8e68066c00647",
+          "sha256": "35356ab4cd4b0c16b04200aa83a007e0249a51e53b849edbb7ca776a027819fb",
+          "base64": "LyoqKioqKioqKioqKioKICogQGJyaWVmIOWOu+aOieS4gOS4queoi+W6j+eahOazqOmHigogKiBAYXV0aG9yIGxpdXl1Y2hlbgogKiBAZGF0ZSAyMDExLy8xMC8vMjYKICovIAoKI2luY2x1ZGUgPHN0ZGlvLmg+CgppbnQgbWFpbigpIHsKICAgIGZyZW9wZW4oIjIuaW4iLCAiciIsIHN0ZGluKTsKICAgIGZyZW9wZW4oIjIub3V0IiwgInciLCBzdGRvdXQpOwogICAgCiAgICBjaGFyIGM7CiAgICBpbnQgY29tbWVudCA9IDA7IC8vMOS4jeWcqOazqOmHiuWGhSwx5Zyo6KGM5rOo6YeK5YaFLDLlnKhibG9ja+azqOmHiuWGhSAKICAgIAogICAgd2hpbGUgKChzY2FuZigiJWMiLCAmYykpICE9IEVPRikgewogICAgICAgICAgaWYgKGNvbW1lbnQgPT0gMCkgey8v5rOo6YeK5aSW5oOF5Ya1IAogICAgICAgICAgICAgaWYgKGMgPT0gJy8nKSB7CiAgICAgICAgICAgICAgICBjaGFyIGxjID0gYzsvL+S/neWtmOS4iuS4gOS4quWtl+espgogICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICBpZiAoKHNjYW5mKCIlYyIsICZjKSkgPT0gRU9GKSB7CiAgICAgICAgICAgICAgICAgICBwcmludGYoIiVjIiwgbGMpOwogICAgICAgICAgICAgICAgICAgYnJlYWs7CiAgICAgICAgICAgICAgICB9CiAgICAgICAgICAgICAgICAvKgogICAgICAgICAgICAgICAg5Lul5LiL5pivCiAgICAgICAgICAgICAgICAg5LiJ56eN5oOF5Ya1CiAgICAgICAgICAgICAgICAqLyAKICAgICAgICAgICAgICAgIGlmIChjID09ICcvJykgY29tbWVudCA9IDE7CiAgICAgICAgICAgICAgICBlbHNlIGlmIChjID09ICcqJykgY29tbWVudCA9IDI7CiAgICAgICAgICAgICAgICBlbHNlIHByaW50ZigiJWMlYyIsIGxjLCBjKTsKICAgICAgICAgICAgIH0KICAgICAgICAgICAgIGVsc2UgcHJpbnRmKCIlYyIsIGMpOwogICAgICAgICAgICAgY29udGludWU7CiAgICAgICAgICB9CiAgICAgICAgICBpZiAoY29tbWVudCA9PSAxKSB7Ly/nm67liY3lpITkuo7ooYzms6jph4rlhoUgCiAgICAgICAgICAgICBpZiAoYyA9PSAnXG4nKSB7CiAgICAgICAgICAgICAgICAgICBwcmludGYoIlxuIik7CiAgICAgICAgICAgICAgICAgICBjb21tZW50ID0gMDsKICAgICAgICAgICAgIH0KICAgICAgICAgICAgIGNvbnRpbnVlOwogICAgICAgICAgfQogICAgICAgICAgaWYgKGNvbW1lbnQgPT0gMikgey8v55uu5YmN5ZyoYmxvY2vms6jph4rlhoUgCiAgICAgICAgICAgICBpZiAoYyA9PSAnKicpIHsKICAgICAgICAgICAgICAgIGNoYXIgbGMgPSBjOwogICAgICAgICAgICAgICAgaWYgKChzY2FuZigiJWMiLCAmYykpID09IEVPRikgewogICAgICAgICAgICAgICAgICAgYnJlYWs7CiAgICAgICAgICAgICAgICB9CiAgICAgICAgICAgICAgICBpZiAoYyA9PSAnLycpIGNvbW1lbnQgPSAwOwogICAgICAgICAgICAgfQogICAgICAgICAgICAgY29udGludWU7CiAgICAgICAgICB9IAogICAgfSAgICAKICAgIC8qCiAgICDlsL7lt7QgCiAgICAqLwogICAgcmV0dXJuIDA7Cn0KCi8qCgnms6jmhI/vvJrkuK3pl7TmnInkuIDnqbrooYzmmK/lm6DkuLrms6jph4rmrrXliY3lkI7lkITmnInkuIDkuKrmjaLooYznrKbvvIzpg73lvpfkv53nlZnvvIzmjaLoqIDkuYvvvIzpmaTms6jph4rpg6jliIbku6XlpJbnmoTlrZfnrKbpg73opoHkv53nlZnovpPlh7rjgILovpPlhaXnmoTnqIvluo/kv53or4HlkIjms5XjgIIKCui+k+WFpQoJ5LiA5q6156iL5bqP77yM5Y+v5Lul55yL5L2c6Iul5bmy5Liq5a2X56ymCgoqLwo="
+        },
+        {
+          "name": "3.in",
+          "expectedSha256": "2aab147785893dcc5f95a45a945dbe7f13aa5b632424ddb01437fc0302ac72f6",
+          "sha256": "dc5319673e65cd7ee2142a175ed71c566f5255164422d93cc2c2f0b949d7364a",
+          "base64": "CiNpbmNsdWRlCSJHcmFwaE1hbmFnZS5oIgoKY29uc3QgY2hhcglOT0RFTEFCRUwJPSAnTic7CmNvbnN0IGNoYXIJQVJDTEFCRUwJPSAnQSc7CmNvbnN0IGNoYXIJQ09NTUVOVExBQkVMCT0gJyMnOwoKY29uc3QgY2hhcglOT0RFTlVNW10JPSAiTk9ERSI7CmNvbnN0IGNoYXIJQVJDTlVNW10JPSAiQVJDIjsKCmNvbnN0IGNoYXIJTUlETEFCRUxbXQk9ICJNSUQiOwpjb25zdCBjaGFyCUJFR0lOTEFCRUxbXQk9ICJCRUdJTiI7CmNvbnN0IGNoYXIJRU5ETEFCRUxbXQk9ICJFTkQiOwpjb25zdCBjaGFyCUJFR0lORU5ETEFCRUxbXQk9ICJCRUdJTl9FTkQiOwoKY29uc3QgY2hhcglOVUxMQVJDTEFCRUxbXQk9ICIhTlVMTCEiOwoKI2RlZmluZQkJTUFYTElORUxFTkdUSAk0MDAKCkdyYXBoTWFuYWdlOjpHcmFwaE1hbmFnZSgpCnsKCW1fYkluaXRlZAk9IGZhbHNlOwoJbV9wR3JhcGhOb2RlQnVmCT0gTlVMTDsKCW1fcEdyYXBoQXJjQnVmCT0gTlVMTDsKCW1fbkdyYXBoTm9kZU51bQk9IG1fbkdyYXBoQXJjTnVtID0gMDsKfQoKR3JhcGhNYW5hZ2U6On5HcmFwaE1hbmFnZSgpCnsKCWlmICggbV9uR3JhcGhBcmNOdW0gPiAwICkKCXsKCQlmb3IgKCBpbnQgaT0wOyBpPG1fbkdyYXBoQXJjTnVtOyBpKysgKQoJCQlkZWxldGUgW10gbV9wR3JhcGhBcmNCdWZbaV0uc3pXb3JkTmFtZTsKCX0KIAlpZiAoIG1fcEdyYXBoTm9kZUJ1ZiApIGRlbGV0ZSBbXSBtX3BHcmFwaE5vZGVCdWY7CiAJaWYgKCBtX3BHcmFwaEFyY0J1ZiApIGRlbGV0ZSBbXSBtX3BHcmFwaEFyY0J1ZjsKfQoKCmJvb2wgR3JhcGhNYW5hZ2U6OkxvYWRHcmFwaEZpbGUoIGNoYXIgKnN6R3JhcGhGTmFtZSApCnsKCW1fYkluaXRlZCA9IGZhbHNlOwoJaWYgKCBtX3BHcmFwaE5vZGVCdWYgKSBkZWxldGUgW10gbV9wR3JhcGhOb2RlQnVmOwoJaWYgKCBtX3BHcmFwaEFyY0J1ZiApIGRlbGV0ZSBbXSBtX3BHcmFwaEFyY0J1ZjsKCW1fcEdyYXBoTm9kZUJ1ZiA9IE5VTEw7CgltX3BHcmFwaEFyY0J1ZiA9IE5VTEw7CgltX25HcmFwaE5vZGVOdW0gPSBtX25HcmFwaEFyY051bSA9IDA7CgoJaWYgKCAhc3pHcmFwaEZOYW1lIHx8IHN0cmxlbihzekdyYXBoRk5hbWUpPT0wICkgcmV0dXJuIGZhbHNlOwoJRklMRSAqZiA9IGZvcGVuKHN6R3JhcGhGTmFtZSwgInJ0Iik7CglpZiAoICFmICkgcmV0dXJuIGZhbHNlOwoKCWNoYXIJc3RyaW5nCVtNQVhMSU5FTEVOR1RIXTsKCWNoYXIJYnVmCVtNQVhMSU5FTEVOR1RIXTsJLy8gc2FtZSBzaXplIGFzIHN0cmluZwkKCWludAlpLCBudW07CglpbnQJcmVhZHN0YXRlID0gMDsKCgl3aGlsZSAoIGZnZXRzKHN0cmluZywgc2l6ZW9mKHN0cmluZyktMSwgZikgIT0gTlVMTCApCQoJewoJCWlmICggc3RyaW5nW3N0cmxlbihzdHJpbmcpLTFdID09ICdcbicgKQoJCQlzdHJpbmdbc3RybGVuKHN0cmluZyktMV0gPSAnXDAnOwoKCQkvLyBjb250aW51ZSBpZiBqdXN0IGEgcmV0dXJuCgkJaWYgKCBzdHJsZW4oc3RyaW5nKT09MCApIGNvbnRpbnVlOwoKCQkvLyBjb250aW51ZSBpZiBqdXN0IGJsYW5rcyBhbmQgdGFibGVzCgkJaWYgKCBzc2NhbmYoIHN0cmluZywgIiVzIiwgYnVmICkgPT0gRU9GICkgY29udGludWU7CgoJCS8vIGNvbnRpbnVlIGlmIGEgY29tbWVudCBsaW5lCgkJaWYgKCBidWZbMF0gPT0gQ09NTUVOVExBQkVMICkgY29udGludWU7CgoJCXN3aXRjaCAoIHJlYWRzdGF0ZSApCgkJewoJCWNhc2UgMDogLy8/Pz8/Pz8/Tk9ERT8/Pz8/CgkJCWlmICggc3NjYW5mKHN0cmluZywgIiVzJWQiLCBidWYsICZudW0pICE9MiApIHsgZmNsb3NlKGYpOyByZXR1cm4gZmFsc2U7IH0KCQkJX3N0cnVwcihidWYpOwoJCQlpZiAoIHN0cmNtcChidWYsIE5PREVOVU0pICE9IDAgKSB7IGZjbG9zZShmKTsgcmV0dXJuIGZhbHNlOyB9CgkJCWlmICggbnVtIDw9MCApIHsgZmNsb3NlKGYpOyByZXR1cm4gZmFsc2U7IH0KCQkJbV9wR3JhcGhOb2RlQnVmID0gbmV3IEdyYXBoTm9kZVtudW1dOwoJCQltX25HcmFwaE5vZGVOdW0gPSBudW07CgkJCW1lbXNldChtX3BHcmFwaE5vZGVCdWYsIDAsIHNpemVvZihHcmFwaE5vZGUpKm1fbkdyYXBoTm9kZU51bSk7CgkJCWZvciAoIGk9MDsgaTxtX25HcmFwaE5vZGVOdW07IGkrKyApCgkJCQltX3BHcmFwaE5vZGVCdWZbaV0ubk5vZGVJZHggPSBpOwoJCQlyZWFkc3RhdGUgPSAxOwoJCQlicmVhazsKCQljYXNlIDE6Ly8/P862Pz8/QVJDPz8/Pz8KCQkJaWYgKCBzc2NhbmYoc3RyaW5nLCAiJXMlZCIsIGJ1ZiwgJm51bSkgIT0yICkgeyBmY2xvc2UoZik7IHJldHVybiBmYWxzZTsgfQoJCQlfc3RydXByKGJ1Zik7CgkJCWlmICggc3RyY21wKGJ1ZiwgQVJDTlVNKSAhPSAwICkgeyBmY2xvc2UoZik7IHJldHVybiBmYWxzZTsgfQoJCQlpZiAoIG51bSA8PTAgKSB7IGZjbG9zZShmKTsgcmV0dXJuIGZhbHNlOyB9CgkJCW1fcEdyYXBoQXJjQnVmID0gbmV3IEdyYXBoQXJjW251bV07CgkJCW1fbkdyYXBoQXJjTnVtID0gbnVtOwoJCQltZW1zZXQobV9wR3JhcGhBcmNCdWYsIDAsIHNpemVvZihHcmFwaEFyYykqbV9uR3JhcGhBcmNOdW0pOwoJCQlmb3IgKCBpPTA7IGk8bV9uR3JhcGhBcmNOdW07IGkrKyApCgkJCQltX3BHcmFwaEFyY0J1ZltpXS5uQXJjSWR4ID0gaTsKCQkJcmVhZHN0YXRlID0gMjsKCQkJYnJlYWs7CgkJY2FzZSAyOiAvLz8/Pz8/Pz8/PwoJCQlfc3RydXByKGJ1Zik7CgkJCWlmICggYnVmWzBdID09IE5PREVMQUJFTCApCgkJCXsKCQkJCWlmICggIVJlYWRPbmVOb2RlKHN0cmluZykgKQoJCQkJewoJCQkJCXByaW50ZigicmVhZCBub2RlIGVycm9yOiAlc1xuIiwgc3RyaW5nKTsKCQkJCQlmY2xvc2UoZik7CgkJCQkJcmV0dXJuIGZhbHNlOwoJCQkJfQoJCQl9CgkJCWVsc2UKCQkJewoJCQkJaWYgKCAhUmVhZE9uZUFyYyhzdHJpbmcpICkKCQkJCXsKCQkJCQlwcmludGYoInJlYWQgYXJjIGVycm9yOiAlc1xuIiwgc3RyaW5nKTsKCQkJCQlmY2xvc2UoZik7CgkJCQkJcmV0dXJuIGZhbHNlOwoJCQkJfQoJCQkJcmVhZHN0YXRlID0gMzsKCQkJfQoJCQlicmVhazsKCQljYXNlIDM6CgkJCV9zdHJ1cHIoYnVmKTsKCQkJaWYgKCBidWZbMF0gIT0gQVJDTEFCRUwgKSB7IGZjbG9zZShmKTsgcmV0dXJuIGZhbHNlOyB9CgkJCWlmICggIVJlYWRPbmVBcmMoc3RyaW5nKSApCgkJCXsKCQkJCXByaW50ZigicmVhZCBhcmMgZXJyb3I6ICVzXG4iLCBzdHJpbmcpOwoJCQkJZmNsb3NlKGYpOwoJCQkJcmV0dXJuIGZhbHNlOwoJCQl9CgkJCWJyZWFrOwoJCX0KCX0KCWZjbG9zZShmKTsKCW1fYkluaXRlZCA9IHRydWU7CglyZXR1cm4gdHJ1ZTsKfQoKYm9vbCBHcmFwaE1hbmFnZTo6UmVhZE9uZU5vZGUoY2hhciAqc3RyKQp7CgljaGFyCWJ1ZjFbTUFYTElORUxFTkdUSF0sIGJ1ZjJbTUFYTElORUxFTkdUSF07CQoJaW50CWlkeDsKCglpZiAoIHNzY2FuZihzdHIsICIlcyVkJXMiLCBidWYxLCAmaWR4LCBidWYyKSE9IDMgKQoJCXJldHVybiBmYWxzZTsKCV9zdHJ1cHIoYnVmMSk7CglpZiAoIGJ1ZjFbMF0gIT0gTk9ERUxBQkVMICYmIGJ1ZjFbMV0gIT0gJ1wwJyApIHJldHVybiBmYWxzZTsKCWlmICggaWR4ID49IG1fbkdyYXBoTm9kZU51bSApIHJldHVybiBmYWxzZTsKCglfc3RydXByKGJ1ZjIpOwoJaWYgKCBzdHJjbXAoYnVmMiwgTUlETEFCRUwpID09IDAgKQoJCW1fcEdyYXBoTm9kZUJ1ZltpZHhdLk5vZGVUeXBlID0gRk5fTUlEOwoJZWxzZSBpZiAoIHN0cmNtcChidWYyLCBCRUdJTkxBQkVMKSA9PSAwICkKCQltX3BHcmFwaE5vZGVCdWZbaWR4XS5Ob2RlVHlwZSA9IEZOX0JFR0lOOwoJZWxzZSBpZiAoIHN0cmNtcChidWYyLCBFTkRMQUJFTCkgPT0gMCApCgkJbV9wR3JhcGhOb2RlQnVmW2lkeF0uTm9kZVR5cGUgPSBGTl9FTkQ7CgllbHNlIGlmICggc3RyY21wKGJ1ZjIsIEJFR0lORU5ETEFCRUwpID09IDAgKQoJCW1fcEdyYXBoTm9kZUJ1ZltpZHhdLk5vZGVUeXBlID0gRk5fQkVHSU5fRU5EOwoJZWxzZQoJCXJldHVybiBmYWxzZTsKCXJldHVybiB0cnVlOwp9Cgpib29sIEdyYXBoTWFuYWdlOjpSZWFkT25lQXJjKGNoYXIgKnN0cikKewoJY2hhcglidWYxW01BWExJTkVMRU5HVEhdLCBidWYyW01BWExJTkVMRU5HVEgrMl07CglpbnQJaWR4LCBzdGFydCwgZW5kOwoKCWlmICggc3NjYW5mKHN0ciwgIiVzJWQlZCVkJXMlZiIsIGJ1ZjEsICZpZHgsICZzdGFydCwgJmVuZCwgYnVmMikhPSA1ICkKCQlyZXR1cm4gZmFsc2U7Cglfc3RydXByKGJ1ZjEpOwoJaWYgKCBidWYxWzBdICE9IEFSQ0xBQkVMICYmIGJ1ZjFbMV0gIT0gJ1wwJyApIHJldHVybiBmYWxzZTsKCWlmICggaWR4ID49IG1fbkdyYXBoQXJjTnVtICkgcmV0dXJuIGZhbHNlOwoJaWYgKCBzdGFydCA+PSBtX25HcmFwaE5vZGVOdW0gfHwgZW5kID49IG1fbkdyYXBoTm9kZU51bSApIHJldHVybiBmYWxzZTsKCglQR3JhcGhBcmMgcGFyYyA9IG1fcEdyYXBoQXJjQnVmICsgaWR4OwoKCXBhcmMtPlN0YXJ0Tm9kZSA9IG1fcEdyYXBoTm9kZUJ1ZiArIHN0YXJ0OwoJcGFyYy0+RW5kTm9kZSA9IG1fcEdyYXBoTm9kZUJ1ZiArIGVuZDsKCXBhcmMtPnN6V29yZE5hbWUgPSBuZXcgY2hhciBbc3RybGVuKGJ1ZjIpKzFdOwoJc3RyY3B5KHBhcmMtPnN6V29yZE5hbWUsIGJ1ZjIpOwoKCVBHcmFwaE5vZGUgcG5vZGUgPSBtX3BHcmFwaE5vZGVCdWYgKyBzdGFydDsKCXBub2RlLT5uQ2hpbGRBcmNOdW0gKys7CglwYXJjLT5scE5leHRDaGlsZCA9IHBub2RlLT5scENoaWxkQXJjOwoJcG5vZGUtPmxwQ2hpbGRBcmMgPSBwYXJjOwovLwlwYXJjLT5mbHRQZW5hbHR5ID0gLTEwMDsKCXJldHVybiB0cnVlOwp9Cgpib29sIEdyYXBoTWFuYWdlOjpHRGVjb2RlckVGdW5jKCBFbnF1aXJlSW5mb0J1ZmZlciAmRXFJbmZvQnVmLCBEV09SRCBkd1VzZXJEYXRhICkKewoJR3JhcGhNYW5hZ2UgKnB0ciA9IChHcmFwaE1hbmFnZSAqKWR3VXNlckRhdGE7CglyZXR1cm4gcHRyLT5FbnF1aXJlU3RhdGUoRXFJbmZvQnVmKTsKfQoKYm9vbCBHcmFwaE1hbmFnZTo6RW5xdWlyZVN0YXRlKCBFbnF1aXJlSW5mb0J1ZmZlciAmRXFJbmZvQnVmICkKewoJRW5xdWlyZUluZm8qIGluZm8gPSBFcUluZm9CdWYuR2V0QnVmZmVyKDApOwoJaW50IGxhc3RzdGF0ZSA9IGluZm8tPmR3R3JhbW1hclN0YXRlOwoJaWYgKCBsYXN0c3RhdGUgPj0gbV9uR3JhcGhOb2RlTnVtIHx8IGxhc3RzdGF0ZTwwICkgcmV0dXJuIGZhbHNlOwoJaW50IGFsbG51bSA9IDA7CgkvLz8/Pz8/Pz8/Pz8/0LY/Pz8/CglhbGxudW0gPSBHZXRDaGlsZE51bSggbV9wR3JhcGhOb2RlQnVmICsgbGFzdHN0YXRlICk7CgkKCUVxSW5mb0J1Zi5TZXREYXRhTGVuKGFsbG51bSk7CglFbnF1aXJlSW5mbyogc3RhcnRwb3MgPSBFcUluZm9CdWYuR2V0QnVmZmVyKCk7CglFbnF1aXJlSW5mbyogZW5kcG9zID0gc3RhcnRwb3M7CgoJQ3JlYXRlRW5xdWlyZSggbV9wR3JhcGhOb2RlQnVmK2xhc3RzdGF0ZSwgZW5kcG9zICk7CgoJaWYgKCBlbmRwb3MgIT0gc3RhcnRwb3MgKyBhbGxudW0gKSByZXR1cm4gZmFsc2U7CglyZXR1cm4gdHJ1ZTsKfQoKaW50CUdyYXBoTWFuYWdlOjpHZXRDaGlsZE51bShQR3JhcGhOb2RlIG5vZGUpCnsKCWludCBjaGlsZG51bSA9IDA7CglQR3JhcGhBcmMgYXJjID0gbm9kZS0+bHBDaGlsZEFyYzsKCXdoaWxlICggYXJjICkKCXsKCQlpZiAoIHN0cmNtcChhcmMtPnN6V29yZE5hbWUsIE5VTExBUkNMQUJFTCkhPTAgKQoJCQljaGlsZG51bSArKzsKCQllbHNlCgkJCWNoaWxkbnVtICs9IEdldENoaWxkTnVtKGFyYy0+RW5kTm9kZSk7CgkJYXJjID0gYXJjLT5scE5leHRDaGlsZDsKCX0KCXJldHVybiBjaGlsZG51bTsKfQoKYm9vbCBHcmFwaE1hbmFnZTo6Q3JlYXRlRW5xdWlyZShQR3JhcGhOb2RlIG5vZGUsIEVucXVpcmVJbmZvICogJnBJbmZvKQp7CglQR3JhcGhBcmMgYXJjID0gbm9kZS0+bHBDaGlsZEFyYzsKCVBHcmFwaE5vZGUgY2hpbGQ7Cgl3aGlsZSAoIGFyYyApCgl7CgkJaWYgKCBzdHJjbXAoYXJjLT5zeldvcmROYW1lLCBOVUxMQVJDTEFCRUwpIT0wICkKCQl7CgkJCWNoaWxkID0gYXJjLT5FbmROb2RlOwoJCQlwSW5mby0+ZHdHcmFtbWFyU3RhdGUgPSBjaGlsZC0+bk5vZGVJZHg7CgkJCXBJbmZvLT5HcmFtbWFyU3RhdGVUeXBlID0gY2hpbGQtPk5vZGVUeXBlOwoJCQlwSW5mby0+c3pXb3JkTmFtZSA9IGFyYy0+c3pXb3JkTmFtZTsKCQkJcEluZm8tPmZsdFBlbmFsdHkgPSBhcmMtPmZsdFBlbmFsdHk7CgkJCXBJbmZvLT5iSXNGaWxsZXJGbGFnID0gZmFsc2U7CgkJCXBJbmZvLT5iTE1TY29yZVVzZWRGbGFnID0gZmFsc2U7CgkJCXBJbmZvLT53V29yZElkeCA9IDA7CgkJCXBJbmZvLT53V29yZENsYXNzSWR4ID0gMDsKCgkJCXBJbmZvICsrOwoJCX0KCQllbHNlCgkJewoJCQlDcmVhdGVFbnF1aXJlKGFyYy0+RW5kTm9kZSwgcEluZm8pOwoJCX0KCQlhcmMgPSBhcmMtPmxwTmV4dENoaWxkOwoJfQoJcmV0dXJuIHRydWU7Cn0K"
+        }
+      ]
+    },
+    {
+      "domainId": "system",
+      "docId": 4576,
+      "pid": "P324",
+      "title": "【例55.2】 约翰书架",
+      "category": "ybt-math",
+      "source": "ybtbas/P324",
+      "expected": {
+        "contentSha256": "5a89a8c272e30515c35a8c5ace094694493db2e977e379ac3ff5deafbff1d2cf",
+        "html": ""
+      },
+      "content": "{\"zh\":\"## 说明\\n\\n约翰最近买了一个书架用来存放奶牛养殖书籍，但书架很快被存满了，只剩最顶层有空余。\\n\\n约翰共有 $N$ 头奶牛（$1 \\\\lt N \\\\lt 20000$），每头奶牛有自己的高度 $h_i$（$1 \\\\lt h_i \\\\lt 10000$），$N$ 头奶牛的总高度为 $S$。书架高度为 $B$（$1 \\\\lt B \\\\lt S \\\\lt 2000000007$）。\\n\\n为了到达书架顶层，奶牛可以踩着其他奶牛的背，像叠罗汉一样，直到他们的总高度不低于书架高度。当然，奶牛越多，危险性越大。请找出达到书架顶层所需奶牛数目最少的方案。\\n\\n## 输入格式\\n\\n第 $1$ 行包含以空格隔开的整数 $N$ 和 $B$。\\n\\n第 $2 \\\\sim N+1$ 行，第 $i+1$ 行为整数 $h_i$。\\n\\n## 输出格式\\n\\n能达到书架高度所使用奶牛的最少数目。\\n\\n## 样例\\n\\n```input1\\n6 40\\n6\\n18\\n11\\n13\\n19\\n11\\n```\\n\\n```output1\\n3\\n```\\n\"}",
+      "html": false,
+      "newContentSha256": "142fb5c55adf2c690a44220c04e9a51e7195a0234598309a1e8958f47c5ca95b"
+    },
+    {
+      "domainId": "system",
+      "docId": 4733,
+      "pid": "P466",
+      "title": "练84.1 2011n次方的后四位",
+      "category": "ybt-math",
+      "source": "ybtbas/P466",
+      "expected": {
+        "contentSha256": "5996ba81ddbca7cf10ad11254683036a4ecb09e3d2cee6750721838a775b9965",
+        "html": ""
+      },
+      "content": "{\"zh\":\"## 说明\\n\\n已知长度最大为 $200$ 位的正整数 $n$，请求出 $2011^n$ 的后四位。\\n\\n## 输入格式\\n\\n第一行为一个正整数 $k$，代表有 $k$ 组数据（$k \\\\leq 200$）。接下来的 $k$ 行，每行都有一个正整数 $n$，$n$ 的位数不超过 $200$。\\n\\n## 输出格式\\n\\n每一个 $n$ 的结果为一个整数，占一行。若不足 $4$ 位，去除高位多余的 $0$。\\n\\n## 样例\\n\\n```input1\\n3\\n5\\n28\\n792\\n```\\n\\n```output1\\n1051\\n81\\n5521\\n```\\n\"}",
+      "html": false,
+      "newContentSha256": "4e9a61082f53b53a0fc032f2c35696b53507897d196d6be996e3ca7c50550164"
+    }
+  ]
+}

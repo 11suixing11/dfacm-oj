@@ -1,0 +1,1662 @@
+[
+  {
+    "order": 5,
+    "pid": 4931,
+    "title": "1111. 不高兴的津津",
+    "originalCases": 10,
+    "expectedCases": 15,
+    "added": [
+      {
+        "input": "11.in",
+        "label": "all-zero",
+        "inputBytes": 28,
+        "answerBytes": 3,
+        "inputSha256": "a3f0bdb81ad4cbd34f2789b1689e136fef9417f423f11b50351617232df8485b",
+        "answerSha256": "13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.012
+      },
+      {
+        "input": "12.in",
+        "label": "exact-eight",
+        "inputBytes": 28,
+        "answerBytes": 3,
+        "inputSha256": "2bee581c6846627553b4d71430e4cfc48542228d5a1f42c6b470e8ba009163b7",
+        "answerSha256": "13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.01
+      },
+      {
+        "input": "13.in",
+        "label": "earliest-tie",
+        "inputBytes": 28,
+        "answerBytes": 3,
+        "inputSha256": "c445a24986fa36b4f30ebb94caaca8ee558297e0b8c72956e7bf13892c1c1a2e",
+        "answerSha256": "f1b2f662800122bed0ff255693df89c4487fbdcf453d3524a42d4ec20c3d9c04",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.021
+      },
+      {
+        "input": "14.in",
+        "label": "Sunday-maximum",
+        "inputBytes": 28,
+        "answerBytes": 3,
+        "inputSha256": "beb3e7b3c9f65603c79608256e7d429776a768888eb83de284278ccea32b8280",
+        "answerSha256": "9b6dd0f55d1cea37555db317f53a0631f694bd46df8018cc2aeed3d9e2f32f5f",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.011
+      },
+      {
+        "input": "15.in",
+        "label": "multiple-maximum",
+        "inputBytes": 28,
+        "answerBytes": 3,
+        "inputSha256": "2666c4f6e5581e8945fc8c45ed4ad6235343b61c8706261a022ce520d68073f5",
+        "answerSha256": "f1b2f662800122bed0ff255693df89c4487fbdcf453d3524a42d4ec20c3d9c04",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.01
+      }
+    ],
+    "oracleChecks": 0
+  },
+  {
+    "order": 6,
+    "pid": 5,
+    "title": "#10003. 「一本通 1.1 例 4」加工生产调度",
+    "originalCases": 12,
+    "expectedCases": 17,
+    "added": [
+      {
+        "input": "13.in",
+        "label": "single",
+        "inputBytes": 6,
+        "answerBytes": 7,
+        "inputSha256": "ccce065269620747ca153e9a430d44b175cdc1f7e0958741b567250a1d6b1d95",
+        "answerSha256": "b09efc01983da473e85f3925eaacf888b491b929269e4bafb3c3e228d38e6da0",
+        "independentKnownAnswer": false,
+        "localSeconds": 0.01
+      },
+      {
+        "input": "14.in",
+        "label": "front-back",
+        "inputBytes": 18,
+        "answerBytes": 14,
+        "inputSha256": "63e6005605161601c93316dea2bfbdc06901be73555cffff062574f75f56d870",
+        "answerSha256": "5f4cc468b9976b51103bd82b822c48096077cba6a217a428aac02bad0a1a2e67",
+        "independentKnownAnswer": false,
+        "localSeconds": 0.01
+      },
+      {
+        "input": "15.in",
+        "label": "n999-ties",
+        "inputBytes": 11992,
+        "answerBytes": 3900,
+        "inputSha256": "b1f825f734f5a95ccc9ae6b89efd14ad6945c8d3df9441ed302a8a45bcd1c442",
+        "answerSha256": "217faf7dcb67d46c80da67f2d34bfff04db35cecaba4c96f5ee2516fc6e64d8d",
+        "independentKnownAnswer": false,
+        "localSeconds": 0.011
+      },
+      {
+        "input": "16.in",
+        "label": "n999-front",
+        "inputBytes": 5890,
+        "answerBytes": 3898,
+        "inputSha256": "10fe81f0a8d547d7f690a760aeafb76892cf7260224abab38a983bdb59353389",
+        "answerSha256": "4126c42b04e4cbd4ca887b4aebb625113fcd16f74f1f928d488c47cf6c18fd55",
+        "independentKnownAnswer": false,
+        "localSeconds": 0.011
+      },
+      {
+        "input": "17.in",
+        "label": "n999-back",
+        "inputBytes": 5890,
+        "answerBytes": 3898,
+        "inputSha256": "044be93f6414bf56000167604e404ba47715836264e7a4abc937ce19d198da82",
+        "answerSha256": "4126c42b04e4cbd4ca887b4aebb625113fcd16f74f1f928d488c47cf6c18fd55",
+        "independentKnownAnswer": false,
+        "localSeconds": 0.012
+      }
+    ],
+    "oracleChecks": 35
+  },
+  {
+    "order": 7,
+    "pid": 3,
+    "title": "#10001. 「一本通 1.1 例 2」种树",
+    "originalCases": 12,
+    "expectedCases": 16,
+    "added": [
+      {
+        "input": "13.in",
+        "label": "single",
+        "inputBytes": 10,
+        "answerBytes": 3,
+        "inputSha256": "a9f1b7656ddf4973bf3741a78424e29e1bce0a7965cba5bff3a256e0c493ebc1",
+        "answerSha256": "f1b2f662800122bed0ff255693df89c4487fbdcf453d3524a42d4ec20c3d9c04",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.026
+      },
+      {
+        "input": "14.in",
+        "label": "max-full-coverage",
+        "inputBytes": 70011,
+        "answerBytes": 7,
+        "inputSha256": "3a6a94589451731a03e1086d30b160b8d9fb1578b05ef47596f2985d64ff154f",
+        "answerSha256": "798a47833e83367319904075caa68f8ec1be8d143dc40998e2b7833b85db97b8",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.02
+      },
+      {
+        "input": "15.in",
+        "label": "max-overlap",
+        "inputBytes": 50011,
+        "answerBytes": 3,
+        "inputSha256": "bde48ae827a06b0195ae0b10c161dc31b5e9b465f814be1f936dc39fc483f1fb",
+        "answerSha256": "f1b2f662800122bed0ff255693df89c4487fbdcf453d3524a42d4ec20c3d9c04",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.016
+      },
+      {
+        "input": "16.in",
+        "label": "max-disjoint",
+        "inputBytes": 57797,
+        "answerBytes": 6,
+        "inputSha256": "14300762c70fd3267fa24a3b07c3267e1fc9a303b2eeea88f326f8d01999fbc3",
+        "answerSha256": "c14f0eeaec609582c1564d5ad140795a7b7bbc9a3fa6e68b6d62fe34057cf2af",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.021
+      }
+    ],
+    "oracleChecks": 35
+  },
+  {
+    "order": 8,
+    "pid": 2,
+    "title": "#10000. 「一本通 1.1 例 1」活动安排",
+    "originalCases": 10,
+    "expectedCases": 15,
+    "added": [
+      {
+        "input": "11.in",
+        "label": "single",
+        "inputBytes": 6,
+        "answerBytes": 3,
+        "inputSha256": "ac32484008273bfad640c497ad1937ca94f96090fdd0e92b02b796ff7e50e758",
+        "answerSha256": "f1b2f662800122bed0ff255693df89c4487fbdcf453d3524a42d4ec20c3d9c04",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.014
+      },
+      {
+        "input": "12.in",
+        "label": "touching-endpoints",
+        "inputBytes": 7788,
+        "answerBytes": 6,
+        "inputSha256": "f63c7d7f62cf701d33622d06974d7e22ae84f9bf3584711d13d1d1ac26d7696c",
+        "answerSha256": "3b7b041d37d1d693c3afe25d2af7d56ad2ee7b98eddb2cc1a055c1117e55542e",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.014
+      },
+      {
+        "input": "13.in",
+        "label": "same-interval",
+        "inputBytes": 7005,
+        "answerBytes": 3,
+        "inputSha256": "c5e7f4b36b4a6249f62d344b71092ac442e65fffa6f8fd8df6b398e1f5f4a838",
+        "answerSha256": "f1b2f662800122bed0ff255693df89c4487fbdcf453d3524a42d4ec20c3d9c04",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.015
+      },
+      {
+        "input": "14.in",
+        "label": "nested",
+        "inputBytes": 8895,
+        "answerBytes": 3,
+        "inputSha256": "6cb80b21b6121f95e76a60ba882909bc20a4238dc1c8911270cece1f206579e3",
+        "answerSha256": "f1b2f662800122bed0ff255693df89c4487fbdcf453d3524a42d4ec20c3d9c04",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.013
+      },
+      {
+        "input": "15.in",
+        "label": "reverse-input",
+        "inputBytes": 7788,
+        "answerBytes": 6,
+        "inputSha256": "e966d1217c99fa204fd482dd102d17dcf5eb25d99be0b62532d0e03f643e1cf3",
+        "answerSha256": "3b7b041d37d1d693c3afe25d2af7d56ad2ee7b98eddb2cc1a055c1117e55542e",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.013
+      }
+    ],
+    "oracleChecks": 0
+  },
+  {
+    "order": 9,
+    "pid": 3671,
+    "title": "衣服搭配",
+    "originalCases": 9,
+    "expectedCases": 13,
+    "added": [
+      {
+        "input": "10.in",
+        "label": "empty",
+        "inputBytes": 10,
+        "answerBytes": 4,
+        "inputSha256": "7fab4b7cc441138a616f3eb32ef26862fe79daa4503806c8d511b1042d087146",
+        "answerSha256": "186a919b8c7cb84aebf4e53c70cd1cc028a93a1d183ee29dd6e10cd18a714577",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.012
+      },
+      {
+        "input": "11.in",
+        "label": "max-price",
+        "inputBytes": 40,
+        "answerBytes": 9,
+        "inputSha256": "9d750c417e249ca325e18e191f003b049927532b3494c463d5255b757e3855d4",
+        "answerSha256": "7b5fca080d967211cde4fcdffb83033ce22c865a3041e59ed3866f5354b4a40c",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.011
+      },
+      {
+        "input": "12.in",
+        "label": "complete-graph",
+        "inputBytes": 29209,
+        "answerBytes": 3,
+        "inputSha256": "9748a53e49cbc17e06cfc79845e1356794b86bc092bf91830a5e4135fd1f40f6",
+        "answerSha256": "92961e9752250efa971147344b22295db32d7b75e940e0971e5fb34f21d0bc67",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.014
+      },
+      {
+        "input": "13.in",
+        "label": "complete-bipartite",
+        "inputBytes": 14809,
+        "answerBytes": 4,
+        "inputSha256": "f973bad0554e56582f072b700ee06d8d3446b996e67639e87fb5dce2be7111a8",
+        "answerSha256": "186a919b8c7cb84aebf4e53c70cd1cc028a93a1d183ee29dd6e10cd18a714577",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.013
+      }
+    ],
+    "oracleChecks": 0
+  },
+  {
+    "order": 10,
+    "pid": 3635,
+    "title": "佩佳与正方形",
+    "originalCases": 9,
+    "expectedCases": 16,
+    "added": [
+      {
+        "input": "10.in",
+        "label": "centre-or-border",
+        "inputBytes": 6,
+        "answerBytes": 4,
+        "inputSha256": "14c00cbe2875dac54a3e051f4f9728541bc5e6108e4e471111041c4e6b12d128",
+        "answerSha256": "4f1e37b4ecc384b4939c4a21fcf06548708ebd635a8494ab181b18625332a6e5",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.023
+      },
+      {
+        "input": "11.in",
+        "label": "centre-or-border",
+        "inputBytes": 6,
+        "answerBytes": 4,
+        "inputSha256": "96c671dff08033e909e8744500506f9033e60dfcef58d9aa7b9d49e7499f1b35",
+        "answerSha256": "4f1e37b4ecc384b4939c4a21fcf06548708ebd635a8494ab181b18625332a6e5",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.011
+      },
+      {
+        "input": "12.in",
+        "label": "centre-or-border",
+        "inputBytes": 10,
+        "answerBytes": 5,
+        "inputSha256": "10126924629c3ecdac697a2a3ffb171dc9aa3f96010b15a6afc4272bc7fec92f",
+        "answerSha256": "1c26f033eaad3de797860ebf899ae5969130ab20e8e1c492678b4eedd4cc3005",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.011
+      },
+      {
+        "input": "13.in",
+        "label": "centre-or-border",
+        "inputBytes": 10,
+        "answerBytes": 4,
+        "inputSha256": "057873c9093b3a233c7331b862dfc69ef05cdb3bc25f10f1f3dc0d2d251a15be",
+        "answerSha256": "4f1e37b4ecc384b4939c4a21fcf06548708ebd635a8494ab181b18625332a6e5",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.01
+      },
+      {
+        "input": "14.in",
+        "label": "centre-or-border",
+        "inputBytes": 10,
+        "answerBytes": 4,
+        "inputSha256": "9c0b9d5afa5a0f6cb1bd6f191d011b32bae7524d265c34dd2a4a1e74e109c710",
+        "answerSha256": "4f1e37b4ecc384b4939c4a21fcf06548708ebd635a8494ab181b18625332a6e5",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.011
+      },
+      {
+        "input": "15.in",
+        "label": "centre-or-border",
+        "inputBytes": 10,
+        "answerBytes": 5,
+        "inputSha256": "20fba06446dd11e32b75c3386b749848252da35456d5076554d734bd8b482bbc",
+        "answerSha256": "1c26f033eaad3de797860ebf899ae5969130ab20e8e1c492678b4eedd4cc3005",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.01
+      },
+      {
+        "input": "16.in",
+        "label": "centre-or-border",
+        "inputBytes": 10,
+        "answerBytes": 5,
+        "inputSha256": "9109bfbd915bb1469a6536ea8c9d50aace6a76530fb50e9bd6ceffb5880da70a",
+        "answerSha256": "1c26f033eaad3de797860ebf899ae5969130ab20e8e1c492678b4eedd4cc3005",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.009
+      }
+    ],
+    "oracleChecks": 0
+  },
+  {
+    "order": 11,
+    "pid": 3592,
+    "title": "素数排列",
+    "originalCases": 9,
+    "expectedCases": 15,
+    "added": [
+      {
+        "input": "10.in",
+        "label": "single",
+        "inputBytes": 2,
+        "answerBytes": 8,
+        "inputSha256": "87428fc522803d31065e7bce3cf03fe475096631e5e07bbd7a0fde60c4cf25c7",
+        "answerSha256": "48923fd40b3a7d346b0d51938a1a0c4330e83ef12fec05754065abdeffd98521",
+        "independentKnownAnswer": false,
+        "localSeconds": 0.012
+      },
+      {
+        "input": "11.in",
+        "label": "impossible-small",
+        "inputBytes": 5,
+        "answerBytes": 4,
+        "inputSha256": "fc4b5fd6816f75a7c81fc8eaa9499d6a299bd803397166e8c4cf9280b801d62c",
+        "answerSha256": "4f1e37b4ecc384b4939c4a21fcf06548708ebd635a8494ab181b18625332a6e5",
+        "independentKnownAnswer": false,
+        "localSeconds": 0.011
+      },
+      {
+        "input": "12.in",
+        "label": "max-feasible",
+        "inputBytes": 1001,
+        "answerBytes": 1007,
+        "inputSha256": "2d0dff699d8e0a69179922c9ff80205f9cbcfae959079b27e4c9c3ef37c70974",
+        "answerSha256": "9a57ff135c86c2c9cf01e094b200ec6a2813f35193f133867a0f20ab9e7fa51c",
+        "independentKnownAnswer": false,
+        "localSeconds": 0.015
+      },
+      {
+        "input": "13.in",
+        "label": "max-infeasible",
+        "inputBytes": 1001,
+        "answerBytes": 4,
+        "inputSha256": "8032b28587dd80c2616dbea5cca35a2c7ca0448070e04a9fef25fcc3c00bb11d",
+        "answerSha256": "4f1e37b4ecc384b4939c4a21fcf06548708ebd635a8494ab181b18625332a6e5",
+        "independentKnownAnswer": false,
+        "localSeconds": 0.012
+      },
+      {
+        "input": "14.in",
+        "label": "component-threshold",
+        "inputBytes": 1001,
+        "answerBytes": 4,
+        "inputSha256": "5615933859761637dc79c95807ad7d513d71aa2344fb6e381aab2a406f275ef0",
+        "answerSha256": "4f1e37b4ecc384b4939c4a21fcf06548708ebd635a8494ab181b18625332a6e5",
+        "independentKnownAnswer": false,
+        "localSeconds": 0.012
+      },
+      {
+        "input": "15.in",
+        "label": "max-many-characters",
+        "inputBytes": 1001,
+        "answerBytes": 4,
+        "inputSha256": "a6774b6e699fc7fae0f6839684bfc8f994dcf8dd98b95192db61fd1459cf04f4",
+        "answerSha256": "4f1e37b4ecc384b4939c4a21fcf06548708ebd635a8494ab181b18625332a6e5",
+        "independentKnownAnswer": false,
+        "localSeconds": 0.012
+      }
+    ],
+    "oracleChecks": 0
+  },
+  {
+    "order": 12,
+    "pid": 3571,
+    "title": "学生与鞋带",
+    "originalCases": 9,
+    "expectedCases": 15,
+    "added": [
+      {
+        "input": "10.in",
+        "label": "single-isolated",
+        "inputBytes": 4,
+        "answerBytes": 3,
+        "inputSha256": "f4a8ae8e74ddfb896a256de4e3099911dcaa6a9302591713898069b0bcd6e3d7",
+        "answerSha256": "13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.013
+      },
+      {
+        "input": "11.in",
+        "label": "max-chain-even",
+        "inputBytes": 585,
+        "answerBytes": 4,
+        "inputSha256": "2a9d931d69343c6e27366f9b1cd1dc55a19fc0add19a37e20bb48bdcf7f2bed2",
+        "answerSha256": "45e26aeb4a0e45265193e9293e88a93d9b3c89af4e401cb1812161c4568d0b51",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.01
+      },
+      {
+        "input": "12.in",
+        "label": "max-chain-odd",
+        "inputBytes": 577,
+        "answerBytes": 4,
+        "inputSha256": "de1573d85ac21f58f8c0a288cd51ca5290eafb8d8d58ca480bb3599e62ee8375",
+        "answerSha256": "4c50d27c5031d7f039fe61dbd05b1e84b02d76786f79c569be88aa04c95aa417",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.014
+      },
+      {
+        "input": "13.in",
+        "label": "star",
+        "inputBytes": 495,
+        "answerBytes": 3,
+        "inputSha256": "30ccc5746400e34a6358d8f720eef506e24a6f11c339db4268e7fca9b28dcf61",
+        "answerSha256": "f1b2f662800122bed0ff255693df89c4487fbdcf453d3524a42d4ec20c3d9c04",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.01
+      },
+      {
+        "input": "14.in",
+        "label": "complete",
+        "inputBytes": 28917,
+        "answerBytes": 3,
+        "inputSha256": "d715f84cb828002c28de07e142821783be77bad85f55c64ffa843cb0aac1e27b",
+        "answerSha256": "13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.017
+      },
+      {
+        "input": "15.in",
+        "label": "cycle-long-tail",
+        "inputBytes": 590,
+        "answerBytes": 4,
+        "inputSha256": "99be84bc21ec6e6a0d708754f7489e4b895adc2c6ff5a5aba76fabf6f2bcc3ba",
+        "answerSha256": "63512f53cc19a54417c287b6dd08939ae77a9301034614782e28ce9e924a9769",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.01
+      }
+    ],
+    "oracleChecks": 0
+  },
+  {
+    "order": 15,
+    "pid": 3555,
+    "title": "平均数",
+    "originalCases": 9,
+    "expectedCases": 13,
+    "added": [
+      {
+        "input": "10.in",
+        "label": "none",
+        "inputBytes": 6,
+        "answerBytes": 5,
+        "inputSha256": "fdcb27265764b2a73c62380d364aa177b18028a2d6fffe621bac5a23affde265",
+        "answerSha256": "933b971c6388d594a23fa1559825db5bec8ade2db1240aa8fc9d0c684949e8c9",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.01
+      },
+      {
+        "input": "11.in",
+        "label": "max-all",
+        "inputBytes": 1000007,
+        "answerBytes": 1288905,
+        "inputSha256": "e981ac245afee275469cf669bdf60fd2adc205677372d2d5b9a31d7e2320379a",
+        "answerSha256": "a1a6fe22de0db80f2ee108f8f562a3c09921c797737e8bf17f12ea6d17c6a1bd",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.163
+      },
+      {
+        "input": "12.in",
+        "label": "nonintegral-mean",
+        "inputBytes": 700010,
+        "answerBytes": 5,
+        "inputSha256": "0f0ec535f13288267d2885ded66333519fd3b859a4c878965e732eccc2b15cfb",
+        "answerSha256": "933b971c6388d594a23fa1559825db5bec8ade2db1240aa8fc9d0c684949e8c9",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.13
+      },
+      {
+        "input": "13.in",
+        "label": "max-many-matches",
+        "inputBytes": 400007,
+        "answerBytes": 429650,
+        "inputSha256": "b3538d235424c9f50e7ee64436c0010572c420861a697a332003bf58e6b6d919",
+        "answerSha256": "beaea013850abdc87271602e544bd767bfa1c3d879033c6b6a2b3d3bee13ad33",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.096
+      }
+    ],
+    "oracleChecks": 0
+  },
+  {
+    "order": 16,
+    "pid": 3668,
+    "title": "克苏鲁",
+    "originalCases": 9,
+    "expectedCases": 15,
+    "added": [
+      {
+        "input": "10.in",
+        "label": "single",
+        "inputBytes": 4,
+        "answerBytes": 4,
+        "inputSha256": "f4a8ae8e74ddfb896a256de4e3099911dcaa6a9302591713898069b0bcd6e3d7",
+        "answerSha256": "4f1e37b4ecc384b4939c4a21fcf06548708ebd635a8494ab181b18625332a6e5",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.013
+      },
+      {
+        "input": "11.in",
+        "label": "triangle",
+        "inputBytes": 16,
+        "answerBytes": 9,
+        "inputSha256": "ea1fc79f0e9f3af73ad87e7702346bdf1a9ea85ae21bfd6cbf640b7f943885c6",
+        "answerSha256": "f4f8d29740c686760a78623f31b9323efcbd883e1ccb59c181888e0a988995f1",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.011
+      },
+      {
+        "input": "12.in",
+        "label": "max-cycle",
+        "inputBytes": 592,
+        "answerBytes": 9,
+        "inputSha256": "cdd9804ce43414748973af7f0a89a5d112f6487345cafc58d7fe243fd8095e83",
+        "answerSha256": "f4f8d29740c686760a78623f31b9323efcbd883e1ccb59c181888e0a988995f1",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.011
+      },
+      {
+        "input": "13.in",
+        "label": "two-disconnected-cycles",
+        "inputBytes": 28,
+        "answerBytes": 4,
+        "inputSha256": "8c35ee397fe1f1cb02a818bcd08951859af589fcd93be4a8b947149a544620bc",
+        "answerSha256": "4f1e37b4ecc384b4939c4a21fcf06548708ebd635a8494ab181b18625332a6e5",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.012
+      },
+      {
+        "input": "14.in",
+        "label": "max-dense",
+        "inputBytes": 28917,
+        "answerBytes": 4,
+        "inputSha256": "d715f84cb828002c28de07e142821783be77bad85f55c64ffa843cb0aac1e27b",
+        "answerSha256": "4f1e37b4ecc384b4939c4a21fcf06548708ebd635a8494ab181b18625332a6e5",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.016
+      },
+      {
+        "input": "15.in",
+        "label": "cycle-long-tail",
+        "inputBytes": 590,
+        "answerBytes": 9,
+        "inputSha256": "99be84bc21ec6e6a0d708754f7489e4b895adc2c6ff5a5aba76fabf6f2bcc3ba",
+        "answerSha256": "f4f8d29740c686760a78623f31b9323efcbd883e1ccb59c181888e0a988995f1",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.011
+      }
+    ],
+    "oracleChecks": 0
+  },
+  {
+    "order": 17,
+    "pid": 3656,
+    "title": "宿舍供水",
+    "originalCases": 9,
+    "expectedCases": 14,
+    "added": [
+      {
+        "input": "10.in",
+        "label": "single",
+        "inputBytes": 4,
+        "answerBytes": 3,
+        "inputSha256": "f4a8ae8e74ddfb896a256de4e3099911dcaa6a9302591713898069b0bcd6e3d7",
+        "answerSha256": "13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.019
+      },
+      {
+        "input": "11.in",
+        "label": "max-chain",
+        "inputBytes": 14782,
+        "answerBytes": 18,
+        "inputSha256": "1d2a63129c2d531e687912ad6c5ea1b5ac1e8bc5540e42425098f98ca386e3cd",
+        "answerSha256": "74a208bb38d84f11da117822a71a0bae971c13e38c64dc62fa390324090904dd",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.015
+      },
+      {
+        "input": "12.in",
+        "label": "interior-bottleneck",
+        "inputBytes": 15774,
+        "answerBytes": 13,
+        "inputSha256": "9ab78b1778e725dd081b72e1964e87ad821a2d5ab00b74a1963a23845d3ec14e",
+        "answerSha256": "b88adc36e84141024bea63260a9ca84567633b04d1034e4174bbdcf35c4d4b8b",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.013
+      },
+      {
+        "input": "13.in",
+        "label": "max-cycle",
+        "inputBytes": 15790,
+        "answerBytes": 3,
+        "inputSha256": "03555ea0de806c7b23c36c5806a487b28af0e6cbe09422291cc431762918f345",
+        "answerSha256": "13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.012
+      },
+      {
+        "input": "14.in",
+        "label": "many-tanks",
+        "inputBytes": 5847,
+        "answerBytes": 6343,
+        "inputSha256": "f62b058164ad7b646570807484d33df000f6df345b376d212cfd8951167133bc",
+        "answerSha256": "0bdcd7cb36fc90642077fae8f3f144bb4f0eb208bce49421b7707cc8ad63dd05",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.011
+      }
+    ],
+    "oracleChecks": 0
+  },
+  {
+    "order": 18,
+    "pid": 3604,
+    "title": "三个儿子",
+    "originalCases": 9,
+    "expectedCases": 14,
+    "added": [
+      {
+        "input": "10.in",
+        "label": "zero-min",
+        "inputBytes": 16,
+        "answerBytes": 3,
+        "inputSha256": "d99d0e98ba656b3ae35440772116e112a208942ef9f899603db7273bca407c6d",
+        "answerSha256": "f1b2f662800122bed0ff255693df89c4487fbdcf453d3524a42d4ec20c3d9c04",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.013
+      },
+      {
+        "input": "11.in",
+        "label": "max-zero",
+        "inputBytes": 5012,
+        "answerBytes": 6,
+        "inputSha256": "592c1f26c69cfcf746ad252c582244acde34a3ed23fbba10a52f69673943fccd",
+        "answerSha256": "c83d150f132037c833d23be5c26cfc9fa0e14a62d58b353dd00ecd04a81ce1d7",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.012
+      },
+      {
+        "input": "12.in",
+        "label": "max-extreme-split",
+        "inputBytes": 10023,
+        "answerBytes": 3,
+        "inputSha256": "cfbdaa7e4c5d62e3945586499d537ec0b438206089000ba7929e4c61abc38cd5",
+        "answerSha256": "92961e9752250efa971147344b22295db32d7b75e940e0971e5fb34f21d0bc67",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.025
+      },
+      {
+        "input": "13.in",
+        "label": "sum-impossible",
+        "inputBytes": 10012,
+        "answerBytes": 3,
+        "inputSha256": "ecb812860c15a0cb157c928b4b143f2538606924e1f667776cc2a8924896714c",
+        "answerSha256": "13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.013
+      },
+      {
+        "input": "14.in",
+        "label": "max-random",
+        "inputBytes": 7293,
+        "answerBytes": 3,
+        "inputSha256": "39c749bab8491c9997b6569007118ceffe5a7af43c9b121103100df2ed0188d2",
+        "answerSha256": "13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.012
+      }
+    ],
+    "oracleChecks": 0
+  },
+  {
+    "order": 19,
+    "pid": 3587,
+    "title": "排列数字",
+    "originalCases": 9,
+    "expectedCases": 13,
+    "added": [
+      {
+        "input": "10.in",
+        "label": "single",
+        "inputBytes": 6,
+        "answerBytes": 3,
+        "inputSha256": "e10af96334f37d83e52216771db7343778fe8e8c49802a319595df3734903c32",
+        "answerSha256": "13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354",
+        "independentKnownAnswer": false,
+        "localSeconds": 0.012
+      },
+      {
+        "input": "11.in",
+        "label": "max-leading-zeros",
+        "inputBytes": 22,
+        "answerBytes": 10,
+        "inputSha256": "8f5880fcbc3b0c79064df280367e4244e232272066b454c3998ba8ef95679972",
+        "answerSha256": "1b2018057273ad51e51b15055eadb3e210036f562bfec9c587600f9059dee796",
+        "independentKnownAnswer": false,
+        "localSeconds": 0.011
+      },
+      {
+        "input": "12.in",
+        "label": "all-equal",
+        "inputBytes": 76,
+        "answerBytes": 3,
+        "inputSha256": "7a4b1741a30587a10e12a548370f4acf70df9abebab203798688e07018d67d86",
+        "answerSha256": "13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354",
+        "independentKnownAnswer": false,
+        "localSeconds": 0.012
+      },
+      {
+        "input": "13.in",
+        "label": "max-permutations",
+        "inputBytes": 76,
+        "answerBytes": 10,
+        "inputSha256": "01a963d581bc9d9fa0c40523351bc0ad1d2edf13b165aa3e72ca8b9b9b998458",
+        "answerSha256": "c7ea3bcb19fc327748877385a7efd1f1b2893b1b20123dc31468afc9b38679e0",
+        "independentKnownAnswer": false,
+        "localSeconds": 0.012
+      }
+    ],
+    "oracleChecks": 0
+  },
+  {
+    "order": 20,
+    "pid": 3577,
+    "title": "雕像",
+    "originalCases": 9,
+    "expectedCases": 13,
+    "added": [
+      {
+        "input": "10.in",
+        "label": "empty",
+        "inputBytes": 72,
+        "answerBytes": 5,
+        "inputSha256": "c945a69959ddca09dce558dee5f22c1b51e9bc2ff7a5d3dedf4e6399ea2eb706",
+        "answerSha256": "6e62096e8bcde8a857ab19e0b8efea3f968d0889aca2859cfa9a16e93b42db7e",
+        "independentKnownAnswer": false,
+        "localSeconds": 0.012
+      },
+      {
+        "input": "11.in",
+        "label": "immediate-crush",
+        "inputBytes": 72,
+        "answerBytes": 6,
+        "inputSha256": "8cfe615c4a085681ac2738eaed784d2b852126bf45fe4df75c9aed162820e5c2",
+        "answerSha256": "16f088d8c1e2a7c603231ec962688baee61d0650615b56f8ec8e12e0437516fc",
+        "independentKnownAnswer": false,
+        "localSeconds": 0.018
+      },
+      {
+        "input": "12.in",
+        "label": "top-row-delay",
+        "inputBytes": 72,
+        "answerBytes": 5,
+        "inputSha256": "de7d9be00dc88ac47449170b948456a01315b8eef685ec016619ecf4ee743543",
+        "answerSha256": "6e62096e8bcde8a857ab19e0b8efea3f968d0889aca2859cfa9a16e93b42db7e",
+        "independentKnownAnswer": false,
+        "localSeconds": 0.011
+      },
+      {
+        "input": "13.in",
+        "label": "random",
+        "inputBytes": 72,
+        "answerBytes": 5,
+        "inputSha256": "9ad0b40324ddc2f7b0b53aa61e34297e3267c26fdaeb033b67d9f0c523fd4099",
+        "answerSha256": "6e62096e8bcde8a857ab19e0b8efea3f968d0889aca2859cfa9a16e93b42db7e",
+        "independentKnownAnswer": false,
+        "localSeconds": 0.011
+      }
+    ],
+    "oracleChecks": 0
+  },
+  {
+    "order": 21,
+    "pid": 3461,
+    "title": "字符串操作",
+    "originalCases": 9,
+    "expectedCases": 13,
+    "added": [
+      {
+        "input": "10.in",
+        "label": "no-operations",
+        "inputBytes": 6,
+        "answerBytes": 3,
+        "inputSha256": "aa6c37fe874a447a7a464bd2b08739ffa6d622c6159f3bfa884eb038f3514693",
+        "answerSha256": "8e4621379786ef42a4fec155cd525c291dd7db3c1fde3478522f4f61c03fd1bd",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.013
+      },
+      {
+        "input": "11.in",
+        "label": "max-last-occurrence",
+        "inputBytes": 180112,
+        "answerBytes": 180002,
+        "inputSha256": "a80445883243d7e2e6a79f15fe7cb513ca00f6aa002a8d13b09bd28505ff680b",
+        "answerSha256": "78e9404d5f03113336be9e899b0d542876cec9ce7041dd0f1cb2f8addf7781c4",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.055
+      },
+      {
+        "input": "12.in",
+        "label": "max-first-occurrence",
+        "inputBytes": 80112,
+        "answerBytes": 180002,
+        "inputSha256": "71f8a6064780cd757c23ab5d5fd59112cfba6540307b39cd7f9304d795dc0116",
+        "answerSha256": "78e9404d5f03113336be9e899b0d542876cec9ce7041dd0f1cb2f8addf7781c4",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.021
+      },
+      {
+        "input": "13.in",
+        "label": "max-two-characters",
+        "inputBytes": 80112,
+        "answerBytes": 180002,
+        "inputSha256": "8e84587b483b251572a90549258efe3110c71bb3873fcc86dbbeaab20c293eb9",
+        "answerSha256": "cc30941965130c2d15ade055a243a00d34521b2d39c085fae8e80958dedc69a2",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.019
+      }
+    ],
+    "oracleChecks": 35
+  },
+  {
+    "order": 22,
+    "pid": 3460,
+    "title": "回文子串对",
+    "originalCases": 9,
+    "expectedCases": 13,
+    "added": [
+      {
+        "input": "10.in",
+        "label": "single",
+        "inputBytes": 2,
+        "answerBytes": 3,
+        "inputSha256": "87428fc522803d31065e7bce3cf03fe475096631e5e07bbd7a0fde60c4cf25c7",
+        "answerSha256": "13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.012
+      },
+      {
+        "input": "11.in",
+        "label": "max-all-palindromes",
+        "inputBytes": 2001,
+        "answerBytes": 14,
+        "inputSha256": "4cb682a656ffc525c9c34fe2bcf66bf56118129b820a0e62d208db22e986be70",
+        "answerSha256": "17c8b62d7d86dd38c9740e92bf990f0a9874f71a5259fa956513e4598faa283f",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.012
+      },
+      {
+        "input": "12.in",
+        "label": "max-alternating",
+        "inputBytes": 2001,
+        "answerBytes": 14,
+        "inputSha256": "ae0f04cf34d42ffab134ab7b3e6da86931e59e2136381f6ef1e9d8f95bcec436",
+        "answerSha256": "f060921da050a595ee7df7a70056149ebea8edea2b4c6a48be356a4f6afceb2a",
+        "independentKnownAnswer": false,
+        "localSeconds": 0.012
+      },
+      {
+        "input": "13.in",
+        "label": "max-random",
+        "inputBytes": 2001,
+        "answerBytes": 9,
+        "inputSha256": "58b28e7260f2a6037ffd3bb174cb02c33e067aa407fc306346dd4ba653135c68",
+        "answerSha256": "3c6db3489d45a276c1943e8c4fe88ee38cb469569dfa5dc9db11aa8536804794",
+        "independentKnownAnswer": false,
+        "localSeconds": 0.01
+      }
+    ],
+    "oracleChecks": 35
+  },
+  {
+    "order": 23,
+    "pid": 3399,
+    "title": "双角兽机器人",
+    "originalCases": 9,
+    "expectedCases": 14,
+    "added": [
+      {
+        "input": "10.in",
+        "label": "too-short",
+        "inputBytes": 2,
+        "answerBytes": 4,
+        "inputSha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+        "answerSha256": "186a919b8c7cb84aebf4e53c70cd1cc028a93a1d183ee29dd6e10cd18a714577",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.024
+      },
+      {
+        "input": "11.in",
+        "label": "three-zeros",
+        "inputBytes": 4,
+        "answerBytes": 3,
+        "inputSha256": "945e4893567554e68f6f28d5652917269341a5f3d295a16b7c708c9bfd95dc5d",
+        "answerSha256": "13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.011
+      },
+      {
+        "input": "12.in",
+        "label": "three-maximums",
+        "inputBytes": 22,
+        "answerBytes": 9,
+        "inputSha256": "2732b676146670828dc18b976d9e7cbf1d02d0c348f7d0240cefbe291a644af4",
+        "answerSha256": "7b5fca080d967211cde4fcdffb83033ce22c865a3041e59ed3866f5354b4a40c",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.011
+      },
+      {
+        "input": "13.in",
+        "label": "leading-zero",
+        "inputBytes": 5,
+        "answerBytes": 4,
+        "inputSha256": "8b3df1d13ae6fbe6fc0b8cf797b05cf2150bf6a048fb523affb4be639eb2f31f",
+        "answerSha256": "186a919b8c7cb84aebf4e53c70cd1cc028a93a1d183ee29dd6e10cd18a714577",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.011
+      },
+      {
+        "input": "14.in",
+        "label": "six-digit-values",
+        "inputBytes": 16,
+        "answerBytes": 9,
+        "inputSha256": "02b0914c8356943e014258c7f33eff741d4e4424339eb977d3ee3807c279aecf",
+        "answerSha256": "b3c7639e94c95952b6786dd51dc3e6223a439c0dede16bae33b7a0642de56163",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.012
+      }
+    ],
+    "oracleChecks": 0
+  },
+  {
+    "order": 24,
+    "pid": 3386,
+    "title": "派对（简单版）",
+    "originalCases": 9,
+    "expectedCases": 13,
+    "added": [
+      {
+        "input": "10.in",
+        "label": "isolated",
+        "inputBytes": 6,
+        "answerBytes": 3,
+        "inputSha256": "929518d880d303db46ed5727b3cfb3326bbbcce50a97586a6a23b10d8ccc4885",
+        "answerSha256": "f1b2f662800122bed0ff255693df89c4487fbdcf453d3524a42d4ec20c3d9c04",
+        "independentKnownAnswer": true,
+        "localSeconds": 1.009
+      },
+      {
+        "input": "11.in",
+        "label": "max-chain",
+        "inputBytes": 17791,
+        "answerBytes": 6,
+        "inputSha256": "7cb56085c77af649aed1b81035cfb2af51dee57d665aafefa2a6133aaa4b3249",
+        "answerSha256": "3f4db5c60402950d5e9e6a24f99f0a2c232fe087b9ca37bd778d48727620fe86",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.011
+      },
+      {
+        "input": "12.in",
+        "label": "one-enemy-invalidates-component",
+        "inputBytes": 17798,
+        "answerBytes": 3,
+        "inputSha256": "51901c4442ecbbc2b378b73e0c57ba8439ce9fb2667ae0d3824b4633b9236504",
+        "answerSha256": "13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.011
+      },
+      {
+        "input": "13.in",
+        "label": "cross-component-enemies",
+        "inputBytes": 17788,
+        "answerBytes": 6,
+        "inputSha256": "2039b623a23a165b43a7aeef71da3e73b007d7a959d108a32dc5482df470dc43",
+        "answerSha256": "3b7b041d37d1d693c3afe25d2af7d56ad2ee7b98eddb2cc1a055c1117e55542e",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.012
+      }
+    ],
+    "oracleChecks": 0
+  },
+  {
+    "order": 25,
+    "pid": 3330,
+    "title": "纸条",
+    "originalCases": 9,
+    "expectedCases": 14,
+    "added": [
+      {
+        "input": "10.in",
+        "label": "single-no-cut",
+        "inputBytes": 8,
+        "answerBytes": 3,
+        "inputSha256": "29c9eb9e82e1525a19a6c43edb201921c22cbaecf16b71b51d01c0e5c6c6584f",
+        "answerSha256": "13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.96
+      },
+      {
+        "input": "11.in",
+        "label": "max-zero",
+        "inputBytes": 200007,
+        "answerBytes": 7,
+        "inputSha256": "2bace7393dcca95690358ec806c43d653ab803825c4cbf4fdc161f8a90b8c65d",
+        "answerSha256": "f10f86317a3e7ba4915f0dd53e8f9cadb491885834942adff6b3073fcad5ff6b",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.044
+      },
+      {
+        "input": "12.in",
+        "label": "max-positive",
+        "inputBytes": 600007,
+        "answerBytes": 3,
+        "inputSha256": "ad9d670bd669a5c804000c02807ef5196cc5c6f53df3b7cce9d741c8b4fecadb",
+        "answerSha256": "f1b2f662800122bed0ff255693df89c4487fbdcf453d3524a42d4ec20c3d9c04",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.083
+      },
+      {
+        "input": "13.in",
+        "label": "max-negative",
+        "inputBytes": 700007,
+        "answerBytes": 3,
+        "inputSha256": "a6d19bf841851b21d74619916be63e598a09393b10dd7406cb7d09e9ed9ee48a",
+        "answerSha256": "f1b2f662800122bed0ff255693df89c4487fbdcf453d3524a42d4ec20c3d9c04",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.145
+      },
+      {
+        "input": "14.in",
+        "label": "max-cancelling",
+        "inputBytes": 650007,
+        "answerBytes": 7,
+        "inputSha256": "f5ba6b4ba3d9015c902e14b0a69561b1110d6410d9e3180c6a7e275d4f6f9264",
+        "answerSha256": "0181b27fe310f7d2e9a7230e8a277bcfeb0ecf4469440964f9eec21777e61bcc",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.091
+      }
+    ],
+    "oracleChecks": 0
+  },
+  {
+    "order": 26,
+    "pid": 3466,
+    "title": "cd 与 pwd 命令",
+    "originalCases": 9,
+    "expectedCases": 13,
+    "added": [
+      {
+        "input": "10.in",
+        "label": "root",
+        "inputBytes": 6,
+        "answerBytes": 3,
+        "inputSha256": "bed77c5ae6b36f009098bccedc84ffdf9f42851295af24831ca99b1f265d80d2",
+        "answerSha256": "9ce998a2512c48e337735a52c61d26e8d59de44f1522cf67b4eae3c1c38c02b7",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.996
+      },
+      {
+        "input": "11.in",
+        "label": "absolute-relative",
+        "inputBytes": 31,
+        "answerBytes": 10,
+        "inputSha256": "7abf5ea60f65d34ed3937334c6ab40f8335bb0c0d4fc85270b0117f518ec7147",
+        "answerSha256": "082aeef38319949c2f1ad6ff691141ba67aa0d7dc1bda2f470cb578b93629f3c",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.012
+      },
+      {
+        "input": "12.in",
+        "label": "max-depth",
+        "inputBytes": 9954,
+        "answerBytes": 9803,
+        "inputSha256": "d912310301ec8db1320d37885063edf0fb6cf622d8a34c962e8187aa55d49727",
+        "answerSha256": "42ed16e6fd08b4173f37059257d51fc6d3ea1e0dd2e394b94e7ef31aaa748233",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.013
+      },
+      {
+        "input": "13.in",
+        "label": "same-names",
+        "inputBytes": 30,
+        "answerBytes": 7,
+        "inputSha256": "3708516f1d7f00c5dbe5a09965680720f0c72209bdd13aa5b333baadc0f8a5bd",
+        "answerSha256": "d0214634b5ad17d9c661a9729208070164a27a5ba7e16b82938a3815bd0fc1f2",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.013
+      }
+    ],
+    "oracleChecks": 0
+  },
+  {
+    "order": 27,
+    "pid": 3275,
+    "title": "小象与卡片",
+    "originalCases": 9,
+    "expectedCases": 14,
+    "added": [
+      {
+        "input": "10.in",
+        "label": "single",
+        "inputBytes": 6,
+        "answerBytes": 3,
+        "inputSha256": "7cd4d2baa0bc812e6baa82e533a1ce9dc7c90726b0109e9b5c8e7ae9991967e5",
+        "answerSha256": "13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.013
+      },
+      {
+        "input": "11.in",
+        "label": "max-all-distinct",
+        "inputBytes": 1177797,
+        "answerBytes": 4,
+        "inputSha256": "dfe6e99b898fc9f9ba74fca710f0861eb03f741c14e6b0cb35d0434557cc21a5",
+        "answerSha256": "186a919b8c7cb84aebf4e53c70cd1cc028a93a1d183ee29dd6e10cd18a714577",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.17
+      },
+      {
+        "input": "12.in",
+        "label": "max-flips",
+        "inputBytes": 1688902,
+        "answerBytes": 7,
+        "inputSha256": "bef42562c1e4452c6583cda0ba3ed5b8add9021f3320ad45e5ea916dddb4a76d",
+        "answerSha256": "92b53a210b121a3df0fd8a15a17fdaabf83ec635a26d3f2d331ebf27b762d06d",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.274
+      },
+      {
+        "input": "13.in",
+        "label": "same-front-back",
+        "inputBytes": 400007,
+        "answerBytes": 3,
+        "inputSha256": "614ee3c1160e965285c7e390ff58c01d228fe7744725790add42c1a04d221b2c",
+        "answerSha256": "13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.075
+      },
+      {
+        "input": "14.in",
+        "label": "odd-majority",
+        "inputBytes": 22,
+        "answerBytes": 3,
+        "inputSha256": "b0657c0a6b4f60c50f5b0d6dc27e9570434a236c734a76a308b1e3628969f458",
+        "answerSha256": "24ba1e99dc06b19351323aae0d7370243d586475a634b7f6ff7927fbc72cfaed",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.011
+      }
+    ],
+    "oracleChecks": 35
+  },
+  {
+    "order": 28,
+    "pid": 3046,
+    "title": "论坛新消息",
+    "originalCases": 9,
+    "expectedCases": 14,
+    "added": [
+      {
+        "input": "10.in",
+        "label": "single",
+        "inputBytes": 4,
+        "answerBytes": 3,
+        "inputSha256": "ad0fadf63cc7cd779ce475e345bf4063565b63a3c2efef1eebc89790aaa6acba",
+        "answerSha256": "13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.936
+      },
+      {
+        "input": "11.in",
+        "label": "max-unchanged",
+        "inputBytes": 588902,
+        "answerBytes": 3,
+        "inputSha256": "527d254a0c89705462b44ee7e5c91d983ee2d0c1ec3fa9f09bc489e4229a6085",
+        "answerSha256": "13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.084
+      },
+      {
+        "input": "12.in",
+        "label": "max-reverse",
+        "inputBytes": 588902,
+        "answerBytes": 7,
+        "inputSha256": "d3b053e7ba9512e41d6bdb463519ecf59f9e0175c4297eb72c0b1b5ccbcd28d0",
+        "answerSha256": "f10f86317a3e7ba4915f0dd53e8f9cadb491885834942adff6b3073fcad5ff6b",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.079
+      },
+      {
+        "input": "13.in",
+        "label": "one-moved",
+        "inputBytes": 588902,
+        "answerBytes": 3,
+        "inputSha256": "2f50ac711cb44407f3d7b6b6ea43c5b02c0c7ebb7f6d2940f6b4b90d6f27c974",
+        "answerSha256": "f1b2f662800122bed0ff255693df89c4487fbdcf453d3524a42d4ec20c3d9c04",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.082
+      },
+      {
+        "input": "14.in",
+        "label": "long-moved-prefix",
+        "inputBytes": 588902,
+        "answerBytes": 7,
+        "inputSha256": "58c6bd52344b7e0b5b7d60a7c0f83445e513033d3048c8234d8bd12f838613f8",
+        "answerSha256": "92b53a210b121a3df0fd8a15a17fdaabf83ec635a26d3f2d331ebf27b762d06d",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.078
+      }
+    ],
+    "oracleChecks": 0
+  },
+  {
+    "order": 29,
+    "pid": 3039,
+    "title": "Dima 与楼梯",
+    "originalCases": 9,
+    "expectedCases": 12,
+    "added": [
+      {
+        "input": "10.in",
+        "label": "single",
+        "inputBytes": 10,
+        "answerBytes": 3,
+        "inputSha256": "b75d0636e6486128b8c0a4c1c1a5bc58269aed03a330adac2abe07939f91e426",
+        "answerSha256": "f1b2f662800122bed0ff255693df89c4487fbdcf453d3524a42d4ec20c3d9c04",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.937
+      },
+      {
+        "input": "11.in",
+        "label": "max-64bit-stack",
+        "inputBytes": 2900014,
+        "answerBytes": 1588895,
+        "inputSha256": "a20a3877f02edfd41746a7a534977c202b61f3bc07d3c03688c49bd70d5aa893",
+        "answerSha256": "3adc8f3bd96cea40dd6d932a383ac7336edf449e393c72a3af3c88c68f254ecb",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.535
+      },
+      {
+        "input": "12.in",
+        "label": "narrow-after-wide",
+        "inputBytes": 37,
+        "answerBytes": 39,
+        "inputSha256": "7b8acb41432de395a17781d9479982edfedda83301dc98b1c2899d6874a81d11",
+        "answerSha256": "e28df1f46303f1a763086f5d5df88f970a0ab06bdf791d67c067c8f6672ef525",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.012
+      }
+    ],
+    "oracleChecks": 0
+  },
+  {
+    "order": 31,
+    "pid": 2824,
+    "title": "最大荒谬度",
+    "originalCases": 9,
+    "expectedCases": 13,
+    "added": [
+      {
+        "input": "10.in",
+        "label": "minimum",
+        "inputBytes": 8,
+        "answerBytes": 5,
+        "inputSha256": "d539706f38d341cb14386bd3849ba455d8fff877e62254d9c61251825aeb9070",
+        "answerSha256": "01d16d3fc9baf02b7e1f16368d22e0d2b71cc96ac27eb8aa6f752c70ad323a70",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.012
+      },
+      {
+        "input": "11.in",
+        "label": "max64bit-half",
+        "inputBytes": 2200014,
+        "answerBytes": 10,
+        "inputSha256": "a248395dce938054b25b1b7bb7e033bab37a0d25c5524ec7cec0784e836ece8c",
+        "answerSha256": "ced314cb63bb03981f550b7573f7a57f8d39a6a728139abf0fb2bfa31c577149",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.283
+      },
+      {
+        "input": "12.in",
+        "label": "max-tie",
+        "inputBytes": 400009,
+        "answerBytes": 5,
+        "inputSha256": "298cfc12a32a2702e55739e31f823bd64d2ec974a87a851d2c2595480c0e8527",
+        "answerSha256": "01d16d3fc9baf02b7e1f16368d22e0d2b71cc96ac27eb8aa6f752c70ad323a70",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.11
+      },
+      {
+        "input": "13.in",
+        "label": "middle-peaks",
+        "inputBytes": 400045,
+        "answerBytes": 14,
+        "inputSha256": "99d88214686b7a1a3e73a40b2e3dfcd04c892c3f1e9f5ad0c31d7632cb4e861d",
+        "answerSha256": "2fdb896312808601ce62a2e9d5195ce22e7bec73dafef5ef01882d300c886bf3",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.088
+      }
+    ],
+    "oracleChecks": 35
+  },
+  {
+    "order": 32,
+    "pid": 3473,
+    "title": "嫌疑人",
+    "originalCases": 9,
+    "expectedCases": 14,
+    "added": [
+      {
+        "input": "10.in",
+        "label": "single-truth",
+        "inputBytes": 7,
+        "answerBytes": 7,
+        "inputSha256": "f559b12fe1f1be57f79164cc7a80de260634f21dfd047a4019dda237b2f0e4a5",
+        "answerSha256": "3afeb4a711f85242ec8c97d1fecef51709d495f615aee7a4f4532df331bc4fe9",
+        "independentKnownAnswer": false,
+        "localSeconds": 1.074
+      },
+      {
+        "input": "11.in",
+        "label": "single-lie",
+        "inputBytes": 7,
+        "answerBytes": 5,
+        "inputSha256": "65a0d33f62a4b18ce5bc3ac8d24077a7fd1a35d37287d3b42a781514bd69dbdc",
+        "answerSha256": "eaee62abf0ca6b5b6f7101aa63f8c65f36b51883f40ef7fce4d84735a38c4ae4",
+        "independentKnownAnswer": false,
+        "localSeconds": 0.013
+      },
+      {
+        "input": "12.in",
+        "label": "max-ambiguous",
+        "inputBytes": 688908,
+        "answerBytes": 1300000,
+        "inputSha256": "471256e1121f749915180bb189e2ba01a58122191e246ad80c651218bf5bee67",
+        "answerSha256": "ce4abf3c862085c93d7200c08d93a9bce41865e46ed20725901f77fc9f57a09c",
+        "independentKnownAnswer": false,
+        "localSeconds": 0.1
+      },
+      {
+        "input": "13.in",
+        "label": "max-all-truth",
+        "inputBytes": 300014,
+        "answerBytes": 700000,
+        "inputSha256": "66c7ccc6eb1b373aaddd0c819792bce69eac4d01f55ce49f8bc95089a6dd75b8",
+        "answerSha256": "766af4ccb680469e4666d2bda380ed0801356a3d1c7978c73876bbdf8a991c73",
+        "independentKnownAnswer": false,
+        "localSeconds": 0.063
+      },
+      {
+        "input": "14.in",
+        "label": "max-mixed",
+        "inputBytes": 688908,
+        "answerBytes": 900000,
+        "inputSha256": "3c89f66de0ce3f7f343b335add7f00b2733555022952c979e1abce0c9e7ba4e0",
+        "answerSha256": "81f5b3c372d787f92778dbe1c389118be0de5373ccff9fa47feebf797a8f7b51",
+        "independentKnownAnswer": false,
+        "localSeconds": 0.12
+      }
+    ],
+    "oracleChecks": 0
+  },
+  {
+    "order": 33,
+    "pid": 3188,
+    "title": "星际之门",
+    "originalCases": 9,
+    "expectedCases": 13,
+    "added": [
+      {
+        "input": "10.in",
+        "label": "disconnected",
+        "inputBytes": 8,
+        "answerBytes": 4,
+        "inputSha256": "9d90c973a24e7afe4203bfc2c4846841f2df600c2fb82af826bf100243edf57e",
+        "answerSha256": "186a919b8c7cb84aebf4e53c70cd1cc028a93a1d183ee29dd6e10cd18a714577",
+        "independentKnownAnswer": true,
+        "localSeconds": 1.06
+      },
+      {
+        "input": "11.in",
+        "label": "long-wait-destination-ignored",
+        "inputBytes": 588916,
+        "answerBytes": 8,
+        "inputSha256": "48791d3f8fc12deda859e59cef18e43d1e0160220fd9359cadbec60c060ec2fd",
+        "answerSha256": "ece3d44e362eb247ae210d356e5d9dfc1738857370d1f72ef6cea4437e029146",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.02
+      },
+      {
+        "input": "12.in",
+        "label": "max-long-path",
+        "inputBytes": 1977788,
+        "answerBytes": 11,
+        "inputSha256": "d64caee539601a1ebfe4ae6402c282e2237a9dbc7b1995b4c67428729c9085b6",
+        "answerSha256": "e168b0b3373b9c5ed5f9e1a1be4afa9fbd4b3ce0bac40528682106f358374a44",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.114
+      },
+      {
+        "input": "13.in",
+        "label": "detour-around-wait",
+        "inputBytes": 46,
+        "answerBytes": 3,
+        "inputSha256": "e03203a534633b9cc00f7787f15c58c3e45ec3a841a814270d4d4318cf149156",
+        "answerSha256": "7c468f5e59f2871b946e051445493bbcace531d597edbbcc9935e7d02d025114",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.017
+      }
+    ],
+    "oracleChecks": 0
+  },
+  {
+    "order": 34,
+    "pid": 3103,
+    "title": "文本编辑器",
+    "originalCases": 9,
+    "expectedCases": 14,
+    "added": [
+      {
+        "input": "10.in",
+        "label": "same-position-empty",
+        "inputBytes": 12,
+        "answerBytes": 3,
+        "inputSha256": "22c4b67f16e9f4730ee5a8163ce0aeabb1ec2ec4e38062edb4409894e70cceae",
+        "answerSha256": "13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.932
+      },
+      {
+        "input": "11.in",
+        "label": "max-horizontal",
+        "inputBytes": 22,
+        "answerBytes": 8,
+        "inputSha256": "b20a993adfc5d3de6bce8c30cf77df52efeb57eaec6e22ce15fe3d822def18b8",
+        "answerSha256": "5e7fdeb146334b292a336c2d6f43cfb0eff41100f6bb067e593318f71beb3ebe",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.011
+      },
+      {
+        "input": "12.in",
+        "label": "leave-row-to-shorten",
+        "inputBytes": 31,
+        "answerBytes": 3,
+        "inputSha256": "7b96feaa2d70cbee207fa3217282ec24753a195ba1a3d8d5d04957833a6ec06f",
+        "answerSha256": "df4e26a04a444901b95afef44e4a96cfae34690fff2ad2c66389c70079cdff2b",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.012
+      },
+      {
+        "input": "13.in",
+        "label": "max-uniform",
+        "inputBytes": 719,
+        "answerBytes": 8,
+        "inputSha256": "12eb413f582a2d8064c2b9d63084dcf76faf3f020712b0ad9114e6372497c9a2",
+        "answerSha256": "a9113ae33c8cff294a847f9bfdb9af27bd402eab0312213b5647f7addb26e976",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.011
+      },
+      {
+        "input": "14.in",
+        "label": "zero-middle",
+        "inputBytes": 714,
+        "answerBytes": 4,
+        "inputSha256": "b6d0f476d771c207e82ff472cb6e4472c3492b4ae885997742faa8c693594b1c",
+        "answerSha256": "2dd9964aa7c59c01362061846da85dcf727bb9f7f25e6b1c67ff342e6ef8c69c",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.02
+      }
+    ],
+    "oracleChecks": 0
+  },
+  {
+    "order": 35,
+    "pid": 2785,
+    "title": "交流电",
+    "originalCases": 9,
+    "expectedCases": 14,
+    "added": [
+      {
+        "input": "10.in",
+        "label": "single",
+        "inputBytes": 2,
+        "answerBytes": 4,
+        "inputSha256": "4e3cf60495dca6411d155372c42aa62f07a6f0c5792f016cff361dd7a3965b20",
+        "answerSha256": "193050346fd34a6daa994a51c19bf0e2bbdec20a4465e3fd6ae2fdd4d3b5a6e9",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.85
+      },
+      {
+        "input": "11.in",
+        "label": "max-same",
+        "inputBytes": 100001,
+        "answerBytes": 5,
+        "inputSha256": "096e4111bebccdf19da74876984bb3dfe5076ab85957a5225e9f9ec22e144a83",
+        "answerSha256": "97f9973acffcd86691239b33272f810880ca14c4476a24e88abdf294518cbc65",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.016
+      },
+      {
+        "input": "12.in",
+        "label": "max-irreducible",
+        "inputBytes": 100001,
+        "answerBytes": 4,
+        "inputSha256": "3ee35fe9cc4579e657c0062b0cc22a70eb5877007166b71b222158946c4329c2",
+        "answerSha256": "193050346fd34a6daa994a51c19bf0e2bbdec20a4465e3fd6ae2fdd4d3b5a6e9",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.017
+      },
+      {
+        "input": "13.in",
+        "label": "max-two-blocks",
+        "inputBytes": 100001,
+        "answerBytes": 5,
+        "inputSha256": "963c870d7201b6b36eec364b5a71e99f9a83dd969cb42cdc4ca9d51b66c29e55",
+        "answerSha256": "97f9973acffcd86691239b33272f810880ca14c4476a24e88abdf294518cbc65",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.018
+      },
+      {
+        "input": "14.in",
+        "label": "cascading",
+        "inputBytes": 5,
+        "answerBytes": 5,
+        "inputSha256": "9472faa618bf79fec32e7de61f4439fbd66a593d760502728d3c3937127dd483",
+        "answerSha256": "97f9973acffcd86691239b33272f810880ca14c4476a24e88abdf294518cbc65",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.019
+      }
+    ],
+    "oracleChecks": 0
+  },
+  {
+    "order": 36,
+    "pid": 2767,
+    "title": "粉刷栅栏",
+    "originalCases": 9,
+    "expectedCases": 14,
+    "added": [
+      {
+        "input": "10.in",
+        "label": "zero",
+        "inputBytes": 20,
+        "answerBytes": 4,
+        "inputSha256": "93c2babe80c10b49df84aee43fc5bbcf96a619ab084f6ec64402973e0c3482e7",
+        "answerSha256": "186a919b8c7cb84aebf4e53c70cd1cc028a93a1d183ee29dd6e10cd18a714577",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.012
+      },
+      {
+        "input": "11.in",
+        "label": "cannot-buy",
+        "inputBytes": 20,
+        "answerBytes": 4,
+        "inputSha256": "96c112a1a5cdab9f32972fe6fd6fa73637e6942b4f9623fe93fb0e09a35d7572",
+        "answerSha256": "186a919b8c7cb84aebf4e53c70cd1cc028a93a1d183ee29dd6e10cd18a714577",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.012
+      },
+      {
+        "input": "12.in",
+        "label": "million-digits",
+        "inputBytes": 26,
+        "answerBytes": 1000002,
+        "inputSha256": "de24d5d4fc6e89ebf2b29832f77d678747bcc838e51543239793233dfe4176ee",
+        "answerSha256": "f5976f3b8d974361b0d7d9d5f78882da14e67d18dbfeb592738e5e5822707626",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.05
+      },
+      {
+        "input": "13.in",
+        "label": "upgrade-leading",
+        "inputBytes": 20,
+        "answerBytes": 5,
+        "inputSha256": "e97ff54e25dae1acd1fb0e8639577558a324e750aa9824fb8140078bfbe895ab",
+        "answerSha256": "8bf4ec4e1d7099f4e91075e2823ef7378aec07f4f3b9a80c7deabf9f5dcb4b63",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.027
+      },
+      {
+        "input": "14.in",
+        "label": "single-largest",
+        "inputBytes": 20,
+        "answerBytes": 3,
+        "inputSha256": "47e84d502469bb614c669b48889017b8cd2f52557df225e5360c406525e3fa91",
+        "answerSha256": "69fa4dd4fdc0b43ba7ca7c997539c4500f03ab9b220228e2b1e97bd305397806",
+        "independentKnownAnswer": true,
+        "localSeconds": 0.012
+      }
+    ],
+    "oracleChecks": 35
+  }
+]

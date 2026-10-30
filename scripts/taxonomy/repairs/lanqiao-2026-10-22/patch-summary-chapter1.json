@@ -1,0 +1,167 @@
+[
+  {
+    "order": 1,
+    "pid": 4072,
+    "reason": "明确黑白皇后不能同格; 恢复原题完整简明样例; 补充合法边界与故障反例数据; 独立计算新增数据答案",
+    "expectedCases": 13,
+    "fields": [
+      "content"
+    ],
+    "fileCount": 10,
+    "solutionCount": 0
+  },
+  {
+    "order": 2,
+    "pid": 4073,
+    "reason": "补全字符串编号下界; 恢复原题完整简明样例; 补充合法边界与故障反例数据; 独立计算新增数据答案",
+    "expectedCases": 6,
+    "fields": [
+      "content"
+    ],
+    "fileCount": 6,
+    "solutionCount": 0
+  },
+  {
+    "order": 3,
+    "pid": 4074,
+    "reason": "恢复原题完整简明样例; 补充合法边界与故障反例数据; 独立计算新增数据答案",
+    "expectedCases": 14,
+    "fields": [
+      "content"
+    ],
+    "fileCount": 8,
+    "solutionCount": 0
+  },
+  {
+    "order": 4,
+    "pid": 4075,
+    "reason": "移除混入题面的整段解答代码; 恢复原题完整简明样例; 补充合法边界与故障反例数据; 独立计算新增数据答案",
+    "expectedCases": 13,
+    "fields": [
+      "content"
+    ],
+    "fileCount": 6,
+    "solutionCount": 0
+  },
+  {
+    "order": 5,
+    "pid": 4076,
+    "reason": "恢复原题完整简明样例; 补充合法边界与故障反例数据; 独立计算新增数据答案",
+    "expectedCases": 15,
+    "fields": [
+      "content"
+    ],
+    "fileCount": 10,
+    "solutionCount": 0
+  },
+  {
+    "order": 6,
+    "pid": 4077,
+    "reason": "修正题面笔误; 恢复原题完整简明样例; 补充合法边界与故障反例数据; 独立计算新增数据答案",
+    "expectedCases": 9,
+    "fields": [
+      "content"
+    ],
+    "fileCount": 10,
+    "solutionCount": 0
+  },
+  {
+    "order": 7,
+    "pid": 4078,
+    "reason": "明确非空字符串; 恢复原题完整简明样例; 补充合法边界与故障反例数据; 独立计算新增数据答案",
+    "expectedCases": 17,
+    "fields": [
+      "content"
+    ],
+    "fileCount": 14,
+    "solutionCount": 0
+  },
+  {
+    "order": 8,
+    "pid": 4079,
+    "reason": "恢复原题完整简明样例; 补充合法边界与故障反例数据; 独立计算新增数据答案",
+    "expectedCases": 28,
+    "fields": [
+      "content"
+    ],
+    "fileCount": 16,
+    "solutionCount": 0
+  },
+  {
+    "order": 9,
+    "pid": 4080,
+    "reason": "修正汉语拼音输出描述并补充跨节零规则; 恢复原题完整简明样例; 补充合法边界与故障反例数据; 独立计算新增数据答案; 修复原站题解跨零节漏读 ling",
+    "expectedCases": 36,
+    "fields": [
+      "content"
+    ],
+    "fileCount": 58,
+    "solutionCount": 1
+  },
+  {
+    "order": 10,
+    "pid": 4081,
+    "reason": "修正小时描述; 恢复原题完整简明样例; 补充合法边界与故障反例数据; 独立计算新增数据答案",
+    "expectedCases": 38,
+    "fields": [
+      "content"
+    ],
+    "fileCount": 4,
+    "solutionCount": 0
+  },
+  {
+    "order": 11,
+    "pid": 4082,
+    "reason": "恢复原题完整简明样例; 修复违反题面约束的旧输入; 独立重算修复数据答案; 补充合法边界与故障反例数据; 独立计算新增数据答案",
+    "expectedCases": 13,
+    "fields": [
+      "content"
+    ],
+    "fileCount": 16,
+    "solutionCount": 0
+  },
+  {
+    "order": 12,
+    "pid": 4083,
+    "reason": "修正矩阵输入数量与非负指数描述; 恢复原题完整简明样例; 补充合法边界与故障反例数据; 独立计算新增数据答案",
+    "expectedCases": 11,
+    "fields": [
+      "content"
+    ],
+    "fileCount": 10,
+    "solutionCount": 0
+  },
+  {
+    "order": 13,
+    "pid": 4084,
+    "reason": "恢复原题完整简明样例; 修复违反题面约束的旧输入; 独立重算修复数据答案; 补充合法边界与故障反例数据; 独立计算新增数据答案",
+    "expectedCases": 10,
+    "fields": [
+      "content"
+    ],
+    "fileCount": 14,
+    "solutionCount": 0
+  },
+  {
+    "order": 14,
+    "pid": 4085,
+    "reason": "明确非负整数允许为零; 恢复原题完整简明样例; 补充合法边界与故障反例数据; 独立计算新增数据答案",
+    "expectedCases": 16,
+    "fields": [
+      "content"
+    ],
+    "fileCount": 12,
+    "solutionCount": 0
+  },
+  {
+    "order": 15,
+    "pid": 4086,
+    "reason": "明确逐秒判断与休息结束的顺序; 恢复原题完整简明样例; 修复违反题面约束的旧输入; 独立重算修复数据答案; 补充合法边界与故障反例数据; 独立计算新增数据答案",
+    "expectedCases": 17,
+    "fields": [
+      "content"
+    ],
+    "fileCount": 16,
+    "solutionCount": 0
+  }
+]

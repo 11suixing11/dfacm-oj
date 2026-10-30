@@ -1,0 +1,748 @@
+{
+  "version": 1,
+  "date": "2026-10-22",
+  "batchSha256": "8d80934882bc6d9209794813866552138442501e14ee248f6e9549d39d7ad00c",
+  "problems": [
+    {
+      "domainId": "system",
+      "docId": 917,
+      "pid": null,
+      "title": "Diverging Directions",
+      "category": "local-sample-testdata",
+      "source": "Current source statement; independent oracles; fixed seed 20261022",
+      "expected": {
+        "contentSha256": "53b40a1c5ecca9eb8e80d3a27b5c1dbf6c9c5d9b61664a6be9a5604e433793f6",
+        "html": true
+      },
+      "content": "<h2>题目描述</h2>\n<div class=\"ttypography\"><div class=\"problem-statement\"><div><p>You are given a directed weighted graph with <span class=\"tex-span\"><i>n</i></span> nodes and <span class=\"tex-span\">2<i>n</i>-2</span> edges. The nodes are labeled from <span class=\"tex-span\">1</span> to <span class=\"tex-span\"><i>n</i></span>, while the edges are labeled from <span class=\"tex-span\">1</span> to <span class=\"tex-span\">2<i>n</i>-2</span>. The graph's edges can be split into two parts.</p><ul> <li> The first <span class=\"tex-span\"><i>n</i>-1</span> edges will form a rooted spanning tree, with node <span class=\"tex-span\">1</span> as the root. All these edges will point away from the root. </li><li> The last <span class=\"tex-span\"><i>n</i>-1</span> edges will be from node <span class=\"tex-span\"><i>i</i></span> to node <span class=\"tex-span\">1</span>, for all <span class=\"tex-span\">2≤<i>i</i>≤<i>n</i></span>. </li></ul><p>You are given <span class=\"tex-span\"><i>q</i></span> queries. There are two types of queries</p><ul> <li> <span class=\"tex-span\">1 <i>i</i> <i>w</i></span>: Change the weight of the <span class=\"tex-span\"><i>i</i></span>-th edge to <span class=\"tex-span\"><i>w</i></span> </li><li> <span class=\"tex-span\">2 <i>u</i> <i>v</i></span>: Print the length of the shortest path between nodes <span class=\"tex-span\"><i>u</i></span> to <span class=\"tex-span\"><i>v</i></span> </li></ul><p>Given these queries, print the shortest path lengths.</p></div><div class=\"input-specification\"><div class=\"section-title\">Input</div><p>The first line of input will contain two integers <span class=\"tex-span\"><i>n</i>,<i>q</i></span> (<span class=\"tex-span\">2≤<i>n</i>,<i>q</i>≤200000</span>), the number of nodes, and the number of queries, respectively.</p><p>The next <span class=\"tex-span\">2<i>n</i>-2</span> integers will contain 3 integers <span class=\"tex-span\"><i>a</i><sub class=\"lower-index\"><i>i</i></sub>,<i>b</i><sub class=\"lower-index\"><i>i</i></sub>,<i>c</i><sub class=\"lower-index\"><i>i</i></sub></span>, denoting a directed edge from node <span class=\"tex-span\"><i>a</i><sub class=\"lower-index\"><i>i</i></sub></span> to node <span class=\"tex-span\"><i>b</i><sub class=\"lower-index\"><i>i</i></sub></span> with weight <span class=\"tex-span\"><i>c</i><sub class=\"lower-index\"><i>i</i></sub></span>.</p><p>The first <span class=\"tex-span\"><i>n</i>-1</span> of these lines will describe a rooted spanning tree pointing away from node <span class=\"tex-span\">1</span>, while the last <span class=\"tex-span\"><i>n</i>-1</span> of these lines will have <span class=\"tex-span\"><i>b</i><sub class=\"lower-index\"><i>i</i></sub>=1</span>.</p><p>More specifically, </p><ul> <li> The edges <span class=\"tex-span\">(<i>a</i><sub class=\"lower-index\">1</sub>,<i>b</i><sub class=\"lower-index\">1</sub>),(<i>a</i><sub class=\"lower-index\">2</sub>,<i>b</i><sub class=\"lower-index\">2</sub>),... (<i>a</i><sub class=\"lower-index\"><i>n</i>-1</sub>,<i>b</i><sub class=\"lower-index\"><i>n</i>-1</sub>)</span> will describe a rooted spanning tree pointing away from node <span class=\"tex-span\">1</span>. </li><li> <span class=\"tex-span\"><i>b</i><sub class=\"lower-index\"><i>j</i></sub>=1</span> for <span class=\"tex-span\"><i>n</i>≤<i>j</i>≤2<i>n</i>-2</span>. </li><li> <span class=\"tex-span\"><i>a</i><sub class=\"lower-index\"><i>n</i></sub>,<i>a</i><sub class=\"lower-index\"><i>n</i>+1</sub>,...,<i>a</i><sub class=\"lower-index\">2<i>n</i>-2</sub></span> will be distinct and between <span class=\"tex-span\">2</span> and <span class=\"tex-span\"><i>n</i></span>. </li></ul><p>The next <span class=\"tex-span\"><i>q</i></span> lines will contain 3 integers, describing a query in the format described in the statement.</p><p>All edge weights will be between <span class=\"tex-span\">1</span> and <span class=\"tex-span\">10<sup class=\"upper-index\">6</sup></span>.</p></div><div class=\"output-specification\"><div class=\"section-title\">Output</div><p>For each type 2 query, print the length of the shortest path in its own line.</p></div><h2>Example</h2><pre><code class=\"language-input1\">5 9\n1 3 1\n3 2 2\n1 4 3\n3 5 4\n5 1 5\n3 1 6\n2 1 7\n4 1 8\n2 1 1\n2 1 3\n2 3 5\n2 5 2\n1 1 100\n2 1 3\n1 8 30\n2 4 2\n2 2 4</code></pre><pre><code class=\"language-output1\">0\n1\n4\n8\n100\n132\n10</code></pre></div><p> </p></div>\n",
+      "html": true,
+      "newContentSha256": "a331c473edf1aa5328ce0623449689dcc5b21bb282da30c1d4ea01e7e3306ff7",
+      "testdataCount": 8,
+      "testdata": [
+        {
+          "name": "2.in",
+          "expectedSha256": null,
+          "sha256": "ae733c73138d5b7f60b665b4e9e5c744b2fe840e9f5b53edec2f75e839d7aeb2"
+        },
+        {
+          "name": "2.out",
+          "expectedSha256": null,
+          "sha256": "36380d16c9bdcde195cbffb66e2a17fa83fe2ecc41be7cc524defffe60e579f1"
+        },
+        {
+          "name": "3.in",
+          "expectedSha256": null,
+          "sha256": "f4a96195990ffce2877f5ba5d68e9edec0ee3f40bd54e4b3645e6a23ed218f12"
+        },
+        {
+          "name": "3.out",
+          "expectedSha256": null,
+          "sha256": "3e97b6f90d55bef15d31183528bfa0654533199c5c0bb8f98c315aa3c41e93b7"
+        },
+        {
+          "name": "4.in",
+          "expectedSha256": null,
+          "sha256": "6bed481d3efd02b3073c57d30e299805781fe0360c4d16ff5ca6361fc214b594"
+        },
+        {
+          "name": "4.out",
+          "expectedSha256": null,
+          "sha256": "3f5916274f69f183e9dd9b50957dd33946a026ba87ff3ea6596a39286866d24b"
+        },
+        {
+          "name": "5.in",
+          "expectedSha256": null,
+          "sha256": "fcc4e681e4516358789a965ea64fd6980be0989e1b91405a26d4e52f0e352805"
+        },
+        {
+          "name": "5.out",
+          "expectedSha256": null,
+          "sha256": "3368ac27a6eb1f6bbcfb5488f5fd7065cee29c0532b78743794190a97f52cec3"
+        },
+        {
+          "name": "6.in",
+          "expectedSha256": null,
+          "sha256": "53d807fb0bdce78ac8b07c5389b73ba98a8e8b3e1c70d8d5988b7ccaaa9c085f"
+        },
+        {
+          "name": "6.out",
+          "expectedSha256": null,
+          "sha256": "693a083eb425112fc3b88a6506320bca1414db9114438440c6619236684e6911"
+        },
+        {
+          "name": "7.in",
+          "expectedSha256": null,
+          "sha256": "7970ec13e1ba5361ea89ce7b5e9fbb0c40db3787a6be0e1c11b490bc684bd630"
+        },
+        {
+          "name": "7.out",
+          "expectedSha256": null,
+          "sha256": "ce6e19b8edfb9d448f02ecd1306426a35c4ef2b8e086340dbc2e6806c3d6ab6d"
+        },
+        {
+          "name": "8.in",
+          "expectedSha256": null,
+          "sha256": "0ac672bd3050ccbf50409d8759ee11b854cd4c59d475395a1cabd7d7eaa8f3b0"
+        },
+        {
+          "name": "8.out",
+          "expectedSha256": null,
+          "sha256": "5b32be975627f33c577ec3e0ce59d9fd99e3c78b75b74f21448fd1c36edf97c6"
+        }
+      ]
+    },
+    {
+      "domainId": "system",
+      "docId": 918,
+      "pid": null,
+      "title": "Binary Blocks",
+      "category": "local-sample-testdata",
+      "source": "Current source statement; independent oracles; fixed seed 20261022",
+      "expected": {
+        "contentSha256": "4e51b21b609d513c08b478c84025923470ceef0293b0b97352e2e14f13843e3f",
+        "html": true
+      },
+      "content": "<h2>题目描述</h2>\n<div class=\"ttypography\"><div class=\"problem-statement\"><div><p>You are given an image, that can be represented with a <span class=\"tex-span\">2</span>-d <span class=\"tex-span\"><i>n</i></span> by <span class=\"tex-span\"><i>m</i></span> grid of pixels. Each pixel of the image is either on or off, denoted by the characters \"<span class=\"tex-font-style-tt\">0</span>\" or \"<span class=\"tex-font-style-tt\">1</span>\", respectively. You would like to compress this image. You want to choose an integer <span class=\"tex-span\"><i>k</i>&gt;1</span> and split the image into <span class=\"tex-span\"><i>k</i></span> by <span class=\"tex-span\"><i>k</i></span> blocks. If <span class=\"tex-span\"><i>n</i></span> and <span class=\"tex-span\"><i>m</i></span> are not divisible by <span class=\"tex-span\"><i>k</i></span>, the image is padded with only zeros on the right and bottom so that they are divisible by <span class=\"tex-span\"><i>k</i></span>. Each pixel in each individual block must have the same value. The given image may not be compressible in its current state. Find the minimum number of pixels you need to toggle (after padding) in order for the image to be compressible for some <span class=\"tex-span\"><i>k</i></span>. More specifically, the steps are to first choose <span class=\"tex-span\"><i>k</i></span>, then the image is padded with zeros, then, we can toggle the pixels so it is compressible for this <span class=\"tex-span\"><i>k</i></span>. The image must be compressible in that state.</p></div><div class=\"input-specification\"><div class=\"section-title\">Input</div><p>The first line of input will contain two integers <span class=\"tex-span\"><i>n</i>,<i>m</i></span> (<span class=\"tex-span\">2≤<i>n</i>,<i>m</i>≤2500</span>), the dimensions of the image.</p><p>The next <span class=\"tex-span\"><i>n</i></span> lines of input will contain a binary string with exactly <span class=\"tex-span\"><i>m</i></span> characters, representing the image.</p></div><div class=\"output-specification\"><div class=\"section-title\">Output</div><p>Print a single integer, the minimum number of pixels needed to toggle to make the image compressible.</p></div><h2>Example</h2><pre><code class=\"language-input1\">3 5\n00100\n10110\n11001</code></pre><pre><code class=\"language-output1\">5</code></pre><div class=\"note\"><div class=\"section-title\">Note</div><p>We first choose <span class=\"tex-span\"><i>k</i>=2</span>.</p><p>The image is padded as follows: </p><pre><br/>001000<br/>101100<br/>110010<br/>000000<br/></pre><p>We can toggle the image to look as follows: </p><pre><br/>001100<br/>001100<br/>000000<br/>000000<br/></pre><p>We can see that this image is compressible for <span class=\"tex-span\"><i>k</i>=2</span>.</p></div></div><p> </p></div>\n",
+      "html": true,
+      "newContentSha256": "b8e77eba5f4f442d3e5c0cad74572b991a72fb892b0aeb4293c4610901c42d9d",
+      "testdataCount": 7,
+      "testdata": [
+        {
+          "name": "2.in",
+          "expectedSha256": null,
+          "sha256": "82c176f5a2b6c13c4b9ae569484f4466997524ec746c00487355c01c358a8520"
+        },
+        {
+          "name": "2.out",
+          "expectedSha256": null,
+          "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+        },
+        {
+          "name": "3.in",
+          "expectedSha256": null,
+          "sha256": "8072a0a08b2732b158d062c1f60bb152ea4eb8295f551fd135b09edfbce9ab92"
+        },
+        {
+          "name": "3.out",
+          "expectedSha256": null,
+          "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+        },
+        {
+          "name": "4.in",
+          "expectedSha256": null,
+          "sha256": "7892f32f82e877253411d0de2446f1eedfd020e482038c5ba324e611e1497916"
+        },
+        {
+          "name": "4.out",
+          "expectedSha256": null,
+          "sha256": "53c234e5e8472b6ac51c1ae1cab3fe06fad053beb8ebfd8977b010655bfdd3c3"
+        },
+        {
+          "name": "5.in",
+          "expectedSha256": null,
+          "sha256": "7e1e3e6ec3eab97fc5c0777e8b217b5d910760a2d4d74dc7e3af4a4de3c98d82"
+        },
+        {
+          "name": "5.out",
+          "expectedSha256": null,
+          "sha256": "53c234e5e8472b6ac51c1ae1cab3fe06fad053beb8ebfd8977b010655bfdd3c3"
+        },
+        {
+          "name": "6.in",
+          "expectedSha256": null,
+          "sha256": "e902a64b8c7163a398cb2ce4fcdf6c52b2308bdb18204a33972202de502e1751"
+        },
+        {
+          "name": "6.out",
+          "expectedSha256": null,
+          "sha256": "8d0736d21edd4e194e5db02347e129c719dd4acfb659113e2d147d8a243f9ef3"
+        },
+        {
+          "name": "7.in",
+          "expectedSha256": null,
+          "sha256": "5944e72f9b9b9661668075579010d4a71d41291a3486500a90d7706ab35f7e65"
+        },
+        {
+          "name": "7.out",
+          "expectedSha256": null,
+          "sha256": "55efe21f346660bb446d5e08c7d8ada36524a4506f083c1f61de6d89f6171ed4"
+        }
+      ]
+    },
+    {
+      "domainId": "system",
+      "docId": 986,
+      "pid": null,
+      "title": "Choosing The Commander",
+      "category": "local-sample-testdata",
+      "source": "Current source statement; independent oracles; fixed seed 20261022",
+      "expected": {
+        "contentSha256": "8cc3ad37fee3a7babf9d6304de6ab819e452bf1f41865f25e202717c60c14f0a",
+        "html": true
+      },
+      "content": "<h2>题目描述</h2>\n<div class=\"ttypography\"><div class=\"problem-statement\"><div><p>As you might remember from the previous round, Vova is currently playing a strategic game known as Rage of Empires.</p><p>Vova managed to build a large army, but forgot about the main person in the army - the commander. So he tries to hire a commander, and he wants to choose the person who will be respected by warriors.</p><p>Each warrior is represented by his personality − an integer number <span class=\"tex-span\"><i>p</i><sub class=\"lower-index\"><i>i</i></sub></span>. Each commander has two characteristics − his personality <span class=\"tex-span\"><i>p</i><sub class=\"lower-index\"><i>j</i></sub></span> and leadership <span class=\"tex-span\"><i>l</i><sub class=\"lower-index\"><i>j</i></sub></span> (both are integer numbers). Warrior <span class=\"tex-span\"><i>i</i></span> <span class=\"tex-font-style-it\">respects</span> commander <span class=\"tex-span\"><i>j</i></span> only if <span class=\"tex-span\"><i>p</i><sub>i</sub> ⊕ <i>p</i><sub>j</sub> &lt; <i>l</i><sub>j</sub></span> (<span class=\"tex-span\"><i>x</i> ⊕ <i>y</i></span> is the bitwise excluding OR of <span class=\"tex-span\"><i>x</i></span> and <span class=\"tex-span\"><i>y</i></span>).</p><p>Initially Vova's army is empty. There are three different types of events that can happen with the army:</p><ul> <li> <span class=\"tex-span\">1<i>p</i><sub class=\"lower-index\"><i>i</i></sub></span> − one warrior with personality <span class=\"tex-span\"><i>p</i><sub class=\"lower-index\"><i>i</i></sub></span> joins Vova's army; </li><li> <span class=\"tex-span\">2<i>p</i><sub class=\"lower-index\"><i>i</i></sub></span> − one warrior with personality <span class=\"tex-span\"><i>p</i><sub class=\"lower-index\"><i>i</i></sub></span> leaves Vova's army; </li><li> <span class=\"tex-span\">3<i>p</i><sub class=\"lower-index\"><i>i</i></sub><i>l</i><sub class=\"lower-index\"><i>i</i></sub></span> − Vova tries to hire a commander with personality <span class=\"tex-span\"><i>p</i><sub class=\"lower-index\"><i>i</i></sub></span> and leadership <span class=\"tex-span\"><i>l</i><sub class=\"lower-index\"><i>i</i></sub></span>. </li></ul><p>For each event of the third type Vova wants to know how many warriors (counting only those who joined the army and haven't left yet) <span class=\"tex-font-style-it\">respect</span> the commander he tries to hire.</p></div><div class=\"input-specification\"><div class=\"section-title\">Input</div><p>The first line contains one integer <span class=\"tex-span\"><i>q</i></span> (<span class=\"tex-span\">1≤<i>q</i>≤100000</span>) − the number of events.</p><p>Then <span class=\"tex-span\"><i>q</i></span> lines follow. Each line describes the event:</p><ul> <li> <span class=\"tex-span\">1<i>p</i><sub class=\"lower-index\"><i>i</i></sub></span> (<span class=\"tex-span\">1≤<i>p</i><sub class=\"lower-index\"><i>i</i></sub>≤10<sup class=\"upper-index\">8</sup></span>) − one warrior with personality <span class=\"tex-span\"><i>p</i><sub class=\"lower-index\"><i>i</i></sub></span> joins Vova's army; </li><li> <span class=\"tex-span\">2<i>p</i><sub class=\"lower-index\"><i>i</i></sub></span> (<span class=\"tex-span\">1≤<i>p</i><sub class=\"lower-index\"><i>i</i></sub>≤10<sup class=\"upper-index\">8</sup></span>) − one warrior with personality <span class=\"tex-span\"><i>p</i><sub class=\"lower-index\"><i>i</i></sub></span> leaves Vova's army (it is guaranteed that there is at least one such warrior in Vova's army by this moment); </li><li> <span class=\"tex-span\">3<i>p</i><sub class=\"lower-index\"><i>i</i></sub><i>l</i><sub class=\"lower-index\"><i>i</i></sub></span> (<span class=\"tex-span\">1≤<i>p</i><sub class=\"lower-index\"><i>i</i></sub>,<i>l</i><sub class=\"lower-index\"><i>i</i></sub>≤10<sup class=\"upper-index\">8</sup></span>) − Vova tries to hire a commander with personality <span class=\"tex-span\"><i>p</i><sub class=\"lower-index\"><i>i</i></sub></span> and leadership <span class=\"tex-span\"><i>l</i><sub class=\"lower-index\"><i>i</i></sub></span>. There is at least one event of this type. </li></ul></div><div class=\"output-specification\"><div class=\"section-title\">Output</div><p>For each event of the third type print one integer − the number of warriors who <span class=\"tex-font-style-it\">respect</span> the commander Vova tries to hire in the event.</p></div><h2>Example</h2><pre><code class=\"language-input1\">5\n1 3\n1 4\n3 6 3\n2 4\n3 6 3</code></pre><pre><code class=\"language-output1\">1\n0</code></pre><div class=\"note\"><div class=\"section-title\">Note</div><p>In the example the army consists of two warriors with personalities <span class=\"tex-span\">3</span> and <span class=\"tex-span\">4</span> after first two events. Then Vova tries to hire a commander with personality <span class=\"tex-span\">6</span> and leadership <span class=\"tex-span\">3</span>, and only one warrior respects him (<span class=\"tex-span\">4 ⊕ 6 = 2</span>, and <span class=\"tex-span\">2&lt;3</span>, but <span class=\"tex-span\">3 ⊕ 6 = 5</span>, and <span class=\"tex-span\">5≥3</span>). Then warrior with personality <span class=\"tex-span\">4</span> leaves, and when Vova tries to hire that commander again, there are no warriors who respect him.</p></div></div><p> </p></div>\n",
+      "html": true,
+      "newContentSha256": "8581e0a32196ec830b747285d9a8d437e02f16d4e98b2ad20ae22695f931cc90",
+      "testdataCount": 7,
+      "testdata": [
+        {
+          "name": "2.in",
+          "expectedSha256": null,
+          "sha256": "7126554aa04ddcf6735f383f69a65e5a330d6f4512a1a7faf8b921a4ff4163d6"
+        },
+        {
+          "name": "2.out",
+          "expectedSha256": null,
+          "sha256": "79b436f9a03889ed76a58aa882c429444feab7cf9ada3979039b9ddc734074f9"
+        },
+        {
+          "name": "3.in",
+          "expectedSha256": null,
+          "sha256": "ab02db157df286f9ea8dcfef1a37e7068f2b764ea315de1d6000930decd70f52"
+        },
+        {
+          "name": "3.out",
+          "expectedSha256": null,
+          "sha256": "e8c2b6029c1cbb38028adca0cb4c88489fe09db2bb9f3100cab59b109a03d854"
+        },
+        {
+          "name": "4.in",
+          "expectedSha256": null,
+          "sha256": "852edc8983cca3bf7b8d72c2b5a7e3a84288f9ea415deadc22fe2baeeafc29c5"
+        },
+        {
+          "name": "4.out",
+          "expectedSha256": null,
+          "sha256": "0ae561edb7239a569827a17608324405c91591429d5a038dce559743aa423bdb"
+        },
+        {
+          "name": "5.in",
+          "expectedSha256": null,
+          "sha256": "931fbb9a29a0b7cb2b1a174022de09462b6ca2df53fcb5843ae3563c03851f13"
+        },
+        {
+          "name": "5.out",
+          "expectedSha256": null,
+          "sha256": "65822a8df7828e7ab63929d9c47a60e868be37c0fd9228df54db0a0b879f1a0a"
+        },
+        {
+          "name": "6.in",
+          "expectedSha256": null,
+          "sha256": "28887aa123e80972897e624e8d23224d7067f327556a2049c784bd6e9e9a1373"
+        },
+        {
+          "name": "6.out",
+          "expectedSha256": null,
+          "sha256": "5fd4aef7717a11905cdb99d225cc3d9daf0ba3c73a05c3a802ed7131b8991376"
+        },
+        {
+          "name": "7.in",
+          "expectedSha256": null,
+          "sha256": "280ab10286bee34d7259166835f979a43e2a2d19a74607c079395ee597304dcd"
+        },
+        {
+          "name": "7.out",
+          "expectedSha256": null,
+          "sha256": "302688433ac547a623e8fda0cb529cda02f428e30d06469ac5c4a2da2e555cc8"
+        }
+      ]
+    },
+    {
+      "domainId": "system",
+      "docId": 3923,
+      "pid": null,
+      "title": "1248. Dungeon Master",
+      "category": "local-sample-testdata",
+      "source": "Current source statement; independent oracles; fixed seed 20261022",
+      "expected": {
+        "contentSha256": "234a5de4674b745c25304b0670687275badbf125b3297fc822226970db026393",
+        "html": true
+      },
+      "content": "<h2>题目描述</h2>\n这题是一个三维的迷宫题目，其中用‘.’表示空地，‘#’表示障碍物，‘S’表示起点，‘E’表示终点，求从起点到终点的最小移动次数，解法和二维的类似，只是在行动时除了东南西北移动外还多了上下。可以上下左右前后移动，每次都只能移到相邻的空位，每次需要花费一分钟，求从起点到终点最少要多久。\n<h2>输入格式</h2>\n多组测试数据。每组数据先给出层数 L、每层行数 R 和列数 C。每层之间有一个空行；以 `0 0 0` 结束输入。\n\n一组测试测试数据表示一个三维迷宫：\n\n前三个数，分别表示层数、一个面的长和宽，后面是每层的平面图。前三个数据为三个零表示结束。\n<h2>输出格式</h2>\n若能到达终点，输出 `Escaped in X minute(s).`，其中 X 是最少分钟数；否则输出 `Trapped!`。\n<pre><code class=\"language-input1\">3 4 5\nS....\n.###.\n.##..\n###.#\n\n#####\n#####\n##.##\n##...\n\n#####\n#####\n#.###\n####E\n\n1 3 3\nS##\n#E#\n###\n\n0 0 0</code></pre><pre><code class=\"language-output1\">Escaped in 11 minute(s).\nTrapped!</code></pre>\n<h2>提示</h2>\n对于题目给出数据的含义就是输入l，r，c，分别代表迷宫有l层，每层长宽分别是c，r。对于数据以可以这样移动:\n\n````\n (1,1,1)->(1,1,2)->(1,1,3)->(1,1,4)->(1,1,5)->(1,2,5)->\n\n (1,3,5)->(1,3,4)->(1,4,4)->(2,4,4)->(2,4,5)->(3,4,5)\n\n````\n 共11步就可以到达终点 对于数据二明显不能到达，则输出Trapped！\n\n 这题用BFS解，每次去队首元素，如果是终点则输出结果移动的次数，否则，从该点开始分别向东南西北上下移动（如果可以走的话）并继续搜，如果到队列为空还没搜到解法，则说明无解。\n<h2>来源</h2>\n一本通 ybtbas-1248",
+      "html": true,
+      "newContentSha256": "c597d2c842ae36bdb5d25167ff6a7a7bedab9fc20c034471698d2142e8ccdec0",
+      "testdataCount": 3,
+      "testdata": [
+        {
+          "name": "2.in",
+          "expectedSha256": null,
+          "sha256": "74816c95d415a9cd0899e5585c272329f8cdd9bec43d12aef2f77821f0abf6af"
+        },
+        {
+          "name": "2.out",
+          "expectedSha256": null,
+          "sha256": "f92fdd854830831acb3742ccac88a5489c8c17cf5bdad197fb16cb9e3fa05313"
+        },
+        {
+          "name": "3.in",
+          "expectedSha256": null,
+          "sha256": "6bc9d95423bf91897316822319283129f82655b5ad491170959caad929869484"
+        },
+        {
+          "name": "3.out",
+          "expectedSha256": null,
+          "sha256": "06cbaf0c212e2f16b5cabcfe356dfc513410cc1399865f9571b55ae4f6ac730e"
+        }
+      ]
+    },
+    {
+      "domainId": "system",
+      "docId": 4129,
+      "pid": null,
+      "title": "3-2字符串输入输出函数",
+      "category": "local-sample-testdata",
+      "source": "Current source statement; independent oracles; fixed seed 20261022",
+      "expected": {
+        "contentSha256": "691b66115ee0594049a868a915d81ba660efc67d579d0901c6c8ef18f8244632",
+        "html": true
+      },
+      "content": "<h2>题目描述</h2>\n编写函数 GetReal 和 GetString，在 main 函数中分别调用这两个函数。读入一个实数和一个字符串后，将读入的结果依次输出。\n<p>两次输入前要输出的提示信息分别是 <code>please input a number:</code> 和 <code>please input a string:</code>，每条提示信息独占一行。</p>\n<h2>输入格式</h2>\n一个实数和一个不含空格的字符串。\n<h2>输出格式</h2>\n先输出两行提示信息，再依次输出实数和字符串，各占一行。\n<h2>样例</h2>\n<pre><code class=\"language-input1\">9.56\nhello</code></pre>\n<pre><code class=\"language-output1\">please input a number:\nplease input a string:\n9.56\nhello</code></pre>\n<h2>来源</h2>\n蓝桥杯 算法提高\n",
+      "html": true,
+      "newContentSha256": "a86c76f59facef42469fbe368bca690935fc7d16d6659a47065c716c757bf585",
+      "testdataCount": 4,
+      "testdata": [
+        {
+          "name": "2.in",
+          "expectedSha256": null,
+          "sha256": "e617026af9c5d266edc362bdcf7e7b3eb054d020406241fc0dcb5e3c763e1ce0"
+        },
+        {
+          "name": "2.out",
+          "expectedSha256": null,
+          "sha256": "45b22eabc912c621a8d744c72a39d75a22d6e44db8583ddfe35647f6cc7840c4"
+        },
+        {
+          "name": "3.in",
+          "expectedSha256": null,
+          "sha256": "c44395147c0e8d69eec229e7862604bb9ac88a5ced2a3b52d25741e72fe6f830"
+        },
+        {
+          "name": "3.out",
+          "expectedSha256": null,
+          "sha256": "d88a4fb67307278b65582a213ca2880b8a3de58e1025fb2178b99025df586b7a"
+        },
+        {
+          "name": "4.in",
+          "expectedSha256": null,
+          "sha256": "4e9a8eeecb1947f20766fbab0c379f5c51c30bbdd249892ea78b878956684543"
+        },
+        {
+          "name": "4.out",
+          "expectedSha256": null,
+          "sha256": "63bf43ae10bfb5cd257fcd317ea0a077c962d683ac4b827ba61e353f89918cbc"
+        }
+      ]
+    },
+    {
+      "domainId": "system",
+      "docId": 4159,
+      "pid": null,
+      "title": "卡勒沃夫之弱水路三千(提高型)",
+      "category": "local-sample-testdata",
+      "source": "Current source statement; independent oracles; fixed seed 20261022",
+      "expected": {
+        "contentSha256": "67911c9b65bd0e218d3359550a976ec23252eac81626b1f47f6a3ff7154c586d",
+        "html": true
+      },
+      "content": "<h2>题目描述</h2>\n锦瑟年华谁与度 莫问情归处 只影向斜阳 剑吼西风 欲把春留驻　　天涯芳草无归路 回首花无数 解语自销魂 弱袂萦春 尘缘不相误　　......　　在卡勒沃夫充满文学杀伤力的声音中，身处紫荆2号楼202B的四位远近高低各不同的室友纷纷回忆起了各自波澜起伏的过去，并对长在百草园，邻有百花谷的现状表达了各自的见解。　　某Q：\"...我小学就开窍了...她的父母说我很好，但是...今天又和北林的联系了...\"　　某X：\"...差点就成了，结果到学校了...这个方法放假了我去对我的同桌用！...\"　　某W：\"...\"（千言万语不言中，有大量的故事等待考古）　　某Z：\"...为了来清华...咱们审美观不一样，不会抢...\"　　......　　卡勒沃夫在这个不朽的夜话中搜集出了某人零散的历任女友资料，为了强迫某人将他出的题目的标程交出，现在卡勒沃夫需要一个能将这些零散信息整合起来的 程序。伴随着雄壮委婉动人的音乐，身为程序设计快男（超女）的你降临了！卡勒沃夫正对着您做Orz状并请求着：\"神牛啊~请施舍给我一段程序把~偶米头 发~\"。。\n\n<h2>输入格式</h2>\n第一行为一个不超过5的整数T，表示数据的组数。之后每组数据的一行为一个不超过100的整数n。之后n行每行有两个用单个空格隔开的字符串（每个字符串只有英文大小写字母，长度不超过10），为两位mm的名字。每行第一个mm先于第二个mm成为某人的女友。　　在这里我们假装诅咒某人不会同时被两个或两个以上mm泡，某个mm抛弃了某人后不会再吃回头草，同时卡勒沃夫深邃的洞察力使得他收集到了充足的信息以确定某人女友的先后顺序。　　在小数据组中出现的人物不超过13个\n\n<h2>输出格式</h2>\n输出T行，每行对应一组数据，并按照mm们从先到后成为某人女友的顺序输出她们的名字，各个名字间用一个空格隔开。\n\n<h2>样例</h2>\n<pre><code class=\"language-input1\">2\n2\nAlice Bob\nBob Carol\n1\nB a</code></pre>\n<pre><code class=\"language-output1\">Alice Bob Carol\nB a</code></pre>\n\n<h2>配图</h2>\n<img src=\"/p/4159/file/lqimg1.png\" alt=\"配图\" style=\"max-width:640px\">\n\n<h2>来源</h2>\n蓝桥杯 算法提高",
+      "html": true,
+      "newContentSha256": "f1155b5c3568bac28aa606bd273cab3469d01400e0bedd22e95f5fcdda779627",
+      "testdataCount": 4,
+      "testdata": [
+        {
+          "name": "2.in",
+          "expectedSha256": null,
+          "sha256": "ce9155609cbf2d9457de75ab6b9b9002be26ce3b775956b4f94bcf19bcd37d71"
+        },
+        {
+          "name": "2.out",
+          "expectedSha256": null,
+          "sha256": "f7d078b7d0e30b449579008c2438b2cbef3020dbf43b72a49a7e658e994a411e"
+        },
+        {
+          "name": "3.in",
+          "expectedSha256": null,
+          "sha256": "d7ea8646518983953a64938fa7d6863a1d7e9d6077c311c40b3c970a20a52e1e"
+        },
+        {
+          "name": "3.out",
+          "expectedSha256": null,
+          "sha256": "a7f96a3af2be29b5f2773a3a14ab7abd076bef6eed6a2ebacf83935139948b6b"
+        },
+        {
+          "name": "4.in",
+          "expectedSha256": null,
+          "sha256": "2fbe030d93cee3578b3822bdf3a82e020a530e9c4d36177f996795570c5ae5d2"
+        },
+        {
+          "name": "4.out",
+          "expectedSha256": null,
+          "sha256": "4d56f3147d2a4be49ec5adb0df36c552b7947c54850be1432b3a3cbf283ecdd8"
+        }
+      ]
+    },
+    {
+      "domainId": "system",
+      "docId": 4161,
+      "pid": null,
+      "title": "和最大子序列",
+      "category": "local-sample-testdata",
+      "source": "Current source statement; independent oracles; fixed seed 20261022",
+      "expected": {
+        "contentSha256": "2e9682d95091cb4199abdf9fa50e09873db8dd6d311d817287bb1491f34b055b",
+        "html": true
+      },
+      "content": "<h2>题目描述</h2>\n<img src=\"/p/4161/file/lqimg1.png\" alt=\"配图\" style=\"max-width:640px\">\n\n对于一个给定的长度为N的整数序列A，它的“子序列”的定义是：A中非空的一段连续的元素（整数）。你要完成的任务是，在所有可能的子序列中，找到一个子序列，该子序列中所有元素的和是最大的（跟其他所有子序列相比）。程序要求你输出这个最大值。\n\n<h2>输入格式</h2>\n输入文件的第一行包含一个整数N，第二行包含N个整数，表示A。　　其中　　1 &lt;= N &lt;= 100000　　-10000 &lt;= A[i] &lt;=　　10000\n\n<h2>输出格式</h2>\n输出仅包含一个整数，表示你算出的答案。\n\n<h2>样例</h2>\n<pre><code class=\"language-input1\">1\n-7</code></pre>\n<pre><code class=\"language-output1\">-7</code></pre>\n\n<h2>来源</h2>\n蓝桥杯 算法提高",
+      "html": true,
+      "newContentSha256": "3fdec34dcfbbd5a62f9dcfea5a42afc46b7f81ced68baed57b010f8794838c40",
+      "testdataCount": 6,
+      "testdata": [
+        {
+          "name": "1.in",
+          "expectedSha256": "8e487d0a7b402d5adb617425a76d7bfc5c14082fdca8d0f3d0386879797d48bc",
+          "sha256": "ffccdc5a36a16080610b8558a06346f822bc0460f73ac563068ab8deb9a9d14c"
+        },
+        {
+          "name": "1.out",
+          "expectedSha256": "dc20ce003da3f78cd447d8032310cf61d10003e6a84a15ecf271cbe3c7fc9aff",
+          "sha256": "6e523c5e14b09ab7c20b8658249511fe61270b6d16fd846fef309c2a7c355161"
+        },
+        {
+          "name": "2.in",
+          "expectedSha256": null,
+          "sha256": "cbc40eab8d1391ad799e90804a7b2bb0d426691517b275c46a6ee891795e9227"
+        },
+        {
+          "name": "2.out",
+          "expectedSha256": null,
+          "sha256": "71f24bf62be4ee171b9cf3b871966bb02bab0739dc01597afab02242a8378c03"
+        },
+        {
+          "name": "3.in",
+          "expectedSha256": null,
+          "sha256": "da818119b89a26c37173a53c02640df4049e8c942ea2103dab04edaeccac22e5"
+        },
+        {
+          "name": "3.out",
+          "expectedSha256": null,
+          "sha256": "ee3aa64bb94a50845d5024cd4bd20202a4567aed5cd5328c0d97e9920775fc28"
+        },
+        {
+          "name": "4.in",
+          "expectedSha256": null,
+          "sha256": "d0e04e5a0da019269cc48c4f8c440a3e61f85b9b64053edc2f3090adf9e795b9"
+        },
+        {
+          "name": "4.out",
+          "expectedSha256": null,
+          "sha256": "238903180cc104ec2c5d8b3f20c5bc61b389ec0a967df8cc208cdc7cd454174f"
+        },
+        {
+          "name": "5.in",
+          "expectedSha256": null,
+          "sha256": "ad9d670bd669a5c804000c02807ef5196cc5c6f53df3b7cce9d741c8b4fecadb"
+        },
+        {
+          "name": "5.out",
+          "expectedSha256": null,
+          "sha256": "8bd5a23c3aef1243c78bac155b39b9d57a43d8c49665ccf6f42acf2992a94afa"
+        },
+        {
+          "name": "6.in",
+          "expectedSha256": null,
+          "sha256": "a6d19bf841851b21d74619916be63e598a09393b10dd7406cb7d09e9ed9ee48a"
+        },
+        {
+          "name": "6.out",
+          "expectedSha256": null,
+          "sha256": "ec2efbcaf465bd9861b29292ed352a536d8732c3da7c2a569ccd5753b4b86cfc"
+        }
+      ]
+    },
+    {
+      "domainId": "system",
+      "docId": 4189,
+      "pid": null,
+      "title": "最小乘积(提高型)",
+      "category": "local-sample-testdata",
+      "source": "Current source statement; independent oracles; fixed seed 20261022",
+      "expected": {
+        "contentSha256": "a078a53b38c4d527b0f952bf8d9b48a404099244477489e6b008005c8607b752",
+        "html": true
+      },
+      "content": "<h2>题目描述</h2>\n<img src=\"/p/4189/file/lqimg1.png\" alt=\"配图\" style=\"max-width:640px\">\n\n给两组数，各n个。　　请调整每组数的排列顺序，使得两组数据相同下标元素对应相乘，然后相加的和最小。要求程序输出这个最小值。　　例如两组数分别为:1 3　　-5和-2 4 1　　那么对应乘积取和的最小值应为：　　(-5) * 4 + 3 * (-2) + 1 * 1 = -25\n\n<h2>输入格式</h2>\n第一个行一个数T表示数据组数。后面每组数据，先读入一个n，接下来两行每行n个数，每个数的绝对值小于等于1000。　　n&lt;=1000,T&lt;=10\n\n<h2>输出格式</h2>\n一个数表示答案。\n\n<h2>样例</h2>\n<pre><code class=\"language-input1\">3\n3\n1 3 -5\n-2 4 1\n1\n1000\n-1000\n2\n0 0\n3 -4</code></pre>\n<pre><code class=\"language-output1\">-25\n-1000000\n0</code></pre>\n\n<h2>来源</h2>\n蓝桥杯 算法提高",
+      "html": true,
+      "newContentSha256": "e9d97ed2dea6adf2ad1a2c2e89628610b7ecb9598743bf96b9c1bd1b05e5e833",
+      "testdataCount": 4,
+      "testdata": [
+        {
+          "name": "2.in",
+          "expectedSha256": null,
+          "sha256": "b1a1dd99ca292a3dc296c4d4651a9583b17f0a57250699dac61f224cfbfa0fd5"
+        },
+        {
+          "name": "2.out",
+          "expectedSha256": null,
+          "sha256": "11b4e26237879fa84be8a1ae68a71b0626bab8f6527a814536c8de576d0d6731"
+        },
+        {
+          "name": "3.in",
+          "expectedSha256": null,
+          "sha256": "e7140c828fe3504748189541f374eb8dda53efe652a7a9839f60807a2e07238c"
+        },
+        {
+          "name": "3.out",
+          "expectedSha256": null,
+          "sha256": "e05151652b46f5dd22fbc8adfbbb0d1ed1a0b0b058d55fd3e38c2e6e5e346ff3"
+        },
+        {
+          "name": "4.in",
+          "expectedSha256": null,
+          "sha256": "a930f46ec1b44fb952b71c1ba10641dc6930618411d5a5f41423bd21d6162685"
+        },
+        {
+          "name": "4.out",
+          "expectedSha256": null,
+          "sha256": "6128016ab589119abd602e0fb24e628c806fdd0f036843bf296e7ab6c49b0104"
+        }
+      ]
+    },
+    {
+      "domainId": "system",
+      "docId": 4207,
+      "pid": null,
+      "title": "立方体截断问题",
+      "category": "local-sample-testdata",
+      "source": "Current source statement; independent oracles; fixed seed 20261022",
+      "expected": {
+        "contentSha256": "4e16dce628618b3994dae974512e9c6da1a5c799f5040da94456cfa746cd8984",
+        "html": true
+      },
+      "content": "<h2>题目描述</h2>\n<img src=\"/p/4207/file/cube-20261022.png\" alt=\"配图\" style=\"max-width:640px\">\n\n如右图所示，这是一个空心正方体（请想象用纸糊出来的正方体），每条棱的编号如图所示　　　　考虑剪开若干条棱，请判断正方体是否会被剪成分开（即判断正方体是否会被分割成不少于2个部分）。\n\n<h2>输入格式</h2>\n本题包括多组数据。　　第一行输入一个N，表示数据组数。　　对于每一组数据，都包括两行。　　第一行输入一个n，表示总共剪开了n条棱。　　第二行有n个数，每个数表示剪开的棱的编号。（输入保证每条棱出现次数不超过1）\n\n<h2>输出格式</h2>\n对于每一组输入，输出一行。　　若正方体会被分割成不少于2个部分，则输出“Yes”，否则输出“No”（均不包括引号）。\n\n<p>图中六个面的边界分别由以下棱组成：<code>1 2 3 4</code>、<code>9 10 11 12</code>、<code>1 5 8 9</code>、<code>2 7 8 10</code>、<code>3 6 7 11</code>、<code>4 5 6 12</code>。</p>\n<h2>样例</h2>\n<pre><code class=\"language-input1\">5\n4\n1 2 3 4\n6\n1 2 5 7 11 12\n3\n1 4 5\n6\n1 3 4 5 9 12\n12\n1 2 3 4 5 6 7 8 9 10 11 12</code></pre>\n<pre><code class=\"language-output1\">Yes\nYes\nNo\nNo\nYes</code></pre>\n\n<h2>来源</h2>\n蓝桥杯 算法提高",
+      "html": true,
+      "newContentSha256": "cc36e440f8a8a610e6ea988fb9d0017709f528ee0bdb7d310f6fb68d96c9043f",
+      "testdataCount": 3,
+      "testdata": [
+        {
+          "name": "1.in",
+          "expectedSha256": "d908fdbea500d631f6a747bdf21687794b6397f51dafe4eac7e930be38e21b8b",
+          "sha256": "7a0a3b612a5879772de9a270bc4d73df6bc73c54526b65bb4859f32427130f9a"
+        },
+        {
+          "name": "1.out",
+          "expectedSha256": "4bce5c7e6ad161f8dc81ce63150dfcaa1ca7e6f6ca3866ea8000c757754bf69c",
+          "sha256": "7ce1769aead3dbdd44ee70d44ef8ba7d639c312ed935228514dc7b33c5af614d"
+        },
+        {
+          "name": "2.in",
+          "expectedSha256": null,
+          "sha256": "6b5acf268602a5750ee82a7060e85c9a6d7ea800040b454b2fd071cc7dab62ef"
+        },
+        {
+          "name": "2.out",
+          "expectedSha256": null,
+          "sha256": "5dec692ed03bb2e0ad34115fd7c1cdf0bbddf730fc7499c086084ba5caf21a18"
+        },
+        {
+          "name": "3.in",
+          "expectedSha256": null,
+          "sha256": "e3599db777d3c9080307e0f7b335d5f5f3de0532e0b27b4f4539109f5ba78d59"
+        },
+        {
+          "name": "3.out",
+          "expectedSha256": null,
+          "sha256": "7f9f36d610e4e0760586ccfd9abcb56a1e3d63839ee700232cc186f7be7ab676"
+        }
+      ],
+      "additionalFiles": [
+        {
+          "name": "cube-20261022.png",
+          "expectedSha256": null,
+          "sha256": "f29b28e9b7ec79e7123d63b2ada4b546bbe96825a1460d93a7e59381d03b12b3"
+        }
+      ]
+    },
+    {
+      "domainId": "system",
+      "docId": 4218,
+      "pid": null,
+      "title": "计算时间",
+      "category": "local-sample-testdata",
+      "source": "Current source statement; independent oracles; fixed seed 20261022",
+      "expected": {
+        "contentSha256": "9c9ab32947567621f398d7d4ec4e47e66c431c53faf75756dd316811ab55a351",
+        "html": true
+      },
+      "content": "<h2>题目描述</h2>\n<img src=\"/p/4218/file/lqimg1.png\" alt=\"配图\" style=\"max-width:640px\">\n\n给定一个t，将t秒转化为HH:MM:SS的形式，表示HH小时MM分钟SS秒。HH,MM,SS均是两位数，如果小于10用0补到两位。\n\n<h2>输入格式</h2>\n第一行一个数T(1&lt;=T&lt;=100,000)，表示数据组数。后面每组数据读入一个数t，0&lt;=t&lt;24*60*60。\n\n<h2>输出格式</h2>\n每组数据一行，HH:MM:SS。\n\n<h2>样例</h2>\n<pre><code class=\"language-input1\">1\n0</code></pre>\n<pre><code class=\"language-output1\">00:00:00</code></pre>\n\n<h2>来源</h2>\n蓝桥杯 算法提高",
+      "html": true,
+      "newContentSha256": "b2e69e66dc014082e4954e6ed41299862976723c32a5794f50e1f77126953dcd",
+      "testdataCount": 4,
+      "testdata": [
+        {
+          "name": "2.in",
+          "expectedSha256": null,
+          "sha256": "5d90ef7fc0d040fd56a1e48697cfa99e0dfaf4fd803aefefc3b5053ec1d36aea"
+        },
+        {
+          "name": "2.out",
+          "expectedSha256": null,
+          "sha256": "23502b0d60d8e77ed0a5f6dc05d6303445dada186ababedfb240ec259da42112"
+        },
+        {
+          "name": "3.in",
+          "expectedSha256": null,
+          "sha256": "50f63510f4625df1371fad17a014138e49e07fa82570743f11237a538f69ff53"
+        },
+        {
+          "name": "3.out",
+          "expectedSha256": null,
+          "sha256": "f9abc152bbebcb507950e323c15c6eed52e90e111695c5d336027263ba91bb71"
+        },
+        {
+          "name": "4.in",
+          "expectedSha256": null,
+          "sha256": "0b17e728b81380a62c1923cb981c0ad971e572010ab9320c8f0ae6f5fd8398b5"
+        },
+        {
+          "name": "4.out",
+          "expectedSha256": null,
+          "sha256": "827b1866b3d3d58e3a355c6429687b0b774a3404566fd83a4dea5b4b3b220bac"
+        }
+      ]
+    },
+    {
+      "domainId": "system",
+      "docId": 4303,
+      "pid": null,
+      "title": "矩阵加法",
+      "category": "local-sample-testdata",
+      "source": "Current source statement; independent oracles; fixed seed 20261022",
+      "expected": {
+        "contentSha256": "101bfa48e4f56775880f8e621ab1bc12856e69db1bd28c1752403360eac01ffe",
+        "html": true
+      },
+      "content": "<h2>题目描述</h2>\n<img src=\"/p/4303/file/lqimg1.png\" alt=\"配图\" style=\"max-width:640px\">\n\n给定两个N×M的矩阵，计算其和。其中：　　N和M大于等于1且小于等于100，矩阵元素的绝对值不超过1000。\n\n<h2>输入格式</h2>\n输入数据的第一行包含两个整数N、M，表示需要相加的两个矩阵的行数和列数。接下来2*N行每行包含M个数，其中前N行表示第一个矩阵，后N行表示第二个矩阵。\n\n<h2>输出格式</h2>\n你的程序需要输出一个N*M的矩阵，表示两个矩阵相加的结果。注意，输出中每行的最后不应有多余的空格，否则你的程序有可能被系统认为是Presentation　　Error\n\n<h2>样例</h2>\n<pre><code class=\"language-input1\">1 1\n1000\n-1000</code></pre>\n<pre><code class=\"language-output1\">0</code></pre>\n\n<h2>来源</h2>\n蓝桥杯 算法训练",
+      "html": true,
+      "newContentSha256": "0f366faa97fc28a2a251d573182f9f3418101f997faded415b4b5a6539449385",
+      "testdataCount": 4,
+      "testdata": [
+        {
+          "name": "2.in",
+          "expectedSha256": null,
+          "sha256": "35593aef3ab9fea03984af558fb38ff2f6c41a80f598232635b983022a1db92a"
+        },
+        {
+          "name": "2.out",
+          "expectedSha256": null,
+          "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+        },
+        {
+          "name": "3.in",
+          "expectedSha256": null,
+          "sha256": "af4e51decf8dd08a2b32c31b5b0a3a994c821b819bf81e5c15c8320b94a10f90"
+        },
+        {
+          "name": "3.out",
+          "expectedSha256": null,
+          "sha256": "2f772769f012dffc4821070adae36684e0da6aed4c335fbe1845d8bbeb0f9564"
+        },
+        {
+          "name": "4.in",
+          "expectedSha256": null,
+          "sha256": "145aa8345a407159b28aaf5f661b06ca8522e3c6769b00293bf09f09c39fdf4e"
+        },
+        {
+          "name": "4.out",
+          "expectedSha256": null,
+          "sha256": "f9462ad9e6e3df8014955aab1e575673d44d1125d10078a40a05667d4bf830b4"
+        }
+      ]
+    },
+    {
+      "domainId": "system",
+      "docId": 4310,
+      "pid": null,
+      "title": "蜜蜂飞舞",
+      "category": "local-sample-testdata",
+      "source": "Current source statement; independent oracles; fixed seed 20261022",
+      "expected": {
+        "contentSha256": "ceef315ad9ecaed53e2e333bb83ae73c0eaf9faf88d4fea9f0f30fe9cba016dc",
+        "html": true
+      },
+      "content": "<h2>题目描述</h2>\n“两只小蜜蜂呀，飞在花丛中呀……”　　话说这天天上飞舞着两只蜜蜂，它们在跳一种奇怪的舞蹈。用一个空间直角坐标系来描述这个世界，那么这两只蜜蜂初始坐标分别为(x1,y1,z1)， (x2,y2,z2)　　。在接下来它们将进行n次飞行，第i次飞行两只蜜蜂分别按照各自的速度向量飞行ti个单位时间。对于这一现象，玮玮已经观察了很 久。他很想知道在蜜蜂飞舞结束时，两只蜜蜂的距离是多少。现在他就求教于你，请你写一个程序来帮他计算这个结果。\n\n<h2>输入格式</h2>\n第一行有且仅有一个整数n，表示两只蜜蜂将进行n次飞行。　　接下来有n行。　　第i行有7个用空格分隔开的整数ai,bi,ci,di,ei,fi,ti　　，表示第一只蜜蜂单位时间的速度向量为(ai,bi,ci) ，第二只蜜蜂单位时间的速度向量为(di,ei,fi) ，它们飞行的时间为ti 。　　最后一行有6个用空格分隔开的整数x1,y1,z1,x2,y2,z2，如题所示表示两只蜜蜂的初始坐标。\n\n<h2>输出格式</h2>\n输出仅包含一行，表示最后两只蜜蜂之间的距离。保留4位小数位。\n\n<h2>样例</h2>\n<pre><code class=\"language-input1\">1\n1 1 1 1 1 1 5\n0 0 0 3 4 0</code></pre>\n<pre><code class=\"language-output1\">5.0000</code></pre>\n\n<h2>配图</h2>\n<img src=\"/p/4310/file/lqimg1.png\" alt=\"配图\" style=\"max-width:640px\">\n\n<h2>来源</h2>\n蓝桥杯 算法训练",
+      "html": true,
+      "newContentSha256": "12bd51b763ad5e411d5afe3e29e4cb21e12dcb49e710ae8e612b623e0cd8ee4a",
+      "testdataCount": 4,
+      "testdata": [
+        {
+          "name": "2.in",
+          "expectedSha256": null,
+          "sha256": "c864eadb58874b75ed2027d1c1df9a9d3cf849100e2ff3f9100bebce84d13973"
+        },
+        {
+          "name": "2.out",
+          "expectedSha256": null,
+          "sha256": "f1d6d23325ceac9c00177ea615e6e43ab693240516dea6cb7c801d46df8fe65d"
+        },
+        {
+          "name": "3.in",
+          "expectedSha256": null,
+          "sha256": "cc16008f04e3ebb00af135b35c663a02edb029d048c9e24f8e91a252dd208aa2"
+        },
+        {
+          "name": "3.out",
+          "expectedSha256": null,
+          "sha256": "3659ad0537f2b0999c9917a92dfb246cb70d660ae48adb7b24cbdfdcd8edbdb0"
+        },
+        {
+          "name": "4.in",
+          "expectedSha256": null,
+          "sha256": "71b40efb373148b8f3d0e3f7b9cc5e6e672ac0ab2b20c3442c3ed80d1f0c0bee"
+        },
+        {
+          "name": "4.out",
+          "expectedSha256": null,
+          "sha256": "c5a09d308e4b7ab924d7251b1be625d1f17aced3e461ba5ded401c7858d9be2c"
+        }
+      ]
+    },
+    {
+      "domainId": "system",
+      "docId": 4312,
+      "pid": null,
+      "title": "调和数列问题",
+      "category": "local-sample-testdata",
+      "source": "Current source statement; independent oracles; fixed seed 20261022",
+      "expected": {
+        "contentSha256": "ac686ba39fb14bb28ccea5ceb50494f546e87a7b363e0492354f3d7c960194db",
+        "html": true
+      },
+      "content": "<h2>题目描述</h2>\n<img src=\"/p/4312/file/lqimg1.png\" alt=\"配图\" style=\"max-width:640px\">\n\n输入一个实数x，求最小的n使得，1/2+1/3+1/4+...+1/(n+1)&gt;=x。　　输入的实数x保证大于等于0.01，小于等于5.20，并且恰好有两位小数。你的程序要能够处理多组数据，即不停地读入x，如果x不等于0.00，则计算答案，否则退出程序。\n\n<h2>输入格式</h2>\n分行输入x的具体数值\n\n<h2>输出格式</h2>\n为对于一个x，输出一行n card(s)。其中n表示要计算的答案。\n分行输出n的数值，格式为n card(s)\n\n<h2>样例</h2>\n<pre><code class=\"language-input1\">0.01\n0.50\n0.51\n1.00\n5.20\n0.00</code></pre>\n<pre><code class=\"language-output1\">1 card(s)\n1 card(s)\n2 card(s)\n3 card(s)\n276 card(s)</code></pre>\n\n<h2>来源</h2>\n蓝桥杯 算法训练",
+      "html": true,
+      "newContentSha256": "bc94736295174a1edd5c188d4eaa064188ec23c2e10996895fea5e69b68a4e8b",
+      "testdataCount": 3,
+      "testdata": [
+        {
+          "name": "2.in",
+          "expectedSha256": null,
+          "sha256": "0762863511d950d0855cbd6138d8d40fffd14d28ba56f42cfcd1af2fe08ec634"
+        },
+        {
+          "name": "2.out",
+          "expectedSha256": null,
+          "sha256": "5c0d6b62a717df12809551fcbc212e0275d04f74cbbdc02031742c9fdad44321"
+        },
+        {
+          "name": "3.in",
+          "expectedSha256": null,
+          "sha256": "f5d2b394919880510723edb180a93c18210c8e93ab0993d9cb770f8a0dffd6bc"
+        },
+        {
+          "name": "3.out",
+          "expectedSha256": null,
+          "sha256": "8e5703d1c4b19a2978f7e21a9b801a254fd110bf5ee5bb3c552c440b56fc4dfa"
+        }
+      ]
+    }
+  ]
+}

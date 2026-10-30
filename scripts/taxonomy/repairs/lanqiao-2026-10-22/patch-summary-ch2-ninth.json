@@ -1,0 +1,79 @@
+[
+  {
+    "order": 74,
+    "pid": 4292,
+    "reason": "补充并列取最先出现的规则; 新增合法边界与反例; 独立计算新增测试答案; 增加边界数据",
+    "expectedCases": 20,
+    "fields": [
+      "content"
+    ],
+    "fileCount": 18,
+    "solutionCount": 0
+  },
+  {
+    "order": 75,
+    "pid": 4293,
+    "reason": "清理断词空格; 新增合法边界与反例; 独立计算新增测试答案; 增加边界数据",
+    "expectedCases": 18,
+    "fields": [
+      "content"
+    ],
+    "fileCount": 16,
+    "solutionCount": 0
+  },
+  {
+    "order": 76,
+    "pid": 4294,
+    "reason": "恢复上标与原文 n=2 样例，修正错字，对阵分隔按判题数据改写为空格; 新增合法边界与反例; 独立计算新增测试答案; 增加边界数据",
+    "expectedCases": 6,
+    "fields": [
+      "content"
+    ],
+    "fileCount": 4,
+    "solutionCount": 0
+  },
+  {
+    "order": 77,
+    "pid": 4295,
+    "reason": "保证改为真前缀以容纳相等的字符串; 新增合法边界与反例; 独立计算新增测试答案; 增加边界数据",
+    "expectedCases": 22,
+    "fields": [
+      "content"
+    ],
+    "fileCount": 20,
+    "solutionCount": 0
+  },
+  {
+    "order": 78,
+    "pid": 4296,
+    "reason": "恢复立方上标与原文 123 样例，清理断词; 新增合法边界与反例; 独立计算新增测试答案; 增加边界数据",
+    "expectedCases": 19,
+    "fields": [
+      "content"
+    ],
+    "fileCount": 18,
+    "solutionCount": 0
+  },
+  {
+    "order": 79,
+    "pid": 4297,
+    "reason": "恢复原题 BADC/BDCA 样例; 新增合法边界与反例; 独立计算新增测试答案; 增加边界数据",
+    "expectedCases": 10,
+    "fields": [
+      "content"
+    ],
+    "fileCount": 10,
+    "solutionCount": 0
+  },
+  {
+    "order": 81,
+    "pid": 4299,
+    "reason": "清理断词，统一用字，明确输入分隔，恢复原题 5 1 样例; 新增合法边界与反例; 独立计算新增测试答案; 增加边界数据",
+    "expectedCases": 22,
+    "fields": [
+      "content"
+    ],
+    "fileCount": 24,
+    "solutionCount": 0
+  }
+]

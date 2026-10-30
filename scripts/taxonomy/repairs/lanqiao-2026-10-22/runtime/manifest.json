@@ -1,0 +1,38 @@
+[
+  {
+    "name": "hydro-host.patched.ts",
+    "target": "/usr/local/share/.config/yarn/global/node_modules/@hydrooj/hydrojudge/src/hosts/hydro.ts",
+    "expectedSha256": "e7306b18fd12501e4436b85b36033864442918a40f18d40fb75bfed771d2f3d9",
+    "sha256": "61692dd868c092f9952a14eda71e9925e79701101979aa26f2db9e6ce68875f8"
+  },
+  {
+    "name": "judge-handler.patched.ts",
+    "target": "/usr/local/share/.config/yarn/global/node_modules/hydrooj/src/handler/judge.ts",
+    "expectedSha256": "fd7d99ad32df70ecd5b40fd4831c65a83278f028dbcf28ee9c2a130948daccee",
+    "sha256": "c5b6575237e22e17ca23af70872c9a8ac927b91e279223004fefc3207d26383e"
+  },
+  {
+    "name": "record.patched.ts",
+    "target": "/usr/local/share/.config/yarn/global/node_modules/hydrooj/src/model/record.ts",
+    "expectedSha256": "64b697463bfd468da58d9c9fe7af1e0510049695e61ed523888943ad3e3fb4ec",
+    "sha256": "36d8cfa3233ce00b61efd90b8dd9160758c0d3c9f9812917664d0b59089d2249"
+  },
+  {
+    "name": "daemon.patched.ts",
+    "target": "/usr/local/share/.config/yarn/global/node_modules/@hydrooj/hydrojudge/src/daemon.ts",
+    "expectedSha256": "c81b7b81638a138687200268f730d332a01bd06ac46348704dee1de3f18aa76a",
+    "sha256": "eaf378d90aa93c4b802a9f2dd118f1ba20e0e5eec3d4d4ca6234827eac1fb769"
+  },
+  {
+    "name": "reliable-delivery.cjs",
+    "target": "/usr/local/share/.config/yarn/global/node_modules/@hydrooj/hydrojudge/src/hosts/reliable-delivery.cjs",
+    "expectedSha256": null,
+    "sha256": "91ba1ede78f83aaad0ff3cc9db963f568e65bdd166eca0767f79570725ef195a"
+  },
+  {
+    "name": "dfacm-judge-delivery.cjs",
+    "target": "/usr/local/share/.config/yarn/global/node_modules/hydrooj/src/handler/dfacm-judge-delivery.cjs",
+    "expectedSha256": null,
+    "sha256": "8b750d2fff4d3cd179e48cc90a1e2110222ab3cc3062a831ef829c2886bd1f56"
+  }
+]

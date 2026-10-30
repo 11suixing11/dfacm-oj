@@ -1,0 +1,79 @@
+[
+  {
+    "order": 35,
+    "pid": 4253,
+    "reason": "恢复原表格、原样例、10^9 上标和字典序定义；明确日期闭区间及升序输出; 将原数据中的起始日期 0 修正为合法日期 1; 独立重算修正后的最优字典序答案; 新增原样例、合法边界与反例; 独立计算新增答案; 增加边界数据",
+    "expectedCases": 35,
+    "fields": [
+      "content"
+    ],
+    "fileCount": 54,
+    "solutionCount": 0
+  },
+  {
+    "order": 36,
+    "pid": 4254,
+    "reason": "恢复原 3 3 样例并移除输出格式的多余 t; 新增原样例、合法边界与反例; 独立计算新增答案; 增加边界数据",
+    "expectedCases": 30,
+    "fields": [
+      "content"
+    ],
+    "fileCount": 40,
+    "solutionCount": 0
+  },
+  {
+    "order": 37,
+    "pid": 4255,
+    "reason": "恢复原 34 分样例，修正文字笔误并明确保证存在两条合法路径的矩阵范围; 新增原样例、合法边界与反例; 独立计算新增答案; 增加边界数据",
+    "expectedCases": 31,
+    "fields": [
+      "content"
+    ],
+    "fileCount": 42,
+    "solutionCount": 0
+  },
+  {
+    "order": 38,
+    "pid": 4256,
+    "reason": "恢复原样例并明确草药不能重复采摘; 修正既有原站题解; 新增原样例、合法边界与反例; 独立计算新增答案; 增加边界数据",
+    "expectedCases": 30,
+    "fields": [
+      "content"
+    ],
+    "fileCount": 40,
+    "solutionCount": 1
+  },
+  {
+    "order": 39,
+    "pid": 4257,
+    "reason": "恢复四个原样例，明确优先级、结合顺序和实数等价规则; 新增原样例、合法边界与反例; 独立计算新增答案; 增加边界数据",
+    "expectedCases": 42,
+    "fields": [
+      "content"
+    ],
+    "fileCount": 70,
+    "solutionCount": 0
+  },
+  {
+    "order": 40,
+    "pid": 4258,
+    "reason": "恢复与说明匹配的原样例，明确大写字母、重复输入行和合法重叠; 修正既有原站题解; 新增原样例、合法边界与反例; 独立计算新增答案; 增加边界数据",
+    "expectedCases": 28,
+    "fields": [
+      "content"
+    ],
+    "fileCount": 44,
+    "solutionCount": 1
+  },
+  {
+    "order": 41,
+    "pid": 4259,
+    "reason": "恢复原友好数样例、约数加号，并明确正整数及相等数定义; 新增原样例、合法边界与反例; 独立计算新增答案; 增加边界数据",
+    "expectedCases": 33,
+    "fields": [
+      "content"
+    ],
+    "fileCount": 46,
+    "solutionCount": 0
+  }
+]

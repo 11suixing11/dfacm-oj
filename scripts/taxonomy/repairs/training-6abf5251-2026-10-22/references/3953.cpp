@@ -1,0 +1,3 @@
+#include <bits/stdc++.h>
+using namespace std;
+int main(){int n,k;cin>>n>>k;vector<long long>a(n);long long low=0,high=0;for(auto&x:a){cin>>x;low=max(low,x);high+=x;}while(low<high){long long mid=(low+high)/2,total=0;int count=1;for(long long x:a){if(total+x>mid){count++;total=0;}total+=x;}if(count<=k)high=mid;else low=mid+1;}vector<pair<int,int>>parts;int end=n;for(int remaining=k;remaining>0;remaining--){int start=end-1;long long sum=a[start];while(start>=remaining&&sum+a[start-1]<=low){start--;sum+=a[start];}parts.push_back({start+1,end});end=start;}reverse(parts.begin(),parts.end());for(auto[l,r]:parts)cout<<l<<' '<<r<<"\n";}

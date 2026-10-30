@@ -1,0 +1,6 @@
+{
+  "originalDocumentSays": "字符不存在时输出提示信息，但原资料未规定提示文案，旧数据也没有此分支。",
+  "clarification": "IS NOT FOUND",
+  "publicImplementationUrl": "https://blog.csdn.net/jim_nana/article/details/128598889",
+  "note": "参考公开同题实现补充明确约定，不声称原题已规定具体文案。证据保存在 qa/lanqiao/evidence/source-edit-csdn-matches.json。"
+}

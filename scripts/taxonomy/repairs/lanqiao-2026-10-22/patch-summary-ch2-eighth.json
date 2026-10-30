@@ -1,0 +1,90 @@
+[
+  {
+    "order": 66,
+    "pid": 4284,
+    "reason": "恢复原题三个样例; 新增合法边界与反例; 独立计算新增测试答案; 增加边界数据",
+    "expectedCases": 12,
+    "fields": [
+      "content"
+    ],
+    "fileCount": 18,
+    "solutionCount": 0
+  },
+  {
+    "order": 67,
+    "pid": 4285,
+    "reason": "把输入输出说明拆回独立小节，整理提示代码; 修复姓名混入数字违反仅字母约束的旧数据; 新增合法边界与反例; 独立计算新增测试答案; 增加边界数据",
+    "expectedCases": 11,
+    "fields": [
+      "content"
+    ],
+    "fileCount": 15,
+    "solutionCount": 0
+  },
+  {
+    "order": 68,
+    "pid": 4286,
+    "reason": "恢复原题 8x8 样例; 新增合法边界与反例; 独立计算新增测试答案; 增加边界数据",
+    "expectedCases": 12,
+    "fields": [
+      "content"
+    ],
+    "fileCount": 14,
+    "solutionCount": 0
+  },
+  {
+    "order": 69,
+    "pid": 4287,
+    "reason": "恢复原题样例并清理断词空格; 修正既有原站题解; 新增合法边界与反例; 独立计算新增测试答案; 增加边界数据",
+    "expectedCases": 11,
+    "fields": [
+      "content"
+    ],
+    "fileCount": 14,
+    "solutionCount": 1
+  },
+  {
+    "order": 70,
+    "pid": 4288,
+    "reason": "清理断词空格; 新增合法边界与反例; 独立计算新增测试答案; 增加边界数据",
+    "expectedCases": 15,
+    "fields": [
+      "content"
+    ],
+    "fileCount": 10,
+    "solutionCount": 0
+  },
+  {
+    "order": 71,
+    "pid": 4289,
+    "reason": "清理描述断词空格; 新增合法边界与反例; 独立计算新增测试答案; 增加边界数据",
+    "expectedCases": 15,
+    "fields": [
+      "content"
+    ],
+    "fileCount": 12,
+    "solutionCount": 0
+  },
+  {
+    "order": 72,
+    "pid": 4290,
+    "reason": "清理断词空格; 新增合法边界与反例; 独立计算新增测试答案; 增加边界数据",
+    "expectedCases": 17,
+    "fields": [
+      "content"
+    ],
+    "fileCount": 14,
+    "solutionCount": 0
+  },
+  {
+    "order": 73,
+    "pid": 4291,
+    "reason": "修正原文错别字与缺失变量，恢复原题样例，明确输出 0 的情形; 修正既有原站题解; 修复超出体积 500 上限的旧数据; 新增合法边界与反例; 独立计算新增测试答案; 增加边界数据",
+    "expectedCases": 17,
+    "fields": [
+      "content"
+    ],
+    "fileCount": 15,
+    "solutionCount": 1
+  }
+]

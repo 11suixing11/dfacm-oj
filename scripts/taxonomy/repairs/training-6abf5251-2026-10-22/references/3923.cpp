@@ -1,0 +1,3 @@
+#include <bits/stdc++.h>
+using namespace std;
+int main(){int l,r,c;while(cin>>l>>r>>c&&(l||r||c)){vector<string>a(l*r);int s=0,e=0;for(int i=0;i<l*r;i++){cin>>a[i];for(int j=0;j<c;j++){if(a[i][j]=='S')s=i*c+j;if(a[i][j]=='E')e=i*c+j;}}vector<int>d(l*r*c,-1);queue<int>q;d[s]=0;q.push(s);while(!q.empty()){int u=q.front();q.pop();int z=u/(r*c),x=u/c%r,y=u%c;for(auto[dz,dx,dy]:vector<tuple<int,int,int>>{{1,0,0},{-1,0,0},{0,1,0},{0,-1,0},{0,0,1},{0,0,-1}}){int zz=z+dz,xx=x+dx,yy=y+dy;if(zz<0||zz>=l||xx<0||xx>=r||yy<0||yy>=c)continue;int v=(zz*r+xx)*c+yy;if(a[zz*r+xx][yy]!='#'&&d[v]<0){d[v]=d[u]+1;q.push(v);}}}if(d[e]<0)cout<<"Trapped!\n";else cout<<"Escaped in "<<d[e]<<" minute(s).\n";}}

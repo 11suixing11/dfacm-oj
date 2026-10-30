@@ -1,0 +1,80 @@
+[
+  {
+    "order": 28,
+    "pid": 4246,
+    "reason": "明确单组输入、双向交通及一位小数；修正原样例中的城市数和输出精度; 新增原样例、边界与故障反例; 独立计算新增测试答案; 新增边界数据",
+    "expectedCases": 30,
+    "fields": [
+      "content"
+    ],
+    "fileCount": 52,
+    "solutionCount": 0
+  },
+  {
+    "order": 29,
+    "pid": 4247,
+    "reason": "恢复字符串长度 2 的 N 次方的上标; 新增原样例、边界与故障反例; 独立计算新增测试答案; 新增边界数据",
+    "expectedCases": 31,
+    "fields": [
+      "content"
+    ],
+    "fileCount": 42,
+    "solutionCount": 0
+  },
+  {
+    "order": 30,
+    "pid": 4248,
+    "reason": "恢复与说明对应的两个原样例答案; 新增原样例、边界与故障反例; 独立计算新增测试答案; 新增边界数据",
+    "expectedCases": 23,
+    "fields": [
+      "content"
+    ],
+    "fileCount": 26,
+    "solutionCount": 0
+  },
+  {
+    "order": 31,
+    "pid": 4249,
+    "reason": "纠正有盘子时 M=0 的无解范围，补全合法移动规则和空塔答案; 修正原站题解; 修复超出 N≤8 的旧汉诺塔输入; 独立重算修正后的答案; 新增原样例、边界与故障反例; 独立计算新增测试答案; 新增边界数据",
+    "expectedCases": 37,
+    "fields": [
+      "content"
+    ],
+    "fileCount": 66,
+    "solutionCount": 1
+  },
+  {
+    "order": 32,
+    "pid": 4250,
+    "reason": "清除残留 span 文本，统一小写 t，恢复原 bdfij 样例; 新增原样例、边界与故障反例; 独立计算新增测试答案; 新增边界数据",
+    "expectedCases": 34,
+    "fields": [
+      "content"
+    ],
+    "fileCount": 48,
+    "solutionCount": 0
+  },
+  {
+    "order": 33,
+    "pid": 4251,
+    "reason": "恢复三次幂与原样例的等价合法系数，明确两位小数精度，修复浮点文本判题; 修正原站题解; 增加独立三角公式判题器，检查恰好三个升序根、精度及多余输出; 统一数据库配置与数据配置; 独立计算真实根并按绝对误差判定; 新增原样例、边界与故障反例; 独立计算新增测试答案; 新增边界数据",
+    "expectedCases": 34,
+    "fields": [
+      "content",
+      "config"
+    ],
+    "fileCount": 62,
+    "solutionCount": 1
+  },
+  {
+    "order": 34,
+    "pid": 4252,
+    "reason": "修正与原样例冲突的 N 下界，明确 K<N、非空分段、前导零和大整数输出; 新增原样例、边界与故障反例; 独立计算新增测试答案; 新增边界数据",
+    "expectedCases": 34,
+    "fields": [
+      "content"
+    ],
+    "fileCount": 60,
+    "solutionCount": 0
+  }
+]

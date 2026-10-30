@@ -1,0 +1,8 @@
+#include <bits/stdc++.h>
+using namespace std;
+using ll=long long;
+struct DSU{vector<int>p,sz;DSU(int n):p(n),sz(n,1){iota(p.begin(),p.end(),0);}int find(int x){return p[x]==x?x:p[x]=find(p[x]);}void join(int a,int b){a=find(a);b=find(b);if(a!=b){if(sz[a]<sz[b])swap(a,b);p[b]=a;sz[a]+=sz[b];}}};
+struct BIT{int n;vector<int>t;BIT(int n=0):n(n),t(n+1){}void add(int x,int v){for(++x;x<=n;x+=x&-x)t[x]+=v;}int sum(int x){int r=0;for(;x>0;x-=x&-x)r+=t[x];return r;}int kth(int k){int p=0;for(int step=1<<20;step;step>>=1)if(p+step<=n&&t[p+step]<k){p+=step;k-=t[p];}return p;}};
+ll power(ll a,ll b,ll mod=1000000007){ll r=1;for(;b;b>>=1,a=a*a%mod)if(b&1)r=r*a%mod;return r;}
+struct SAM{struct Node{array<int,26>next{};int link=-1,len=0;ll count=0,total=0;};vector<Node>a={Node{}};int last=0;void add(int c){int current=a.size();a.push_back(Node{});a[current].len=a[last].len+1;a[current].count=1;int p=last;for(;p>=0&&!a[p].next[c];p=a[p].link)a[p].next[c]=current;if(p<0)a[current].link=0;else{int q=a[p].next[c];if(a[p].len+1==a[q].len)a[current].link=q;else{int clone=a.size();a.push_back(a[q]);a[clone].len=a[p].len+1;a[clone].count=0;for(;p>=0&&a[p].next[c]==q;p=a[p].link)a[p].next[c]=clone;a[q].link=a[current].link=clone;}}last=current;}vector<int> prepare(){vector<int>order(a.size());iota(order.begin(),order.end(),0);sort(order.begin(),order.end(),[&](int x,int y){return a[x].len>a[y].len;});for(int u:order)if(a[u].link>=0)a[a[u].link].count+=a[u].count;return order;}};
+int main(){string s;cin>>s;SAM sam;for(char c:s)sam.add(c-'a');sam.prepare();ll answer=0;for(int u=1;u<(int)sam.a.size();u++){auto&v=sam.a[u];answer+=1LL*(v.len-sam.a[v.link].len)*v.count*(v.count+1)/2;}cout<<answer<<'\n';}

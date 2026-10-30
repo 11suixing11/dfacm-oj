@@ -1,0 +1,90 @@
+[
+  {
+    "order": 50,
+    "pid": 4268,
+    "reason": "补全真因子定义、整数范围，去掉输出段多余输入; 新增原样例、合法边界与反例; 独立计算新增测试答案; 增加边界数据",
+    "expectedCases": 34,
+    "fields": [
+      "content"
+    ],
+    "fileCount": 48,
+    "solutionCount": 0
+  },
+  {
+    "order": 51,
+    "pid": 4269,
+    "reason": "恢复原 40 样例，修正重复文字并明确严格小于 n 和空输出; 新增原样例、合法边界与反例; 独立计算新增测试答案; 增加边界数据",
+    "expectedCases": 32,
+    "fields": [
+      "content"
+    ],
+    "fileCount": 44,
+    "solutionCount": 0
+  },
+  {
+    "order": 52,
+    "pid": 4270,
+    "reason": "恢复全部丢失上标和英文括号定义，补足递归展开顺序及原文示例; 新增原样例、合法边界与反例; 独立计算新增测试答案; 增加边界数据",
+    "expectedCases": 34,
+    "fields": [
+      "content"
+    ],
+    "fileCount": 58,
+    "solutionCount": 0
+  },
+  {
+    "order": 53,
+    "pid": 4271,
+    "reason": "恢复原购物样例，明确每件最多一次、零价格和无可买物品答案; 新增原样例、合法边界与反例; 独立计算新增测试答案; 增加边界数据",
+    "expectedCases": 31,
+    "fields": [
+      "content"
+    ],
+    "fileCount": 42,
+    "solutionCount": 0
+  },
+  {
+    "order": 54,
+    "pid": 4272,
+    "reason": "恢复原导弹样例，明确读至 EOF、正高度和相等高度可连续拦截; 修正既有原站题解; 新增原样例、合法边界与反例; 独立计算新增测试答案; 增加边界数据",
+    "expectedCases": 28,
+    "fields": [
+      "content"
+    ],
+    "fileCount": 48,
+    "solutionCount": 1
+  },
+  {
+    "order": 55,
+    "pid": 4273,
+    "reason": "修正 0/1 限制的自相矛盾，恢复原样例，明确相邻约束、字典序和存在性; 修正既有原站题解; 新增原样例、合法边界与反例; 独立计算新增测试答案; 增加边界数据",
+    "expectedCases": 24,
+    "fields": [
+      "content"
+    ],
+    "fileCount": 44,
+    "solutionCount": 1
+  },
+  {
+    "order": 56,
+    "pid": 4274,
+    "reason": "恢复两个原样例，使逐秒说明与第一个样例一致; 新增原样例、合法边界与反例; 独立计算新增测试答案; 增加边界数据",
+    "expectedCases": 31,
+    "fields": [
+      "content"
+    ],
+    "fileCount": 42,
+    "solutionCount": 0
+  },
+  {
+    "order": 57,
+    "pid": 4275,
+    "reason": "恢复原 k=3 样例，整理四项条件并明确比较 a[i−2]; 修正既有原站题解; 新增原样例、合法边界与反例; 独立计算新增测试答案; 增加边界数据",
+    "expectedCases": 20,
+    "fields": [
+      "content"
+    ],
+    "fileCount": 20,
+    "solutionCount": 1
+  }
+]

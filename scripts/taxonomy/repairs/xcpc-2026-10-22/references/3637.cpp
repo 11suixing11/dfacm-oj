@@ -1,0 +1,7 @@
+#include <bits/stdc++.h>
+using namespace std;
+using ll=long long;
+struct DSU{vector<int>p,sz;DSU(int n):p(n),sz(n,1){iota(p.begin(),p.end(),0);}int find(int x){return p[x]==x?x:p[x]=find(p[x]);}void join(int a,int b){a=find(a);b=find(b);if(a!=b){if(sz[a]<sz[b])swap(a,b);p[b]=a;sz[a]+=sz[b];}}};
+struct BIT{int n;vector<int>t;BIT(int n=0):n(n),t(n+1){}void add(int x,int v){for(++x;x<=n;x+=x&-x)t[x]+=v;}int sum(int x){int r=0;for(;x>0;x-=x&-x)r+=t[x];return r;}int kth(int k){int p=0;for(int step=1<<20;step;step>>=1)if(p+step<=n&&t[p+step]<k){p+=step;k-=t[p];}return p;}};
+ll power(ll a,ll b,ll mod=1000000007){ll r=1;for(;b;b>>=1,a=a*a%mod)if(b&1)r=r*a%mod;return r;}
+int main(){int n,m,k;cin>>n>>m>>k;const ll mod=1000000007;if(m==1){cout<<power(k,n)<<'\n';return 0;}vector<ll>fact(k+1,1),inv(k+1,1);for(int i=1;i<=k;i++)fact[i]=fact[i-1]*i%mod;inv[k]=power(fact[k],mod-2);for(int i=k;i;i--)inv[i-1]=inv[i]*i%mod;auto choose=[&](int a,int b){return b<0||b>a?0LL:fact[a]*inv[b]%mod*inv[a-b]%mod;};int limit=min(n,k);vector<ll>onto(limit+1);onto[0]=1;for(int i=1;i<=n;i++){for(int c=limit;c>=1;c--)onto[c]=c*(onto[c]+onto[c-1])%mod;onto[0]=0;}vector<ll>inside(limit+1);for(int c=0;c<=limit;c++)inside[c]=power(c,1LL*n*(m-2));ll ans=0;for(int colors=1;colors<=limit;colors++){ll sum=0;for(int shared=max(0,2*colors-k);shared<=colors;shared++)sum=(sum+choose(colors,shared)*choose(k-colors,colors-shared)%mod*inside[shared])%mod;ans=(ans+choose(k,colors)*onto[colors]%mod*onto[colors]%mod*sum)%mod;}cout<<ans<<'\n';}

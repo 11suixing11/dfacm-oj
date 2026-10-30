@@ -1,0 +1,3 @@
+#include <bits/stdc++.h>
+using namespace std;
+int main(){int n,m;cin>>n>>m;vector<vector<long long>>a(n,vector<long long>(m+1));for(auto&r:a)for(int j=1;j<=m;j++)cin>>r[j];const long long NEG=LLONG_MIN/4;vector<vector<long long>>d(n+1,vector<long long>(m+1,NEG));vector<vector<int>>take(n+1,vector<int>(m+1));d[0][0]=0;for(int i=1;i<=n;i++)for(int j=0;j<=m;j++)for(int k=0;k<=j;k++)if(d[i-1][j-k]!=NEG&&d[i-1][j-k]+a[i-1][k]>d[i][j]){d[i][j]=d[i-1][j-k]+a[i-1][k];take[i][j]=k;}int total=max_element(d[n].begin(),d[n].end())-d[n].begin();cout<<d[n][total]<<"\n";vector<int>counts(n);for(int i=n;i>0;i--){counts[i-1]=take[i][total];total-=counts[i-1];}for(int i=0;i<n;i++)cout<<i+1<<' '<<counts[i]<<"\n";}

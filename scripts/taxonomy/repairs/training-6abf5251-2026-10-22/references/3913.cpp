@@ -1,0 +1,3 @@
+#include <bits/stdc++.h>
+using namespace std;
+int main(){long double a,b,c,d;cin>>a>>b>>c>>d;auto f=[&](long double x){return ((a*x+b)*x+c)*x+d;};vector<long double>roots;for(int i=-100;i<=100;i++){long double x=i,fx=f(x);if(fx==0){roots.push_back(x);continue;}if(i==100||f(x+1)==0||fx*f(x+1)>=0)continue;long double l=x,r=x+1;for(int j=0;j<100;j++){long double m=(l+r)/2;if(f(m)==0){l=r=m;break;}if(f(m)*fx>0)l=m;else r=m;}roots.push_back((l+r)/2);}cout<<fixed<<setprecision(2);for(int i=0;i<int(roots.size());i++){if(i)cout<<' ';long double x=roots[i];if(fabsl(x)<.0000000001L)x=0;cout<<x;}cout<<"\n";}

@@ -1,0 +1,90 @@
+[
+  {
+    "order": 58,
+    "pid": 4276,
+    "reason": "去掉输出段混入的输入残留，恢复原 769 样例; 新增合法边界与反例; 独立计算新增测试答案; 增加边界数据",
+    "expectedCases": 24,
+    "fields": [
+      "content"
+    ],
+    "fileCount": 28,
+    "solutionCount": 0
+  },
+  {
+    "order": 59,
+    "pid": 4277,
+    "reason": "重排错位的约束文字、恢复上标与原文样例; 修正既有原站题解; 修复溢出回绕答案的第 10 组输入; 独立重算第 10 组答案; 新增合法边界与反例; 独立计算新增测试答案; 增加边界数据",
+    "expectedCases": 24,
+    "fields": [
+      "content"
+    ],
+    "fileCount": 30,
+    "solutionCount": 1
+  },
+  {
+    "order": 60,
+    "pid": 4278,
+    "reason": "去掉输出段混入的输入残留，明确正整数范围; 修正既有原站题解; 新增合法边界与反例; 独立计算新增测试答案; 增加边界数据",
+    "expectedCases": 24,
+    "fields": [
+      "content"
+    ],
+    "fileCount": 28,
+    "solutionCount": 1
+  },
+  {
+    "order": 61,
+    "pid": 4279,
+    "reason": "明确输入分隔，恢复原 7 3 样例并补充分法说明; 修正既有原站题解; 新增合法边界与反例; 独立计算新增测试答案; 增加边界数据",
+    "expectedCases": 16,
+    "fields": [
+      "content"
+    ],
+    "fileCount": 22,
+    "solutionCount": 1
+  },
+  {
+    "order": 62,
+    "pid": 4280,
+    "reason": "恢复原 12 个数样例并独立核计样例输出; 新增合法边界与反例; 独立计算新增测试答案; 增加边界数据",
+    "expectedCases": 19,
+    "fields": [
+      "content"
+    ],
+    "fileCount": 18,
+    "solutionCount": 0
+  },
+  {
+    "order": 63,
+    "pid": 4281,
+    "reason": "明确删除排序替换规则与空输出，恢复原题样例; 新增合法边界与反例; 独立计算新增测试答案; 增加边界数据",
+    "expectedCases": 12,
+    "fields": [
+      "content"
+    ],
+    "fileCount": 20,
+    "solutionCount": 0
+  },
+  {
+    "order": 64,
+    "pid": 4282,
+    "reason": "补全输入输出格式，恢复原题两个样例并明确向零取整; 新增合法边界与反例; 独立计算新增测试答案; 增加边界数据",
+    "expectedCases": 13,
+    "fields": [
+      "content"
+    ],
+    "fileCount": 20,
+    "solutionCount": 0
+  },
+  {
+    "order": 65,
+    "pid": 4283,
+    "reason": "去掉输出段混入的输入残留，输入统一为三个正整数; 新增合法边界与反例; 独立计算新增测试答案; 增加边界数据",
+    "expectedCases": 23,
+    "fields": [
+      "content"
+    ],
+    "fileCount": 26,
+    "solutionCount": 0
+  }
+]

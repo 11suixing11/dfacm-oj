@@ -1,0 +1,91 @@
+[
+  {
+    "order": 42,
+    "pid": 4260,
+    "reason": "去掉输出段多余输入，明确非负数、零及 64 位中间结果范围; 新增原样例、合法边界与反例; 独立计算新增测试答案; 增加边界数据",
+    "expectedCases": 34,
+    "fields": [
+      "content"
+    ],
+    "fileCount": 48,
+    "solutionCount": 0
+  },
+  {
+    "order": 43,
+    "pid": 4261,
+    "reason": "恢复原样例并删除混入样例的额外数据，明确空集、无解及整数范围; 修正既有原站题解; 删除 8 组旧输入末尾的生成器调试掩码; 独立重算清理后的全部方案及顺序; 新增原样例、合法边界与反例; 独立计算新增测试答案; 增加边界数据",
+    "expectedCases": 32,
+    "fields": [
+      "content"
+    ],
+    "fileCount": 59,
+    "solutionCount": 1
+  },
+  {
+    "order": 44,
+    "pid": 4262,
+    "reason": "恢复原 9 进制样例，明确大整数、初始回文及恰好 30 步的边界; 新增原样例、合法边界与反例; 独立计算新增测试答案; 增加边界数据",
+    "expectedCases": 27,
+    "fields": [
+      "content"
+    ],
+    "fileCount": 46,
+    "solutionCount": 0
+  },
+  {
+    "order": 45,
+    "pid": 4263,
+    "reason": "恢复两个原题样例，核对次数、长度、首次位置三级优先规则; 新增原样例、合法边界与反例; 独立计算新增测试答案; 增加边界数据",
+    "expectedCases": 35,
+    "fields": [
+      "content"
+    ],
+    "fileCount": 50,
+    "solutionCount": 0
+  },
+  {
+    "order": 46,
+    "pid": 4264,
+    "reason": "恢复三个原题样例，修正笔误及多余输入，明确边缘和连续减号处理; 新增原样例、合法边界与反例; 独立计算新增测试答案; 增加边界数据",
+    "expectedCases": 36,
+    "fields": [
+      "content"
+    ],
+    "fileCount": 52,
+    "solutionCount": 0
+  },
+  {
+    "order": 47,
+    "pid": 4265,
+    "reason": "补全严重截断的题面、输入输出，恢复原样例并规定字符不存在的提示，明确空格和句点; 独立重算编辑结果，严格核对字符串中的空格; 保持数据库与数据配置一致; 避免普通空白分词比较漏判丢失或额外空格; 新增原样例、合法边界与反例; 独立计算新增测试答案; 增加边界数据",
+    "expectedCases": 41,
+    "fields": [
+      "content",
+      "config"
+    ],
+    "fileCount": 66,
+    "solutionCount": 0
+  },
+  {
+    "order": 48,
+    "pid": 4266,
+    "reason": "明确合法空字符串和全删空行，去掉输出段多余输入; 为空字符串旧输入补上缺失的待删字符; 新增原样例、合法边界与反例; 独立计算新增测试答案; 增加边界数据",
+    "expectedCases": 33,
+    "fields": [
+      "content"
+    ],
+    "fileCount": 47,
+    "solutionCount": 0
+  },
+  {
+    "order": 49,
+    "pid": 4267,
+    "reason": "恢复原样例，整理原料配方表，明确按菜单优先级逐份制作及零原料范围; 新增原样例、合法边界与反例; 独立计算新增测试答案; 增加边界数据",
+    "expectedCases": 37,
+    "fields": [
+      "content"
+    ],
+    "fileCount": 54,
+    "solutionCount": 0
+  }
+]

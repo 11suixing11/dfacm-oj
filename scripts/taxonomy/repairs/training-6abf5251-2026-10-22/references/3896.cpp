@@ -1,0 +1,3 @@
+#include <bits/stdc++.h>
+using namespace std;
+int n,best;vector<string>w;vector<vector<int>>overlap;vector<int>used;void dfs(int last,int length){best=max(best,length);int bound=length;for(int j=0;j<n;j++)bound+=(2-used[j])*max(0,int(w[j].size())-1);if(bound<=best)return;for(int j=0;j<n;j++)if(used[j]<2&&overlap[last][j]){used[j]++;dfs(j,length+int(w[j].size())-overlap[last][j]);used[j]--;}}int main(){cin>>n;w.resize(n);used.resize(n);for(auto&s:w)cin>>s;char first;cin>>first;overlap.assign(n,vector<int>(n));for(int i=0;i<n;i++)for(int j=0;j<n;j++)for(int k=1;k<min(w[i].size(),w[j].size());k++)if(w[i].substr(w[i].size()-k)==w[j].substr(0,k)){overlap[i][j]=k;break;}for(int i=0;i<n;i++)if(w[i][0]==first){used[i]=1;dfs(i,w[i].size());used[i]=0;}cout<<best<<"\n";}

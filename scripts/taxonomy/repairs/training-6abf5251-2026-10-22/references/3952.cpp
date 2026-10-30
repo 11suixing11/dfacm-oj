@@ -1,0 +1,3 @@
+#include <bits/stdc++.h>
+using namespace std;
+int main(){int n;cin>>n;vector<vector<long long>>a(n,vector<long long>(n));int x,y;long long v;while(cin>>x>>y>>v&&(x||y||v))a[x-1][y-1]=v;const long long NEG=LLONG_MIN/4;vector<vector<long long>>d(n,vector<long long>(n,NEG));d[0][0]=a[0][0];for(int step=1;step<=2*n-2;step++){vector<vector<long long>>next(n,vector<long long>(n,NEG));for(int x=0;x<n;x++)for(int y=0;y<n;y++){int c1=step-x,c2=step-y;if(c1<0||c1>=n||c2<0||c2>=n)continue;for(int dx=0;dx<=1;dx++)for(int dy=0;dy<=1;dy++)if(x>=dx&&y>=dy&&d[x-dx][y-dy]!=NEG)next[x][y]=max(next[x][y],d[x-dx][y-dy]+a[x][c1]+(x==y?0:a[y][c2]));}d=next;}cout<<d[n-1][n-1]<<"\n";}

@@ -1,0 +1,4 @@
+#include <bits/stdc++.h>
+using namespace std;
+pair<int,vector<pair<int,int>>> walk(vector<string>a,pair<int,int>s,pair<int,int>e,vector<pair<int,int>>moves={{1,0},{-1,0},{0,1},{0,-1}}){int r=a.size(),c=a[0].size();vector<vector<int>>d(r,vector<int>(c,-1));vector<vector<pair<int,int>>>p(r,vector<pair<int,int>>(c,{-1,-1}));queue<pair<int,int>>q;q.push(s);d[s.first][s.second]=0;while(!q.empty()){auto[x,y]=q.front();q.pop();for(auto[dx,dy]:moves){int u=x+dx,v=y+dy;if(u>=0&&u<r&&v>=0&&v<c&&a[u][v]!='#'&&d[u][v]<0){d[u][v]=d[x][y]+1;p[u][v]={x,y};q.push({u,v});}}}vector<pair<int,int>>path;if(d[e.first][e.second]>=0){for(auto v=e;v.first>=0;v=p[v.first][v.second])path.push_back(v);reverse(path.begin(),path.end());}return {d[e.first][e.second],path};}
+int main(){int r,c;cin>>r>>c;vector<string>a(r);for(auto&s:a)cin>>s;cout<<walk(a,{0,0},{r-1,c-1}).first+1<<"\n";}

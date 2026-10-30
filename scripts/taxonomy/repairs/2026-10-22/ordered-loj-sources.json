@@ -1,0 +1,175 @@
+{
+  "698": {
+    "meta": {
+      "id": 2146,
+      "displayId": 2146,
+      "type": "Traditional",
+      "publicTime": null,
+      "isPublic": true,
+      "ownerId": 77,
+      "locales": [
+        "zh_CN"
+      ]
+    },
+    "localizedContentsOfLocale": {
+      "locale": "zh_CN",
+      "title": "「SHOI2017」寿司餐厅",
+      "contentSections": [
+        {
+          "sectionTitle": "题目描述",
+          "type": "Text",
+          "text": "Kiana 最近喜欢到一家非常美味的寿司餐厅用餐。\r\n\r\n每天晚上，这家餐厅都会按顺序提供 $n$ 种寿司，第 $i$ 种寿司有一个代号 $a_i$ 和美味度 $d_{i, i}$，不同种类的寿司有可能使用相同的代号。每种寿司的份数都是无限的，Kiana 也可以无限次取寿司来吃，但每种寿司每次只能取一份，且每次取走的寿司必须是按餐厅提供寿司的顺序连续的一段，即 Kiana 可以一次取走第 $1, 2$ 种寿司各一份，也可以一次取走第 $2, 3$ 种寿司各一份，但不可以一次取走第 $1, 3$ 种寿司。\r\n\r\n由于餐厅提供的寿司种类繁多，而不同种类的寿司之间相互会有影响：三文鱼寿司和鱿鱼寿司一起吃或许会很棒，但和水果寿司一起吃就可能会肚子痛。因此，Kiana 定义了一个综合美味度 $d_{i, j} \\ (i < j)$，表示在一次取的寿司中，如果包含了餐厅提供的从第 $i$ 份到第 $j$ 份的所有寿司，吃掉这次取的所有寿司后将获得的额外美味度。由于取寿司需要花费一些时间，所以我们认为分两次取来的寿司之间相互不会影响。注意在吃一次取的寿司时，不止一个综合美味度会被累加，比如若 Kiana 一次取走了第 $1, 2, 3$ 种寿司各一份，除了 $d_{1, 3}$ 以外，$d_{1, 2}, d_{2, 3}$ 也会被累加进总美味度中。\r\n\r\n神奇的是，Kiana 的美食评判标准是有记忆性的，无论是单种寿司的美味度，还是多种寿司组合起来的综合美味度，在计入 Kiana 的总美味度时都只会被累加一次。比如，若 Kiana 某一次取走了第 $1, 2$ 种寿司各一份，另一次取走了第 $2, 3$ 种寿司各一份，那么这两次取寿司的总美味度为 $d_{1, 1} + d_{2, 2} + d_{3, 3} + d_{1, 2} + d_{2, 3}$，其中 $d_{2, 2}$ 只会计算一次。\r\n\r\n奇怪的是，这家寿司餐厅的收费标准很不同寻常。具体来说，如果 Kiana 一共吃过了 $c \\ (c > 0)$ **种**代号为 $x$ 的寿司，则她需要为这些寿司付出 $mx^2 + cx$ 元钱，其中 $m$ 是餐厅给出的一个常数。\r\n\r\n现在 Kiana 想知道，在这家餐厅吃寿司，自己能获得的总美味度（包括所有吃掉的单种寿司的美味度和所有被累加的综合美味度）减去花费的总钱数的最大值是多少。由于她不会算，所以希望由你告诉她。"
+        },
+        {
+          "sectionTitle": "输入格式",
+          "type": "Text",
+          "text": "第一行包含两个正整数 $n, m$，分别表示这家餐厅提供的寿司总数和计算寿司价格中使用的常数。  \r\n第二行包含 $n$ 个正整数，其中第 $k$ 个数 $a_k$ 表示第 $k$ 份寿司的代号。  \r\n接下来 $n$ 行，第 $i$ 行包含 $n - i + 1$ 个整数，其中第 $j$ 个数 $d_{i, i+j-1}$ 表示吃掉寿司能获得的相应的美味度，具体含义见问题描述。"
+        },
+        {
+          "sectionTitle": "输出格式",
+          "type": "Text",
+          "text": "输出共一行包含一个正整数，表示 Kiana 能获得的总美味度减去花费的总钱数的最大值。"
+        },
+        {
+          "sectionTitle": "样例 1",
+          "type": "Sample",
+          "sampleId": 0,
+          "text": "在这组样例中，餐厅一共提供了 $3$ 份寿司，它们的代号依次为 $a_1 = 2, a_2 = 3, a_3 = 2$，计算价格时的常数 $m = 1$。\n\n在保证每次取寿司都能获得新的美味度的前提下，Kiana 一共有 $14$ 种不同的吃寿司方案。以下列出其中几种：\n1. Kiana 一个寿司也不吃，这样她获得的总美味度和花费的总钱数都是 $0$，两者相减也是 $0$；\n2. Kiana 只取 $1$ 次寿司，且只取第 $1$ 个寿司，即她取寿司的情况为 $\\{[1, 1]\\}$，这样获得的总美味度为 $5$，花费的总钱数为 $1 \\times 2^2 + 1 \\times 2 = 6$，两者相减为 $-1$；\n3. Kiana 取 $2$ 次寿司，第一次取第 $1, 2$ 个寿司，第二次取第 $2, 3$ 个寿司，即她取寿司的情况为 $\\{[1, 2], [2, 3]\\}$，这样获得的总美味度为 $5 + (-10) + 15 + (-10) + 15 = 15$，花费的总钱数为 $(1 \\times 2^2 + 2 \\times 2) + (1 \\times 3^2 + 1 \\times 3) = 20$，两者相减为 $-5$；\n4. Kiana 取 $2$ 次寿司，第一次取第 $1$ 个寿司，第二次取第 $3$ 个寿司，即她取寿司的情况为 $\\{[1, 1], [3, 3]\\}$，这样获得的总美味度为 $5 + 15 = 20$，花费的总钱数为 $1 \\times 2^2 + 2 \\times 2 = 8$，两者相减为 $12$。\n\n在 $14$ 种方案中，惟一的最优方案是列出的最后一种方案，这时她获得的总美味度减去花费的总钱数的值最大为 $12$。"
+        },
+        {
+          "sectionTitle": "样例 2",
+          "type": "Sample",
+          "sampleId": 1,
+          "text": ""
+        },
+        {
+          "sectionTitle": "样例 3",
+          "type": "Sample",
+          "sampleId": 2,
+          "text": ""
+        },
+        {
+          "sectionTitle": "数据范围与提示",
+          "type": "Text",
+          "text": "对于所有数据，保证 $-500 \\leq d_{i, j} \\leq 500$。\r\n\r\n数据的一些特殊约定如下表：\r\n\r\n<!-- BEGIN: Migrated markdown table -->\n\n| Case # | $n$ | $a_i$ | $m$ | 附加限制 |\n|:-:|:-:|:-:|:-:|:-:|\n| 1 | $\\leq 2$ | $\\leq 30$ | $= 0$ | - |\n| 2 | $\\leq 2$ | $\\leq 30$ | $= 1$ | - |\n| 3 | $\\leq 3$ | $\\leq 30$ | $= 0$ | - |\n| 4 | $\\leq 3$ | $\\leq 30$ | $= 1$ | - |\n| 5 | $\\leq 5$ | $\\leq 30$ | $= 0$ | - |\n| 6 | $\\leq 5$ | $\\leq 30$ | $= 1$ | - |\n| 7 | $\\leq 10$ | $\\leq 30$ | $= 0$ | 所有的 $a_i$ 相同 |\n| 8 | $\\leq 10$ | $\\leq 30$ | $= 1$ | - |\n| 9 | $\\leq 15$ | $\\leq 30$ | $= 0$ | 所有的 $a_i$ 相同 |\n| 10 | $\\leq 15$ | $\\leq 30$ | $= 1$ | - |\n| 11 | $\\leq 30$ | $\\leq 1000$ | $= 0$ | 所有的 $a_i$ 相同 |\n| 12 | $\\leq 30$ | $\\leq 30$ | $= 0$ | 所有的 $a_i$ 相同 |\n| 13 | $\\leq 30$ | $\\leq 1000$ | $= 0$ | - |\n| 14 | $\\leq 30$ | $\\leq 1000$ | $= 1$ | - |\n| 15 | $\\leq 50$ | $\\leq 1000$ | $= 0$ | 所有的 $a_i$ 相同 |\n| 16 | $\\leq 50$ | $\\leq 30$ | $= 0$ | 所有的 $a_i$ 相同 |\n| 17 | $\\leq 50$ | $\\leq 1000$ | $= 0$ | - |\n| 18 | $\\leq 50$ | $\\leq 1000$ | $= 1$ | - |\n| 19 | $\\leq 100$ | $\\leq 1000$ | $= 0$ | - |\n| 20 | $\\leq 100$ | $\\leq 1000$ | $= 1$ | - |\n\n<!-- Migrated from original HTML table:\n<table class='ui celled table'>\r\n<thead>\r\n    <tr>\r\n        <th style='text-align: center;'> Case # </th>\r\n        <th style='text-align: center;'> $n$ </th>\r\n        <th style='text-align: center;'> $a_i$ </th>\r\n        <th style='text-align: center;'> $m$ </th>\r\n        <th style='text-align: center;'>附加限制</th>\r\n    </tr>\r\n</thead>\r\n<tbody>\r\n    <tr>\r\n        <td style='text-align: center;'>1</td>\r\n        <td style='text-align: center;' rowspan='2'> $\\leq 2$ </td>\r\n        <td style='text-align: center;' rowspan='10'> $\\leq 30$ </td>\r\n        <td style='text-align: center;'> $= 0$ </td>\r\n        <td style='text-align: center;' rowspan='6'> - </td>\r\n    </tr>\r\n    <tr>\r\n        <td style='text-align: center;'>2</td>\r\n        <td style='text-align: center;'> $= 1$ </td>\r\n    </tr>\r\n    <tr>\r\n        <td style='text-align: center;'>3</td>\r\n        <td style='text-align: center;' rowspan='2'> $\\leq 3$ </td>\r\n        <td style='text-align: center;'> $= 0$ </td>\r\n    </tr>\r\n    <tr>\r\n        <td style='text-align: center;'>4</td>\r\n        <td style='text-align: center;'> $= 1$ </td>\r\n    </tr>\r\n    <tr>\r\n        <td style='text-align: center;'>5</td>\r\n        <td style='text-align: center;' rowspan='2'> $\\leq 5$ </td>\r\n        <td style='text-align: center;'> $= 0$ </td>\r\n    </tr>\r\n    <tr>\r\n        <td style='text-align: center;'>6</td>\r\n        <td style='text-align: center;'> $= 1$ </td>\r\n    </tr>\r\n    <tr>\r\n        <td style='text-align: center;'>7</td>\r\n        <td style='text-align: center;' rowspan='2'> $\\leq 10$ </td>\r\n        <td style='text-align: center;'> $= 0$ </td>\r\n        <td style='text-align: center;'> 所有的 $a_i$ 相同 </td>\r\n    </tr>\r\n    <tr>\r\n        <td style='text-align: center;'>8</td>\r\n        <td style='text-align: center;'> $= 1$ </td>\r\n        <td style='text-align: center;'> - </td>\r\n    </tr>\r\n    <tr>\r\n        <td style='text-align: center;'>9</td>\r\n        <td style='text-align: center;' rowspan='2'> $\\leq 15$ </td>\r\n        <td style='text-align: center;'> $= 0$ </td>\r\n        <td style='text-align: center;'> 所有的 $a_i$ 相同 </td>\r\n    </tr>\r\n    <tr>\r\n        <td style='text-align: center;'>10</td>\r\n        <td style='text-align: center;'> $= 1$ </td>\r\n        <td style='text-align: center;'> - </td>\r\n    </tr>\r\n\r\n    <tr>\r\n        <td style='text-align: center;'>11</td>\r\n        <td style='text-align: center;' rowspan='4'> $\\leq 30$ </td>\r\n        <td style='text-align: center;'> $\\leq 1000$ </td>\r\n        <td style='text-align: center;'> $= 0$ </td>\r\n        <td style='text-align: center;' rowspan='2'> 所有的 $a_i$ 相同 </td>\r\n    </tr>\r\n    <tr>\r\n        <td style='text-align: center;'>12</td>\r\n        <td style='text-align: center;'> $\\leq 30$ </td>\r\n        <td style='text-align: center;'> $= 0$ </td>\r\n    </tr>\r\n    <tr>\r\n        <td style='text-align: center;'>13</td>\r\n        <td style='text-align: center;' rowspan='3'> $\\leq 1000$ </td>\r\n        <td style='text-align: center;'> $= 0$ </td>\r\n        <td style='text-align: center;' rowspan='2'> - </td>\r\n    </tr>\r\n    <tr>\r\n        <td style='text-align: center;'>14</td>\r\n        <td style='text-align: center;'> $= 1$ </td>\r\n    </tr>\r\n    <tr>\r\n        <td style='text-align: center;'>15</td>\r\n        <td style='text-align: center;' rowspan='4'> $\\leq 50$ </td>\r\n        <td style='text-align: center;'> $= 0$ </td>\r\n        <td style='text-align: center;' rowspan='2'> 所有的 $a_i$ 相同 </td>\r\n    </tr>\r\n    <tr>\r\n        <td style='text-align: center;'>16</td>\r\n        <td style='text-align: center;'> $\\leq 30$ </td>\r\n        <td style='text-align: center;'> $= 0$ </td>\r\n    </tr>\r\n    <tr>\r\n        <td style='text-align: center;'>17</td>\r\n        <td style='text-align: center;' rowspan='4'> $\\leq 1000$ </td>\r\n        <td style='text-align: center;'> $= 0$ </td>\r\n        <td style='text-align: center;' rowspan='2'> - </td>\r\n    </tr>\r\n    <tr>\r\n        <td style='text-align: center;'>18</td>\r\n        <td style='text-align: center;'> $= 1$ </td>\r\n    </tr>\r\n    <tr>\r\n        <td style='text-align: center;'>19</td>\r\n        <td style='text-align: center;' rowspan='2'> $\\leq 100$ </td>\r\n        <td style='text-align: center;'> $= 0$ </td>\r\n        <td style='text-align: center;' rowspan='2'> - </td>\r\n    </tr>\r\n    <tr>\r\n        <td style='text-align: center;'>20</td>\r\n        <td style='text-align: center;'> $= 1$ </td>\r\n    </tr>\r\n</tbody>\r\n</table>\n-->\n\n<!-- END: Migrated markdown table -->"
+        }
+      ]
+    },
+    "samples": [
+      {
+        "inputData": "3 1\n2 3 2\n5 -10 15\n-10 15\n15",
+        "outputData": "12"
+      },
+      {
+        "inputData": "5 0\n1 4 1 3 4\n50 99 8 -39 30\n68 27 -75 -32\n70 24 72\n-10 81\n-95",
+        "outputData": "381"
+      },
+      {
+        "inputData": "10 1\n5 5 4 4 1 2 5 1 5 3\n83 91 72 29 22 -5 57 -14 -36 -3\n-11 34 45 96 32 73 -1 0 29\n-48 68 44 -5 96 66 17 74\n88 47 69 -9 2 25 -49\n86 -9 -77 62 -10 -30\n2 40 95 -74 46\n49 -52 2 -51\n-55 50 -44\n72 22\n-68",
+        "outputData": "1223"
+      }
+    ]
+  },
+  "731": {
+    "meta": {
+      "id": 2252,
+      "displayId": 2252,
+      "type": "Traditional",
+      "publicTime": null,
+      "isPublic": true,
+      "ownerId": 8,
+      "locales": [
+        "zh_CN"
+      ]
+    },
+    "localizedContentsOfLocale": {
+      "locale": "zh_CN",
+      "title": "「ZJOI2017」多项式",
+      "contentSections": [
+        {
+          "sectionTitle": "题目描述",
+          "type": "Text",
+          "text": "九条可怜最近研究了一下多项式在系数模 $2$ 意义下的性质。她发现可以用多项式在模 $2$ 意义下的乘法得到一个很长的字符串：\r\n\r\n对于一个 $n$ 次的系数为 $0$ 或 $1$ 的多项式 $f(x)$，我们在模 $2$ 意义下计算 $g(x) = f(x)^m$，则 $g(x)$ 为一个 $nm$ 次的多项式，它有 $nm + 1$ 个系数，将这些系数从**高位到低位**写下来，就可以得到一个长度为 $nm + 1$ 的 $01$ 字符串。\r\n\r\n例如对于多项式 $f(x) = x^3 + x + 1$，计算 $g(x) = f(x)^3 = x^9 + x^7 + x^6 + x^5 + x^2 + x + 1$，这样我们得到了一个长度为$10$ 的字符串 $1011100111$。\r\n\r\n现在可怜有一个次数为 $n$ 的多项式 $f(x)$，整数 $m, L,R$ 以及一个长度为 $K$ 的 $01$ 串 $t$。令 $s$ 为 $f(x)^m$ 得到的字符串，$s[L,R]$ 为$s$ 的第 $L$ 个字符到第 $R$ 个字符，可怜想要知道 $t$ 在 $s[L,R]$ 中出现了多少次。"
+        },
+        {
+          "sectionTitle": "输入格式",
+          "type": "Text",
+          "text": "第一行输入一个整数 $T$  表示数据组数。\r\n\r\n每组数据第一行输入五个整数 $n, m,K, L,R$。\r\n\r\n第二行输入一个长度为 $n + 1$ 的 $01$  串表示多项式 $f(x)$ 的系数，其中第 $i$ 位表示 $f(x)$ 的第 $n-i + 1$ 次系数。\r\n\r\n第三行输入一个长度为 $K$ 的字符串表示字符串 $t$ 。"
+        },
+        {
+          "sectionTitle": "输出格式",
+          "type": "Text",
+          "text": "对于每组数据输出一个整数表示答案。"
+        },
+        {
+          "sectionTitle": "样例",
+          "type": "Sample",
+          "sampleId": 0,
+          "text": ""
+        },
+        {
+          "sectionTitle": "数据范围与提示",
+          "type": "Text",
+          "text": "| 测试点编号 |   $n$    |        $m$         |   $K$    |   其他约定    |\n| :--------: | :------: | :----------------: | :------: | :-----------: |\n|    $1$     | $\\le 18$ |     $\\le 500$      | $\\le 18$ |      无       |\n|    $2$     | $\\le 18$ | $\\le 2\\times 10^5$ | $\\le 18$ |      无       |\n|    $3$     | $\\le 18$ | $\\le 2\\times 10^5$ | $\\le 18$ |      无       |\n|    $4$     | $\\le 18$ |   $\\le 10^{16}$    | $\\le 18$ | $R-L\\le 10^4$ |\n|    $5$     | $\\le 18$ |   $\\le 10^{16}$    | $\\le 18$ | $R-L\\le 10^4$ |\n|    $6$     | $\\le 18$ |   $\\le 10^{16}$    | $\\le 18$ | $L=1,R=nm+1$  |\n|    $7$     | $\\le 18$ |   $\\le 10^{16}$    | $\\le 18$ | $L=1,R=nm+1$  |\n|    $8$     | $\\le 18$ |   $\\le 10^{16}$    | $\\le 18$ | $L=1,R=nm+1$  |\n|    $9$     | $\\le 18$ |   $\\le 10^{16}$    | $\\le 18$ |      无       |\n|    $10$    | $\\le 18$ |   $\\le 10^{16}$    | $\\le 18$ |      无       |\n\n\n对于$100\\%$ 的数据，保证 $1\\leq T\\leq 5$，$1\\leq L\\leq R \\leq nm + 1$。"
+        }
+      ]
+    },
+    "samples": [
+      {
+        "inputData": "1\n3 3 2 1 10\n1011\n01",
+        "outputData": "2"
+      }
+    ]
+  },
+  "822": {
+    "meta": {
+      "id": 6224,
+      "displayId": 6224,
+      "type": "Traditional",
+      "publicTime": null,
+      "isPublic": true,
+      "ownerId": 75,
+      "locales": [
+        "zh_CN"
+      ]
+    },
+    "localizedContentsOfLocale": {
+      "locale": "zh_CN",
+      "title": "「网络流 24 题」深海机器人",
+      "contentSections": [
+        {
+          "sectionTitle": "题目描述",
+          "type": "Text",
+          "text": "深海资源考察探险队的潜艇将到达深海的海底进行科学考察。\n\n潜艇内有多个深海机器人。潜艇到达深海海底后，深海机器人将离开潜艇向预定目标移动。\n\n深海机器人在移动中还必须沿途采集海底生物标本。沿途生物标本由最先遇到它的深海机器人完成采集。\n\n每条预定路径上的生物标本的价值是已知的，而且生物标本只能被采集一次。\n\n本题限定深海机器人只能从其出发位置沿着向北或向东的方向移动，而且多个深海机器人可以在同一时间占据同一位置。\n\n用一个 $P \\times Q$ 网格表示深海机器人的可移动位置。西南角的坐标为 $(0,0)$ ，东北角的坐标为 $(Q,P)$ 。\n\n给定每个深海机器人的出发位置和目标位置，以及每条网格边上生物标本的价值。\n\n计算深海机器人的最优移动方案， 使深海机器人到达目的地后，采集到的生物标本的总价值最高。\n\n![robot.png](https://img.loj.ac.cn/2020/08/02/5f26a0c02c82c.png)"
+        },
+        {
+          "sectionTitle": "输入格式",
+          "type": "Text",
+          "text": "文件的第 $1$ 行为深海机器人的出发位置数 $a$ 和目的地数 $b$ 。\n\n第 $2$ 行为 $P$ 和 $Q$ 的值。\n\n接下来的 $P +1$ 行，每行有 $Q$ 个正整数，表示向东移动路径上生物标本的价值，行数据依从南到北方向排列。\n\n再接下来的 $Q +1 $ 行，每行有 $P$ 个正整数，表示向北移动路径上生物标本的价值，行数据依从西到东方向排列。\n\n接下来的 $a$ 行，每行有 $3$ 个正整数 $k,x,y$，表示有 $k$ 个深海机器人从 $(y,x)$ 位置坐标出发。\n\n再接下来的 $b$ 行，每行有 $3$ 个正整数 $r,x,y$，表示有 $r$ 个深海机器人可选择 $(y,x)$ 位置坐标作为目的地。"
+        },
+        {
+          "sectionTitle": "输出格式",
+          "type": "Text",
+          "text": "输出采集到的生物标本的最高总价值."
+        },
+        {
+          "sectionTitle": "样例",
+          "type": "Sample",
+          "sampleId": 0,
+          "text": ""
+        },
+        {
+          "sectionTitle": "数据范围与提示",
+          "type": "Text",
+          "text": "$1\\leq P,Q \\leq15$\n\n$ 1\\leq a\\leq 4$\n\n$1\\leq b\\leq 6$"
+        }
+      ]
+    },
+    "samples": [
+      {
+        "inputData": "1 1\n2 2\n1 2\n3 4\n5 6\n7 2\n8 10\n9 3\n2 0 0\n2 2 2",
+        "outputData": "42"
+      }
+    ]
+  }
+}

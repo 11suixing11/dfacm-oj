@@ -1,0 +1,26 @@
+[
+  {
+    "pid": 4090,
+    "reason": "移除正则模板以修复判题器在 10 秒编译限制下超时，保持数字语法及误差规则",
+    "expectedCases": 30,
+    "files": [
+      {
+        "name": "checker-4090.cc",
+        "sha256": "96cc0936845d80b04d590724ac8e468f9cee198f484cd240dfa8632e326b71f2",
+        "expectedSha256": "191425fe15811843105fc49aabb832b67ba7279068dbacff2b0efe479c903d38"
+      }
+    ]
+  },
+  {
+    "pid": 4091,
+    "reason": "移除正则模板以修复判题器在 10 秒编译限制下超时，保持数字语法及误差规则",
+    "expectedCases": 10,
+    "files": [
+      {
+        "name": "checker-4091.cc",
+        "sha256": "8c8c355e83d93070f28097f15f28242593d64ea55a19455f8a1712793cbb9cb7",
+        "expectedSha256": "60a5e27114f37bb3e91d95317a70a5749d6fb5aae041eb091e507e5febe7d1a9"
+      }
+    ]
+  }
+]

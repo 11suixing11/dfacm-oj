@@ -38,3 +38,15 @@ plugin-dfacm-calendar/auto-cache.json
 plugin-dfacm-calendar/auto-cache-*.json
 plugin-dfacm-calendar/clist-cache.json
 plugin-dfacm-calendar/*-cache*.tmp
+
+# Taxonomy repair sessions: bulky data snapshots regenerated from the OJ
+# (statement/testdata copies and full verification dumps). The pipeline
+# scripts, checkers, oracle/reference sources, per-batch manifests and
+# REPORT.md are committed; these large regenerable dumps are not.
+scripts/taxonomy/repairs/2026-10-22/local-tests.json
+scripts/taxonomy/repairs/2026-10-22/local-tests.json.gz
+scripts/taxonomy/repairs/2026-10-22/ordered-statements.json.gz
+scripts/taxonomy/repairs/2026-10-22/ordered-statements.manifest.json
+scripts/taxonomy/repairs/2026-10-22/ordered-sample-recovery.json
+scripts/taxonomy/repairs/training-6abf5251-2026-10-22/verification-manifest.json
+scripts/taxonomy/repairs/xcpc-2026-10-22/verification-manifest.json

@@ -1,0 +1,7 @@
+#include <bits/stdc++.h>
+using namespace std;
+using ll=long long;
+struct DSU{vector<int>p,sz;DSU(int n):p(n),sz(n,1){iota(p.begin(),p.end(),0);}int find(int x){return p[x]==x?x:p[x]=find(p[x]);}void join(int a,int b){a=find(a);b=find(b);if(a!=b){if(sz[a]<sz[b])swap(a,b);p[b]=a;sz[a]+=sz[b];}}};
+struct BIT{int n;vector<int>t;BIT(int n=0):n(n),t(n+1){}void add(int x,int v){for(++x;x<=n;x+=x&-x)t[x]+=v;}int sum(int x){int r=0;for(;x>0;x-=x&-x)r+=t[x];return r;}int kth(int k){int p=0;for(int step=1<<20;step;step>>=1)if(p+step<=n&&t[p+step]<k){p+=step;k-=t[p];}return p;}};
+ll power(ll a,ll b,ll mod=1000000007){ll r=1;for(;b;b>>=1,a=a*a%mod)if(b&1)r=r*a%mod;return r;}
+vector<int> zfunc(string s){vector<int>z(s.size());for(int i=1,l=0,r=0;i<(int)s.size();i++){if(i<=r)z[i]=min(r-i+1,z[i-l]);while(i+z[i]<(int)s.size()&&s[z[i]]==s[i+z[i]])z[i]++;if(i+z[i]-1>r){l=i;r=i+z[i]-1;}}return z;}vector<int>first(string p,string s){int m=p.size();auto z=zfunc(p+"#"+s);vector<int>best(m+1,INT_MAX/2);for(int i=0;i<(int)s.size();i++){int len=min(m,z[m+1+i]);if(len)best[len]=min(best[len],i);}for(int len=m-1;len>=1;len--)best[len]=min(best[len],best[len+1]);return best;}int main(){string s;int m;cin>>s>>m;string rev=s;reverse(rev.begin(),rev.end());int ans=0;while(m--){string p;cin>>p;if(p.size()<2)continue;auto f=first(p,s);string q=p;reverse(q.begin(),q.end());auto b=first(q,rev);bool good=false;for(int split=1;split<(int)p.size();split++)if(f[split]+split<=int(s.size())-b[p.size()-split]-(int(p.size())-split))good=true;ans+=good;}cout<<ans<<'\n';}

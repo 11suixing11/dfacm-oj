@@ -1,0 +1,46 @@
+[
+  {
+    "order": 24,
+    "pid": 4242,
+    "reason": "补全输入输出格式、从 1 开始的位置规则并恢复原样例; 新增原样例、边界与故障反例; 独立计算新增测试答案; 新增边界数据",
+    "expectedCases": 24,
+    "fields": [
+      "content"
+    ],
+    "fileCount": 40,
+    "solutionCount": 0
+  },
+  {
+    "order": 25,
+    "pid": 4243,
+    "reason": "补全十个复数的输入与输出格式，修复负虚部符号; 修复原站题解负虚部输出 `+-`; 新增原样例、边界与故障反例; 独立计算新增测试答案; 新增边界数据",
+    "expectedCases": 19,
+    "fields": [
+      "content"
+    ],
+    "fileCount": 32,
+    "solutionCount": 1
+  },
+  {
+    "order": 26,
+    "pid": 4244,
+    "reason": "恢复原样例并修复超出 0–1000 的旧数据; 将不合法的旧 A+B 输入修正到题目范围内; 独立重算修正后的 A+B 答案; 新增原样例、边界与故障反例; 独立计算新增测试答案; 新增边界数据",
+    "expectedCases": 18,
+    "fields": [
+      "content"
+    ],
+    "fileCount": 34,
+    "solutionCount": 0
+  },
+  {
+    "order": 27,
+    "pid": 4245,
+    "reason": "恢复两个原样例和语法排版，补全基本式求值规则及输入输出格式; 新增原样例、边界与故障反例; 独立计算新增测试答案; 新增边界数据",
+    "expectedCases": 42,
+    "fields": [
+      "content"
+    ],
+    "fileCount": 44,
+    "solutionCount": 0
+  }
+]

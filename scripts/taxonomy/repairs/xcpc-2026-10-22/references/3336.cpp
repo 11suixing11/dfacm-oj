@@ -1,0 +1,7 @@
+#include <bits/stdc++.h>
+using namespace std;
+using ll=long long;
+struct DSU{vector<int>p,sz;DSU(int n):p(n),sz(n,1){iota(p.begin(),p.end(),0);}int find(int x){return p[x]==x?x:p[x]=find(p[x]);}void join(int a,int b){a=find(a);b=find(b);if(a!=b){if(sz[a]<sz[b])swap(a,b);p[b]=a;sz[a]+=sz[b];}}};
+struct BIT{int n;vector<int>t;BIT(int n=0):n(n),t(n+1){}void add(int x,int v){for(++x;x<=n;x+=x&-x)t[x]+=v;}int sum(int x){int r=0;for(;x>0;x-=x&-x)r+=t[x];return r;}int kth(int k){int p=0;for(int step=1<<20;step;step>>=1)if(p+step<=n&&t[p+step]<k){p+=step;k-=t[p];}return p;}};
+ll power(ll a,ll b,ll mod=1000000007){ll r=1;for(;b;b>>=1,a=a*a%mod)if(b&1)r=r*a%mod;return r;}
+int main(){int n,m,k;cin>>n>>m>>k;vector<int>vol(k);for(auto&v:vol){cin>>v;--v;}vector<vector<int>>g(n);vector<pair<int,int>>edges;for(int i=0,u,v;i<m;i++){cin>>u>>v;--u;--v;g[u].push_back(v);g[v].push_back(u);edges.push_back({u,v});}int s,t;cin>>s>>t;--s;--t;if(find(vol.begin(),vol.end(),t)==vol.end())vol.push_back(t);vector<int>owner(n,-1),dist(n);queue<int>q;for(int v:vol){owner[v]=v;q.push(v);}while(!q.empty()){int u=q.front();q.pop();for(int v:g[u])if(owner[v]<0){owner[v]=owner[u];dist[v]=dist[u]+1;q.push(v);}}vector<tuple<int,int,int>>es;for(auto[u,v]:edges)if(owner[u]>=0&&owner[v]>=0&&owner[u]!=owner[v])es.push_back({dist[u]+dist[v]+1,owner[u],owner[v]});sort(es.begin(),es.end());DSU d(n);for(auto[w,u,v]:es){d.join(u,v);if(d.find(s)==d.find(t)){cout<<w<<'\n';return 0;}}cout<<-1<<'\n';}

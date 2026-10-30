@@ -1,0 +1,90 @@
+[
+  {
+    "order": 16,
+    "pid": 4087,
+    "reason": "恢复三个原题样例并明确集合元素互异; 去除 16 组旧输入的重复集合元素并重算核对答案; 补充原样例、合法边界与故障反例; 独立计算新增测试答案; 新增边界数据",
+    "expectedCases": 29,
+    "fields": [
+      "content"
+    ],
+    "fileCount": 34,
+    "solutionCount": 0
+  },
+  {
+    "order": 17,
+    "pid": 4088,
+    "reason": "恢复完整样例并统一两行输出规则; 独立验证答案、浮点容差及尾随内容的判题器; 补充原样例、合法边界与故障反例; 独立计算新增测试答案; 新增边界数据",
+    "expectedCases": 31,
+    "fields": [
+      "content"
+    ],
+    "fileCount": 23,
+    "solutionCount": 0
+  },
+  {
+    "order": 18,
+    "pid": 4089,
+    "reason": "用原图等价编号表恢复螺旋顺序并恢复原样例; 补充原样例、合法边界与故障反例; 独立计算新增测试答案; 新增边界数据",
+    "expectedCases": 31,
+    "fields": [
+      "content"
+    ],
+    "fileCount": 24,
+    "solutionCount": 0
+  },
+  {
+    "order": 19,
+    "pid": 4090,
+    "reason": "修复 DFS 伪代码、错放样例及浮点误差规则; 独立验证答案、浮点容差及尾随内容的判题器; 启用数值误差判题; 同步配置字段与测试数据配置; 补充原样例、合法边界与故障反例; 独立计算新增测试答案; 新增边界数据",
+    "expectedCases": 30,
+    "fields": [
+      "content",
+      "config"
+    ],
+    "fileCount": 22,
+    "solutionCount": 0
+  },
+  {
+    "order": 20,
+    "pid": 4091,
+    "reason": "补全总金额精度规则并按数值判断; 独立验证答案、浮点容差及尾随内容的判题器; 启用数值误差判题; 同步配置字段与测试数据配置; 补充原样例、合法边界与故障反例; 独立计算新增测试答案; 新增边界数据; 提高原站金额题解的累加精度",
+    "expectedCases": 10,
+    "fields": [
+      "content",
+      "config"
+    ],
+    "fileCount": 14,
+    "solutionCount": 1
+  },
+  {
+    "order": 21,
+    "pid": 4092,
+    "reason": "补充原样例、合法边界与故障反例; 独立计算新增测试答案; 新增边界数据",
+    "expectedCases": 10,
+    "fields": [],
+    "fileCount": 10,
+    "solutionCount": 0
+  },
+  {
+    "order": 22,
+    "pid": 4093,
+    "reason": "恢复三个原样例并明确重复字符串按输入项选择; 补充原样例、合法边界与故障反例; 独立计算新增测试答案; 新增边界数据",
+    "expectedCases": 31,
+    "fields": [
+      "content"
+    ],
+    "fileCount": 22,
+    "solutionCount": 0
+  },
+  {
+    "order": 23,
+    "pid": 4094,
+    "reason": "恢复原样例并明确每轮同时替换; 补充原样例、合法边界与故障反例; 独立计算新增测试答案; 新增边界数据",
+    "expectedCases": 30,
+    "fields": [
+      "content"
+    ],
+    "fileCount": 20,
+    "solutionCount": 0
+  }
+]

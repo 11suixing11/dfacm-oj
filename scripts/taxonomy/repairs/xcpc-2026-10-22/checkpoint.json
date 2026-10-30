@@ -1,0 +1,47 @@
+{
+  "status": "completed",
+  "scope": "system XCPC training DAG 6ac38fb88b364d5443b9ee22",
+  "lastCheckedOrder": 108,
+  "lastCheckedPid": 3523,
+  "auditAt": "2026-10-22T05:18:33.854Z",
+  "knownUnresolvedIssues": [],
+  "summary": {
+    "problemCount": 108,
+    "localProblemCount": 102,
+    "remoteProblemCount": 6,
+    "baselineCases": 1255,
+    "finalLocalCases": 1744,
+    "addedCases": 489,
+    "problemsWithAddedCases": 99,
+    "localInputFilesChecked": 1744,
+    "displayedSamplePairsChecked": 232,
+    "httpProblemsChecked": 108,
+    "imagesChecked": 23,
+    "specialCheckersVerified": 11,
+    "realJudgeAcceptedProblems": 108,
+    "fileCount": 3650,
+    "countersUnchanged": true,
+    "verificationRecordsAndTasksRemaining": 0,
+    "queue": 0,
+    "pending": 0,
+    "judgeLimits": {
+      "builtin": {
+        "testcasesMax": 200,
+        "totalTimeLimit": 600
+      },
+      "standalone": {
+        "testcasesMax": 200,
+        "totalTimeLimit": 600
+      }
+    },
+    "independentOracleChecks": 2449
+  },
+  "report": "REPORT.md",
+  "manifest": "verification-manifest.json",
+  "manifestSha256": "750ee2e887dfa70b3fb95009df1fe8b82da8fb8d4d12c65f21dc74a16a5aabdc",
+  "finalInventorySha256": "09c349d8110c6a71910735047f18557eabc71f6b23d755c3dae9fbef08f31a3e",
+  "privateLocalSnapshot": "qa/xcpc/snapshot-final",
+  "remoteBackupRoot": "/root/backups/xcpc-repair-20261022",
+  "nextRun": "Use a new snapshot root; preserve both the original baseline and snapshot-final. Check the live DAG before resuming.",
+  "historicalFailures": "Retained in private audit evidence and superseded by current successful records."
+}

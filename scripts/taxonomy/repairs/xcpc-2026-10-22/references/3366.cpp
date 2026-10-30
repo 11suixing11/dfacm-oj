@@ -1,0 +1,7 @@
+#include <bits/stdc++.h>
+using namespace std;
+using ll=long long;
+struct DSU{vector<int>p,sz;DSU(int n):p(n),sz(n,1){iota(p.begin(),p.end(),0);}int find(int x){return p[x]==x?x:p[x]=find(p[x]);}void join(int a,int b){a=find(a);b=find(b);if(a!=b){if(sz[a]<sz[b])swap(a,b);p[b]=a;sz[a]+=sz[b];}}};
+struct BIT{int n;vector<int>t;BIT(int n=0):n(n),t(n+1){}void add(int x,int v){for(++x;x<=n;x+=x&-x)t[x]+=v;}int sum(int x){int r=0;for(;x>0;x-=x&-x)r+=t[x];return r;}int kth(int k){int p=0;for(int step=1<<20;step;step>>=1)if(p+step<=n&&t[p+step]<k){p+=step;k-=t[p];}return p;}};
+ll power(ll a,ll b,ll mod=1000000007){ll r=1;for(;b;b>>=1,a=a*a%mod)if(b&1)r=r*a%mod;return r;}
+int K;vector<string>a;vector<ll>solve(int l,int r,int parent){int depth=0;while(depth<(int)a[l].size()&&depth<(int)a[r-1].size()&&a[l][depth]==a[r-1][depth])depth++;int first=l;while(first<r&&(int)a[first].size()==depth)first++;vector<ll>dp(min(K,first-l)+1,0);for(int p=first;p<r;){int end=p+1;while(end<r&&a[end][depth]==a[p][depth])end++;auto child=solve(p,end,depth);vector<ll>next(min(K,(int)dp.size()+(int)child.size()-2)+1,LLONG_MIN/4);for(int i=0;i<(int)dp.size();i++)for(int j=0;j<(int)child.size()&&i+j<=K;j++)next[i+j]=max(next[i+j],dp[i]+child[j]);dp.swap(next);p=end;}for(int j=0;j<(int)dp.size();j++)dp[j]+=1LL*(depth-parent)*j*(j-1)/2;return dp;}int main(){int n;cin>>n>>K;a.resize(n);for(auto&s:a)cin>>s;sort(a.begin(),a.end());cout<<solve(0,n,0)[K]<<'\n';}

@@ -1,0 +1,3 @@
+#include <bits/stdc++.h>
+using namespace std;
+int main(){int f,v;cin>>f>>v;vector<vector<int>>a(f,vector<int>(v));for(auto&r:a)for(int&x:r)cin>>x;const long long NEG=LLONG_MIN/4;vector<vector<long long>>d(f+1,vector<long long>(v+1,NEG));vector<vector<int>>take(f+1,vector<int>(v+1));for(int j=0;j<=v;j++)d[0][j]=0;for(int i=1;i<=f;i++)for(int j=1;j<=v;j++){d[i][j]=d[i][j-1];if(d[i-1][j-1]!=NEG&&d[i-1][j-1]+a[i-1][j-1]>d[i][j]){d[i][j]=d[i-1][j-1]+a[i-1][j-1];take[i][j]=1;}}cout<<d[f][v]<<"\n";vector<int>path;int i=f,j=v;while(i){if(take[i][j]){path.push_back(j);i--;}j--;}reverse(path.begin(),path.end());for(int x:path)cout<<x<<' ';cout<<"\n";}
