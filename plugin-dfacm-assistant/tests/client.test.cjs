@@ -130,3 +130,21 @@ test('plain-mode retry stays off for the rest of the generation and a hard 400 s
     assert.equal(calls[1].response_format, undefined);
     assert.equal(calls[2].response_format, undefined);
 });
+
+test('level-forbidden fields are trimmed instead of failing the generation', async () => {
+    const full = answer('solve', 'solution');
+    const client = createModelClient({ resourceRoot: root, fetchImpl: async () => response({ content: JSON.stringify(full) }) });
+    const approach = await client.generate(request('solve', 'approach'), cfg());
+    assert.equal(approach.level, 'approach');
+    assert.equal(approach.code, '');
+    assert.ok(approach.approach.trim());
+    assert.ok(approach.complexity.trim());
+    const hint = await client.generate(request('solve', 'hint'), cfg());
+    assert.equal(hint.level, 'hint');
+    assert.equal(hint.code, '');
+    assert.equal(hint.complexity, '');
+    assert.equal(hint.commentary, '');
+    assert.ok(hint.approach.trim());
+    const solution = await client.generate(request('solve', 'solution'), cfg());
+    assert.ok(solution.code.includes('int main'));
+});

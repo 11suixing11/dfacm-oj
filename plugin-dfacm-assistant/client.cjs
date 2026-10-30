@@ -3,7 +3,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { createHash } = require('node:crypto');
-const { AssistantError, validateAnswer } = require('./protocol.cjs');
+const { AssistantError, validateAnswer, parseJson, assistanceLevel } = require('./protocol.cjs');
 const { DEFAULT_BASE, DEFAULT_MODEL, personalProvider } = require('./provider-config.cjs');
 const { publicHttpsFetch } = require('./provider-network.cjs');
 const { createCodexRunner } = require('./codex-client.cjs');
@@ -95,6 +95,29 @@ function upstreamError(status, personal) {
     return new AssistantError('UPSTREAM_ERROR', '模型服务暂时不可用，请稍后重试。', 502);
 }
 
+// Some OpenAI-compatible providers (smaller local models are the observed
+// case) produce full-solution answers regardless of the requested assistance
+// level. Instead of failing the whole generation, trim exactly the fields the
+// level contract forbids: the level decides what the student gets to see, so
+// dropping the spoiler content is the contract-correct outcome. Compliant
+// providers are unaffected (their fields are already empty), and any other
+// shape problem still fails validation unchanged.
+function normalizeForLevel(raw, request) {
+    if (request.mode !== 'solve' || !request.level) return raw;
+    const level = assistanceLevel(request.level);
+    if (level === 'solution') return raw;
+    let value;
+    try { value = parseJson(raw); } catch { return raw; }
+    if (!value || typeof value !== 'object' || Array.isArray(value) || value.status !== 'ok') return raw;
+    let changed = false;
+    if (typeof value.code === 'string' && value.code.trim()) { value.code = ''; changed = true; }
+    if (level === 'hint') {
+        if (typeof value.complexity === 'string' && value.complexity.trim()) { value.complexity = ''; changed = true; }
+        if (typeof value.commentary === 'string' && value.commentary.trim()) { value.commentary = ''; changed = true; }
+    }
+    return changed ? JSON.stringify(value) : raw;
+}
+
 function createModelClient({ resourceRoot, fetchImpl = globalThis.fetch, personalFetchImpl = publicHttpsFetch, codexRunner = createCodexRunner() }) {
     const skill = loadSkill(resourceRoot);
     async function generate(request, config, outerSignal, onProgress) {
@@ -105,7 +128,7 @@ function createModelClient({ resourceRoot, fetchImpl = globalThis.fetch, persona
             if (typeof raw === 'string' && config.apiKey && raw.includes(config.apiKey)) {
                 throw new AssistantError('INVALID_RESPONSE', '模型返回内容异常，请重试。', 502);
             }
-            const answer = validateAnswer(raw, request);
+            const answer = validateAnswer(normalizeForLevel(raw, request), request);
             if (config.apiKey && JSON.stringify(answer).includes(config.apiKey)) {
                 throw new AssistantError('INVALID_RESPONSE', '模型返回内容异常，请重试。', 502);
             }
