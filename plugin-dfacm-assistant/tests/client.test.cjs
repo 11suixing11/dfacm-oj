@@ -3,7 +3,7 @@
 const assert = require('node:assert/strict');
 const { test } = require('node:test');
 const path = require('node:path');
-const { createModelClient, modelConfig, loadSkill } = require('../client.cjs');
+const { createModelClient, modelConfig, personalModelConfig, loadSkill } = require('../client.cjs');
 const { request, answer } = require('./fixtures.cjs');
 
 const root = path.resolve(__dirname, '../skill/acm-trainer');
@@ -91,4 +91,42 @@ test('abort cancels a model call instead of retrying billable requests', async (
     controller.abort();
     await assert.rejects(pending, { code: 'TIMEOUT' });
     assert.equal(calls, 1);
+});
+
+test('provider rejecting json_object gets one plain-mode retry and still answers', async () => {
+    const calls = [];
+    const client = createModelClient({ resourceRoot: root, fetchImpl: async (_url, options) => {
+        const body = JSON.parse(options.body); calls.push(body);
+        if (body.response_format) return new Response('{"error":"\'response_format.type\' must be \'json_schema\' or \'text\'"}', { status: 400 });
+        return response({ content: JSON.stringify(answer()) });
+    } });
+    const output = await client.generate(request(), cfg());
+    assert.equal(output.mode, 'solve');
+    assert.equal(calls.length, 2);
+    assert.deepEqual(calls[0].response_format, { type: 'json_object' });
+    assert.equal(calls[1].response_format, undefined);
+    for (const body of calls) {
+        assert.equal(body.stream, true);
+        assert.deepEqual(body.stream_options, { include_usage: true });
+        assert.ok(Array.isArray(body.tools));
+    }
+});
+
+test('plain-mode retry stays off for the rest of the generation and a hard 400 still fails', async () => {
+    const calls = [];
+    const personal = personalModelConfig({ provider: 'custom', baseUrl: 'https://provider.example/v1', model: 'fixture-model', apiKey: 'fixture-key' });
+    const stub = async (_url, options) => {
+        const body = JSON.parse(options.body); calls.push(body);
+        if (body.response_format) return new Response('bad request', { status: 400 });
+        if (calls.length === 2) return response({ content: null, tool_calls: [
+            { id: 'call1', type: 'function', function: { name: 'read_template', arguments: '{"name":"dsu.md"}' } },
+        ] }, 'tool_calls');
+        return new Response('some other bad request', { status: 400 });
+    };
+    const client = createModelClient({ resourceRoot: root, fetchImpl: stub, personalFetchImpl: stub });
+    await assert.rejects(client.generate(request(), personal), { code: 'UPSTREAM_CONFIG' });
+    assert.equal(calls.length, 3);
+    assert.deepEqual(calls[0].response_format, { type: 'json_object' });
+    assert.equal(calls[1].response_format, undefined);
+    assert.equal(calls[2].response_format, undefined);
 });

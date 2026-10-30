@@ -142,17 +142,33 @@ function createModelClient({ resourceRoot, fetchImpl = globalThis.fetch, persona
                 const raw = await codexRunner({ request, config, system, resourceRoot, signal: controller.signal, progress });
                 return finish(raw);
             }
-            for (let round = 0; round < 4; round++) {
-                const response = await (config.personal ? personalFetchImpl : fetchImpl)(config.endpoint, {
+            // Some OpenAI-compatible servers accept only json_schema or no
+            // response_format at all (e.g. LM Studio). On a 400 that may come
+            // from response_format, retry this generation once in plain mode;
+            // the system prompt still requires a complete JSON object and the
+            // answer keeps passing the same structural validation.
+            let jsonMode = true;
+            const sendChatRequest = (round) => {
+                const payload = {
+                    model: config.model, messages, stream: true, stream_options: { include_usage: true },
+                    max_tokens: request.level === 'hint' ? 2500 : request.level === 'approach' ? 6000 : 12000,
+                    tools: [tool],
+                    tool_choice: loaded.size >= 2 || round === 3 ? 'none' : 'auto',
+                };
+                if (jsonMode) payload.response_format = { type: 'json_object' };
+                return (config.personal ? personalFetchImpl : fetchImpl)(config.endpoint, {
                     method: 'POST', signal: controller.signal,
                     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${config.apiKey}` },
-                    body: JSON.stringify({
-                        model: config.model, messages, stream: true, stream_options: { include_usage: true },
-                        max_tokens: request.level === 'hint' ? 2500 : request.level === 'approach' ? 6000 : 12000,
-                        response_format: { type: 'json_object' }, tools: [tool],
-                        tool_choice: loaded.size >= 2 || round === 3 ? 'none' : 'auto',
-                    }),
+                    body: JSON.stringify(payload),
                 });
+            };
+            for (let round = 0; round < 4; round++) {
+                let response = await sendChatRequest(round);
+                if (response.status === 400 && jsonMode) {
+                    await response.body?.cancel();
+                    jsonMode = false;
+                    response = await sendChatRequest(round);
+                }
                 if (!response.ok) { await response.body?.cancel(); throw upstreamError(response.status, config.personal); }
                 progress.stage('generating');
                 let roundUsage = null;
