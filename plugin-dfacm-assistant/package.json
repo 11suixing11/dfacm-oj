@@ -16,7 +16,7 @@
     "@hydrooj/framework": "0.3.2",
     "esbuild": "0.25.12",
     "linkedom": "0.18.12",
-    "markdown-it": "14.1.0",
+    "markdown-it": "14.3.3",
     "nunjucks": "3.2.4"
   }
 }
