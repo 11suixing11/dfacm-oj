@@ -600,7 +600,7 @@ test('contest-calendar plugin ships its data, template and bot-feed wiring', () 
     documented.push(...match[1].split(',').map((name) => name.trim()));
   }
   assert.deepEqual(documented.sort(), [
-    'auto.cjs', 'cache.cjs', 'calendar.cjs', 'calendar.json', 'clist.cjs', 'index.ts', 'package.json', 'presentation.cjs',
+    'ai.cjs', 'auto.cjs', 'cache.cjs', 'calendar.cjs', 'calendar.json', 'clist.cjs', 'index.ts', 'package.json', 'presentation.cjs',
     'public/calendar.css', 'public/calendar.js', 'templates/calendar.html',
   ]);
   for (const name of documented) {
@@ -625,7 +625,7 @@ test('contest-calendar plugin ships its data, template and bot-feed wiring', () 
   // branded scoped styles, and no client-side date math.
   const tpl = fs.readFileSync(path.join(repo, 'plugin-dfacm-calendar', 'templates', 'calendar.html'), 'utf8');
   assert.match(tpl, /\{% extends "layout\/basic.html" %\}/, 'calendar.html must extend the site layout');
-  assert.match(tpl, /class="section"/, 'calendar.html must use the section component');
+  assert.match(tpl, /class="section(?: [^"]+)?"/, 'calendar.html must use the section component');
   assert.match(tpl, /swpu-cal-chip/, 'calendar.html must render the type filter chips');
   assert.match(tpl, /swpu-cal-card/, 'calendar.html must render contest rows');
   assert.match(tpl, /<details[^>]+dfacm-cal__archive/, 'ended events must use the native collapsible archive');
@@ -639,7 +639,8 @@ test('contest-calendar plugin ships its data, template and bot-feed wiring', () 
   // The bot feed projects raw events (manual + auto merged) — internal Date
   // fields must not leak, and the merge must actually reach the projection.
   assert.match(index, /events: merged\.events\.map/);
-  assert.match(index, /mergeCalendar\(parsed, \[\.\.\.auto, \.\.\.extra\]\)/);
+  assert.match(index, /mergeCalendar\(parsed, \[\.\.\.auto, \.\.\.extra, \.\.\.ai\]\)/);
+  assert.match(index, /ctx\.Route\('swpu_calendar_rss', '\/calendar\/feed\.xml'/);
   assert.match(index, /ctx\.Route\('swpu_calendar_feed', '\/calendar\/feed\.ics'/);
   assert.match(index, /ctx\.Route\('swpu_calendar_asset', '\/calendar\/assets\/:file'/);
   assert.match(index, /dfacm_calendar\.clist_api_key/);

@@ -29,9 +29,8 @@ function sessionScript() {
     return hit;
 }
 
-// Wiring lock: the shipped markup must contain the exact nodes the script swaps
-// and the stats this release refreshed.
-test('landing wiring: swap targets, detection marker and stats exist in shipped HTML', () => {
+// The personal training area and shared homepage entries have separate jobs.
+test('landing wiring: personal training targets and shared path entries exist', () => {
     assert.ok(html.includes('<a class="login" href="/reg?tab=pwd">登录</a>'));
     assert.ok(html.includes('<a class="cta" href="/reg">注册账号</a>'));
     assert.ok(html.includes('<nav id="mmenu"'));
@@ -41,16 +40,16 @@ test('landing wiring: swap targets, detection marker and stats exist in shipped 
     assert.ok(html.includes("credentials:'same-origin'"));
     assert.ok(html.includes("cache:'no-store'"), 'probe must bypass the HTTP cache');
     assert.ok(html.includes("addEventListener('pageshow'"), 'bfcache restore must re-probe login state');
-    assert.ok(html.includes('/workbench/recent'), 'recent-trainings endpoint must stay wired into the hero CTA swap');
-    assert.ok(html.includes('#hero .hero-cta'), 'the hero CTA container must stay addressable for the card swap');
+    assert.ok(html.includes('/workbench/recent'), 'recent-trainings endpoint must stay wired into the training area');
+    assert.ok(html.includes("querySelector('#training-resume')"), 'training card updates must target the algorithm area');
     assert.ok(html.includes('.rt{'), 'recent-training card styles must exist');
-    assert.equal((html.match(/class="hero-cta /g) || []).length, 2, 'hero CTA rows: top hero + #go section');
+    assert.equal((html.match(/class="hero-cta /g) || []).length, 1, 'the register row is separate from the two homepage paths');
     assert.ok(html.includes('id="go"'), 'the register CTA section must exist for guests and no-JS visitors');
     assert.ok(html.includes("querySelector('#go')"), 'the member paint must keep toggling the register section');
     assert.ok(html.includes('.ft-col a[href="/reg?tab=pwd"], .ft-col a[href="/reg"]'), 'footer auth links must stay addressable for the member toggle');
-    assert.ok(html.includes('4,249'), 'problem count must not regress');
-assert.ok(html.includes('>29</span>'), '29 judge languages');
-    assert.ok(!html.includes('data-count'), 'dead attributes: nothing reads them, and they drifted from the visible numbers');
+    assert.ok(html.includes('id="algorithm-entry-title"'), 'algorithm entry missing');
+    assert.ok(html.includes('id="ai-entry-title"'), 'AI development entry missing');
+    assert.ok(!html.includes('data-count'), 'homepage counts must not drift from live data');
     assert.ok(!html.includes('2.5ms'), 'the judge-sourced 2.5ms stat must stay gone');
     assert.ok(!html.includes('8.1ms'), 'stale 8.1ms stat must be gone');
     assert.ok(!html.includes('最快一次评测'), 'the fastest-run cell was removed — do not reintroduce an unattributable headline stat');
@@ -140,12 +139,12 @@ function textNode(text) {
     return { tagName: '', textContent: String(text) };
 }
 
-const GUEST_HELP = '第一次来？<a href="#start">查看入门指引</a><span>已有账号 <a href="/reg?tab=pwd">登录</a></span>';
+const GUEST_HELP = '第一次来？<a href="#start">查看实践指引</a><span>已有账号 <a href="/reg?tab=pwd">登录</a></span>';
 
-// The static hero CTA the shipped markup carries (guest / no-JS default).
+// Static algorithm controls shown before a personal training list is loaded.
 const HERO_CTA = [
-    '<a class="btn btn-p" href="/training/6abf5251aaa235606eedfb84">开始登顶训练 <svg aria-hidden="true"><use href="#i-arrow"/></svg></a>',
-    '<a class="btn btn-g" href="/p">浏览题库</a>',
+    '<a class="btn btn-p" href="/training/6abf5251aaa235606eedfb84">从入门开始 <svg aria-hidden="true"><use href="#i-arrow"/></svg></a>',
+    '<a class="btn btn-g" href="/training">浏览全部路线</a>',
 ].join('');
 
 // /workbench/recent payload shape, captured from the live endpoint contract.
@@ -179,12 +178,12 @@ async function runPage({ page, pages, cached } = {}) {
         '#mmenu a[href="/reg?tab=pwd"]': new El('登录', '/reg?tab=pwd'),
         '#mmenu a[href="/reg"]': new El('注册账号', '/reg'),
         '.hero-help': new El('', undefined),
-        '#hero .hero-cta': new El('', undefined),
+        '#training-resume': new El('', undefined),
         '#go': Object.assign(new El('', undefined), { hidden: false }),
         '#start': Object.assign(new El('', undefined), { hidden: false }),
     };
     els['.hero-help'].innerHTML = GUEST_HELP;
-    els['#hero .hero-cta'].innerHTML = HERO_CTA;
+    els['#training-resume'].innerHTML = HERO_CTA;
     const qa = {
         '.ft-col a[href="/reg?tab=pwd"], .ft-col a[href="/reg"]': [
             Object.assign(new El('登录', '/reg?tab=pwd'), { hidden: false }),
@@ -279,7 +278,7 @@ test('logged-in SSR page swaps nav to username + workbench and caches the sessio
     assert.ok(els['.hero-help'].toHTML().includes('/workbench'));
     // The second fetch was answered with the SSR HTML fixture, so r.json()
     // threw inside the script's own catch: the static CTA must survive.
-    assert.ok(els['#hero .hero-cta'].toHTML().includes('开始登顶训练'), 'malformed recent payload keeps the static CTA');
+    assert.ok(els['#training-resume'].toHTML().includes('从入门开始'), 'malformed recent payload keeps the static CTA');
     // Register-pitch content hides for members.
     assert.equal(els['#go'].hidden, true, 'the register CTA section must hide for members');
     assert.equal(els['#start'].hidden, true, 'the first-visit guide must hide for members');
@@ -433,11 +432,11 @@ test('bfcache restore (persisted pageshow) resets to the guest baseline then re-
     const { els, store, fetches, fire } = await runPage({ pages: [AUTH_PAGE, RECENT_JSON, GUEST_PAGE] });
     assert.equal(els['#nav a.login'].textContent, 'e2etest');
     assert.ok(store.has('swpu-me'));
-    assert.ok(els['#hero .hero-cta'].toHTML().includes('【专题】动态规划'), 'member sees recent-training cards');
+    assert.ok(els['#training-resume'].toHTML().includes('【专题】动态规划'), 'member sees recent-training cards');
     fire({ persisted: true });
     assert.equal(els['#nav a.login'].textContent, '登录', 'baseline must reset the moment bfcache restores');
     assert.equal(els['#nav a.cta'].textContent, '注册账号');
-    assert.ok(els['#hero .hero-cta'].toHTML().includes('开始登顶训练'), 'baseline must restore the static CTA');
+    assert.ok(els['#training-resume'].toHTML().includes('从入门开始'), 'baseline must restore the static CTA');
     assert.equal(els['#go'].hidden, false, 'baseline must restore the register section for the guest re-probe');
     assert.ok(!store.has('swpu-me'));
     assert.equal(fetches.length, 3); // /p probe, /workbench/recent, /p re-probe
@@ -445,7 +444,7 @@ test('bfcache restore (persisted pageshow) resets to the guest baseline then re-
     assert.equal(fetches[2].opts.cache, 'no-store');
     assert.equal(els['#nav a.login'].textContent, '登录', 'guest re-probe keeps the guest UI');
     assert.equal(els['.hero-help'].innerHTML, GUEST_HELP);
-    assert.ok(els['#hero .hero-cta'].toHTML().includes('开始登顶训练'));
+    assert.ok(els['#training-resume'].toHTML().includes('从入门开始'));
     assert.ok(!store.has('swpu-me'));
 });
 
@@ -459,7 +458,7 @@ test('persisted pageshow after a fresh login re-detects the signed-in user', asy
     assert.equal(fetches[2].url, '/workbench/recent');
     assert.equal(els['#nav a.login'].textContent, 'e2etest', 're-probe must repaint the member UI');
     assert.equal(els['#nav a.login'].getAttribute('href'), '/user/5');
-    assert.ok(els['#hero .hero-cta'].toHTML().includes('【专题】动态规划'), 'cards must render after the re-probe');
+    assert.ok(els['#training-resume'].toHTML().includes('【专题】动态规划'), 'cards must render after the re-probe');
 });
 
 test('non-persisted pageshow (normal load) never triggers a second probe', async () => {
@@ -471,14 +470,14 @@ test('non-persisted pageshow (normal load) never triggers a second probe', async
 test('recent trainings replace the static CTA and the welcome link follows the newest one', async () => {
     const { els, store, fetches } = await runPage({ pages: [AUTH_PAGE, RECENT_JSON] });
     assert.equal(fetches[1].url, '/workbench/recent');
-    const cards = els['#hero .hero-cta'].toHTML();
+    const cards = els['#training-resume'].toHTML();
     assert.ok(cards.includes('href="/training/6ac63618a1cd796076ca5daf"'), 'first card links to the newest plan');
     assert.ok(cards.includes('href="/training/6abf5251aaa235606eedfb84"'), 'second card links to the older plan');
     assert.ok(cards.includes('【专题】动态规划'));
     assert.ok(cards.includes('4 / 32 题'));
     assert.ok(cards.includes('37 / 396 题'));
     assert.ok(cards.includes('继续 →'));
-    assert.ok(!cards.includes('开始登顶训练'), 'the static CTA must be swapped out for members with activity');
+    assert.ok(!cards.includes('从入门开始'), 'the static CTA must be swapped out for members with activity');
     // Relative labels come from lastActiveAt (3 and 9 days before "now").
     assert.ok(cards.includes('3 天前'));
     assert.ok(cards.includes('9 天前'));
@@ -486,6 +485,7 @@ test('recent trainings replace the static CTA and the welcome link follows the n
     const help = els['.hero-help'].toHTML();
     assert.ok(help.includes('href="/training/6ac63618a1cd796076ca5daf"'), help);
     assert.ok(help.includes('继续训练路线'));
+    assert.ok(help.includes('href="#ai"'), 'member welcome must retain the AI development entry');
     const saved = JSON.parse(store.get('swpu-me'));
     assert.equal(saved.recent.length, 2);
     assert.equal(saved.recent[0].url, '/training/6ac63618a1cd796076ca5daf');
@@ -495,9 +495,9 @@ test('recent trainings replace the static CTA and the welcome link follows the n
 
 test('an empty recent list keeps the static CTA and the default welcome link', async () => {
     const { els } = await runPage({ pages: [AUTH_PAGE, EMPTY_RECENT_JSON] });
-    const cards = els['#hero .hero-cta'].toHTML();
-    assert.ok(cards.includes('开始登顶训练'), 'a member with no plan activity sees the default CTA');
-    assert.ok(cards.includes('浏览题库'));
+    const cards = els['#training-resume'].toHTML();
+    assert.ok(cards.includes('从入门开始'), 'a member with no plan activity sees the default CTA');
+    assert.ok(cards.includes('浏览全部路线'));
     const help = els['.hero-help'].toHTML();
     assert.ok(help.includes('/training/6abf5251aaa235606eedfb84'), 'welcome link falls back to the entry route');
 });
@@ -506,7 +506,7 @@ test('a failed cards fetch never breaks the member paint', async () => {
     const { els, fetches } = await runPage({ pages: [AUTH_PAGE, REJECT] });
     assert.equal(fetches.length, 2);
     assert.equal(els['#nav a.login'].textContent, 'e2etest', 'login detection is independent of the cards fetch');
-    assert.ok(els['#hero .hero-cta'].toHTML().includes('开始登顶训练'));
+    assert.ok(els['#training-resume'].toHTML().includes('从入门开始'));
 });
 
 test('cached recent trainings paint instantly and survive a failed refresh', async () => {
@@ -520,7 +520,7 @@ test('cached recent trainings paint instantly and survive a failed refresh', asy
             }],
         },
     });
-    assert.ok(els['#hero .hero-cta'].toHTML().includes('【专题】动态规划'),
+    assert.ok(els['#training-resume'].toHTML().includes('【专题】动态规划'),
         'optimistic cards must survive a failed refresh (probe still confirmed the login)');
     const saved = JSON.parse(store.get('swpu-me'));
     assert.equal(saved.recent.length, 1, 'the optimistic list stays cached for the next visit');
@@ -535,7 +535,7 @@ test('a guest probe after a cached member visit restores the static CTA', async 
         },
     });
     assert.equal(els['#nav a.login'].textContent, '登录');
-    assert.ok(els['#hero .hero-cta'].toHTML().includes('开始登顶训练'), 'member cards must not leak into the guest view');
+    assert.ok(els['#training-resume'].toHTML().includes('从入门开始'), 'member cards must not leak into the guest view');
     assert.equal(els['#go'].hidden, false, 'member paint must not leave the register section hidden for a guest');
     assert.equal(els['#start'].hidden, false, 'first-visit guidance must return for guests');
     assert.ok(qa['.ft-col a[href="/reg?tab=pwd"], .ft-col a[href="/reg"]'].every((l) => l.hidden === false), 'footer auth links must be restored for a guest');

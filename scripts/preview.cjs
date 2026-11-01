@@ -27,16 +27,36 @@ function instrument(html, pathname) {
   return result.replace('</body>', '<script src="/preview/ui.js" defer></script></body>');
 }
 
-function trainingBundle() {
+async function trainingBundle() {
   let esbuild;
   try { esbuild = require('../plugin-dfacm-train/node_modules/esbuild'); }
   catch { throw new Error('请先在 plugin-dfacm-train 目录运行 npm ci，再启动预览。'); }
-  return esbuild.buildSync({ entryPoints: [path.join(root, 'scripts/preview/training-entry.js')], bundle: true,
-    write: false, platform: 'browser', format: 'iife', target: ['chrome65'] }).outputFiles[0].text;
+  const sources = new Map([
+    ['training-preview', 'scripts/preview/training-entry.js'],
+    ['../../plugin-dfacm-train/frontend/training.js', 'plugin-dfacm-train/frontend/training.js'],
+    ['../../plugin-dfacm-train/frontend/catalog.js', 'plugin-dfacm-train/frontend/catalog.js'],
+  ]);
+  // Virtual sources keep esbuild from scanning restricted ancestor directories.
+  const result = await esbuild.build({ absWorkingDir: root, entryPoints: ['training-preview'], bundle: true,
+    write: false, platform: 'browser', format: 'iife', target: ['chrome65'],
+    plugins: [{
+      name: 'preview-sources',
+      setup(build) {
+        build.onResolve({ filter: /.*/ }, ({ path: name }) => sources.has(name)
+          ? { path: name, namespace: 'preview-source' }
+          : { errors: [{ text: 'Unexpected preview import: ' + name }] });
+        build.onLoad({ filter: /.*/, namespace: 'preview-source' }, ({ path: name }) => ({
+          contents: fs.readFileSync(path.join(root, sources.get(name)), 'utf8'), loader: 'js',
+        }));
+      },
+    }],
+  });
+  return result.outputFiles[0].text;
 }
 
 function createServer() {
-  return http.createServer((req, res) => {
+  let trainingBuild;
+  return http.createServer(async (req, res) => {
     const url = new URL(req.url, 'http://127.0.0.1');
     const pathname = url.pathname;
     const ref = new URL(req.headers.referer || '/', 'http://127.0.0.1');
@@ -72,7 +92,11 @@ function createServer() {
     }
     if (pathname === '/preview/problems.json') return json(fixtures.problems);
     if (pathname === '/preview/training.js') {
-      try { return send(200, types['.js'], trainingBundle()); }
+      try {
+        // Share only an in-flight build; later requests always read current sources.
+        if (!trainingBuild) trainingBuild = trainingBundle().finally(() => { trainingBuild = undefined; });
+        return send(200, types['.js'], await trainingBuild);
+      }
       catch (error) { return send(503, types['.js'], 'console.error(' + JSON.stringify(error.message) + ')'); }
     }
     const record = flow.recordPage(url);

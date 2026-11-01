@@ -6,14 +6,15 @@ const fs = require('node:fs');
 const path = require('node:path');
 const nunjucks = require('nunjucks');
 const { loadCalendar, mergeCalendar } = require('./calendar.cjs');
-const { pageData, buildIcs } = require('./presentation.cjs');
+const { pageData, buildIcs, buildRss } = require('./presentation.cjs');
+const { normalizeCompetition } = require('./ai.cjs');
 
 const env = new nunjucks.Environment(new nunjucks.FileSystemLoader(path.join(__dirname, 'templates')), { autoescape: true });
 const template = fs.readFileSync(path.join(__dirname, 'templates/calendar.html'), 'utf8')
     .replace('{% extends "layout/basic.html" %}', '').replace('{% block content %}', '').replace('{% endblock %}', '');
 const assets = new Map([
-    ['calendar-1.36.3.js', ['public/calendar.js', 'application/javascript']],
-    ['calendar-1.36.3.css', ['public/calendar.css', 'text/css']],
+    ['calendar-1.37.1.js', ['public/calendar.js', 'application/javascript']],
+    ['calendar-1.37.1.css', ['public/calendar.css', 'text/css']],
 ]);
 const port = Number(process.env.PORT || 4174);
 http.createServer((req, res) => {
@@ -28,17 +29,23 @@ http.createServer((req, res) => {
     const now = new Date(process.env.CALENDAR_PREVIEW_NOW || Date.now());
     const manual = loadCalendar(fs.readFileSync(path.join(__dirname, 'calendar.json'), 'utf8'));
     const extra = process.env.CALENDAR_PREVIEW_DATA ? JSON.parse(fs.readFileSync(process.env.CALENDAR_PREVIEW_DATA, 'utf8')) : [];
-    const parsed = mergeCalendar(manual, extra);
-    const options = Object.fromEntries(['type', 'types', 'q'].map((key) => [key, url.searchParams.get(key) || '']));
+    const ai = process.env.CALENDAR_PREVIEW_AI ? JSON.parse(fs.readFileSync(process.env.CALENDAR_PREVIEW_AI, 'utf8')).items.map(normalizeCompetition).filter(Boolean) : [];
+    const parsed = mergeCalendar(manual, [...extra, ...ai]);
+    const options = Object.fromEntries(['type', 'types', 'q', 'scope', 'interests', 'source', 'status', 'sort'].map((key) => [key, url.searchParams.get(key) || '']));
     if (url.pathname === '/calendar/feed.ics') {
         res.writeHead(200, { 'Content-Type': 'text/calendar; charset=utf-8' });
         return res.end(buildIcs(parsed, { ...options, now }));
+    }
+    if (url.pathname === '/calendar/feed.xml') {
+        res.writeHead(200, { 'Content-Type': 'application/rss+xml; charset=utf-8' });
+        return res.end(buildRss(parsed, { ...options, now }));
     }
     if (!['/', '/calendar'].includes(url.pathname)) { res.writeHead(404); return res.end(); }
     const view = pageData(parsed, now, options, [
         { id: 'cf', label: 'Codeforces', status: 'fresh' },
         { id: 'atcoder', label: 'AtCoder', status: 'fresh' },
         { id: 'clist', label: 'CLIST', status: 'unconfigured' },
+        { id: 'ai', label: 'AI 赛事采集', status: 'fresh' },
     ]);
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
     const content = env.renderString(template, view);

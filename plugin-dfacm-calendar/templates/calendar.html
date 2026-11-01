@@ -1,8 +1,8 @@
 {% extends "layout/basic.html" %}
 {% block content %}
 {% macro contestRow(e) %}
-<li class="dfacm-cal__row swpu-cal-card{% if e.status == 'ongoing' and not e.approx %} is-live{% endif %}{% if e.status == 'ended' and not e.approx %} is-ended{% endif %}" style="--cal-category:{{ e.color }}" data-calendar-card data-id="{{ e.id }}" data-type="{{ e.type }}" data-search="{{ e.searchText }}"{% if e.hidden %} hidden{% endif %}>
-  <time class="dfacm-cal__date-block{% if e.approx %} is-uncertain{% endif %}" datetime="{{ e.dateValue }}" aria-label="{{ e.scheduleDateText }}">
+<li class="dfacm-cal__row swpu-cal-card{% if e.status == 'ongoing' and not e.approx %} is-live{% endif %}{% if e.status == 'ended' and not e.approx %} is-ended{% endif %}" style="--cal-category:{{ e.color }}" data-calendar-card data-id="{{ e.id }}" data-type="{{ e.type }}" data-track="{{ e.track }}" data-tags="{{ e.tags | join(',') }}" data-sources="{{ e.sources | join(',') }}" data-status="{{ e.filterStatus }}" data-sort-schedule="{{ e.sortValues.schedule }}" data-sort-deadline="{{ e.sortValues.deadline }}" data-sort-newest="{{ e.sortValues.newest }}" data-sort-prize="{{ e.sortValues.prize }}" data-currency="{{ e.sortValues.currency }}" data-search="{{ e.searchText }}"{% if e.hidden %} hidden{% endif %}>
+  <time class="dfacm-cal__date-block{% if e.approx or e.dateUnknown %} is-uncertain{% endif %}"{% if e.dateValue %} datetime="{{ e.dateValue }}"{% endif %} aria-label="{{ e.scheduleDateText }}">
     <span class="dfacm-cal__date-month">{{ e.dateMonth }}</span>
     <strong>{{ e.dateDay }}</strong>
     <span class="dfacm-cal__date-weekday">{{ e.dateWeekday }}</span>
@@ -11,8 +11,12 @@
     <h3>{% if e.url %}<a href="{{ e.url }}" target="_blank" rel="noopener noreferrer">{{ e.name }}</a>{% else %}{{ e.name }}{% endif %}</h3>
     <div class="dfacm-cal__row-meta">
       <span class="dfacm-cal__badge">{{ e.typeLabel }}</span>
+      {% for label in e.interestLabels %}<span class="dfacm-cal__interest">{{ label }}</span>{% endfor %}
       <span class="dfacm-cal__date-text">{{ e.scheduleDateText }}{% if e.timeText %} · {{ e.timeText }}{% endif %}</span>
       {% if e.placeText %}<span class="dfacm-cal__place"><svg class="dfacm-cal__icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 10c0 5-7 11-7 11S5 15 5 10a7 7 0 1 1 14 0Z"/><circle cx="12" cy="10" r="2.5"/></svg>{{ e.placeText }}</span>{% endif %}
+    </div>
+    <div class="dfacm-cal__details">
+      <span>{{ e.sourceLabel }}</span>{% if e.organizer %}<span>主办方：{{ e.organizer }}</span>{% endif %}{% if e.prizeText %}<span class="dfacm-cal__prize">奖金：{{ e.prizeText }}</span>{% endif %}{% if e.teamsCount %}<span>{{ e.teamsCount }} 支队伍</span>{% endif %}
     </div>
     {% if e.regText %}<p class="dfacm-cal__reg{% if e.regSoon %} is-soon{% endif %}" data-calendar-registration>{{ e.regText }}</p>{% endif %}
     {% if e.note %}<p class="dfacm-cal__note">{{ e.note }}</p>{% endif %}
@@ -23,16 +27,17 @@
   </div>
 </li>
 {% endmacro %}
-<link rel="stylesheet" href="/calendar/assets/calendar-1.36.3.css">
-<div class="section">
+<link rel="stylesheet" href="/calendar/assets/calendar-1.37.1.css">
+<link rel="alternate" type="application/rss+xml" title="赛事日历 RSS" href="{{ rssUrl }}" data-calendar-rss>
+<div class="section dfacm-cal-shell">
   <div class="section__body dfacm-cal" id="dfacm-calendar">
     <header class="dfacm-cal__intro">
       <div class="dfacm-cal__intro-copy">
         <span class="dfacm-cal__mark" aria-hidden="true"><svg class="dfacm-cal__icon" viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11m-17-12 1 1 2-2m-3 7 1 1 2-2m-3 7 1 1 2-2"/></svg></span>
         <div>
           <p class="dfacm-cal__eyebrow">d&f · CONTEST SCHEDULE</p>
-          <h1>赛事清单</h1>
-          <p class="dfacm-cal__lead">找到下一场比赛，也别错过报名。</p>
+          <h1>赛事日历</h1>
+          <p class="dfacm-cal__lead">算法赛、AI 赛与黑客松，在这里找到下一场比赛。</p>
         </div>
       </div>
       <div class="dfacm-cal__intro-action">
@@ -43,17 +48,32 @@
     {% if broken %}<p class="dfacm-cal__empty" role="status">赛事数据暂时不可用，正在展示上一份赛程。</p>{% endif %}
     {% for s in skipped %}<p class="dfacm-cal__meta">数据行被忽略：{{ s }}</p>{% endfor %}
     <div class="dfacm-cal__filters">
+      <div class="swpu-cal-chips dfacm-cal__tracks" aria-label="赛事方向">
+        {% for f in scopeFilters %}<a class="swpu-cal-chip{% if f.selected %} is-on{% endif %}" href="{{ f.href }}" data-calendar-scope="{{ f.key }}" aria-pressed="{% if f.selected %}true{% else %}false{% endif %}">{{ f.label }}<small>{{ f.count }}</small></a>{% endfor %}
+        <a class="dfacm-cal__clear" href="/calendar" data-calendar-clear>清空筛选</a>
+      </div>
       <form class="dfacm-cal__search" id="dfacm-calendar-search-form" action="/calendar" method="get" role="search">
         <input type="hidden" name="types" id="dfacm-calendar-selected-types" value="{{ selectedTypesValue }}">
+        <input type="hidden" name="interests" id="dfacm-calendar-selected-interests" value="{{ selectedInterestsValue }}">
+        <input type="hidden" name="scope" id="dfacm-calendar-selected-scope" value="{{ currentScope }}">
         <div class="dfacm-cal__search-field">
           <svg class="dfacm-cal__icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/></svg>
-          <input type="search" name="q" id="dfacm-calendar-search" value="{{ query }}" maxlength="80" placeholder="搜索比赛名称、地点或关键词" aria-label="搜索赛事" autocomplete="off">
+          <input type="search" name="q" id="dfacm-calendar-search" value="{{ query }}" maxlength="80" placeholder="搜索比赛、主办方、地点或关键词" aria-label="搜索赛事" autocomplete="off">
         </div>
         <button type="submit" class="dfacm-cal__button">搜索</button>
+        <div class="dfacm-cal__selects">
+          <label>平台<select name="source" id="dfacm-calendar-source">{% for o in sourceOptions %}<option value="{{ o.key }}"{% if o.selected %} selected{% endif %}>{{ o.label }}</option>{% endfor %}</select></label>
+          <label>状态<select name="status" id="dfacm-calendar-status">{% for o in statusOptions %}<option value="{{ o.key }}"{% if o.selected %} selected{% endif %}>{{ o.label }}</option>{% endfor %}</select></label>
+          <label>排序<select name="sort" id="dfacm-calendar-sort">{% for o in sortOptions %}<option value="{{ o.key }}"{% if o.selected %} selected{% endif %}>{{ o.label }}</option>{% endfor %}</select></label>
+        </div>
       </form>
       <div class="dfacm-cal__filter-label"><span>赛事类型</span><small>可多选</small></div>
       <div class="swpu-cal-chips" aria-label="赛事类型，可选择多项">
         {% for f in filters %}<a class="swpu-cal-chip{% if f.selected %} is-on{% endif %}" style="--cal-category:{{ f.color }}" href="{{ f.href }}" data-calendar-type="{{ f.key }}" aria-pressed="{% if f.selected %}true{% else %}false{% endif %}"><span class="dfacm-cal__chip-dot" aria-hidden="true"></span><span>{{ f.label }}</span><small>{{ f.count }}</small></a>{% endfor %}
+      </div>
+      <div class="dfacm-cal__filter-label dfacm-cal__interest-label"><span>兴趣标签</span><small>可多选</small></div>
+      <div class="swpu-cal-chips" aria-label="兴趣标签，可选择多项">
+        {% for f in interestFilters %}<a class="swpu-cal-chip{% if f.selected %} is-on{% endif %}" href="{{ f.href }}" data-calendar-interest="{{ f.key }}" aria-pressed="{% if f.selected %}true{% else %}false{% endif %}">{{ f.label }}<small>{{ f.count }}</small></a>{% endfor %}
       </div>
     </div>
     <div class="dfacm-cal__caption">
@@ -64,7 +84,7 @@
     <div id="dfacm-calendar-list">
       {% for g in groups %}
       {% if g.key == 'ended' %}
-      <details class="dfacm-cal__group dfacm-cal__archive" data-calendar-group data-group="{{ g.key }}"{% if g.hidden %} hidden{% endif %}{% if currentTypes.length or query %} open{% endif %}>
+      <details class="dfacm-cal__group dfacm-cal__archive" data-calendar-group data-group="{{ g.key }}"{% if g.hidden %} hidden{% endif %}{% if hasFilters %} open{% endif %}>
         <summary class="dfacm-cal__group-heading"><span>{{ g.label }}</span><span class="dfacm-cal__group-count" data-group-count>{{ g.count }}</span><span class="dfacm-cal__archive-hint">查看往期赛事<svg class="dfacm-cal__icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></span></summary>
         <ul class="dfacm-cal__rows" aria-label="{{ g.label }}">{% for e in g.events %}{{ contestRow(e) }}{% endfor %}</ul>
       </details>
@@ -79,21 +99,22 @@
     <footer class="dfacm-cal__footer">
       <div class="dfacm-cal__sources" aria-label="赛程同步状态">{% for s in sources %}<span class="dfacm-cal__source is-{{ s.status }}">{{ s.label }} · {{ s.text }}</span>{% endfor %}</div>
       <p>官方赛事按通知整理，平台赛事自动同步。{% if updated %}官方赛程更新于 {{ updated }}。{% endif %}时间以赛事最终公告为准。</p>
-      <p>补充赛事数据由 <a href="https://clist.by" target="_blank" rel="noopener noreferrer">CLIST</a> 提供。<a href="{{ subscribeUrl }}" data-calendar-feed download="dfacm-contests.ics">下载当前筛选的日历</a></p>
+      <p>补充赛事数据由 <a href="https://clist.by" target="_blank" rel="noopener noreferrer">CLIST</a> 提供。<a href="{{ subscribeUrl }}" data-calendar-feed download="dfacm-contests.ics">下载当前筛选的日历</a> · <a href="{{ rssUrl }}" data-calendar-rss>订阅 RSS</a></p>
+      <p id="dfacm-calendar-prize-note"{% if not prizeSort %} hidden{% endif %}>奖金按币种分组后从高到低排列，不进行汇率换算。</p>
     </footer>
     <dialog class="dfacm-cal__dialog" id="dfacm-calendar-subscribe" aria-labelledby="dfacm-subscribe-title">
       <button class="dfacm-cal__close" type="button" id="dfacm-subscribe-close" aria-label="关闭订阅说明">×</button>
       <h2 id="dfacm-subscribe-title">把赛程加入你的日历</h2>
-      <p>订阅会跟随当前选择的赛事类型和关键词，后续赛程更新会由日历应用自动同步。</p>
+      <p>订阅会跟随当前选择的赛事方向、类型、兴趣标签、平台、状态和关键词，后续赛程更新会由日历应用自动同步。</p>
       <label for="dfacm-calendar-feed-url" class="dfacm-cal__meta">日历订阅地址</label>
       <input id="dfacm-calendar-feed-url" type="text" readonly aria-label="日历订阅地址">
       <div class="dfacm-cal__dialog-actions"><button type="button" class="dfacm-cal__subscribe" id="dfacm-subscribe-copy">复制订阅地址</button><a class="dfacm-cal__button" href="{{ subscribeUrl }}" data-calendar-feed download="dfacm-contests.ics">下载 .ics 文件</a></div>
       <p>Apple 日历：文件 → 新建日历订阅。Google 日历：其他日历 → 通过网址。Outlook：添加日历 → 从 Web 订阅。</p>
-      <p>定时比赛包含赛前 30 分钟提醒，报名截止包含提前 3 天和 1 天提醒。是否通知和同步频率取决于你的日历应用设置。日期未确定的赛事仅订阅已公布的报名截止。</p>
+      <p>定时比赛包含赛前 30 分钟提醒，报名或赛事截止包含提前 3 天和 1 天提醒。是否通知和同步频率取决于你的日历应用设置。日期未确定的赛事仅订阅已公布的截止时间。</p>
       <p id="dfacm-subscribe-message" role="status" aria-live="polite"></p>
     </dialog>
     <script id="dfacm-calendar-boot" type="application/json">{{ bootJson | safe }}</script>
   </div>
 </div>
-<script defer src="/calendar/assets/calendar-1.36.3.js"></script>
+<script defer src="/calendar/assets/calendar-1.37.1.js"></script>
 {% endblock %}

@@ -23,8 +23,8 @@ const events = [
 const template = fs.readFileSync(path.join(ROOT, 'templates/calendar.html'), 'utf8').replace('{% extends "layout/basic.html" %}', '').replace('{% block content %}', '').replace('{% endblock %}', '');
 const client = fs.readFileSync(path.join(ROOT, 'public/calendar.js'), 'utf8');
 
-function fixture(t, { options = {}, noScript = false, badBoot = false, view, dialogSupported = true } = {}) {
-    const data = pageData(loadCalendar(JSON.stringify({ events })), NOW, options);
+function fixture(t, { options = {}, noScript = false, badBoot = false, view, dialogSupported = true, extraEvents = [] } = {}) {
+    const data = pageData(loadCalendar(JSON.stringify({ events: [...events, ...extraEvents] })), NOW, options);
     const rendered = new nunjucks.Environment(null, { autoescape: true }).renderString(template, data);
     const params = new URLSearchParams(options);
     const dom = new JSDOM(rendered, {
@@ -212,4 +212,62 @@ test('enhancement initializes once and unavailable URL history does not disable 
     f.search('Thursday');
     assert.equal(f.shown().length, 1);
     assert.equal(new URL(f.$('[data-calendar-feed]').href).searchParams.get('q'), 'Thursday');
+});
+
+test('AI direction, interests, source and status keep client selection, form fallback and both subscriptions consistent', (t) => {
+    const extraEvents = [
+        { id: 'vibe', name: 'Vibe Coding Build', type: 'hackathon', source: 'lablab', form: 'online', start: '2026-10-20T12:00:00+08:00', end: '2026-10-23T12:00:00+08:00', tags: ['vibe-coding'], organizer: 'Build Labs', prizeText: '$10,000', currency: 'USD', prizeAmount: 1 },
+        { id: 'agent', name: 'Agent Challenge', type: 'llm_agent', source: 'devpost', form: 'online', dateUnknown: true, tags: ['agent'] },
+    ];
+    const f = fixture(t, { extraEvents });
+    f.$('[data-calendar-scope="ai"]').click();
+    assert.deepEqual(f.shown().map((row) => row.dataset.id), ['vibe', 'agent']);
+    f.$('[data-calendar-interest="vibe-coding"]').click();
+    assert.deepEqual(f.shown().map((row) => row.dataset.id), ['vibe']);
+    f.$('[data-calendar-interest="agent"]').click();
+    assert.equal(f.shown().length, 2, 'multiple interests use OR within the selected direction');
+    const platform = f.$('#dfacm-calendar-source');
+    platform.value = 'lablab'; platform.dispatchEvent(new f.window.Event('change'));
+    assert.equal(f.shown().length, 1);
+    const state = f.$('#dfacm-calendar-status');
+    state.value = 'ongoing'; state.dispatchEvent(new f.window.Event('change'));
+    f.search('Build Labs');
+    assert.equal(f.shown()[0].dataset.id, 'vibe');
+    for (const selector of ['[data-calendar-feed]', '[data-calendar-rss]']) {
+        const params = new URL(f.$(selector).href).searchParams;
+        assert.equal(params.get('scope'), 'ai');
+        assert.equal(params.get('interests'), 'vibe-coding,agent');
+        assert.equal(params.get('source'), 'lablab');
+        assert.equal(params.get('status'), 'ongoing');
+        assert.equal(params.get('q'), 'Build Labs');
+    }
+    assert.equal(f.$('#dfacm-calendar-selected-interests').value, 'vibe-coding,agent');
+    f.$('[data-calendar-clear]').click();
+    assert.equal(f.shown().length, 10);
+    assert.equal(f.window.location.search, '');
+    assert.equal(f.$('.dfacm-cal__archive').open, false);
+    const noJs = fixture(t, { extraEvents, noScript: true, options: { scope: 'ai', interests: 'agent', status: 'uncertain' } });
+    assert.equal(noJs.shown().length, 1);
+    assert.equal(noJs.shown()[0].dataset.id, 'agent');
+    assert.equal(noJs.$('[data-id="agent"] time').hasAttribute('datetime'), false);
+    assert.equal(noJs.$('#dfacm-calendar-selected-scope').value, 'ai');
+});
+
+test('sorting agrees with the server and treats different currencies as separate groups', (t) => {
+    const extraEvents = [
+        { id: 'usd-low', name: 'USD Small', type: 'hackathon', form: 'online', start: '2026-10-22T08:00:00+08:00', end: '2026-10-29T12:00:00+08:00', prizeAmount: 1, currency: 'USD', firstSeenAt: 1000 },
+        { id: 'cny', name: 'CNY Award', type: 'hackathon', form: 'online', start: '2026-10-23T08:00:00+08:00', end: '2026-10-27T12:00:00+08:00', prizeAmount: 5, currency: 'CNY', firstSeenAt: 2000 },
+        { id: 'usd-high', name: 'USD Large', type: 'hackathon', form: 'online', start: '2026-10-24T08:00:00+08:00', end: '2026-10-28T12:00:00+08:00', prizeAmount: 3, currency: 'USD', firstSeenAt: 3000 },
+    ];
+    const options = { types: 'hackathon', sort: 'prize' };
+    const client = fixture(t, { extraEvents, options });
+    const server = fixture(t, { extraEvents, options, noScript: true });
+    assert.deepEqual(client.shown().map((row) => row.dataset.id), ['cny', 'usd-high', 'usd-low']);
+    assert.deepEqual(client.shown().map((row) => row.dataset.id), server.shown().map((row) => row.dataset.id));
+    const select = client.$('#dfacm-calendar-sort');
+    select.value = 'deadline'; select.dispatchEvent(new client.window.Event('change'));
+    assert.deepEqual(client.shown().map((row) => row.dataset.id), ['cny', 'usd-high', 'usd-low']);
+    select.value = 'newest'; select.dispatchEvent(new client.window.Event('change'));
+    assert.deepEqual(client.shown().map((row) => row.dataset.id), ['usd-high', 'cny', 'usd-low']);
+    assert.equal(new URL(client.$('[data-calendar-feed]').href).searchParams.get('sort'), 'newest');
 });

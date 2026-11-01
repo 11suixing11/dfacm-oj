@@ -1,4 +1,6 @@
 /* d&f算法网 contest list. Styles are scoped to this page. */
+/* This page sits directly inside Hydro's main; its mobile column gutters do not apply. */
+.section.dfacm-cal-shell { margin-left: 0; margin-right: 0; }
 .dfacm-cal {
     --cal-bg: #fff;
     --cal-bg-soft: #f6f8fc;
@@ -66,6 +68,16 @@ html.theme--dark .dfacm-cal {
 .dfacm-cal__chip-dot { width: 6px; height: 6px; flex: none; border-radius: 50%; background: var(--cal-category); }
 .dfacm-cal .swpu-cal-chip small { display: inline-flex; align-items: center; justify-content: center; min-width: 19px; box-sizing: border-box; border-radius: 5px; background: var(--cal-bg-soft); color: var(--cal-muted); font-size: 10px; line-height: 18px; padding: 0 4px; font-variant-numeric: tabular-nums; }
 .dfacm-cal .swpu-cal-chip.is-on small { background: color-mix(in srgb, var(--cal-blue) 12%, var(--cal-bg)); color: var(--cal-blue); }
+.dfacm-cal .dfacm-cal__tracks { margin-bottom: 15px; }
+.dfacm-cal__clear { margin-left: auto; align-self: center; color: var(--cal-muted); font-size: 11px; text-underline-offset: 3px; }
+.dfacm-cal__search { flex-wrap: wrap; }
+.dfacm-cal__selects { display: flex; flex-wrap: wrap; gap: 12px; flex-basis: 100%; }
+.dfacm-cal__selects label { display: flex; align-items: center; gap: 7px; font-size: 11px; color: var(--cal-muted); }
+.dfacm-cal__selects select { max-width: 100%; box-sizing: border-box; min-height: 34px; border: 1px solid var(--cal-border); border-radius: 7px; background: var(--cal-bg); color: var(--cal-ink); font: inherit; font-size: 12px; padding: 5px 8px; }
+.dfacm-cal__interest-label { margin-top: 15px; }
+.dfacm-cal__interest { display: inline-flex; border: 1px solid var(--cal-border); border-radius: 5px; padding: 2px 6px; font-size: 10px; color: var(--cal-blue); }
+.dfacm-cal__details { display: flex; flex-wrap: wrap; gap: 3px 12px; margin-top: 7px; font-size: 11px; line-height: 1.8; color: var(--cal-muted); overflow-wrap: anywhere; }
+.dfacm-cal__prize { color: var(--cal-amber); }
 
 .dfacm-cal__caption { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 18px; margin: 0 0 18px; }
 .dfacm-cal__counter { color: var(--cal-muted); font-size: 12px; line-height: 1.7; margin: 0; font-variant-numeric: tabular-nums; }

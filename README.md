@@ -3,58 +3,53 @@
 [![CI](https://github.com/11suixing11/dfacm-oj/actions/workflows/ci.yml/badge.svg)](https://github.com/11suixing11/dfacm-oj/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-> 每个人都能在算法竞赛这条路上找到属于自己的 final。
+**算法训练与 AI 开发的实践社区。练算法，做 AI 项目。**
 
-面向算法学习与竞赛训练的在线评测平台，将做题、复盘、赛事信息与社区互动放在同一个站点。平台基于 [Hydro OJ](https://hydro.ac)，本仓库维护品牌首页、认证页面、训练插件、AI 题目助手、主题与部署工具。
+围绕两条实践路径组织网站：算法侧按路线练习、提交评测与复盘；AI 侧围绕应用、Agent 和 Vibe Coding 完成小作品。两条路径共用赛事日历、账号和交流社区。算法竞赛的品牌寄语仍是：每个人都能在算法竞赛这条路上找到属于自己的 final。
 
-**[访问平台](https://dfacm.website) · [开始做题](https://dfacm.website/p) · [赛事日历](https://dfacm.website/calendar) · [部署文档](deploy/deployment.md)**
+**[访问平台](https://dfacm.website) · [算法训练](https://dfacm.website/training) · [AI 实践清单](docs/ai-practice.md) · [赛事日历](https://dfacm.website/calendar)**
 
 主域名为 [dfacm.website](https://dfacm.website)，[swpuacm.xyz](https://swpuacm.xyz) 保留为兼容入口。
 
-![d&f算法网首页](docs/img/01-hero.png)
+网站定位与入口规则见 [产品定位](docs/product.md)，代码职责和独立仓库关系见 [项目地图](docs/project-map.md)。维护时从 [文档索引](docs/README.md) 开始。
 
-## 平台功能
+## 两条实践路径
 
-| 功能 | 使用场景 | 文档 |
+| 方向 | 用户要完成的事 | 入口与现有能力 |
 | --- | --- | --- |
-| 统一认证 | 在 `/reg` 注册、验证码登录或密码登录；按配置启用 GitHub、linux.do 第三方登录 | [认证插件](plugin-dfacm-regcode/README.md) · [linux.do 登录](plugin-linuxdo-oauth/README.md) |
-| 训练工作台 | 在 `/workbench` 继续当前训练，查看下一题、本周进度和最近未通过的题目 | [训练插件](plugin-dfacm-train/README.md) |
-| 错题复习 | 在 `/mistakes` 查看自动收集的错题，记录原因和复盘笔记，跟踪补题状态 | [错题本](plugin-dfacm-train/README.md) |
-| AI 题目助手 | 在题目旁展开小窗，获取提示、算法思路、完整题解，或分析失败提交与粘贴代码 | [助手插件](plugin-dfacm-assistant/README.md) |
-| 积分与徽章 | 首次 AC 获得积分，在 `/shop` 兑换徽章，在 `/shop/title` 创建个人称号 | [积分商店](plugin-dfacm-shop/README.md) |
-| 赛事日历 | 在 `/calendar` 筛选赛事、查看报名截止、订阅 ICS 日历；支持 CF、AtCoder 与 CLIST 数据源 | [赛事日历](plugin-dfacm-calendar/README.md) |
-| QQ 社区播报 | 自动播报 AC、榜单和比赛动态，提供账号绑定、签到与赛程提醒 | [QQ 播报](plugin-dfacm-broadcast/README.md) |
-| 管理与排名 | RP 自动更新、成员对账、训练周报与评测健康摘要 | [运维插件](plugin-dfacm-ops/README.md) |
+| 算法训练 | 选路线 → 练题 → 提交 → 复盘 → 参赛 | `/training`、`/p`、`/workbench`、`/mistakes`、`/contest`；[训练插件](plugin-dfacm-train/README.md) |
+| AI 开发 | 选任务 → 做作品 → 验证 → 分享 → 参加黑客松 | 首页 `#ai` 的三个实践任务；[AI 实践清单](docs/ai-practice.md)；作品在自己的开发环境中完成，站内提供赛事和交流入口 |
+| 共同资源 | 找比赛、订阅赛程、交流经验 | `/calendar`、`/discuss`；[赛事日历](plugin-dfacm-calendar/README.md) |
+
+AI 开发优先覆盖 AI 应用、Agent 与 Vibe Coding。模型训练和数据科学比赛继续由日历收录，作为扩展方向。项目托管、AI 开发沙箱、作品提交与专用进度系统仍待建设。
+
+## 支持实践的工具
+
+| 工具 | 职责 | 文档 |
+| --- | --- | --- |
+| 题目助手 | 算法提示、思路、完整题解和失败代码诊断，嵌入题目与提交页面 | [助手使用与配置](plugin-dfacm-assistant/README.md) |
+| 账号与登录 | 邮箱验证码、密码和按配置启用的第三方登录 | [认证](plugin-dfacm-regcode/README.md) · [linux.do](plugin-linuxdo-oauth/README.md) |
+| 积分与徽章 | 算法首次 AC 积分、徽章和称号 | [积分商店](plugin-dfacm-shop/README.md) |
+| 社区播报 | QQ 的 AC、榜单、赛程和账号绑定 | [QQ 播报](plugin-dfacm-broadcast/README.md) |
+
+题目助手由用户在 [账户设置 → AI 设置](https://dfacm.website/home/settings/account#ai) 配置个人供应商与 Key，再在题目页主动生成。它支持算法训练；AI 开发实践是独立的产品方向。
+
+管理员工具另见 [运维插件](plugin-dfacm-ops/README.md) 与 [提交线索审核](plugin-dfacm-ai-watch/README.md)。审核分用于人工复核排序，不表示 AI 使用概率。它们属于后台维护，首页不作为实践方向推广。
 
 首页和 OJ 页面支持浅色、深色主题；首页、认证页和题目助手适配手机使用。
 
-## AI 题目助手
+## 当前进度
 
-在题目页或自己的提交详情页，点击右下角 **“题目助手”** 展开。桌面使用浮窗，手机使用底部抽屉，答案区域独立滚动。
+- 算法平台、统一日历及题目助手已有部署记录；验证范围见 [发布记录索引](docs/README.md#发布与验收记录)。
+- 双主线首页和三个 AI 实践任务已于 2026-11-01 上线，部署范围与验证结果见 [本次整理记录](docs/project-organization-2026-11-01.md#服务器发布与验收)。
+- 下一阶段优先建设 AI 项目目录、作品分享和轻量实践进度，详细顺序见 [产品建设安排](docs/product.md#建设顺序)。
 
-| 帮助方式 | 返回内容 |
-| --- | --- |
-| 提示 | 关键观察和下一步方向 |
-| 思路 | 算法选择、关键步骤与正确性理由 |
-| 完整题解 | 题意提炼、算法思路、C++ 参考代码、复杂度与易错点评 |
-| 代码诊断 | 结合 WA / CE / TLE / RE 分析问题；引用原代码行，CE 可结合实际编译日志 |
-
-### 使用步骤
-
-1. 登录后进入 **[账户设置 → AI 设置](https://dfacm.website/home/settings/account#ai)**，选择 AgentRouter 或自定义供应商，填写模型与自己的 API Key，保存配置。
-2. 打开 [A+B 题目](https://dfacm.website/p/P1000)，展开助手。选择讲解层级，或选择“最近失败提交”“粘贴代码”进行诊断。
-3. 点击对应的 **生成 / 诊断** 按钮，查看结果。切换类型、层级或收起窗口会保留当前状态；已有答案可直接继续阅读。
-
-供应商配置跟随 OJ 账户，换题、刷新或换设备时共用。API Key 在服务端加密保存，保存后不回显；模型请求使用所选供应商的个人额度。保存设置和切换视图不调用模型，生成时展示实际阶段、耗时、供应商返回的 tokens 与缓存复用情况。
-
-AgentRouter 默认地址为 `https://agentrouter.org/v1`，默认模型为 `gpt-5.6-sol`，账户需具备相应客户端接入和模型权限。[注册 AgentRouter（邀请链接）](https://agentrouter.org/register?aff=SeEq)。自定义供应商需提供兼容 Chat Completions、JSON 输出和工具调用的公开 HTTPS 接口。
-
-助手已部署到当前站点，本地测试和部署检查已完成。真实个人 Key 的模型生成与浏览器视觉验收仍待验证；代码诊断提供静态分析和推演结论。安装、权限、接口兼容与验证范围见 [助手说明](plugin-dfacm-assistant/README.md)，部署证据见 [上线记录](docs/assistant-release-2026-10-22.md)。
-
-## 界面预览
+## 界面记录
 
 <details>
-<summary>展开训练路线、评测演示与移动端认证页截图</summary>
+<summary>展开此前 OJ 界面截图（历史记录，不代表本次首页）</summary>
+
+![此前 d&f算法网首页](docs/img/01-hero.png)
 
 <p>
   <img src="docs/img/02-routes.png" width="49%" alt="首页训练路线展示">
@@ -70,15 +65,20 @@ AgentRouter 默认地址为 `https://agentrouter.org/v1`，默认模型为 `gpt-
 
 ## 本地预览
 
-建议使用 **Node.js 22 或更新版本**。先检出仓库，启动首页与认证页预览：
+建议使用 **Node.js 22 或更新版本**。先检出仓库，按锁文件安装训练预览依赖，再启动：
 
 ```bash
 git clone https://github.com/11suixing11/dfacm-oj.git
 cd dfacm-oj
+cd plugin-dfacm-train
+npm ci --no-audit --no-fund
+cd ..
 node scripts/preview.cjs
 ```
 
-打开 <http://127.0.0.1:4173/> 查看首页，打开 <http://127.0.0.1:4173/reg> 查看认证页。这是静态预览，完整账号和评测功能由 Hydro 实例提供。
+打开 <http://127.0.0.1:4173/> 查看首页，打开 <http://127.0.0.1:4173/reg> 查看认证页。训练目录在 <http://127.0.0.1:4173/training>，工作台在 <http://127.0.0.1:4173/workbench>；可体验进入题目、切换评测结果和返回章节。
+
+预览使用固定题目和进度，完整账号和评测功能由 Hydro 实例提供。首页和认证页可不安装训练依赖直接预览；实时赛事需要对应后端，本地没有连接时保留页面入口。
 
 在仓库根目录另开终端，启动助手预览：
 

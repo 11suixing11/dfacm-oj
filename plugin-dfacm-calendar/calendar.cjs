@@ -34,7 +34,8 @@
 //   atcoder     AtCoder ABC/ARC 等（auto.cjs 自动抓取）
 //   other       其余算法类赛事（睿抗 RAICOM 程序设计赛道等）
 
-const TYPES = ['icpc', 'ccpc', 'provincial', 'invitational', 'school', 'lqb', 'ladder', 'asta', 'industry', 'ccsp', 'cf', 'atcoder', 'nowcoder', 'luogu', 'leetcode', 'codechef', 'other'];
+const AI_TYPES = ['datascience', 'aigc', 'llm_agent', 'hackathon', 'ai_other'];
+const TYPES = ['icpc', 'ccpc', 'provincial', 'invitational', 'school', 'lqb', 'ladder', 'asta', 'industry', 'ccsp', 'cf', 'atcoder', 'nowcoder', 'luogu', 'leetcode', 'codechef', ...AI_TYPES, 'other'];
 const TYPE_META = {
     icpc: { label: 'ICPC', color: '#2a5caa', fg: '#ffffff' },
     ccpc: { label: 'CCPC', color: '#c9a227', fg: '#1a2940' },
@@ -52,8 +53,19 @@ const TYPE_META = {
     luogu: { label: '洛谷', color: '#348ac7', fg: '#ffffff' },
     leetcode: { label: 'LeetCode', color: '#a66714', fg: '#ffffff' },
     codechef: { label: 'CodeChef', color: '#85624b', fg: '#ffffff' },
+    datascience: { label: '数据科学', color: '#177e89', fg: '#ffffff' },
+    aigc: { label: 'AIGC', color: '#9b559c', fg: '#ffffff' },
+    llm_agent: { label: '大模型 / Agent', color: '#6654b5', fg: '#ffffff' },
+    hackathon: { label: '黑客松', color: '#b26134', fg: '#ffffff' },
+    ai_other: { label: '其他 AI 赛', color: '#6d6e9a', fg: '#ffffff' },
     other: { label: '其他', color: '#8a94a6', fg: '#ffffff' },
 };
+const INTEREST_META = { 'vibe-coding': 'Vibe Coding', agent: 'Agent' };
+const SOURCE_META = { manual: '官方整理', cf: 'Codeforces', atcoder: 'AtCoder', clist: 'CLIST',
+    leetcode: 'LeetCode', datafountain: 'DataFountain', tianchi: '天池', xfyun: '讯飞', kaggle: 'Kaggle',
+    drivendata: 'DrivenData', devpost: 'Devpost', lablab: 'lablab.ai' };
+const STATUSES = ['', 'active', 'ongoing', 'upcoming', 'uncertain', 'ended'];
+const SORTS = ['schedule', 'deadline', 'newest', 'prize'];
 const FORM_LABELS = { onsite: '现场', online: '线上', hybrid: '线上/线下' };
 const WEEKDAYS = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
 const CST = 8 * 3600 * 1000;
@@ -116,14 +128,15 @@ function validateEvent(raw, index) {
     const id = raw.id.trim();
     if (typeof raw.name !== 'string' || !raw.name.trim()) return { ok: false, id, reason: '缺少 name' };
     if (!TYPES.includes(raw.type)) return { ok: false, id, reason: `未知 type：${raw.type}` };
-    let start;
+    let start = null;
     let end = null;
     let reg = null;
     try {
-        start = parseDate(raw.start, 'start', id);
+        if (raw.dateUnknown === true && !raw.start) start = null;
+        else start = parseDate(raw.start, 'start', id);
         if (raw.end !== undefined && raw.end !== null && raw.end !== '') {
             end = parseDate(raw.end, 'end', id);
-            if (end.getTime() < start.getTime()) return { ok: false, id, reason: 'end 早于 start' };
+            if (start && end.getTime() < start.getTime()) return { ok: false, id, reason: 'end 早于 start' };
         }
         if (raw.regDeadline !== undefined && raw.regDeadline !== null && raw.regDeadline !== '') {
             reg = parseDate(raw.regDeadline, 'regDeadline', id);
@@ -141,6 +154,7 @@ function validateEvent(raw, index) {
         } catch { return { ok: false, id, reason: `url 必须是合法 http(s):// 链接：${url}` }; }
     }
     const approx = raw.approx === true;
+    if (approx && !start) return { ok: false, id, reason: '月份级赛事必须提供月份窗口' };
     // approx 条目约定 start/end 圈出月份窗口（如 2027-04-01 ~ 2027-04-30），
     // end 缺席时补一个月窗口，避免"日期待公布"的条目被当成单日赛事。
     if (approx && !end) {
@@ -157,14 +171,26 @@ function validateEvent(raw, index) {
             form,
             approx,
             allDay: raw.allDay === true,
-            source: raw.source === 'clist' ? 'clist' : raw.source === 'cf' || raw.source === 'atcoder' ? raw.source : 'manual',
+            source: Object.hasOwn(SOURCE_META, raw.source) ? raw.source : 'manual',
+            sources: [...new Set([Object.hasOwn(SOURCE_META, raw.source) ? raw.source : 'manual',
+                ...(Array.isArray(raw.sources) ? raw.sources.filter((source) => Object.hasOwn(SOURCE_META, source)) : [])])],
             location: raw.location ? String(raw.location).trim() : '',
             // 原始 ISO 字符串原样保留（/calendar/data 端点与 bot 依赖）
-            start: raw.start,
+            start: raw.start || null,
             end: raw.end || null,
             regDeadline: raw.regDeadline || null,
             url,
             note: raw.note ? String(raw.note).trim() : '',
+            dateUnknown: !start,
+            openEnded: raw.openEnded === true,
+            tags: [...new Set((Array.isArray(raw.tags) ? raw.tags : []).filter((tag) => typeof tag === 'string')
+                .map((tag) => tag.trim().slice(0, 80)).filter(Boolean))].slice(0, 40),
+            organizer: raw.organizer ? String(raw.organizer).trim().slice(0, 500) : '',
+            prizeText: raw.prizeText ? String(raw.prizeText).trim().slice(0, 500) : '',
+            prizeAmount: Number.isFinite(raw.prizeAmount) && raw.prizeAmount >= 0 ? raw.prizeAmount : null,
+            currency: /^[A-Z]{3}$/.test(raw.currency || '') ? raw.currency : '',
+            teamsCount: Number.isSafeInteger(raw.teamsCount) && raw.teamsCount >= 0 ? raw.teamsCount : null,
+            firstSeenAt: Number.isFinite(raw.firstSeenAt) ? raw.firstSeenAt : null,
             _start: start,
             _end: end,
             _reg: reg,
@@ -195,7 +221,7 @@ function loadCalendar(raw) {
         seen.add(result.event.id);
         events.push(result.event);
     });
-    events.sort((a, b) => a._start.getTime() - b._start.getTime());
+    events.sort(compareEvents());
     return {
         updated: typeof data.updated === 'string' ? data.updated : '',
         events,
@@ -204,6 +230,8 @@ function loadCalendar(raw) {
 }
 
 function statusOf(event, now) {
+    if (!event._start) return event._end && now > event._end ? 'ended' : 'uncertain';
+    if (event.openEnded && !event._end) return now < event._start ? 'upcoming' : 'ongoing';
     const start = event._start.getTime();
     const p = cstParts(event._start);
     const end = event._end ? event._end.getTime() : event.allDay || (event.form === 'onsite' && p.hh === 0 && p.mm === 0)
@@ -218,22 +246,32 @@ function statusOf(event, now) {
 // 与手工条目撞 id 时以手工为准，输出与 loadCalendar 同形（直接喂
 // describeEvents）。自动源的坏行静默丢弃——官方赛永远优先。
 function mergeCalendar(manual, autoRaw) {
-    const events = [...manual.events];
+    const events = manual.events.map((event) => ({ ...event, tags: [...event.tags], sources: [...event.sources] }));
     const skipped = [...manual.skipped];
-    const seen = new Set(events.map((event) => event.id));
-    const urls = new Set(events.filter((event) => event.url).map((event) => canonicalUrl(event.url)));
+    const seen = new Map(events.map((event) => [event.id, event]));
+    const urls = new Map(events.filter((event) => event.url).map((event) => [canonicalUrl(event.url), event]));
     let dropped = 0;
     for (const raw of Array.isArray(autoRaw) ? autoRaw : []) {
         const result = validateEvent(raw, events.length + dropped);
-        if (!result.ok || seen.has(result.event.id) || (result.event.url && urls.has(canonicalUrl(result.event.url)))) {
+        if (!result.ok) { dropped++; continue; }
+        const duplicate = seen.get(result.event.id) || (result.event.url && urls.get(canonicalUrl(result.event.url)));
+        if (duplicate) {
+            // Keep the preferred ID, dates and title, while retaining useful
+            // metadata and provenance from the other collector.
+            duplicate.tags = [...new Set([...duplicate.tags, ...result.event.tags])];
+            duplicate.sources = [...new Set([...duplicate.sources, ...result.event.sources])];
+            for (const key of ['organizer', 'prizeText', 'currency']) if (!duplicate[key]) duplicate[key] = result.event[key];
+            for (const key of ['prizeAmount', 'teamsCount', 'firstSeenAt']) if (duplicate[key] === null) duplicate[key] = result.event[key];
+            seen.set(result.event.id, duplicate);
+            if (result.event.url) urls.set(canonicalUrl(result.event.url), duplicate);
             dropped++;
             continue;
         }
-        seen.add(result.event.id);
-        if (result.event.url) urls.add(canonicalUrl(result.event.url));
+        seen.set(result.event.id, result.event);
+        if (result.event.url) urls.set(canonicalUrl(result.event.url), result.event);
         events.push(result.event);
     }
-    events.sort((a, b) => a._start.getTime() - b._start.getTime());
+    events.sort(compareEvents());
     return { updated: manual.updated, events, skipped, autoDropped: dropped };
 }
 
@@ -242,8 +280,11 @@ function mergeCalendar(manual, autoRaw) {
 function canonicalUrl(value) {
     try {
         const url = new URL(value);
-        const host = url.hostname.toLowerCase().replace(/^www\./, '');
-        const pathname = host === 'codeforces.com' ? url.pathname.replace(/^\/contests\//, '/contest/') : url.pathname;
+        let host = url.hostname.toLowerCase().replace(/^www\./, '');
+        // Regional LeetCode hosts identify the same weekly/biweekly contest.
+        if (host === 'leetcode.cn') host = 'leetcode.com';
+        let pathname = host === 'codeforces.com' ? url.pathname.replace(/^\/contests\//, '/contest/') : url.pathname;
+        if (host === 'codeforces.com') pathname = pathname.replace(/^(\/contest\/\d+)\/(?:registration|standings)\/?$/, '$1');
         // Preserve meaningful query parameters on announcement/listing URLs.
         for (const key of [...url.searchParams.keys()]) {
             if (/^utm_|^(fbclid|gclid)$/.test(key)) url.searchParams.delete(key);
@@ -258,11 +299,60 @@ function selectedTypes({ type = '', types = '' } = {}) {
     return [...new Set(values)];
 }
 
+function filterOptions(options = {}) {
+    return { selectedTypes: selectedTypes(options), scope: ['algorithm', 'ai'].includes(options.scope) ? options.scope : '',
+        interests: [...new Set(String(options.interests || '').split(',').filter((tag) => Object.hasOwn(INTEREST_META, tag)))],
+        source: Object.hasOwn(SOURCE_META, options.source) ? options.source : '',
+        status: STATUSES.includes(options.status) ? options.status : '',
+        sort: SORTS.includes(options.sort) ? options.sort : 'schedule',
+        query: String(options.q || '').trim().slice(0, 80) };
+}
+
+function filterParams(options = {}) {
+    const current = filterOptions(options);
+    const params = new URLSearchParams();
+    if (current.selectedTypes.length) params.set('types', current.selectedTypes.join(','));
+    if (current.interests.length) params.set('interests', current.interests.join(','));
+    for (const key of ['scope', 'source', 'status']) if (current[key]) params.set(key, current[key]);
+    if (current.sort !== 'schedule') params.set('sort', current.sort);
+    if (current.query) params.set('q', current.query);
+    return params;
+}
+
+const trackOf = (event) => AI_TYPES.includes(event.type) ? 'ai' : 'algorithm';
+const filterStatusOf = (event, now) => event.approx && statusOf(event, now) !== 'ended' ? 'uncertain' : statusOf(event, now);
+const searchTextOf = (event) => [event.name, event.location, event.note, event.organizer, event.prizeText,
+    ...(event.tags || []), ...(event.sources || [event.source]).map((source) => SOURCE_META[source]),
+    TYPE_META[event.type]?.label].filter(Boolean).join(' ');
+
+function sortValues(event) {
+    return { schedule: event._start?.getTime() ?? event._end?.getTime() ?? Number.MAX_SAFE_INTEGER,
+        deadline: event._end?.getTime() ?? event._reg?.getTime() ?? event._start?.getTime() ?? Number.MAX_SAFE_INTEGER,
+        newest: event.firstSeenAt ?? event._start?.getTime() ?? 0, prize: event.prizeAmount ?? -1, currency: event.currency || '' };
+}
+
+function compareEvents(sort = 'schedule', group = '') {
+    return (a, b) => {
+        const va = a.sortValues || sortValues(a), vb = b.sortValues || sortValues(b);
+        if (sort === 'prize') {
+            if ((va.prize < 0) !== (vb.prize < 0)) return va.prize < 0 ? 1 : -1;
+            return va.currency.localeCompare(vb.currency) || vb.prize - va.prize || va.schedule - vb.schedule;
+        }
+        const direction = sort === 'newest' || group === 'ended' ? -1 : 1;
+        return direction * (va[sort] - vb[sort]) || va.schedule - vb.schedule;
+    };
+}
+
 function selectEvents(events, options = {}) {
-    const selected = selectedTypes(options);
-    const query = String(options.q || '').trim().slice(0, 80).toLocaleLowerCase();
-    return events.filter((event) => (!selected.length || selected.includes(event.type))
-        && (!query || [event.name, event.location, event.note, TYPE_META[event.type].label].join(' ').toLocaleLowerCase().includes(query)));
+    const current = filterOptions(options);
+    const query = current.query.toLowerCase();
+    const now = options.now || new Date();
+    return events.filter((event) => (!current.selectedTypes.length || current.selectedTypes.includes(event.type))
+        && (!current.scope || trackOf(event) === current.scope)
+        && (!current.interests.length || current.interests.some((tag) => event.tags.includes(tag)))
+        && (!current.source || event.sources.includes(current.source))
+        && (!current.status || (current.status === 'active' ? filterStatusOf(event, now) !== 'ended' : filterStatusOf(event, now) === current.status))
+        && (!query || searchTextOf(event).toLowerCase().includes(query)));
 }
 
 function describeEvent(event, now) {
@@ -272,7 +362,10 @@ function describeEvent(event, now) {
     const end = event._end;
     let dateText;
     let timeText = '';
-    if (event.approx) {
+    if (!start) {
+        dateText = end ? `截至 ${fmtDate(end)}` : '日期待公布';
+        if (end && !event.allDay) timeText = fmtTime(end);
+    } else if (event.approx) {
         // 月份级条目：只说年月，不猜具体星期。
         const p = cstParts(start);
         dateText = `${p.y}年${p.m}月`;
@@ -289,7 +382,7 @@ function describeEvent(event, now) {
     let countdownText;
     if (status === 'ongoing') countdownText = event.approx ? '临近 / 进行中' : '进行中';
     else if (status === 'ended') countdownText = '已结束';
-    else if (event.approx) countdownText = '日期待公布';
+    else if (event.approx || status === 'uncertain') countdownText = '日期待公布';
     else {
         const days = cstDayDiff(now, start);
         if (days <= 0) countdownText = '今天开赛';
@@ -323,12 +416,23 @@ function describeEvent(event, now) {
         form: event.form,
         formLabel: FORM_LABELS[event.form],
         approx: !!event.approx,
+        dateUnknown: event.dateUnknown,
+        track: trackOf(event),
+        tags: event.tags,
+        interestLabels: event.tags.filter((tag) => Object.hasOwn(INTEREST_META, tag)).map((tag) => INTEREST_META[tag]),
+        organizer: event.organizer,
+        prizeText: event.prizeText,
+        teamsCount: event.teamsCount,
+        sources: event.sources,
+        sourceLabel: (event.sources || []).map((source) => SOURCE_META[source]).join(' / '),
+        sortValues: sortValues(event),
         source: event.source,
-        searchText: [event.name, event.location, event.note, meta.label].join(' '),
+        searchText: searchTextOf(event),
         placeText,
         url: event.url,
         note: event.note,
         status,
+        filterStatus: filterStatusOf(event, now),
         dateText,
         timeText,
         countdownText,
@@ -352,18 +456,18 @@ function describeEvents(parsed, now, typeFilter, options = {}) {
     for (const item of filters) {
         item.selected = item.key ? currentTypes.includes(item.key) : !currentTypes.length;
         const nextTypes = !item.key ? [] : item.selected ? currentTypes.filter((value) => value !== item.key) : [...currentTypes, item.key];
-        const params = new URLSearchParams();
-        if (nextTypes.length) params.set('types', nextTypes.join(','));
-        if (query) params.set('q', query);
+        const params = filterParams({ ...options, type: '', types: nextTypes.join(','), q: query });
         item.href = `/calendar${params.size ? `?${params}` : ''}`;
     }
     const ongoing = [];
     const upcoming = [];
     const ended = [];
-    for (const event of selectEvents(parsed.events, { ...options, type: filter, q: query })) {
+    const uncertain = [];
+    for (const event of selectEvents(parsed.events, { ...options, type: filter, q: query, now })) {
         const dto = describeEvent(event, now);
         if (dto.status === 'ongoing') ongoing.push(dto);
         else if (dto.status === 'upcoming') upcoming.push(dto);
+        else if (dto.status === 'uncertain') uncertain.push(dto);
         else ended.push(dto);
     }
     // loadCalendar 已按 start 升序：upcoming/ongoing 天然按开始时间正序，
@@ -379,12 +483,14 @@ function describeEvents(parsed, now, typeFilter, options = {}) {
         ongoing,
         upcoming,
         ended,
-        total: ongoing.length + upcoming.length + ended.length,
+        uncertain,
+        total: ongoing.length + upcoming.length + uncertain.length + ended.length,
     };
 }
 
 module.exports = {
     CST,
+    AI_TYPES, INTEREST_META, SOURCE_META, STATUSES, SORTS,
     FORM_LABELS,
     TYPES,
     TYPE_META,
@@ -397,6 +503,7 @@ module.exports = {
     fmtTime,
     loadCalendar,
     mergeCalendar,
+    canonicalUrl, filterOptions, filterParams, trackOf, filterStatusOf, searchTextOf, sortValues, compareEvents,
     selectEvents,
     selectedTypes,
     sameCstDay,

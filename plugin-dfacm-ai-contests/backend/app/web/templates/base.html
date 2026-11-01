@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}AI 赛讯{% endblock %} · d&amp;f算法网</title>
+  <meta name="description" content="聚合 AI 比赛、Vibe Coding 黑客松、数据科学和大模型 Agent 挑战赛，查看赛程并订阅日历。">
+  <link rel="icon" href="/favicon-32x32.png">
+  <script>try{if(localStorage.getItem('swpu-theme')==='dark')document.documentElement.classList.add('dark')}catch(e){}</script>
+  <link rel="stylesheet" href="{{ hub_url('static/style.css') }}?v=0.1.0">
+  <script src="{{ hub_url('static/theme.js') }}?v=0.1.0" defer></script>
+  <link rel="alternate" type="application/rss+xml" title="AI 赛讯" href="{{ hub_url('feed.xml') }}">
+</head>
+<body>
+<a class="skip-link" href="#content">跳到比赛内容</a>
+<header class="dfacm-header">
+  <nav class="dfacm-nav" aria-label="站内导航">
+    <a class="dfacm-brand" href="/">d&amp;f算法网</a>
+    <div class="dfacm-links">
+      <a href="/p">题库</a>
+      <a href="/training">训练</a>
+      <a href="/contest">比赛</a>
+      <a href="/calendar">赛事日历</a>
+      <a href="{{ hub_url() }}" aria-current="page">AI 赛讯</a>
+    </div>
+    <button id="theme-toggle" type="button" aria-label="切换到夜间模式">夜间模式</button>
+  </nav>
+</header>
+{% block content %}{% endblock %}
+<footer class="site-footer">
+  <p>数据来自各竞赛平台公开页面 · 时间均为北京时间 · <a href="/">d&amp;f算法网</a></p>
+  <p><a href="{{ hub_url() }}">比赛列表</a> · <a href="{{ hub_url('calendar') }}">月历</a> · <a href="{{ hub_url('feed.ics') }}">ICS 日历订阅</a> · <a href="{{ hub_url('feed.xml') }}">RSS 订阅</a></p>
+</footer>
+</body>
+</html>

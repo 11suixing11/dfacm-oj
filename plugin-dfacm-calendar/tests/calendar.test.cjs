@@ -47,7 +47,7 @@ test('bad rows are skipped with reasons; good rows survive them', () => {
             { id: 'ok', name: '好条目', type: 'icpc', start: '2026-10-24T00:00:00+08:00' },
             { name: '缺 id', type: 'icpc', start: '2026-10-24T00:00:00+08:00' },
             { id: 'n2', type: 'icpc', start: '2026-10-24T00:00:00+08:00' }, // 缺 name
-            { id: 'n3', name: '坏类型', type: 'hackathon', start: '2026-10-24T00:00:00+08:00' },
+            { id: 'n3', name: '坏类型', type: 'unknown-type', start: '2026-10-24T00:00:00+08:00' },
             { id: 'n4', name: '坏时间', type: 'icpc', start: 'not-a-date' },
             { id: 'n5', name: '倒序', type: 'icpc', start: '2026-10-30T00:00:00+08:00', end: '2026-10-24T00:00:00+08:00' },
             { id: 'ok', name: '重复 id', type: 'icpc', start: '2026-10-25T00:00:00+08:00' },
@@ -163,7 +163,7 @@ test('type filter narrows the view; unknown filters fall back to all', () => {
     assert.equal(icpc.total, 2);
     assert.ok(icpc.ongoing.every((e) => e.type === 'icpc'));
     assert.equal(icpc.currentType, 'icpc');
-    const bogus = describeEvents(parsed, NOW, 'hackathon');
+    const bogus = describeEvents(parsed, NOW, 'unknown-type');
     assert.equal(bogus.total, 5);
     assert.equal(bogus.currentType, '');
     // filter chips only offer types that actually exist in the data

@@ -37,6 +37,7 @@ plugin-dfacm-broadcast/mongo_uri.txt
 plugin-dfacm-calendar/auto-cache.json
 plugin-dfacm-calendar/auto-cache-*.json
 plugin-dfacm-calendar/clist-cache.json
+plugin-dfacm-calendar/ai-cache.json
 plugin-dfacm-calendar/*-cache*.tmp
 
 # Taxonomy repair sessions: bulky data snapshots regenerated from the OJ
@@ -50,3 +51,40 @@ scripts/taxonomy/repairs/2026-10-22/ordered-statements.manifest.json
 scripts/taxonomy/repairs/2026-10-22/ordered-sample-recovery.json
 scripts/taxonomy/repairs/training-6abf5251-2026-10-22/verification-manifest.json
 scripts/taxonomy/repairs/xcpc-2026-10-22/verification-manifest.json
+
+# Local credentials, agent instructions and server state must stay private.
+.ssh/
+.hydro/
+.codex/
+CODELY.md
+CODELY*.md
+AGENTS.md
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa*
+id_dsa*
+id_ecdsa*
+id_ed25519*
+*_ed25519
+known_hosts*
+authorized_keys
+credentials.json
+credentials.*.json
+secrets.json
+*.session
+*.token
+dump.pm2*
+backups/
+private/
+
+# AI watch deployment checks create production metadata; never commit it.
+plugin-dfacm-ai-watch/dist/
+plugin-dfacm-ai-watch/artifacts/
+plugin-dfacm-ai-watch/native-*-ok.json
+plugin-dfacm-ai-watch/live-ok.json
+plugin-dfacm-ai-watch/version-baseline.json
+plugin-dfacm-ai-watch/backup-path.txt
+plugin-dfacm-ai-watch/readiness.html
+plugin-dfacm-ai-watch/manifest.json

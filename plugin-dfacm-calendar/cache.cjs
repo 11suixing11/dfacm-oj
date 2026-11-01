@@ -8,7 +8,7 @@ const RETRY_MS = 10 * 60 * 1000;
 
 // Each upstream keeps its own last successful result. A failed source never
 // erases another source, and requests only await local disk hydration.
-function createCachedSource({ id, label, file, fetchEvents, legacy, validate = () => true, now = Date.now }) {
+function createCachedSource({ id, label, file, fetchEvents, legacy, validate = () => true, now = Date.now, ttlMs = TTL_MS, retryMs = RETRY_MS }) {
     let memory = null;
     let hydrating = null;
     let refreshing = null;
@@ -42,14 +42,14 @@ function createCachedSource({ id, label, file, fetchEvents, legacy, validate = (
         if (refreshing || now() < retryAt) return;
         forceRefresh = false;
         const currentGeneration = generation;
-        retryAt = now() + RETRY_MS;
+        retryAt = now() + retryMs;
         refreshing = (async () => {
             const events = await fetchEvents(now());
             if (!Array.isArray(events) || !events.every(validate)) throw new Error('Invalid calendar source result');
             if (currentGeneration !== generation) return;
             memory = { fetchedAt: now(), events };
             failed = false;
-            retryAt = now() + TTL_MS;
+            retryAt = now() + ttlMs;
             const temporary = `${file}.${process.pid}.tmp`;
             try {
                 await writeFile(temporary, JSON.stringify(memory), { encoding: 'utf8', mode: 0o600 });
@@ -67,7 +67,7 @@ function createCachedSource({ id, label, file, fetchEvents, legacy, validate = (
     async function get(at = now()) {
         if (!memory) await hydrate();
         const age = memory ? at - memory.fetchedAt : Infinity;
-        if (forceRefresh || failed || age >= TTL_MS) refresh();
+        if (forceRefresh || failed || age >= ttlMs) refresh();
         return memory && age < STALE_MAX_MS ? memory.events : [];
     }
 
@@ -75,7 +75,7 @@ function createCachedSource({ id, label, file, fetchEvents, legacy, validate = (
         const age = memory ? now() - memory.fetchedAt : Infinity;
         return {
             id, label,
-            status: age < TTL_MS && !failed ? 'fresh' : age < STALE_MAX_MS ? 'stale' : failed ? 'unavailable' : 'pending',
+            status: age < ttlMs && !failed ? 'fresh' : age < STALE_MAX_MS ? 'stale' : failed ? 'unavailable' : 'pending',
             updatedAt: memory ? new Date(memory.fetchedAt).toISOString() : null,
         };
     }

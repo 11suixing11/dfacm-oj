@@ -1,0 +1,26 @@
+name: Tests and public-source check
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Check public files and Git history
+        run: node scripts/check-public.cjs --git
+      - name: Run tests
+        run: node --test tests/*.test.cjs
+      - name: Check syntax
+        run: node scripts/check-build.cjs

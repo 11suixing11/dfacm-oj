@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block title %}AI 赛讯 · 比赛列表{% endblock %}
+{% block content %}
+<header class="site-header">
+  <div class="brand-row">
+    <h1>AI 赛讯</h1>
+    <p class="sub">聚合全网 AI 比赛 · 数据科学 / AIGC / OJ 算法 / 大模型 Agent / 黑客松</p>
+  </div>
+
+  <form method="get" action="{{ hub_url() }}" class="toolbar">
+    {% if category %}<input type="hidden" name="category" value="{{ category }}">{% endif %}
+    <input type="search" name="q" aria-label="搜索比赛、主办方或标签" placeholder="搜索比赛 / 主办方 / 标签…" value="{{ q }}">
+    <select name="sort" aria-label="排序方式">
+      <option value="deadline" {% if sort == 'deadline' %}selected{% endif %}>按截止时间</option>
+      <option value="prize" {% if sort == 'prize' %}selected{% endif %}>按奖金</option>
+      <option value="newest" {% if sort == 'newest' %}selected{% endif %}>按最新收录</option>
+    </select>
+    <select name="status" aria-label="比赛状态">
+      <option value="active" {% if status == 'active' %}selected{% endif %}>进行中 / 未开始</option>
+      <option value="ongoing" {% if status == 'ongoing' %}selected{% endif %}>进行中</option>
+      <option value="upcoming" {% if status == 'upcoming' %}selected{% endif %}>未开始</option>
+      <option value="ended" {% if status == 'ended' %}selected{% endif %}>已结束</option>
+      <option value="all" {% if status == 'all' %}selected{% endif %}>全部</option>
+    </select>
+    <button type="submit">筛选</button>
+  </form>
+
+  <nav class="tabs">
+    <a class="{{ 'active' if not category }}" href="{{ hub_url() }}?{{ qs(category=None) }}">全部</a>
+    {% for key, name in category_names.items() %}
+      {% if key != 'other' %}
+      <a class="{{ 'active' if category == key }}" href="{{ hub_url() }}?{{ qs(category=key) }}">{{ name }}</a>
+      {% endif %}
+    {% endfor %}
+    <span class="tabs-sep"></span>
+    {% for key, name in interest_filters.items() %}
+      <a class="{{ 'active' if category == key }} interest-tab" href="{{ hub_url() }}?{{ qs(category=key) }}">{{ name }}</a>
+    {% endfor %}
+    <span class="tabs-sep"></span>
+    <a class="cal-link" href="{{ hub_url('calendar') }}{% if category %}?category={{ category | urlencode }}{% endif %}">📅 月历</a>
+    <a class="cal-link" href="{{ hub_url('feed.ics') }}?{{ qs(sort=None) }}" title="订阅当前筛选的比赛日历">ICS</a>
+    <a class="cal-link" href="{{ hub_url('feed.xml') }}?{{ qs(sort=None) }}" title="订阅当前筛选的比赛 RSS">RSS</a>
+  </nav>
+</header>
+
+<main id="content" tabindex="-1">
+  <p class="result-count">共 {{ total }} 场比赛</p>
+
+  {% for c in items %}
+  <a class="card" href="{{ c.url }}" target="_blank" rel="noopener">
+    <div class="card-chips">
+      <span class="chip cat-{{ c.category }}">{{ category_names.get(c.category, c.category) }}</span>
+      <span class="chip src">{{ source_names.get(c.source, c.source) }}</span>
+      {% if c.live_status == 'ongoing' %}
+        <span class="chip st st-ongoing">进行中</span>
+      {% elif c.live_status == 'upcoming' %}
+        <span class="chip st st-upcoming">未开始</span>
+      {% else %}
+        <span class="chip st st-ended">已结束</span>
+      {% endif %}
+      {% if c.days_left is not none and c.live_status != 'ended' %}
+        <span class="chip days {{ 'hot' if c.days_left <= 7 }}">剩 {{ c.days_left }} 天</span>
+      {% endif %}
+    </div>
+    <h2 class="card-title">{{ c.title }}</h2>
+    <div class="card-meta">
+      {% if c.organizer %}<span class="meta-item">🏢 {{ c.organizer }}</span>{% endif %}
+      {% if c.prize_text %}<span class="meta-item prize">💰 {{ c.prize_text }}</span>{% endif %}
+      {% if c.start_date or c.end_date %}
+        <span class="meta-item">📅 {{ c.start_date or '?' }} ~ {{ c.end_date or '?' }}</span>
+      {% endif %}
+      {% if c.teams_count %}<span class="meta-item">👥 {{ c.teams_count }} 人参赛</span>{% endif %}
+    </div>
+    {% if c.tags %}
+    <div class="card-tags">
+      {% for t in c.tags %}<span class="tag">{{ t }}</span>{% endfor %}
+    </div>
+    {% endif %}
+  </a>
+  {% else %}
+  <p class="empty">
+    暂无符合条件的比赛，试试其他分类或关键词。
+  </p>
+  {% endfor %}
+  {% if pages > 1 %}
+  <nav class="pagination" aria-label="比赛列表分页">
+    {% if page > 1 %}<a class="nav-btn" href="{{ hub_url() }}?{{ qs(page=page-1) }}">上一页</a>{% endif %}
+    <span>第 {{ page }} / {{ pages }} 页</span>
+    {% if page < pages %}<a class="nav-btn" href="{{ hub_url() }}?{{ qs(page=page+1) }}">下一页</a>{% endif %}
+  </nav>
+  {% endif %}
+</main>
+{% endblock %}

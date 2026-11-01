@@ -10,15 +10,17 @@ import { Context, Handler, Logger, param, SettingModel, SystemModel, Types } fro
 const { loadCalendar, mergeCalendar } = require('./calendar.cjs');
 const { getAutoEvents, getAutoStatus, warmup } = require('./auto.cjs');
 const { createClistSource } = require('./clist.cjs');
-const { pageData, buildIcs } = require('./presentation.cjs');
+const { getAiEvents, getAiStatus, warmupAi } = require('./ai.cjs');
+const { filterParams } = require('./calendar.cjs');
+const { pageData, buildIcs, buildRss } = require('./presentation.cjs');
 
 const logger = new Logger('swpu-calendar');
 
 // SWPU_CALENDAR_FILE 供运维指向临时数据文件排障（默认随插件目录）。
 const DATA_FILE = process.env.SWPU_CALENDAR_FILE || join(__dirname, 'calendar.json');
 const ASSETS = new Map([
-    ['calendar-1.36.3.js', ['public/calendar.js', 'application/javascript; charset=utf-8']],
-    ['calendar-1.36.3.css', ['public/calendar.css', 'text/css; charset=utf-8']],
+    ['calendar-1.37.1.js', ['public/calendar.js', 'application/javascript; charset=utf-8']],
+    ['calendar-1.37.1.css', ['public/calendar.css', 'text/css; charset=utf-8']],
 ]);
 const clist = createClistSource({ credentials: () => ({
     username: SystemModel.get('dfacm_calendar.clist_username'),
@@ -27,11 +29,37 @@ const clist = createClistSource({ credentials: () => ({
 
 async function currentCalendar() {
     const parsed = readCalendar();
-    const [auto, extra] = await Promise.all([getAutoEvents(), clist.get()]);
-    return { ...mergeCalendar(parsed, [...auto, ...extra]), broken: parsed.broken };
+    const [auto, extra, ai] = await Promise.all([getAutoEvents(), clist.get(), getAiEvents()]);
+    return { ...mergeCalendar(parsed, [...auto, ...extra, ...ai]), broken: parsed.broken };
 }
 
-function sources() { return [...getAutoStatus(), clist.status()]; }
+function sources() { return [...getAutoStatus(), clist.status(), getAiStatus()]; }
+
+function requestOptions(args: any = {}) {
+    return Object.fromEntries(['type', 'types', 'q', 'scope', 'interests', 'source', 'status', 'sort']
+        .map((key) => [key, String(args[key] || '').slice(0, key === 'q' ? 80 : 240)]));
+}
+
+function legacyOptions(args: any = {}, feed = false) {
+    const options = requestOptions(args);
+    const category = String(args.category || '');
+    if (!options.types && !options.type && ['datascience', 'aigc', 'llm_agent', 'hackathon'].includes(category)) options.types = category;
+    if (category === 'other') options.types = 'ai_other';
+    if (['vibe-coding', 'agent'].includes(category)) options.interests = category;
+    if (category === 'oj') options.scope = 'algorithm';
+    if (options.source === 'codeforces') options.source = 'cf';
+    if (feed && !options.status) options.status = 'active';
+    return options;
+}
+
+function legacyRedirect(handler: Handler, address: string) {
+    // Hydro 5's response.redirect always sends 302. A raw response preserves
+    // the permanent status for existing bookmarks and calendar subscribers.
+    handler.response.status = 308;
+    handler.response.addHeader('Location', address);
+    handler.response.type = 'text/plain; charset=utf-8';
+    handler.response.body = `Moved to ${address}`;
+}
 
 type ParsedCalendar = { updated: string; events: any[]; skipped: string[] };
 
@@ -60,7 +88,7 @@ class CalendarPageHandler extends Handler {
         const merged = await currentCalendar();
         const now = new Date();
         this.response.body = {
-            ...pageData(merged, now, { type, types, q }, sources()), broken: merged.broken, page_name: 'swpu_calendar',
+            ...pageData(merged, now, { ...requestOptions(this.args), type, types, q }, sources()), broken: merged.broken, page_name: 'swpu_calendar',
         };
         this.response.template = 'calendar.html';
     }
@@ -86,6 +114,16 @@ class CalendarDataHandler extends Handler {
                 approx: !!event.approx,
                 allDay: !!event.allDay,
                 source: event.source,
+                sources: event.sources,
+                dateUnknown: event.dateUnknown,
+                openEnded: event.openEnded,
+                tags: event.tags,
+                organizer: event.organizer,
+                prizeText: event.prizeText,
+                prizeAmount: event.prizeAmount,
+                currency: event.currency,
+                teamsCount: event.teamsCount,
+                firstSeenAt: event.firstSeenAt,
                 location: event.location,
                 start: event.start,
                 end: event.end,
@@ -105,9 +143,41 @@ class CalendarFeedHandler extends Handler {
         this.response.type = 'text/calendar; charset=utf-8';
         this.response.addHeader('Cache-Control', 'public, max-age=300');
         this.response.disposition = 'inline; filename="dfacm-contests.ics"';
-        this.response.body = buildIcs(merged, {
-            type: String(this.args.type || ''), types: String(this.args.types || ''), q: String(this.args.q || '').slice(0, 80),
-        });
+        this.response.body = buildIcs(merged, requestOptions(this.args));
+    }
+}
+
+class CalendarRssHandler extends Handler {
+    noCheckPermView = true;
+    async get() {
+        await this.limitRate('swpu_calendar_feed', 60, 120, 'public');
+        this.response.type = 'application/rss+xml; charset=utf-8';
+        this.response.addHeader('Cache-Control', 'public, max-age=300');
+        this.response.body = buildRss(await currentCalendar(), requestOptions(this.args));
+    }
+}
+
+class LegacyAiPageHandler extends Handler {
+    noCheckPermView = true;
+    async get() {
+        const params = filterParams(legacyOptions(this.args));
+        legacyRedirect(this, `/calendar${params.size ? `?${params}` : ''}`);
+    }
+}
+
+class LegacyAiIcsHandler extends Handler {
+    noCheckPermView = true;
+    async get() {
+        const params = filterParams(legacyOptions(this.args, true));
+        legacyRedirect(this, `/calendar/feed.ics${params.size ? `?${params}` : ''}`);
+    }
+}
+
+class LegacyAiRssHandler extends Handler {
+    noCheckPermView = true;
+    async get() {
+        const params = filterParams(legacyOptions(this.args, true));
+        legacyRedirect(this, `/calendar/feed.xml${params.size ? `?${params}` : ''}`);
     }
 }
 
@@ -136,7 +206,12 @@ export async function apply(ctx: Context) {
     ctx.Route('swpu_calendar', '/calendar', CalendarPageHandler);
     ctx.Route('swpu_calendar_data', '/calendar/data', CalendarDataHandler);
     ctx.Route('swpu_calendar_feed', '/calendar/feed.ics', CalendarFeedHandler);
+    ctx.Route('swpu_calendar_rss', '/calendar/feed.xml', CalendarRssHandler);
     ctx.Route('swpu_calendar_asset', '/calendar/assets/:file', CalendarAssetHandler);
+    ctx.Route('dfacm_ai_contests', '/ai-contests', LegacyAiPageHandler);
+    ctx.Route('dfacm_ai_contests_calendar', '/ai-contests/calendar', LegacyAiPageHandler);
+    ctx.Route('dfacm_ai_contests_ics', '/ai-contests/feed.ics', LegacyAiIcsHandler);
+    ctx.Route('dfacm_ai_contests_rss', '/ai-contests/feed.xml', LegacyAiRssHandler);
     // 赛事情报对游客也有价值：注入不传 priv，全站可见；before: 'ranking'
     // 让它落在「评测记录」旁（与工作台/错题本同款定位法）。
     // 注入名必须与 ctx.Route 第一参同名：ui-default 用 url(item.name) 生成
@@ -147,6 +222,7 @@ export async function apply(ctx: Context) {
     // 启动预热平台赛缓存：加载几秒后首批访客就能看到 CF/AtCoder；
     // 预热失败与后续刷新失败一样，只影响平台区块，官方日历无感。
     warmup();
+    warmupAi();
     clist.get().catch(() => {});
-    logger.info('swpu-calendar routes ready: /calendar, /calendar/data, /calendar/feed.ics');
+    logger.info('swpu-calendar routes ready: /calendar, /calendar/data, /calendar/feed.ics, /calendar/feed.xml');
 }

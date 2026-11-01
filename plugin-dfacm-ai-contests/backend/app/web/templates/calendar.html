@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}AI 赛讯 · 比赛月历{% endblock %}
+{% block content %}
+<header class="site-header">
+  <div class="brand-row">
+    <h1>AI 赛讯 <span class="h-sub">月历</span></h1>
+    <div class="cal-nav">
+      <a class="nav-btn" href="{{ hub_url('calendar') }}?{{ calendar_qs(month=prev_month) }}">‹ 上月</a>
+      <a class="nav-btn" href="{{ hub_url('calendar') }}?{{ calendar_qs(month=this_month) }}">本月</a>
+      <a class="nav-btn" href="{{ hub_url('calendar') }}?{{ calendar_qs(month=next_month) }}">下月 ›</a>
+      <a class="nav-btn view-switch" href="{{ hub_url() }}{% if category %}?category={{ category | urlencode }}{% endif %}">列表视图</a>
+    </div>
+  </div>
+  <p class="sub">{{ month_label }} · 共 {{ event_count }} 场比赛有日程</p>
+  <nav class="tabs" aria-label="月历比赛分类">
+    <a class="{{ 'active' if not category }}" href="{{ hub_url('calendar') }}?{{ calendar_qs(category=None) }}">全部</a>
+    {% for key, name in category_names.items() %}
+      {% if key != 'other' %}<a class="{{ 'active' if category == key }}" href="{{ hub_url('calendar') }}?{{ calendar_qs(category=key) }}">{{ name }}</a>{% endif %}
+    {% endfor %}
+    {% for key, name in interest_filters.items() %}
+      <a class="{{ 'active' if category == key }} interest-tab" href="{{ hub_url('calendar') }}?{{ calendar_qs(category=key) }}">{{ name }}</a>
+    {% endfor %}
+  </nav>
+</header>
+
+<main class="cal-wrap" id="content" tabindex="-1">
+  <div class="cal-grid">
+  <div class="cal-head">
+    {% for wd in ["周一", "周二", "周三", "周四", "周五", "周六", "周日"] %}
+      <div class="cal-wd">{{ wd }}</div>
+    {% endfor %}
+  </div>
+
+  {% for week in weeks %}
+  <div class="cal-week">
+    <div class="cal-days">
+      {% for d in week.days %}
+      <div class="cal-day {{ 'dim' if not d.in_month }} {{ 'today' if d.is_today }}">
+        <span class="dnum">{{ d.num }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="cal-bars" style="height: {{ [week.lanes, 1] | max * 28 }}px">
+      {% for b in week.bars %}
+      <a class="cal-bar cat-{{ b.c.category }} {{ 'cont-left' if b.cont_left }} {{ 'cont-right' if b.cont_right }}"
+         style="left: {{ b.col_start / 7 * 100 }}%; width: {{ b.span / 7 * 100 }}%; top: {{ b.c.lane * 28 }}px"
+         href="{{ b.c.url }}" target="_blank" rel="noopener"
+         title="{{ b.c.title }} · {{ b.c.end_date or '' }}">
+        <span class="bar-title">{{ b.c.title }}</span>
+        {% if b.c.prize_text %}<span class="bar-prize">{{ b.c.prize_text }}</span>{% endif %}
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+  {% endfor %}
+  </div>
+
+  <div class="cal-legend">
+    {% for key, name in category_names.items() %}
+      {% if key != 'other' %}
+      <span class="legend-item"><i class="dot cat-{{ key }}"></i>{{ name }}</span>
+      {% endif %}
+    {% endfor %}
+  </div>
+</main>
+{% endblock %}

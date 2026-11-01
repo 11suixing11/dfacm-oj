@@ -1,0 +1,14 @@
+{
+  "ai.cjs": "cbf2c2756bc6ca3d423cf1c2a09d77cb811f09713261ea4ed8d153288fe13ad0",
+  "auto.cjs": "da1c89b9a64c5a1bbfcfbf65c9ffe8b14ebb7e5d29a1432a55b2ddc1f08ff453",
+  "cache.cjs": "d772220f32904ce74741cb3d13cca9b9bb9b522a5f745dc89c95a928392737af",
+  "calendar.cjs": "c5ce334551ce9d1876ddffeaf7a650d4106e6bab73cecfbef77de3f7efcb9ade",
+  "clist.cjs": "f64771de1b5c8cd0480adfa2bedea6949e97a9f5d2bdfaebf9a26f00bdba2cf6",
+  "index.ts": "22d91973bc23374debcac02fe72f1ceb4322bcaa9f58959ddcfae724ecbf6b80",
+  "package.json": "7986d2b11c7ce84a819246cb453d00f1312b0d58e0528a090cd4e39e07f54c91",
+  "presentation.cjs": "b7b0a8922015640cb00985d57171f1c9033eaf37fe5341e3a4916724df5db1fc",
+  "templates/calendar.html": "89057fadff16821cd7900e879d5e05ba5345686411d449cb9e744fb0f576c190",
+  "public/calendar.js": "2b301c75af106762dc8b76637d8f70a88f370c0ccb3d36000ed7c141e2ba45a2",
+  "public/calendar.css": "066fcd0022415cb217776bee0dc9ef0a4bf6019c1c6ebd35196a9dd6b9c5f054",
+  "collector/index.ts": "bfcd9f5e031b33f7e718d29d1153086ec111474371caf32f3aafab7ca581f5e3"
+}

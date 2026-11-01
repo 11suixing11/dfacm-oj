@@ -20,6 +20,7 @@ const repo = path.resolve(pluginDir, '..');
 // Handler 测试默认关闭平台赛自动抓取：apply() 的 warmup() 与后续 handler
 // 调用都不会发起真实外网请求；需要测合并的用例自行临时打开并桩掉 fetch。
 process.env.SWPU_CALENDAR_AUTO_OFF = '1';
+process.env.DFACM_CALENDAR_AI_OFF = '1';
 const compiled = esbuild.buildSync({
     entryPoints: [pluginPath], bundle: true, platform: 'node', format: 'cjs', write: false,
     external: ['hydrooj'], tsconfigRaw: { compilerOptions: { experimentalDecorators: true } },
@@ -125,7 +126,7 @@ test('the page handler groups the shipped season and narrows by type', async () 
     }
     // an unknown filter falls back to "all" instead of an empty page
     const bogus = f.handler('/calendar');
-    await bogus.get('system', 'hackathon');
+    await bogus.get('system', 'unknown-type');
     assert.equal(bogus.response.body.currentType, '');
 });
 
@@ -271,15 +272,64 @@ test('ICS handler applies multiple filters, returns raw calendar and rate limits
 
 test('asset route serves only pinned files, sets MIME/cache, rejects traversal', async () => {
     const f = await fixture();
-    for (const [name, mime] of [['calendar-1.36.3.js', 'application/javascript'], ['calendar-1.36.3.css', 'text/css']]) {
+    for (const [name, mime] of [['calendar-1.37.1.js', 'application/javascript'], ['calendar-1.37.1.css', 'text/css']]) {
         const h = f.handler('/calendar/assets/:file'); await h.get('system', name);
         assert.ok(h.response.body.length > 100);
         assert.ok(h.response.type.startsWith(mime));
         assert.match(h.response.headers['Cache-Control'], /immutable/);
     }
-    for (const name of ['../../.env', 'calendar.json', 'clist-cache.json', 'calendar-1.36.0.js', 'calendar-1.36.1.js', 'calendar-1.36.2.js', 'calendar-1.36.2.css', 'fullcalendar-7.1.3.js', 'fullcalendar-7.1.3.css']) {
+    for (const name of ['../../.env', 'calendar.json', 'clist-cache.json', 'ai-cache.json', 'calendar-1.36.0.js', 'calendar-1.36.1.js', 'calendar-1.36.2.js', 'calendar-1.36.2.css', 'calendar-1.36.3.js', 'fullcalendar-7.1.3.js', 'fullcalendar-7.1.3.css']) {
         const h = f.handler('/calendar/assets/:file'); await h.get('system', name);
         assert.equal(h.response.status, 404);
         assert.equal(h.response.headers['Cache-Control'], undefined);
+    }
+});
+
+test('old AI page and subscription URLs map categories and interests into the unified calendar', async () => {
+    const f = await fixture();
+    for (const [route, args, path, expected] of [
+        ['/ai-contests', { category: 'vibe-coding', source: 'codeforces', q: 'AI' }, '/calendar', { interests: 'vibe-coding', source: 'cf', q: 'AI' }],
+        ['/ai-contests/calendar', { category: 'hackathon' }, '/calendar', { types: 'hackathon' }],
+        ['/ai-contests/feed.ics', { category: 'agent' }, '/calendar/feed.ics', { interests: 'agent', status: 'active' }],
+        ['/ai-contests/feed.xml', { category: 'datascience', status: 'all' }, '/calendar/feed.xml', { types: 'datascience' }],
+    ]) {
+        const h = f.handler(route); h.args = args; await h.get();
+        assert.equal(h.response.status, 308);
+        assert.equal(h.response.redirect, undefined, 'Hydro forces its redirect helper to 302');
+        assert.equal(h.response.type, 'text/plain; charset=utf-8');
+        const redirect = new URL(h.response.headers.Location, 'https://dfacm.website');
+        assert.equal(redirect.pathname, path);
+        for (const [key, value] of Object.entries(expected)) assert.equal(redirect.searchParams.get(key), value);
+    }
+    assert.equal(f.nav.length, 1, 'only the calendar has a public navigation entry');
+});
+
+test('AI source reaches real handlers after cached hydration and retains bot fields alongside new metadata', async () => {
+    const savedOff = process.env.DFACM_CALENDAR_AI_OFF;
+    const savedCache = process.env.DFACM_CALENDAR_AI_CACHE;
+    const dir = fs.mkdtempSync(path.join(fs.realpathSync(fixtureParent), '.calendar-ai-'));
+    const file = path.join(dir, 'ai-cache.json');
+    fs.writeFileSync(file, JSON.stringify({ fetchedAt: Date.now(), events: [{ id: 'ai-lablab-demo', name: 'Vibe Coding Lab',
+        type: 'hackathon', source: 'lablab', form: 'online', start: '2026-11-20T12:00:00+08:00', end: '2026-11-21T12:00:00+08:00',
+        tags: ['vibe-coding'], organizer: 'Demo Lab', prizeText: '$10,000', prizeAmount: 1, currency: 'USD' }] }));
+    process.env.DFACM_CALENDAR_AI_OFF = '0';
+    process.env.DFACM_CALENDAR_AI_CACHE = file;
+    try {
+        const f = await fixture();
+        const page = f.handler('/calendar'); page.args = { scope: 'ai', interests: 'vibe-coding' };
+        await page.get('system'); assert.equal(page.response.body.total, 1);
+        const data = f.handler('/calendar/data'); await data.get();
+        const event = data.response.body.events.find((item) => item.id === 'ai-lablab-demo');
+        for (const key of ['id', 'name', 'type', 'form', 'approx', 'allDay', 'source', 'location', 'start', 'end', 'regDeadline', 'url', 'note']) assert.ok(Object.hasOwn(event, key));
+        assert.equal(event.prizeText, '$10,000'); assert.deepEqual(event.tags, ['vibe-coding']);
+        assert.ok(!('_start' in event));
+        const rss = f.handler('/calendar/feed.xml'); rss.args = { scope: 'ai', interests: 'vibe-coding' }; await rss.get();
+        assert.equal(rss.response.type, 'application/rss+xml; charset=utf-8');
+        assert.match(rss.response.body, /Vibe Coding Lab/); assert.equal((rss.response.body.match(/<item>/g) || []).length, 1);
+        const ics = f.handler('/calendar/feed.ics'); ics.args = rss.args; await ics.get(); assert.match(ics.response.body, /SUMMARY:Vibe Coding Lab/);
+    } finally {
+        if (savedOff === undefined) delete process.env.DFACM_CALENDAR_AI_OFF; else process.env.DFACM_CALENDAR_AI_OFF = savedOff;
+        if (savedCache === undefined) delete process.env.DFACM_CALENDAR_AI_CACHE; else process.env.DFACM_CALENDAR_AI_CACHE = savedCache;
+        fs.rmSync(dir, { recursive: true, force: true });
     }
 });

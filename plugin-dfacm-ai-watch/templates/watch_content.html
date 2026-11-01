@@ -1,0 +1,35 @@
+<link rel="stylesheet" href="{{ cssUrl }}">
+<main class="ai-watch" id="ai-watch" data-endpoint="{{ dataUrl }}" data-csrf="{{ csrf }}" data-demo="{{ demo }}">
+  <header class="aw-header">
+    <div><p class="aw-eyebrow">Hydro OJ · 管理工作台</p><h1>提交审核<span class="aw-title-tag">AI 作答线索</span></h1><p class="aw-subtitle">从提交中发现需要关注的线索，让每一次复核都有依据。</p></div>
+    <div class="aw-header-actions"><span class="aw-live" id="aw-health" role="status"><i></i>正在连接</span><button type="button" class="aw-button aw-icon-button" id="aw-theme" aria-label="切换主题">◐</button></div>
+  </header>
+  <aside class="aw-notice"><strong>辅助复核</strong><span>分数用于排序，不是 AI 作答概率。相似代码、风格变化都不能单独判定违规；最终结论需结合比赛规则和选手解释。</span></aside>
+  <p class="aw-demo" id="aw-demo" hidden>本地演示 · 以下均为模拟选手和提交，使用真实分析引擎；不连接线上 OJ。</p>
+  <section class="aw-metrics" aria-label="审核统计">
+    <div class="aw-metric"><span>监测提交</span><strong id="aw-total">—</strong><small id="aw-window">最近 24 小时</small></div>
+    <div class="aw-metric aw-metric-high"><span>优先复核</span><strong id="aw-high">—</strong><small>有可追溯来源线索</small></div>
+    <div class="aw-metric"><span>待人工复核</span><strong id="aw-pending">—</strong><small>含处理中与线索不足</small></div>
+    <div class="aw-metric"><span>已记录复核</span><strong id="aw-reviewed">—</strong><small>已排除 / 需进一步核实</small></div>
+  </section>
+  <section class="aw-workspace" aria-label="提交监测">
+    <div class="aw-workspace-bar"><div><h2>实时提交</h2><p id="aw-scope">正在读取监测范围</p></div><div class="aw-tools"><button type="button" class="aw-button" id="aw-demo-submit" hidden>模拟一份新提交</button><button type="button" class="aw-button" id="aw-pause">暂停刷新</button><button type="button" class="aw-button aw-primary" id="aw-refresh">立即刷新</button></div></div>
+    <form id="aw-filters" class="aw-filters" aria-label="筛选提交">
+      <label>复核优先级<select name="priority"><option value="">全部</option><option value="high">优先复核</option><option value="medium">关注</option><option value="low">常规</option><option value="insufficient">线索不足</option></select></label>
+      <label>复核状态<select name="review"><option value="">全部</option><option value="pending">待复核</option><option value="cleared">已排除</option><option value="escalated">需核实</option></select></label>
+      <label>选手 UID<input type="number" name="uid" min="1" max="2147483647" placeholder="全部选手"></label>
+      <label class="aw-contest-filter">比赛 ID<input type="text" name="contest" maxlength="24" placeholder="24 位比赛 ID" autocomplete="off"></label>
+      <label>时间范围<select name="days"><option value="1">最近 24 小时</option><option value="3">最近 3 天</option><option value="7">最近 7 天</option></select></label>
+      <button type="submit" class="aw-button">应用筛选</button>
+    </form>
+    <p id="aw-error" class="aw-error" role="alert" hidden></p>
+    <div class="aw-table-wrap"><table class="aw-table"><thead><tr><th>提交 / 题目</th><th>选手</th><th>评测</th><th>复核优先级</th><th>主要线索</th><th>人工复核</th><th><span class="aw-sr-only">操作</span></th></tr></thead><tbody id="aw-rows"><tr><td colspan="7" class="aw-empty">正在加载提交…</td></tr></tbody></table></div>
+    <footer class="aw-table-footer"><span id="aw-updated" role="status">等待首次同步</span><div class="aw-pagination"><button type="button" class="aw-button" id="aw-first" hidden>返回最新</button><button type="button" class="aw-button" id="aw-next" disabled>下一页</button></div></footer>
+  </section>
+  <footer class="aw-footer"><span>管理员专用 · 证据保留 <span id="aw-retention">30</span> 天</span><span>本地分析 · 不调用第三方检测 API</span></footer>
+  <dialog id="aw-detail" class="aw-dialog" aria-labelledby="aw-detail-title">
+    <div class="aw-dialog-top"><div><p class="aw-eyebrow">人工复核</p><h2 id="aw-detail-title">提交详情</h2></div><button type="button" class="aw-button" id="aw-close">关闭</button></div>
+    <div id="aw-detail-content"></div>
+  </dialog>
+</main>
+<script defer src="{{ jsUrl }}"></script>

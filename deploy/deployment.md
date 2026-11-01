@@ -214,7 +214,7 @@ mongosh "$(python3 -c "import json;print(json.load(open('/root/.hydro/config.jso
 
 ```bash
 mkdir -p /root/.hydro/addons/swpu-calendar/{templates,public}
-cp /root/swpu-oj/plugin-dfacm-calendar/{auto.cjs,cache.cjs,calendar.cjs,calendar.json,clist.cjs,presentation.cjs,index.ts,package.json} \
+cp /root/swpu-oj/plugin-dfacm-calendar/{ai.cjs,auto.cjs,cache.cjs,calendar.cjs,calendar.json,clist.cjs,presentation.cjs,index.ts,package.json} \
    /root/.hydro/addons/swpu-calendar/
 cp /root/swpu-oj/plugin-dfacm-calendar/{templates/calendar.html} \
    /root/.hydro/addons/swpu-calendar/templates/
@@ -227,7 +227,9 @@ ln -sfn /usr/local/share/.config/yarn/global/node_modules/hydrooj \
 pm2 restart hydrooj
 ```
 
-安装后导航栏出现「赛事日历」（`/calendar`，落在「评测记录」旁，游客可见），页面采用赛事清单，桌面和手机都按状态分组，已结束赛事默认折叠，搜索或类型筛选时展开匹配的往期赛事。支持 `?types=icpc,cf&q=关键词`（兼容 `?type=`）。`GET /calendar/data` 继续提供无鉴权 JSON 数据，`GET /calendar/feed.ics` 为可按相同筛选订阅的日历。页面不加载 FullCalendar，`/calendar/assets/:file` 只服务 `calendar-1.36.3.js` / `calendar-1.36.3.css`，不依赖外部 CDN；无需改 Caddy。手工赛程在 `calendar.json` 维护：**改数据文件后 `bash deploy/deploy.sh --sync-only` 即时生效，无需 pm2 restart**。月份级公告保留年月与日期待公布提示，ICS 仅收录其精确报名截止。
+安装后导航栏出现「赛事日历」（`/calendar`，落在「评测记录」旁，游客可见），统一查看算法赛、AI 赛与黑客松。页面采用赛事清单，桌面和手机按状态分组，已结束赛事默认折叠，筛选时展开匹配的往期赛事。支持 `?types=icpc,cf&q=关键词`（兼容 `?type=`），以及 `scope=algorithm|ai`、`interests=vibe-coding,agent`、`source`、`status`、`sort`。类型和兴趣各自支持多选，跨条件取交集。`GET /calendar/data` 保留原 QQ JSON 字段，增加 AI 元数据；`/calendar/feed.ics` 与 `/calendar/feed.xml` 共用页面筛选。资源版本为 `calendar-1.37.1.js` / `calendar-1.37.1.css`，不加载 FullCalendar 或外部 CDN。手工赛程在 `calendar.json` 维护：**改数据文件后 `bash deploy/deploy.sh --sync-only` 即时生效，无需 pm2 restart**。月份级或完全未知时间不会导出猜测的开赛日期；已公布的报名或赛事截止可单独订阅。
+
+AI 数据由 [采集组件](../plugin-dfacm-ai-contests/README.md) 在服务器后台抓取，日历的 `ai.cjs` 每 5 分钟读取 `127.0.0.1:8765`，独立缓存和失败回退。取消独立 `dfacm-ai-contests` 导航 addon，旧页面与订阅 URL 由日历兼容跳转。原 Caddy 的 `/ai-contests/*` 整段反代必须改成 `plugin-dfacm-ai-contests/deploy/caddy.inc` 中仅匹配 `/ai-contests/api/*` 和 `/ai-contests/healthz` 的规则，让页面与订阅交给 Hydro。现有网站的一次性合并脚本和上线验证见 [日历维护说明](../plugin-dfacm-calendar/README.md)。
 
 平台赛抓取未来 60 天及最近 12 小时（进行中的长赛按结束时间判断）。CF、AtCoder、CLIST 各自独立缓存，每小时刷新；失败时保留自己的上次成功数据（≤24 小时）并退避 10 分钟。页面只等待本地缓存读取，外网抓取在后台。运行时文件 `auto-cache-cf.json` / `auto-cache-atcoder.json` / `clist-cache.json` 不发货，兼容读取旧 `auto-cache.json`。
 
@@ -433,7 +435,7 @@ bash /opt/swpu-oj/scripts/backup-hydro.sh \
 
 ### 异机副本：自动拉取到维护人电脑
 
-服务器 cron 生成日备（`17 3` 与 `37 15` 每日两份，`/root/daily-backup.sh` 保留最近 14 份 zip；RPO 12 小时）后，管理机每天 **09:07** 由 Windows 计划任务 `OJ backup pull` 运行 `C:\Users\yuki\Desktop\oj备份\pull_oj_backup.ps1`：
+服务器 cron 生成日备（`17 3` 与 `37 15` 每日两份，`/root/daily-backup.sh` 保留最近 14 份 zip；RPO 12 小时）后，管理机每天 **09:07** 由 Windows 计划任务 `OJ backup pull` 运行维护人配置的 `pull_oj_backup.ps1`。管理机实际文件位置记录在私有维护说明中：
 
 - 依次尝试 Tailscale（`100.69.19.62`）与公网（`107.151.246.137`），先通者为准；只拉本地缺失的文件（`.part` 中转，断网/中断不留半截文件）。
 - 拉取范围：`/root/backups` 下全部平铺文件（含 `dead-19` / `ybt-remote-609` 等题库归档 JSON），本地 `backup-*.zip` 只保留最近 14 份，一次性归档永不删。

@@ -1,7 +1,7 @@
 'use strict';
 
 const { createHash } = require('node:crypto');
-const { TYPE_META, cstParts, describeEvent, selectEvents, fmtDate } = require('./calendar.cjs');
+const { TYPE_META, INTEREST_META, SOURCE_META, cstParts, describeEvent, selectEvents, fmtDate, filterOptions, filterParams, trackOf, compareEvents } = require('./calendar.cjs');
 
 function dateOnly(value) {
     const p = cstParts(new Date(value));
@@ -9,6 +9,7 @@ function dateOnly(value) {
 }
 
 function isAllDay(event) {
+    if (!event._start) return false;
     const start = cstParts(event._start);
     const end = event._end && cstParts(event._end);
     return event.allDay || (event.form === 'onsite' && start.hh === 0 && start.mm === 0
@@ -25,6 +26,13 @@ function allDayRange(event) {
 
 function scheduleRow(event, now) {
     const dto = describeEvent(event, now);
+    if (!event._start) {
+        const end = event._end && cstParts(event._end);
+        return { ...dto, dateValue: end ? dateOnly(event._end) : '',
+            scheduleDateText: end ? `开始日期待公布 · 截至 ${end.y}年${fmtDate(event._end)}` : '日期待公布',
+            dateMonth: end ? `${end.y}年${end.m}月` : '赛事时间', dateDay: end ? String(end.d).padStart(2, '0') : '待定',
+            dateWeekday: end ? '截止日期' : '待公布' };
+    }
     const start = cstParts(event._start);
     const end = event._end && cstParts(event._end);
     const dateValue = event.approx ? `${start.y}-${String(start.m).padStart(2, '0')}` : dateOnly(event._start);
@@ -39,30 +47,49 @@ function scheduleRow(event, now) {
     };
 }
 
-function pageData(parsed, now, { type = '', types = '', q = '' } = {}, sourceStatuses = []) {
+function pageData(parsed, now, options = {}, sourceStatuses = []) {
     const { describeEvents } = require('./calendar.cjs');
-    const view = describeEvents(parsed, now, type, { types, q });
-    const selected = new Set(selectEvents(parsed.events, { type, types, q }).map((event) => event.id));
+    const current = filterOptions(options);
+    const view = describeEvents(parsed, now, options.type || '', { ...options, now });
+    const selected = new Set(selectEvents(parsed.events, { ...options, now }).map((event) => event.id));
     const rows = parsed.events.map((event) => ({ ...scheduleRow(event, now), hidden: !selected.has(event.id) }));
     const groups = ['ongoing', 'upcoming', 'uncertain', 'ended'].map((key) => {
-        const events = rows.filter((event) => (event.approx ? 'uncertain' : event.status) === key);
-        if (key === 'ended') events.reverse();
+        const events = rows.filter((event) => event.filterStatus === key);
+        events.sort(compareEvents(current.sort, key));
         const count = events.filter((event) => !event.hidden).length;
         return { key, label: { ongoing: '进行中', upcoming: '即将到来', uncertain: '日期待公布', ended: '已结束' }[key], events, count, hidden: !count };
     });
     const sources = sourceStatuses.map((source) => ({ ...source, text: {
         fresh: '已同步', stale: '使用上次赛程', pending: '正在同步', unavailable: '暂不可用', unconfigured: '尚未启用', disabled: '未启用',
     }[source.status] || '正在同步' }));
-    const params = new URLSearchParams();
-    if (view.currentTypes.length) params.set('types', view.currentTypes.join(','));
-    if (view.query) params.set('q', view.query);
+    const params = filterParams(options);
+    const link = (change) => { const next = filterParams({ ...options, ...change }); return `/calendar${next.size ? `?${next}` : ''}`; };
+    const scopeFilters = [{ key: '', label: '全部赛事' }, { key: 'algorithm', label: '算法赛' }, { key: 'ai', label: 'AI / 黑客松' }]
+        .map((item) => ({ ...item, selected: current.scope === item.key,
+            count: parsed.events.filter((event) => !item.key || trackOf(event) === item.key).length, href: link({ scope: item.key }) }));
+    const interestFilters = [{ key: '', label: '不限' }, ...Object.entries(INTEREST_META).map(([key, label]) => ({ key, label }))]
+        .map((item) => ({ ...item, selected: item.key ? current.interests.includes(item.key) : !current.interests.length,
+            count: parsed.events.filter((event) => !item.key || event.tags.includes(item.key)).length,
+            href: link({ interests: !item.key ? '' : current.interests.includes(item.key)
+                ? current.interests.filter((tag) => tag !== item.key).join(',') : [...current.interests, item.key].join(',') }) }));
+    const sourceOptions = [{ key: '', label: '全部平台' }, ...Object.entries(SOURCE_META)
+        .filter(([key]) => parsed.events.some((event) => event.sources.includes(key)))
+        .map(([key, label]) => ({ key, label }))].map((item) => ({ ...item, selected: current.source === item.key }));
+    const statusOptions = Object.entries({ '': '全部状态', active: '未结束', ongoing: '进行中', upcoming: '即将到来', uncertain: '日期待公布', ended: '已结束' })
+        .map(([key, label]) => ({ key, label, selected: current.status === key }));
+    const sortOptions = Object.entries({ schedule: '按赛程', deadline: '按截止时间', newest: '最新收录', prize: '按奖金（同币种）' })
+        .map(([key, label]) => ({ key, label, selected: current.sort === key }));
     return {
         ...view, filters: view.filters.map((filter) => ({ ...filter, color: TYPE_META[filter.key]?.color || '#64748b' })),
         groups,
         registrationCount: parsed.events.filter((event) => event._reg && selected.has(event.id)).length,
-        selectedTypesValue: view.currentTypes.join(','), sources,
+        selectedTypesValue: view.currentTypes.join(','), selectedInterestsValue: current.interests.join(','), sources,
+        scopeFilters, interestFilters, sourceOptions, statusOptions, sortOptions, currentScope: current.scope,
+        hasFilters: !!(current.selectedTypes.length || current.interests.length || current.query || current.scope || current.status || current.source),
+        prizeSort: current.sort === 'prize',
         subscribeUrl: `/calendar/feed.ics${params.size ? `?${params}` : ''}`,
-        bootJson: serializeBoot({ selectedTypes: view.currentTypes, query: view.query }),
+        rssUrl: `/calendar/feed.xml${params.size ? `?${params}` : ''}`,
+        bootJson: serializeBoot(current),
     };
 }
 
@@ -93,16 +120,20 @@ function foldLine(line) {
 const utc = (value) => new Date(value).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z');
 const uid = (id) => `${createHash('sha256').update(id).digest('hex')}@dfacm.website`;
 
-function buildIcs(parsed, { type = '', types = '', q = '', now = new Date() } = {}) {
+function buildIcs(parsed, options = {}) {
+    const now = options.now || new Date();
     const rows = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//DFACM//Contest Calendar//ZH-CN', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH',
         'X-WR-CALNAME:d&f算法网赛事日历', 'X-WR-TIMEZONE:Asia/Shanghai', 'REFRESH-INTERVAL;VALUE=DURATION:PT1H', 'X-PUBLISHED-TTL:PT1H'];
     const dtstamp = utc(now);
 
-    function append(event, registration) {
+    function append(event, registration, deadline = false) {
         const dto = describeEvent(event, now);
-        const summary = registration ? `报名截止：${event.name}` : event.name;
-        rows.push('BEGIN:VEVENT', `UID:${uid(`${event.id}${registration ? ':registration' : ''}`)}`, `DTSTAMP:${dtstamp}`, `SUMMARY:${escapeText(summary)}`);
-        if (registration) rows.push(`DTSTART:${utc(event._reg)}`, `DTEND:${utc(new Date(event._reg.getTime() + 60000))}`);
+        const summary = registration ? `报名截止：${event.name}` : deadline ? `赛事截止：${event.name}` : event.name;
+        rows.push('BEGIN:VEVENT', `UID:${uid(`${event.id}${registration ? ':registration' : deadline ? ':deadline' : ''}`)}`, `DTSTAMP:${dtstamp}`, `SUMMARY:${escapeText(summary)}`);
+        if (registration || deadline) {
+            const at = registration ? event._reg : event._end;
+            rows.push(`DTSTART:${utc(at)}`, `DTEND:${utc(new Date(at.getTime() + 60000))}`);
+        }
         else if (isAllDay(event)) {
             const item = allDayRange(event);
             rows.push(`DTSTART;VALUE=DATE:${item.start.replace(/-/g, '')}`, `DTEND;VALUE=DATE:${item.end.replace(/-/g, '')}`);
@@ -111,24 +142,47 @@ function buildIcs(parsed, { type = '', types = '', q = '', now = new Date() } = 
             if (event._end) rows.push(`DTEND:${utc(event._end)}`);
         }
         const credit = event.source === 'clist' ? '赛事数据由 CLIST 提供（https://clist.by）' : '赛事时间以官方最终通知为准。';
-        rows.push(`DESCRIPTION:${escapeText([dto.typeLabel, event.note, dto.regText, credit, event.url].filter(Boolean).join('\n'))}`);
+        rows.push(`DESCRIPTION:${escapeText([dto.typeLabel, dto.sourceLabel, event.organizer, event.prizeText,
+            event.tags.join(' / '), event.note, dto.regText, credit, event.url].filter(Boolean).join('\n'))}`);
         if (event.location) rows.push(`LOCATION:${escapeText(event.location)}`);
         if (event.url) rows.push(`URL:${event.url.replace(/[\r\n]/g, '')}`);
-        if (registration || !isAllDay(event)) {
-            for (const trigger of registration ? ['-P3D', '-P1D'] : ['-PT30M']) {
+        if (registration || deadline || !isAllDay(event)) {
+            for (const trigger of registration || deadline ? ['-P3D', '-P1D'] : ['-PT30M']) {
                 rows.push('BEGIN:VALARM', 'ACTION:DISPLAY', `TRIGGER:${trigger}`, `DESCRIPTION:${escapeText(summary)}`, 'END:VALARM');
             }
         }
         rows.push('END:VEVENT');
     }
 
-    for (const event of selectEvents(parsed.events, { type, types, q })) {
+    for (const event of selectEvents(parsed.events, { ...options, now })) {
         // Month-only announcements cannot be exported as invented race dates.
-        if (!event.approx) append(event, false);
+        if (!event.approx && event._start) append(event, false);
+        else if (!event._start && event._end) append(event, false, true);
         if (event._reg) append(event, true);
     }
     rows.push('END:VCALENDAR');
     return rows.map(foldLine).join('\r\n') + '\r\n';
 }
 
-module.exports = { pageData, dateOnly, isAllDay, serializeBoot, buildIcs, foldLine, escapeText };
+const escapeXml = (value) => String(value || '').replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, '')
+    .replace(/[<>&"']/g, (char) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&apos;' }[char]));
+
+function buildRss(parsed, options = {}) {
+    const now = options.now || new Date();
+    const params = filterParams(options);
+    const address = `https://dfacm.website/calendar${params.size ? `?${params}` : ''}`;
+    const events = selectEvents(parsed.events, { ...options, now }).sort(compareEvents('newest'));
+    const items = events.map((event) => {
+        const dto = scheduleRow(event, now);
+        const description = [dto.typeLabel, dto.sourceLabel, dto.scheduleDateText, dto.timeText, event.organizer,
+            event.prizeText, event.tags.join(' / '), event.note].filter(Boolean).join(' · ');
+        const pubDate = event.firstSeenAt ? `<pubDate>${new Date(event.firstSeenAt).toUTCString()}</pubDate>` : '';
+        return `<item><title>${escapeXml(event.name)}</title><link>${escapeXml(event.url || address)}</link>`
+            + `<guid isPermaLink="false">${uid(event.id)}</guid><description>${escapeXml(description)}</description>${pubDate}</item>`;
+    });
+    return '<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel>'
+        + `<title>d&amp;f算法网 · 赛事日历</title><link>${escapeXml(address)}</link><description>算法赛、AI 赛与黑客松</description>`
+        + `<lastBuildDate>${now.toUTCString()}</lastBuildDate>${items.join('')}</channel></rss>`;
+}
+
+module.exports = { pageData, scheduleRow, dateOnly, isAllDay, serializeBoot, buildIcs, buildRss, escapeXml, foldLine, escapeText };

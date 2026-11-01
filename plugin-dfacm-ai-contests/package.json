@@ -1,0 +1,7 @@
+{
+  "name": "dfacm-ai-contests",
+  "version": "0.1.0",
+  "private": true,
+  "main": "index.ts",
+  "engines": { "node": ">=22" }
+}

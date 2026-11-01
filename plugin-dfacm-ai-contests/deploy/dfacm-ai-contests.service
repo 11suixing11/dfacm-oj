@@ -1,0 +1,32 @@
+[Unit]
+Description=d&f AI competition hub
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=dfacm-ai
+Group=dfacm-ai
+WorkingDirectory=/opt/dfacm-ai-contests/current/backend
+Environment=PYTHONUNBUFFERED=1
+Environment=PYTHONDONTWRITEBYTECODE=1
+Environment=TZ=Asia/Shanghai
+Environment=ACH_DB_PATH=/var/lib/dfacm-ai-contests/competitions.db
+Environment=ACH_ROOT_PATH=/ai-contests
+Environment=ACH_PUBLIC_URL=https://dfacm.website/ai-contests/
+Environment=ACH_ENABLE_SCHEDULER=1
+Environment=ACH_KAGGLE_TOKEN_PATH=/var/lib/dfacm-ai-contests/kaggle.json
+ExecStart=/opt/dfacm-ai-contests/.venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8765 --workers 1 --root-path /ai-contests --proxy-headers --forwarded-allow-ips=127.0.0.1
+Restart=on-failure
+RestartSec=5
+StateDirectory=dfacm-ai-contests
+StateDirectoryMode=0750
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/dfacm-ai-contests
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target

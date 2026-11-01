@@ -238,5 +238,29 @@ jobs:
         run: |
           npm test
           npm run check-build
+      - name: Run AI watch tests, syntax and public source checks
+        working-directory: plugin-dfacm-ai-watch
+        run: |
+          node --test tests/*.test.cjs
+          node scripts/check-build.cjs
+          node scripts/check-public.cjs
       - name: Run deployment script tests
         run: node --test scripts/deployment.test.mjs scripts/landing.test.cjs scripts/repository.test.cjs
+
+  collector-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+      - name: Install locked collector dependencies
+        working-directory: plugin-dfacm-ai-contests
+        run: python -m pip install --disable-pip-version-check -r requirements.lock
+      - name: Run collector website and crawler fixture tests
+        working-directory: plugin-dfacm-ai-contests
+        env:
+          ACH_ENABLE_SCHEDULER: '0'
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: python -B -m unittest discover -s tests -p 'test_*.py'

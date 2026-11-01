@@ -92,7 +92,7 @@ test('page DTO retains all list rows while counting and grouping the server sele
     assert.equal(view.groups.flatMap((g) => g.events).filter((e) => e.hidden).length, 3);
     assert.equal(view.groups.find((g) => g.key === 'uncertain').events[0].hidden, true);
     const boot = JSON.parse(view.bootJson);
-    assert.deepEqual(boot, { selectedTypes: ['cf'], query: '比赛' });
+    assert.deepEqual(boot, { selectedTypes: ['cf'], query: '比赛', scope: '', interests: [], source: '', status: '', sort: 'schedule' });
     const month = pageData(parsed(), NOW, { types: 'lqb' });
     assert.equal(month.total, 1);
     assert.equal(month.registrationCount, 1);
