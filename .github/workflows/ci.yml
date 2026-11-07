@@ -218,6 +218,10 @@ jobs:
           npm run check:build
       - name: Check the local preview training flow
         run: node --test scripts/preview.test.cjs
+      - name: Check PTA OOP grading and static page build
+        run: |
+          node --test scripts/practice/pta-oop/core.test.cjs
+          node scripts/practice/pta-oop/build.cjs
       - name: Run ops plugin tests
         run: node --test plugin-dfacm-ops/tests/*.test.cjs
       - name: Install shop test dependencies
