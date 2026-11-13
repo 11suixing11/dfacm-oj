@@ -11,11 +11,11 @@ const flush = async () => { for (let i = 0; i < 60; i++) await Promise.resolve()
 
 // Compile the real addon entry; only Hydro's external database/framework boundary
 // is replaced. The CJS scheduling modules load from their production paths.
-async function entryFixture(t, { automatic = true, rpRun } = {}) {
-    const envKeys = ['SWPU_SERVICE_UIDS', 'SWPU_SERVICE_UIDS_DRYRUN', 'SWPU_AUTO_JOIN', 'SWPU_RP_SWEEP', 'SWPU_LIVE_RP', 'NODE_APP_INSTANCE'];
+async function entryFixture(t, { automatic = true, rpRun, controlled = false } = {}) {
+    const envKeys = ['SWPU_SERVICE_UIDS', 'SWPU_SERVICE_UIDS_DRYRUN', 'SWPU_AUTO_JOIN', 'SWPU_RP_SWEEP', 'SWPU_LIVE_RP', 'NODE_APP_INSTANCE', 'DFACM_CONTROLLED_HISTORY'];
     const env = Object.fromEntries(envKeys.map((key) => [key, process.env[key]]));
     Object.assign(process.env, { SWPU_SERVICE_UIDS: '3', SWPU_SERVICE_UIDS_DRYRUN: '0', SWPU_AUTO_JOIN: '0',
-        SWPU_RP_SWEEP: automatic ? '1' : '0', SWPU_LIVE_RP: automatic ? '1' : '0', NODE_APP_INSTANCE: '0' });
+        SWPU_RP_SWEEP: automatic ? '1' : '0', SWPU_LIVE_RP: automatic ? '1' : '0', NODE_APP_INSTANCE: '0', DFACM_CONTROLLED_HISTORY: controlled ? '1' : '0' });
     const previousHydro = global.Hydro;
     global.Hydro = { script: { rp: { run: rpRun || (async () => {}) } } };
     const scripts = {}, events = {}, stages = [];
@@ -42,6 +42,7 @@ async function entryFixture(t, { automatic = true, rpRun } = {}) {
     const hydro = { db: { collection(name) { assert.ok(collections[name], `unexpected collection ${name}`); return collections[name]; } },
         Schema: { string: () => schema, number: () => schema, union: () => schema, object: () => schema },
         DomainModel: {}, ObjectId: class {}, RecordModel: {}, TaskModel: {}, UserModel: {} };
+    if (controlled) Object.assign(hydro, require('./native-callback-fixture.cjs').nativeFixture().api);
     t.after(() => {
         for (const stop of events.dispose || []) stop();
         global.Hydro = previousHydro;
@@ -53,13 +54,14 @@ async function entryFixture(t, { automatic = true, rpRun } = {}) {
     const output = transformSync(fs.readFileSync(filename, 'utf8'), { loader: 'ts', format: 'cjs', target: 'node22', sourcefile: filename }).code;
     const entry = new Module(filename, module);
     entry.filename = filename; entry.paths = Module._nodeModulePaths(path.dirname(filename));
-    entry.require = (id) => id === 'hydrooj' ? hydro : Module.prototype.require.call(entry, id);
+    entry.require = (id) => id === 'hydrooj' ? hydro : id === 'hydrooj/package.json' ? { version: '5.0.7' } : Module.prototype.require.call(entry, id);
     entry._compile(output, filename);
     await entry.exports.apply({
         addScript(name, _title, _schema, run) { scripts[name] = run; },
         on(name, handler) { (events[name] ||= []).push(handler); },
+        effect(factory) { (events.dispose ||= []).push(factory()); },
     });
-    return { scripts, events, stages, dispose() { for (const stop of events.dispose || []) stop(); } };
+    return { scripts, events, stages, hydro, dispose() { for (const stop of events.dispose || []) stop(); } };
 }
 
 for (const order of [
@@ -152,4 +154,10 @@ test('real apply lets live work queued after a failed manual RP run complete', a
     assert.equal(result.recalculated, false);
     assert.match(result.failures[0].message, /manual RP failed/);
     assert.deepEqual(starts, [{}, { domainId: 'system' }]);
+});
+
+test('real ops apply advertises native capability only while opted-in lifecycle wrapper is installed', async t => {
+    const { getCapability } = require('../controlled-history.cjs');
+    const f = await entryFixture(t, { automatic: false, controlled: true });
+    assert.ok(getCapability(f.hydro)); f.dispose(); assert.equal(getCapability(f.hydro), null);
 });

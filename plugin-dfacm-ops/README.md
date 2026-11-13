@@ -107,3 +107,49 @@ npm test
 - [`UserModel.listGroup`](https://github.com/hydro-dev/Hydro/blob/18257e71da6a13e2c85ce0c03e2ac32553599dfd/packages/hydrooj/src/model/user.ts)、[`TaskModel.coll` / 领取删除](https://github.com/hydro-dev/Hydro/blob/18257e71da6a13e2c85ce0c03e2ac32553599dfd/packages/hydrooj/src/model/task.ts)、[插件 API 导出](https://github.com/hydro-dev/Hydro/blob/18257e71da6a13e2c85ce0c03e2ac32553599dfd/packages/hydrooj/src/plugin-api.ts)。
 
 本地测试验证聚合、参数和模型适配逻辑。由于仓库不包含运行中的 Hydro 或 MongoDB，真实管理员权限、MongoDB 聚合执行及 CLI 服务加载仍需在同版本测试实例验收。
+
+## Controlled editorial verification ownership
+
+`DFACM_CONTROLLED_HISTORY=1` explicitly enables the `controlled-history.cjs`
+adapter through this addon's native `ctx.effect` lifecycle. Default activation
+is off. Existing maintenance scheduling and script names are unchanged.
+
+The supported native implementation is Hydro 5.0.7 with the accepted esbuild
+`JudgeResultCallbackContext` `_next`, `_end`, `next`, and `end` method shapes.
+Other versions or loaders, changed methods, and incompatible instances fail
+closed. Repeated activation shares wrappers; the final disposal restores the
+original methods. `getCapability(nativeApi)` is available only while the actual
+wrapper and models are installed. Stock APIs or configuration flags alone cannot
+supply the taxonomy CLI's required ownership capability.
+
+For annotated controlled `judge` tasks, the adapter reads the exact native
+record and service user, confirms RID/domain/UID/PID/language/source marker and
+code, and persists the batch/entry, service username, and code hash at the
+callback's actual history ID before native progress or immediate CE/end writes.
+It never runs submitted code. Ordinary and unrelated controlled callbacks
+retain their native behavior.
+
+A record durably claims its first callback ID. Another callback for the same
+RID marks ambiguity and retains owned evidence; such results stay pending for
+manual reconciliation. Persistence or identity failures settle only the failed
+controlled context, releasing its native consumer slot without publishing an
+AC. Terminal cleanup seals the exact claim before deleting artifacts, preventing
+late callbacks from writing new owned histories. Never resolve ambiguity by
+newest-row or timestamp matching, or clear claim markers without proving the
+exact native work has stopped and reviewing its batch/RID/history evidence.
+
+Ship the new `controlled-history.cjs` with the updated `index.ts` and existing
+ops CJS files. Load this addon with the flag in the administrator CLI and every
+native callback host; inventory actual processes/consumption entries before
+release. A flag only in the CLI cannot instrument callbacks on another host.
+The taxonomy helper can use `DFACM_CONTROLLED_HISTORY_MODULE` as the absolute
+installed helper path when scripts are copied outside the repository layout.
+Preserve the installed Hydro dependencies and existing production addon name;
+shared deployment packaging is handled separately.
+
+Protocol tests replace only model/framework boundaries. The isolated native
+fixture uses the real addon lifecycle and callback adapter on Hydro 5.0.7 and
+checks accounting/status/ledger isolation over full fixture data, ordinary AC
+concurrency, durable restart boundaries and reconnect ambiguity. Its trusted
+C++ compiler emulates the external worker; production daemon/sandbox and remote
+judge result execution still require release acceptance.

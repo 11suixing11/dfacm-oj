@@ -124,23 +124,123 @@ hand-written TeX maps, tracked as follow-up work. 152/196 fixed.
 
 ## solutions/ — editorial pipeline
 
-`solutions-apply.cjs` + `run-solutions.sh` turn a batch JSON
-(`[{docId, t: 思路, c: C++17 code}]`, see `solutions/lq-batch-*.json`) into
-published editorials:
+`run-solutions.sh` invokes `solutions-apply.cjs` inside the configured Hydro
+administrator CLI. Node >=22.13 and Linux `flock` are required. It no longer
+logs in through HTTP, restores counter snapshots, deletes user status rows, or
+consumes `/root/sol-ready.json`.
 
-1. skip problems that already have one (marker `【本题解由站长编写】`);
-2. snapshot `nSubmit`/`nAccept` of every target problem;
-3. submit each solution as the hidden judge account (`lang=cc.cc17o2`),
-   poll the record, require AC;
-4. WAs are reported and dropped; the verification records of AC entries are
-   deleted and the problem counters restored;
-5. surviving entries are inserted through the official
-   `SolutionModel.add(domainId, pid, owner=1, content)` via
-   `hydrooj cli execute` (one CLI boot per batch).
+**Release gate:** the existing `dfacm-ops` addon must be loaded with
+`DFACM_CONTROLLED_HISTORY=1` in the administrator CLI and every process that
+hosts native judge callbacks. Stock Hydro 5.0.7 writes controlled history under
+a private callback ID without RID ownership; stock exports alone remain blocked.
+The addon now installs `controlled-history.cjs` through native Cordis `ctx.effect`
+and removes both wrappers and capability when its plugin fiber is disposed.
+Compatibility is limited to Hydro **5.0.7**, ui-default **4.58.5**, and the
+accepted native esbuild callback method shapes. An incompatible version, loader,
+method replacement, or unloaded wrapper fails preflight. Do not bypass this
+check with a boolean capability or task metadata.
 
-Continue with further batches by authoring more `lq-batch-NN.json` files and
-running `run-solutions.sh` against them. Coverage target: all problems inside
-training plans (蓝桥杯 253 → in progress; XCPC 108; the 8 topic plans 256).
+`verifySolutions(api, batch, stateStore)` uses
+`RecordModel.add(..., false, {type: 'judge'})` followed by
+`RecordModel.judge(..., {}, {type: 'judge', rejudge: 'controlled', ...ownership})`.
+Its capability comes from `getCapability(api)` in the installed native adapter.
+The adapter verifies the exact native RID/domain/UID/PID/language/source marker,
+code, and service username, then writes owned metadata under the callback's
+actual history ID before native progress or terminal updates. Metadata includes
+the code hash, service username, batch/entry ID, and native RID. No callback
+source or executable is run by the adapter. Ordinary callbacks and unrelated
+controlled callbacks retain their native behavior.
+
+Ship the taxonomy runner, `solutions-apply.cjs`, `verify-solutions.cjs`, and
+`verification-state.cjs` together, plus the updated existing ops entry and
+`controlled-history.cjs`. Preserve the repository layout, or set
+`DFACM_CONTROLLED_HISTORY_MODULE` to the absolute installed ops helper path when
+taxonomy scripts live elsewhere. Existing ops runtime CJS modules remain
+required. Use the installed Hydro package and locked dependencies; do not run
+`npm ci` in the addon runtime. The shared deploy/CI shipping changes and process
+inventory remain release work outside this local task.
+
+Input is now an immutable versioned batch object (old bare arrays fail safely):
+
+```json
+{
+  "id": "lq-editorials-20261113",
+  "domainId": "system",
+  "uid": 3,
+  "uname": "hydsvc-0074",
+  "entries": [
+    {"id": "problem-4072", "docId": 4072, "t": "思路", "c": "int main() {}"}
+  ]
+}
+```
+
+Each batch/entry ID is unique; the actual account must match the exact UID and
+service username. Keep the existing service-account score exclusion configured.
+The current eligible problem family is local `judge`, default problem/checker,
+using the problem's complete data with no config override. Remote problems are
+scheduled by Hydro as `remotejudge` and are rejected here. Other task/checker
+families also require separate native acceptance evidence.
+
+State defaults to `<batch.json>.state.json`; `DFACM_SOL_STATE` can choose its
+location. Reuse **the same canonical batch and state paths on one host** for
+all retries. State uses file fsync, atomic rename, directory fsync, and a kernel
+`flock` held for the entire verification/publication operation. This is not a
+cross-host deployment lock. Never run the same batch through different state
+files, manually edit a state file, or unlink its lock while a runner is alive.
+Code is marked with a unique batch/entry comment before native insertion;
+resume can recover a created RID even if its file receipt was lost.
+
+Timeouts and uncertain scheduling stay pending with their records intact.
+The native RID durably claims its first callback history. A reconnect that
+creates a second callback retains both histories, marks the RID ambiguous, and
+reports pending/manual reconciliation even if one row is AC. Invalid ownership
+or persistence failure settles that controlled context to release its native
+consumer slot, preserves evidence, and cannot authorize publication. Terminal
+cleanup atomically seals the exact claim before deleting its owned artifacts;
+late callbacks cannot create new owned histories after that seal. Do not select
+the newest history or erase ambiguity/failed markers to resume automatically.
+An operator must prove cancellation/completion and reconcile the exact batch,
+source, RID and owned histories before authorizing manual recovery.
+
+Durable terminal/cleanup work resumes even if its current problem is missing,
+unsupported, has empty testdata, or changed identity. That current invalidation
+still rejects publication. Unfinished work remains pending with RID/phase and
+the invalidation reason; no new RID is created for an invalid current problem.
+An uncertain schedule is not automatically retried: Hydro can remove a queued
+task but cannot prove a previously fetched worker has stopped. Reconcile the
+existing controlled callback or establish cancellation before any manual
+recovery. Cleanup only follows a persisted owned terminal history, and uses
+exact RID, UID, domain, source-code marker and history/batch/entry filters.
+AC, WA and CE follow the same cleanup protocol. No `document.status` rows,
+user statistics, problem counters, or ledgers are deleted or overwritten.
+
+Only owned ACs whose original problem identity, config and testdata metadata
+still match may reach `SolutionModel.add(domainId, pid, 1, content)`. The input
+and result persist across retries, and an exact editorial content marker
+recovers an insertion that succeeded before its receipt was saved. Another
+existing editorial is preserved. The shell verifies a unique durable receipt
+for the current invocation, because Hydro's CLI can catch errors and exit 0.
+Pending, rejected, blocked and missing-receipt runs exit nonzero. `--dry`
+checks installed capability, account and batch shape without submitting/publishing.
+
+```bash
+bash scripts/taxonomy/run-solutions.sh /absolute/path/batch.json --dry
+bash scripts/taxonomy/run-solutions.sh /absolute/path/batch.json
+node --test scripts/taxonomy/tests/solutions-apply.test.cjs
+```
+
+`tests/native-solutions.cjs` is an explicit isolated acceptance entry point:
+call its exported async function with native Hydro models, ObjectId, version
+and a writable artifact directory from `hydrooj cli execute`. It refuses any
+database other than `dfacm_native_validation`. It compiles trusted C++ fixtures
+with `g++`, reads all test files from native StorageModel task payloads, invokes
+native callbacks with the production ops adapter, and checks ordinary AC
+concurrency and real shop ledger functions. It also exercises durable file
+checkpoints, lost native insert/delete receipts, conservative reconnect
+ambiguity, and native Cordis disposal. The private-context ownership insertion
+used by the old characterization fixture has been removed. It intentionally emulates the worker boundary; it does not
+validate the production sandbox/daemon or a remote judge. It retains uniquely
+named fixture domains, ordinary fixture records and evidence for audit.
 
 ## Working a batch: pre-flight locally, then judge
 
@@ -152,8 +252,8 @@ per case. Nothing reaches the judge until it passes locally.
 export PATH=/root/.nix-profile/bin:/usr/local/bin:/usr/bin:/bin
 export NODE_PATH=/usr/local/share/.config/yarn/global/node_modules
 node /root/preflight.cjs /root/lq-batch-07.json
-# then
-bash /root/run-solutions.sh /root/lq-batch-07.json
+# Historical preflight input is an array. Convert to the versioned batch above
+# and satisfy the ownership release gate before invoking run-solutions.sh.
 ```
 
 This is worth the extra step. Batch 07 went **8/8 on the first judge attempt**;

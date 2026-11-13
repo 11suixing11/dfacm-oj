@@ -1,6 +1,8 @@
 import { Context, db, DomainModel, ObjectId, RecordModel, Schema, TaskModel, UserModel } from 'hydrooj';
+import * as HydroNative from 'hydrooj';
 
 const { createOperations } = require('./operations.cjs');
+const { installControlledHistory } = require('./controlled-history.cjs');
 const { createLiveRp } = require('./live-rp.cjs');
 const {
     assertServiceAccounts, createAutoJoin, createJoinReconcile, createPurgeDoc, createRpLock, createRpSweep, createSanitize, dryRunFromEnv, serviceUidsFromEnv,
@@ -11,6 +13,9 @@ const {
 // Deliberately register no HTTP route; the background work is the live-RP hook
 // plus the hourly sweep (see rp-sweep.cjs).
 export async function apply(ctx: Context) {
+    if (process.env.DFACM_CONTROLLED_HISTORY === '1') {
+        ctx.effect(() => installControlledHistory({ ...HydroNative, version: require('hydrooj/package.json').version }));
+    }
     const ops = createOperations({ DomainModel, ObjectId, RecordModel, TaskModel, UserModel });
     const windowFields = {
         domainId: Schema.string().default('system'),
