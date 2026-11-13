@@ -1,12 +1,13 @@
 'use strict';
 
-const { problems, trainingId, chapters } = require('./fixtures.cjs');
+const { problems, trainingId, chapters, trainingRoutes } = require('./fixtures.cjs');
 const { catalogFor, docs: catalogDocs } = require('./catalog.cjs');
 const esc = (value) => String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const route = '/training/' + trainingId;
 
 function previewNote() {
-  return '<aside class="preview-note" aria-label="本地预览说明"><span>本地设计预览 · 题目与进度为固定示例</span><a href="/">首页</a><a href="/p">题库</a><a href="/training">训练</a><a href="/workbench">工作台</a><a href="/mistakes">错题本</a></aside>';
+  return '<aside class="preview-note" aria-label="本地预览说明"><span>本地设计预览 · 题目与进度为固定示例</span><a href="/">首页</a><a href="/p">题库</a><a href="/training">训练</a><a href="/workbench">工作台</a><a href="/mistakes">错题本</a></aside>'
+    + '<script>window.__SWPU_ROUTES__=' + JSON.stringify(trainingRoutes).replace(/</g, '\\u003c') + ';</script>';
 }
 const logo = '<svg viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="preview-brand-bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1c3e78"/><stop offset="1" stop-color="#0c1a36"/></linearGradient></defs><rect x="2" y="2" width="60" height="60" rx="15" fill="url(#preview-brand-bg)" stroke="#c9a227"/><path d="M20 21 12 32l8 11m24-22 8 11-8 11" fill="none" stroke="#e8edf5" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/><path d="m24 43 9-17 4 7 3-4 6 14Z" fill="#e8edf5"/><path d="m33 26 4 7 3-4 2 4-5 1Z" fill="#e9c455"/><circle cx="34" cy="20" r="1.5" fill="#e9c455"/></svg>';
 
