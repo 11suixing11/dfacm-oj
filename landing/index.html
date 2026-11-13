@@ -1197,31 +1197,58 @@ int main() {
     if(s<2592000)return Math.floor(s/86400)+' 天前';
     return Math.floor(s/2592000)+' 个月前';
   }
-  /* 接口数据落 DOM 前全部过形状校验：url 只收站内训练路径，字段收敛为数字 */
+  /* URL 作为数据校验：只收同域原生路线、当前章节和带本路线来源的题目。
+     逐段解码拒绝路径分隔符、双重编码及属性/脚本字符，保留正确编码的域名。 */
+  function safeSegment(s){
+    if(!/^(?:[A-Za-z0-9_.~-]|%[0-9a-fA-F]{2})+$/.test(s))return '';
+    try{var v=decodeURIComponent(s);return v!=='.'&&v!=='..'&&/^[\p{L}\p{N}_.~-]+$/u.test(v)?v:''}catch(e){return ''}
+  }
+  function localRoute(u,kind){
+    if(typeof u!=='string')return null;
+    var m=/^((?:\/d\/([^/?#]+))?)\/(training|p)\/([^/?#]+)(.*)$/.exec(u);
+    if(!m||m[3]!==kind||(m[2]&&!safeSegment(m[2]))||!safeSegment(m[4]))return null;
+    return {prefix:m[1],id:safeSegment(m[4]),tail:m[5]};
+  }
+  function safeNext(u,route,nid){
+    var p=localRoute(u,'p'),r=localRoute(route,'training');
+    if(!p||!r||p.prefix!==r.prefix||nid===null)return '';
+    var query='?training='+encodeURIComponent(r.id)+'&trainingNode='+encodeURIComponent(nid);
+    return p.tail===query?u:'';
+  }
   function normRecent(list){
     if(!Array.isArray(list))return [];
     var out=[];
     for(var i=0;i<list.length&&out.length<3;i++){
-      var t=list[i]||{};
-      var url=typeof t.url==='string'&&/^\/training\/[0-9a-f]+$/.test(t.url)?t.url:'';
-      if(!url)continue;
+      var t=list[i]||{},route=localRoute(t.url,'training');
+      if(!route||route.tail)continue;
+      var nid=t.currentNid!==null&&t.currentNid!==undefined&&Number.isSafeInteger(Number(t.currentNid))&&Number(t.currentNid)>=0?Number(t.currentNid):null;
+      var current=typeof t.currentUrl==='string'&&(t.currentUrl===t.url||(nid!==null&&t.currentUrl===t.url+'#node-'+encodeURIComponent(nid)))?t.currentUrl:'';
+      var next=t.next&&Number.isSafeInteger(t.next.pid)&&t.next.pid>0?safeNext(t.next.url,t.url,nid):'';
       out.push({
-        url:url,
+        url:t.url,
         title:typeof t.title==='string'?t.title:'',
         done:Math.max(0,Math.floor(Number(t.done)||0)),
         total:Math.max(0,Math.floor(Number(t.total)||0)),
-        at:typeof t.lastActiveAt==='string'?t.lastActiveAt:(typeof t.at==='string'?t.at:'')
+        at:typeof t.lastActiveAt==='string'?t.lastActiveAt:(typeof t.at==='string'?t.at:''),
+        completed:t.completed===true,
+        currentNid:nid,
+        currentTitle:typeof t.currentTitle==='string'?t.currentTitle:'',
+        currentUrl:current,
+        next:next?{pid:t.next.pid,title:typeof t.next.title==='string'?t.next.title:'',url:next}:null
       });
     }
     return out;
+  }
+  function trainingTarget(t){
+    return {url:t?(t.completed?t.url:(t.next&&t.next.url)||t.currentUrl||t.url):ROUTE_URL,review:!!(t&&t.completed)};
   }
   function paintCards(){
     if(!recent.length){ctaRow.innerHTML=orig.ctaRow;return}
     ctaRow.innerHTML='';
     for(var i=0;i<recent.length;i++){
-      var t=recent[i];
+      var t=recent[i],target=trainingTarget(t);
       var a=doc.createElement('a');
-      a.setAttribute('href',t.url);
+      a.setAttribute('href',target.url);
       a.className='rt';
       var b=doc.createElement('b');b.className='rt-t';b.textContent=t.title||('训练路线 '+(i+1));a.appendChild(b);
       var m=doc.createElement('span');m.className='rt-m';
@@ -1229,7 +1256,7 @@ int main() {
       m.appendChild(bb);
       m.appendChild(doc.createTextNode(fmtAgo(t.at)?' · '+fmtAgo(t.at):''));
       a.appendChild(m);
-      var g=doc.createElement('span');g.className='rt-go';g.textContent='继续 →';a.appendChild(g);
+      var g=doc.createElement('span');g.className='rt-go';g.textContent=target.review?'回顾 →':'继续 →';a.appendChild(g);
       ctaRow.appendChild(a);
     }
   }
@@ -1259,7 +1286,8 @@ int main() {
     help.appendChild(a('/workbench','打开工作台'));
     var span=document.createElement('span');
     /* 有最近训练时跟随最近一条，否则回退默认入门路线 */
-    span.appendChild(a(recent.length?recent[0].url:ROUTE_URL,'继续训练路线'));
+    var target=trainingTarget(recent[0]);
+    span.appendChild(a(target.url,target.review?'回顾训练路线':'继续训练路线'));
     help.appendChild(span);
     help.appendChild(a('#ai','选择 AI 实践'));
   }

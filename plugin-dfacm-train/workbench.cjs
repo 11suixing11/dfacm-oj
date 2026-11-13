@@ -127,8 +127,8 @@ function trainingProblemUrl(url, tid, nid) {
 // "Recently used" is derived from the member's newest non-contest submissions:
 // every record whose pid lives in a plan's dag marks that plan active at the
 // record's timestamp, so the ordering signal is real activity, not enrolment.
-// Enrolment carries no timestamp, so it is only the fallback for members whose
-// scanned records all fall outside any plan (or who only ever enrolled).
+// Joined routes are the candidates; activity orders them without hiding older
+// unfinished routes. Members with no existing joins retain the activity fallback.
 
 function indexPlanPids(tdocs) {
     const byPid = new Map();
@@ -164,6 +164,10 @@ function lastActiveByPlan(records, byPid) {
     return last;
 }
 
+function selectTrainingShortlist(summaries, limit) {
+    return [...summaries.filter((item) => !item.completed), ...summaries.filter((item) => item.completed)].slice(0, limit);
+}
+
 async function buildRecentTrainings({
     domainId,
     uid,
@@ -175,30 +179,38 @@ async function buildRecentTrainings({
     maxTrainings = 3,
 }) {
     if (typeof url !== 'function') throw new TypeError('buildRecentTrainings requires a URL router');
-    const tdocs = (await trainingModel.getMulti(domainId).toArray())
-        .filter((tdoc) => tdoc && Array.isArray(tdoc.dag));
-    const byPid = indexPlanPids(tdocs);
-    const last = lastActiveByPlan(records, byPid);
-    let ranked = tdocs.filter((tdoc) => last.has(tdoc))
-        .sort((a, b) => last.get(b) - last.get(a))
-        .slice(0, maxTrainings);
-    let source = 'record';
-    if (!ranked.length) {
-        // Mirrors buildWorkbench's enrolment fallback: pinned first, newest docId second.
-        const tsdocs = await trainingModel.getMultiStatus(domainId, { uid, enroll: 1 }).toArray();
-        const tids = tsdocs.map((doc) => doc.docId);
-        const tdict = tids.length ? await trainingModel.getList(domainId, tids) : {};
-        ranked = tids.map((tid) => tdict[String(tid)]).filter(Boolean)
-            .sort((a, b) => (b.pin || 0) - (a.pin || 0) || String(b.docId).localeCompare(String(a.docId)))
-            .slice(0, maxTrainings);
-        source = 'enrolled';
+    const tsdocs = await trainingModel.getMultiStatus(domainId, { uid, enroll: 1 }).toArray();
+    const tids = tsdocs.map((doc) => doc.docId);
+    const tdict = tids.length ? await trainingModel.getList(domainId, tids) : {};
+    let plans = tids.map((tid) => tdict[String(tid)]).filter(Boolean);
+    const joined = plans.length > 0;
+    if (!joined) {
+        plans = (await trainingModel.getMulti(domainId).toArray())
+            .filter((tdoc) => tdoc && Array.isArray(tdoc.dag));
     }
-    const trainings = [];
-    for (const tdoc of ranked) {
-        const pids = [...new Set((tdoc.dag || []).flatMap((node) => node.pids || []))];
-        const psdocs = pids.length ? await problemModel.getListStatus(domainId, uid, pids) : {};
-        const summary = analyzeTraining(tdoc, psdocs);
-        trainings.push({
+    const last = lastActiveByPlan(records, indexPlanPids(plans));
+    const ranked = (joined ? plans : plans.filter((tdoc) => last.has(tdoc)))
+        .sort((a, b) => (last.get(b)?.getTime() || 0) - (last.get(a)?.getTime() || 0)
+            || (b.pin || 0) - (a.pin || 0) || String(b.docId).localeCompare(String(a.docId)));
+    // Status is shared across all candidates and read before applying the limit.
+    const pids = [...new Set(ranked.flatMap((tdoc) => (tdoc.dag || []).flatMap((node) => node.pids || [])))];
+    const psdocs = pids.length ? await problemModel.getListStatus(domainId, uid, pids) : {};
+    const summaries = ranked.map((tdoc) => ({
+        ...analyzeTraining(tdoc, psdocs),
+        lastActiveAt: last.has(tdoc) ? last.get(tdoc).toISOString() : null,
+        source: last.has(tdoc) ? 'record' : 'enrolled',
+    }));
+    const shortlist = selectTrainingShortlist(summaries, maxTrainings);
+    const nextPids = [...new Set(shortlist.map((item) => item.nextPid).filter(Boolean))];
+    const pdocs = nextPids.length ? await problemModel.getList(domainId, nextPids, uid, false) : {};
+    const trainings = shortlist.map((summary) => {
+        const pdoc = pdocs[summary.nextPid];
+        const next = pdoc && pdoc.docId === summary.nextPid ? {
+            pid: summary.nextPid,
+            title: pdoc.title,
+            url: trainingProblemUrl(url('problem_detail', { pid: pdoc.pid || summary.nextPid }), summary.tid, summary.currentNid),
+        } : null;
+        return {
             tid: summary.tid,
             title: summary.title,
             url: trainingUrl(summary.tid, null, url),
@@ -206,10 +218,14 @@ async function buildRecentTrainings({
             total: summary.total,
             percent: summary.percent,
             completed: summary.completed,
-            lastActiveAt: last.has(tdoc) ? last.get(tdoc).toISOString() : null,
-            source,
-        });
-    }
+            lastActiveAt: summary.lastActiveAt,
+            source: summary.source,
+            currentNid: summary.currentNid,
+            currentTitle: summary.currentTitle,
+            currentUrl: trainingUrl(summary.tid, summary.currentNid, url),
+            next,
+        };
+    });
     return { generatedAt: now.toISOString(), trainings };
 }
 
@@ -249,8 +265,7 @@ async function buildWorkbench({
             ...analyzeTraining(tdoc, planStatuses),
             lastActiveAt: lastActive.has(tdoc) ? lastActive.get(tdoc).toISOString() : null,
         }));
-    const shortlist = [...summaries.filter((item) => !item.completed), ...summaries.filter((item) => item.completed)];
-    const trainings = shortlist.slice(0, maxTrainings);
+    const trainings = selectTrainingShortlist(summaries, maxTrainings);
     // The record scan contains historical failures. Resolve current problem
     // status BEFORE applying the display limit, including AC outside this week.
     const candidates = summarizeRecentFailed(recent, recent.length);

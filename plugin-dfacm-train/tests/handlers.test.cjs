@@ -179,7 +179,7 @@ test('buildRecentTrainings caps the list at maxTrainings', async () => {
             getMultiStatus: () => ({ toArray: async () => [] }),
             getList: async () => ({}),
         },
-        problemModel: { getListStatus: async () => ({}) },
+        problemModel: { getListStatus: async () => ({}), getList: async () => ({}) },
         records: [
             { pid: 40, at: new Date('2026-10-04T00:00:00Z') },
             { pid: 30, at: new Date('2026-10-03T00:00:00Z') },

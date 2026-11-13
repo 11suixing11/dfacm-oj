@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 const { test } = require('node:test');
 const { fixtureUrl } = require('./fixture-url.cjs');
 const {
-    analyzeTraining, buildWorkbench, summarizeRecentFailed, summarizeWeek, trainingProblemUrl, weekStartShanghai,
+    analyzeTraining, buildRecentTrainings, buildWorkbench, summarizeRecentFailed, summarizeWeek, trainingProblemUrl, weekStartShanghai,
 } = require('../workbench.cjs');
 
 test('weekStartShanghai returns Monday 00:00 in Asia/Shanghai', () => {
@@ -248,4 +248,136 @@ test('legacy trainingUrl argument order remains usable while an explicit router 
     const { trainingUrl } = require('../workbench.cjs');
     assert.equal(trainingUrl('t1', 2), '/training/t1#node-2');
     assert.equal(trainingUrl('t1', 2, () => '/d/poj/training/t1'), '/d/poj/training/t1#node-2');
+});
+
+// Real DTO builders, with only model I/O doubled. A/B/C have newer activity,
+// while D is joined and unfinished beyond the homepage's three-card boundary.
+function recentFixture({ joined = ['A', 'B', 'C', 'D'], completed = [101, 102, 103], visible = [104], records } = {}) {
+    const plans = [
+        { docId: 'A', title: '路线 A', pin: 0, dag: [{ _id: 1, title: 'A 章', requireNids: [], pids: [101] }] },
+        { docId: 'B', title: '路线 B', pin: 1, dag: [{ _id: 1, title: 'B 章', requireNids: [], pids: [102] }] },
+        { docId: 'C', title: '路线 C', pin: 1, dag: [{ _id: 1, title: 'C 章', requireNids: [], pids: [103] }] },
+        { docId: 'D', title: '路线 D', pin: 0, dag: [{ _id: 2, title: 'D 当前章', requireNids: [], pids: [104] },
+            { _id: 3, title: 'D 锁定章', requireNids: [2], pids: [105] }] },
+        { docId: 'unjoined', title: '未报名', pin: 9, dag: [{ _id: 1, title: '未报名章', requireNids: [], pids: [106] }] },
+    ];
+    const statusCalls = [], problemCalls = [];
+    const activity = records || [
+        { pid: 101, at: new Date('2026-11-14T04:00:00Z') },
+        { pid: 102, at: new Date('2026-11-14T03:00:00Z') },
+        { pid: 103, at: new Date('2026-11-14T02:00:00Z') },
+        { pid: 104, at: new Date('2026-11-01T00:00:00Z') },
+        { pid: 106, at: new Date('2026-11-14T05:00:00Z') },
+    ];
+    return {
+        activity, statusCalls, problemCalls,
+        trainingModel: {
+            getMulti: () => ({ toArray: async () => plans }),
+            getMultiStatus: (domainId, query) => { assert.deepEqual(query, { uid: 42, enroll: 1 });
+                return { toArray: async () => [...joined.map((docId) => ({ docId })), { docId: 'deleted' }] }; },
+            getList: async (_domainId, tids) => Object.fromEntries(plans.filter((p) => tids.includes(p.docId)).map((p) => [p.docId, p])),
+        },
+        problemModel: {
+            getListStatus: async (domainId, uid, pids) => { statusCalls.push({ domainId, uid, pids });
+                return Object.fromEntries(completed.map((pid) => [pid, { status: 1 }])); },
+            getList: async (domainId, pids, uid, doThrow) => { problemCalls.push({ domainId, pids, uid, doThrow });
+                return Object.fromEntries(pids.map((pid) => [pid, visible.includes(pid)
+                    ? { docId: pid, pid: 'P' + pid, title: '题 ' + pid } : { docId: 0, title: '*' }])); },
+        },
+    };
+}
+
+for (const domainId of ['system', 'poj']) {
+    test('recent keeps joined unfinished D ahead of recently completed A/B/C in ' + domainId, async () => {
+        const f = recentFixture();
+        const router = (name, args) => (domainId === 'system' ? '' : '/d/poj') + fixtureUrl(name, args);
+        const recent = await buildRecentTrainings({ domainId, uid: 42, url: router, ...f, records: f.activity });
+        assert.deepEqual(recent.trainings.map((t) => t.tid), ['D', 'A', 'B']);
+        assert.deepEqual(f.statusCalls, [{ domainId, uid: 42, pids: [101, 102, 103, 104, 105] }],
+            'all joined statuses, including D beyond the old limit, use one union query');
+        assert.deepEqual(f.problemCalls, [{ domainId, uid: 42, pids: [104], doThrow: false }]);
+        const prefix = domainId === 'system' ? '' : '/d/poj';
+        assert.deepEqual(recent.trainings[0], {
+            tid: 'D', title: '路线 D', url: prefix + '/training/D', done: 0, total: 2, percent: 0, completed: false,
+            lastActiveAt: '2026-11-01T00:00:00.000Z', source: 'record', currentNid: 2, currentTitle: 'D 当前章',
+            currentUrl: prefix + '/training/D#node-2', next: { pid: 104, title: '题 104', url: prefix + '/p/P104?training=D&trainingNode=2' },
+        });
+        assert.equal(recent.trainings[1].next, null);
+        assert.equal(recent.trainings[1].currentNid, null);
+        const workbench = await buildWorkbench({ domainId, uid: 42, url: router, ...f,
+            records: { weekly: async () => [], recentFailed: async () => [], recentActivity: async () => f.activity } });
+        assert.deepEqual(workbench.trainings.map((t) => t.tid), ['D', 'A', 'B'], 'both surfaces share the shortlist');
+    });
+}
+
+test('all-complete recent routes remain review candidates with activity, pin and docId ordering', async () => {
+    const f = recentFixture({ completed: [101, 102, 103, 104, 105], records: [
+        { pid: 101, at: new Date('2026-11-14T04:00:00Z') },
+        { pid: 102, at: new Date('2026-11-14T03:00:00Z') },
+        { pid: 103, at: new Date('2026-11-14T03:00:00Z') },
+    ] });
+    const result = await buildRecentTrainings({ domainId: 'system', uid: 42, url: fixtureUrl, ...f, records: f.activity });
+    assert.deepEqual(result.trainings.map((t) => t.tid), ['A', 'C', 'B']);
+    assert.ok(result.trainings.every((t) => t.completed && t.next === null && t.currentTitle === null));
+    assert.equal(f.statusCalls.length, 1);
+    assert.equal(f.problemCalls.length, 0);
+});
+
+test('joined routes without activity still rank by pin/docId and unfinished-first', async () => {
+    const f = recentFixture({ records: [] });
+    const result = await buildRecentTrainings({ domainId: 'system', uid: 42, url: fixtureUrl, ...f, records: [] });
+    assert.deepEqual(result.trainings.map((t) => t.tid), ['D', 'C', 'B']);
+    assert.ok(result.trainings.every((t) => t.source === 'enrolled' && t.lastActiveAt === null));
+});
+
+test('no joins preserves activity-derived fallback, still computing statuses before limiting', async () => {
+    const f = recentFixture({ joined: [] });
+    const result = await buildRecentTrainings({ domainId: 'system', uid: 42, url: fixtureUrl, ...f, records: f.activity });
+    assert.deepEqual(result.trainings.map((t) => t.tid), ['unjoined', 'D', 'A']);
+    assert.equal(f.statusCalls.length, 1);
+    assert.deepEqual(f.statusCalls[0].pids, [106, 101, 102, 103, 104, 105]);
+    assert.ok(result.trainings.every((t) => t.source === 'record'));
+});
+
+for (const visible of [[], [105]]) {
+    test('recent hides unavailable next problems and never selects a locked chapter: visible=' + visible, async () => {
+        const f = recentFixture({ visible });
+        const result = await buildRecentTrainings({ domainId: 'system', uid: 42, url: fixtureUrl, ...f, records: f.activity });
+        assert.equal(result.trainings[0].tid, 'D');
+        assert.equal(result.trainings[0].next, null, 'a visibility placeholder is never an authorized next target');
+        assert.equal(result.trainings[0].currentUrl, '/training/D#node-2');
+        assert.deepEqual(f.problemCalls[0].pids, [104], 'locked PID 105 is not a next candidate');
+    });
+}
+
+test('recent accepts an empty no-joins fallback without status or problem queries', async () => {
+    const f = recentFixture({ joined: [], records: [] });
+    const result = await buildRecentTrainings({ domainId: 'system', uid: 42, url: fixtureUrl, ...f, records: [] });
+    assert.deepEqual(result.trainings, []);
+    assert.deepEqual(f.statusCalls, []);
+    assert.deepEqual(f.problemCalls, []);
+});
+
+test('recent batches shared status and all visible next problems across its shortlist', async () => {
+    const plans = [
+        { docId: 'x', title: 'X', dag: [{ _id: 0, title: '零章', requireNids: [], pids: [10, 20] }] },
+        { docId: 'y', title: 'Y', dag: [{ _id: 4, title: '四章', requireNids: [], pids: [10, 30] }] },
+        { docId: 'z', title: 'Z', dag: [{ _id: 5, title: '五章', requireNids: [], pids: [40] }] },
+    ];
+    const statusCalls = [], problemCalls = [];
+    const result = await buildRecentTrainings({ domainId: 'system', uid: 42, url: fixtureUrl,
+        trainingModel: {
+            getMultiStatus: () => ({ toArray: async () => plans.map((p) => ({ docId: p.docId })) }),
+            getList: async () => Object.fromEntries(plans.map((p) => [p.docId, p])),
+        },
+        problemModel: {
+            getListStatus: async (domainId, uid, pids) => { statusCalls.push({ domainId, uid, pids }); return { 10: { status: 1 } }; },
+            getList: async (domainId, pids, uid, doThrow) => { problemCalls.push({ domainId, pids, uid, doThrow }); return {
+                20: { docId: 20, title: '数字 PID' }, 30: { docId: 30, pid: 'P30', title: '公开 PID' }, 40: { docId: 0, title: '*' },
+            }; },
+        }, records: [],
+    });
+    assert.deepEqual(statusCalls, [{ domainId: 'system', uid: 42, pids: [40, 10, 30, 20] }]);
+    assert.deepEqual(problemCalls, [{ domainId: 'system', uid: 42, pids: [40, 30, 20], doThrow: false }]);
+    assert.deepEqual(result.trainings.map((t) => t.next && t.next.url), [null, '/p/P30?training=y&trainingNode=4', '/p/20?training=x&trainingNode=0']);
 });
