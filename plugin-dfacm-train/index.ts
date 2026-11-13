@@ -92,6 +92,11 @@ function servePage(handler: Handler, page: string) {
     if (page.includes(CSRF_MARKER)) {
         body = body.replace(CSRF_MARKER, () => `window.__SWPU_CSRF__=${JSON.stringify(csrfToken(handler))};`);
     }
+    if (page.includes('/*__SWPU_MISTAKE_SCOPE__*/')) {
+        const scope = JSON.stringify({ uid: handler.user._id, domainId: handler.args.domainId })
+            .replace(/[<>&\u2028\u2029]/g, (char) => `\\u${char.charCodeAt(0).toString(16).padStart(4, '0')}`);
+        body = body.replace('/*__SWPU_MISTAKE_SCOPE__*/', () => `window.__SWPU_MISTAKE_SCOPE__=${scope};`);
+    }
     handler.response.body = body;
     handler.response.type = 'text/html; charset=utf-8';
     handler.response.addHeader('Cache-Control', 'no-store');

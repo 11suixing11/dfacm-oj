@@ -118,6 +118,7 @@ textarea:focus,select:focus{outline:none;border-color:var(--focus)}
     </div>
     <button type="button" class="btn ghost" id="sync" title="从近期日常训练提交中补充收集">同步近期记录</button>
   </div>
+  <p class="sub" id="draft-storage" role="status"></p>
   <div id="loading" class="state" role="status">正在读取错题本…</div>
   <div id="error" class="state err" hidden>加载失败，请稍后重试。<br><button type="button" class="btn ghost" id="retry">重新加载</button></div>
   <div id="list"></div>
@@ -146,7 +147,61 @@ textarea:focus,select:focus{outline:none;border-color:var(--focus)}
   function localUrl(value){var safe=sameOriginUrl(value);return /^\/(?:d\/[^/]+\/)?(?:p|training|record)\/[^/]+(?:[?#].*)?$/.test(safe)?safe:''}
   var REASON_TEXT={idea:'思路不会',boundary:'边界情况没考虑到',complexity:'复杂度不够（超时）',implement:'实现细节出错',misread:'题意理解偏差',other:'其他'};
   var EMPTY_TEXT={open:'太棒了，当前没有待补的错题。',done:'还没有已补题的记录。',all:'错题本还是空的。日常训练或比赛中未通过的题目会自动收入这里。'};
+  /*__SWPU_MISTAKE_SCOPE__*/
   var state={filter:'open',page:1,pages:1,noteMaxLength:2000};
+  var drafts=Object.create(null),saved=Object.create(null),feedback=Object.create(null),pending=Object.create(null);
+  var latestRequestId=0,activeRead=null;
+  function draftStorageKey(scope){
+    if(!scope||!Number.isSafeInteger(scope.uid)||scope.uid<=0||typeof scope.domainId!=='string'||!scope.domainId)return null;
+    return 'swpu-mistake-drafts:v1:'+scope.uid+':'+encodeURIComponent(scope.domainId);
+  }
+  var storageKey=draftStorageKey(window.__SWPU_MISTAKE_SCOPE__),tabStorage=null;
+  if(storageKey){
+    try{
+      tabStorage=window.sessionStorage||null;
+      var raw=tabStorage&&tabStorage.getItem(storageKey),restored;
+      try{restored=raw?JSON.parse(raw):null}catch(e){restored=null}
+      if(restored&&typeof restored==='object'&&!Array.isArray(restored))Object.keys(restored).forEach(function(pid){
+        var draft=restored[pid];
+        if(Number.isSafeInteger(Number(pid))&&Number(pid)>0&&draft&&typeof draft.note==='string'
+          &&typeof draft.reason==='string'&&(draft.reason===''||Object.prototype.hasOwnProperty.call(REASON_TEXT,draft.reason)))
+          drafts[pid]={reason:draft.reason,note:draft.note};
+      });
+    }catch(e){tabStorage=null}
+  }
+  function storageMessage(){
+    $('draft-storage').textContent=tabStorage?'未保存的复盘暂存于当前标签页；点击「保存复盘」才会提交。':'未保存的复盘仅在当前页面保留；刷新或离开前请保存。';
+  }
+  function persistDrafts(){
+    if(tabStorage)try{
+      if(Object.keys(drafts).length)tabStorage.setItem(storageKey,JSON.stringify(drafts));else tabStorage.removeItem(storageKey);
+    }catch(e){tabStorage=null}
+    storageMessage();
+  }
+  storageMessage();
+  function sameSnapshot(a,b){return !!a&&!!b&&a.reason===b.reason&&a.note===b.note}
+  function editorSnapshot(pid){
+    var note=$('note-'+pid),reason=$('reason-'+pid);
+    return note&&reason?{reason:reason.value,note:note.value}:drafts[pid]||saved[pid];
+  }
+  function captureDraft(pid){
+    var value=editorSnapshot(pid);if(!value)return;
+    if(sameSnapshot(value,saved[pid]))delete drafts[pid];else drafts[pid]=value;
+    persistDrafts();
+  }
+  function showItemState(pid){
+    var value=feedback[pid];
+    if(pending[pid])itemMsg(pid,pending[pid]==='save'?'保存中…':'操作中…','');
+    else if(value)itemMsg(pid,value.text+(drafts[pid]?'（未保存）':''),value.cls);
+    else itemMsg(pid,drafts[pid]?'有未保存的修改。':'','');
+    document.querySelectorAll('button[data-pid="'+pid+'"]').forEach(function(btn){btn.disabled=!!pending[pid]});
+  }
+  function edited(e){
+    var match=/^(?:note|reason)-(\d+)$/.exec(e.target.id||'');if(!match)return;
+    var pid=match[1];captureDraft(pid);delete feedback[pid];showItemState(pid);
+  }
+  $('list').addEventListener('input',edited);
+  $('list').addEventListener('change',edited);
   function esc(s){var d=document.createElement('div');d.textContent=s==null?'':String(s);return d.innerHTML}
   function rel(iso){
     if(!iso)return'';
@@ -209,54 +264,88 @@ textarea:focus,select:focus{outline:none;border-color:var(--focus)}
       +'</div></div>';
   }
   async function load(){
-    $('loading').hidden=false;$('error').hidden=true;$('list').innerHTML='';$('empty').hidden=true;$('pager').hidden=true;
-    var d;
+    var query={filter:state.filter,page:state.page},requestId=++latestRequestId;
+    if(activeRead){activeRead.controller.abort();clearTimeout(activeRead.timeout)}
+    var read={controller:new AbortController(),timeout:null};activeRead=read;
+    $('loading').hidden=false;$('error').hidden=true;$('empty').hidden=true;
     try{
       var dataUrl=sameOriginUrl(routes.mistakesData);if(!dataUrl)throw new Error('invalid route');
-      var resp=await fetch(dataUrl+(dataUrl.indexOf('?')>=0?'&':'?')+'filter='+encodeURIComponent(state.filter)+'&page='+state.page,{headers:{'Accept':'application/json'}});
-      d=await resp.json();
-      if(!resp.ok||!d||!d.ok)throw new Error('bad');
-    }catch(e){
-      $('loading').hidden=true;$('error').hidden=false;return;
-    }
-    state.page=d.page;state.pages=d.pages;state.noteMaxLength=d.noteMaxLength||2000;
-    $('n-open').textContent=d.open?String(d.open):'';
-    var list=$('list');
-    d.items.forEach(function(item){
-      var div=document.createElement('div');
-      div.className='item'+(item.resolved?' done':'');
-      div.innerHTML=itemHtml(item);
-      list.appendChild(div);
-    });
-    $('empty').textContent=EMPTY_TEXT[state.filter]||EMPTY_TEXT.all;
-    $('empty').hidden=d.items.length>0;
-    if(d.pages>1){
-      $('pager').hidden=false;
+      // Race the entire read (including JSON) against its own deadline. Aborting
+      // is a transport courtesy; sequence ownership also rejects late replies.
+      var deadline=new Promise(function(_resolve,reject){
+        read.timeout=setTimeout(function(){read.controller.abort();reject(new Error('read timeout'))},10000);
+      });
+      var result=(async function(){
+        var resp=await fetch(dataUrl+(dataUrl.indexOf('?')>=0?'&':'?')+'filter='+encodeURIComponent(query.filter)+'&page='+query.page,
+          {headers:{'Accept':'application/json'},signal:read.controller.signal});
+        var data=await resp.json();
+        if(!resp.ok||!data||!data.ok)throw new Error('bad');
+        return data;
+      })();
+      var d=await Promise.race([result,deadline]);
+      if(requestId!==latestRequestId)return;
+      state.page=d.page;state.pages=d.pages;state.noteMaxLength=d.noteMaxLength||2000;
+      $('n-open').textContent=d.open?String(d.open):'';
+      $('list').innerHTML=d.items.map(function(item){
+        saved[item.pid]={reason:item.reason||'',note:item.note||''};
+        var displayed=Object.assign({},item,drafts[item.pid]||{});
+        return '<div class="item'+(item.resolved?' done':'')+'">'+itemHtml(displayed)+'</div>';
+      }).join('');
+      d.items.forEach(function(item){
+        // Assign the editor value as text as well as escaping its HTML template.
+        $('note-'+item.pid).value=(drafts[item.pid]||saved[item.pid]).note;
+        showItemState(item.pid);
+      });
+      $('empty').textContent=EMPTY_TEXT[query.filter]||EMPTY_TEXT.all;
+      $('empty').hidden=d.items.length>0;
+      $('pager').hidden=d.pages<=1;
       $('page-info').textContent=d.page+' / '+d.pages+' 页 · 共 '+d.total+' 题';
       $('prev').disabled=d.page<=1;$('next').disabled=d.page>=d.pages;
+    }catch(e){
+      if(requestId===latestRequestId){$('error').hidden=false;$('pager').hidden=true}
+    }finally{
+      clearTimeout(read.timeout);
+      if(requestId===latestRequestId){$('loading').hidden=true;activeRead=null}
     }
-    $('loading').hidden=true;
   }
   function itemMsg(pid,text,cls){var el=$('imsg-'+pid);if(el){el.textContent=text;el.className='itemmsg '+cls}}
   $('list').addEventListener('click',async function(e){
     var btn=e.target.closest('button[data-act]');
     if(!btn||btn.disabled)return;
     var pid=btn.getAttribute('data-pid'),act=btn.getAttribute('data-act');
+    if(pending[pid])return;
     if(act==='save'){
-      btn.disabled=true;itemMsg(pid,'保存中…','');
-      var d=await api(routes.mistakesUpdate,{pid:pid,reason:$('reason-'+pid).value,note:$('note-'+pid).value});
-      btn.disabled=false;
-      itemMsg(pid,d.ok?'已保存。':(d.message||'保存失败，请稍后重试。'),d.ok?'ok':'err');
+      captureDraft(pid);var submitted=editorSnapshot(pid);
+      pending[pid]='save';showItemState(pid);
+      var d=await api(routes.mistakesUpdate,{pid:pid,reason:submitted.reason,note:submitted.note});
+      delete pending[pid];
+      if(d.ok){
+        var current=editorSnapshot(pid);saved[pid]=submitted;
+        if(sameSnapshot(current,submitted))delete drafts[pid];else if(current)drafts[pid]=current;
+        persistDrafts();
+      }
+      feedback[pid]={text:d.ok?'已保存。':(d.message||'保存失败，请稍后重试。'),cls:d.ok?'ok':'err'};
+      showItemState(pid);
+      // Refresh through the same read owner so a pre-save snapshot cannot later
+      // restore an old saved note, including when this row was filtered away.
+      if(d.ok)load();
     }else if(act==='toggle'){
-      btn.disabled=true;
+      pending[pid]='toggle';showItemState(pid);
       var resolved=btn.textContent==='标记已补';
       var d2=await api(routes.mistakesUpdate,{pid:pid,resolved:resolved?'1':'0'});
-      if(d2.ok){load()}else{btn.disabled=false;itemMsg(pid,d2.message||'操作失败，请稍后重试。','err')}
+      delete pending[pid];
+      if(d2.ok){showItemState(pid);load()}else{feedback[pid]={text:d2.message||'操作失败，请稍后重试。',cls:'err'};showItemState(pid)}
     }else if(act==='remove'){
       if(!window.confirm('确定把这道题移出错题本吗？复盘笔记会一并删除。'))return;
-      btn.disabled=true;
+      pending[pid]='remove';showItemState(pid);
       var d3=await api(routes.mistakesRemove,{pid:pid});
-      if(d3.ok){load()}else{btn.disabled=false;itemMsg(pid,d3.message||'移除失败，请稍后重试。','err')}
+      delete pending[pid];
+      if(d3.ok){
+        delete drafts[pid];delete saved[pid];delete feedback[pid];persistDrafts();
+        var removed=$('note-'+pid);if(removed)removed.closest('.item').remove();
+        load();
+      }
+      else{feedback[pid]={text:d3.message||'移除失败，请稍后重试。',cls:'err'};showItemState(pid)}
     }
   });
   $('tab-open').addEventListener('click',function(){setTab('open')});
