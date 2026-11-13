@@ -197,3 +197,39 @@ test('latest GET has a 10-second deadline; timed-out response cannot later overw
     assert.equal(note(b), 'deadline draft'); assert.equal(b.document.querySelector('#error').hidden, true);
     assert.equal(b.timers.size, 0);
 });
+
+test('stalled response.json obeys the full 10-second read deadline and cannot overwrite retry', async () => {
+    const b = await openMistakesBrowser({ domainId: 'poj', extraOpen: 20 });
+    b.edit(1001, { note: 'JSON deadline draft', reason: 'complexity' });
+    const retainedRows = b.rows(), retainedDrafts = b.drafts();
+    const late = b.deferNext({ method: 'GET', phase: 'json', ignoreAbort: true });
+    await b.click('#tab-done');
+    await b.tick(9999);
+    assert.equal(b.document.querySelector('#loading').hidden, false);
+    assert.equal(b.document.querySelector('#error').hidden, true);
+    assert.deepEqual(b.rows(), retainedRows);
+    await b.tick(1);
+    assert.equal(b.document.querySelector('#error').hidden, false);
+    assert.equal(b.document.querySelector('#loading').hidden, true);
+    assert.deepEqual(b.rows(), retainedRows);
+    assert.equal(note(b), 'JSON deadline draft'); assert.equal(reason(b), 'complexity');
+    assert.deepEqual(b.drafts(), retainedDrafts); assert.equal(b.storedNote(1001), 'saved A');
+    assert.equal(b.calls.at(-1).signal?.aborted, true);
+    assert.equal(b.timers.size, 0);
+
+    await b.click('#tab-all');
+    const currentRows = [1001, 1002, 1003, 2000, 2001, 2002, 2003, 2004, 2005, 2006,
+        2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016];
+    assert.deepEqual(b.rows(), currentRows);
+    late.resolve(); await b.flush();
+    assert.deepEqual(b.rows(), currentRows);
+    assert.equal(b.document.querySelector('#n-open').textContent, '22');
+    assert.equal(b.document.querySelector('#page-info').textContent, '1 / 2 页 · 共 23 题');
+    assert.equal(b.document.querySelector('#pager').hidden, false);
+    assert.equal(b.document.querySelector('#empty').hidden, true);
+    assert.equal(b.document.querySelector('#error').hidden, true);
+    assert.equal(b.document.querySelector('#loading').hidden, true);
+    assert.equal(note(b), 'JSON deadline draft'); assert.equal(reason(b), 'complexity');
+    assert.deepEqual(b.drafts(), retainedDrafts); assert.equal(b.storedNote(1001), 'saved A');
+    assert.equal(b.timers.size, 0);
+});

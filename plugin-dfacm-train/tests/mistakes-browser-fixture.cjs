@@ -15,7 +15,8 @@ function memoryStorage(initial = {}) {
 // The page and every API handler are shipped production code. Only Hydro/Mongo,
 // tab storage, DOM, clock and transport are local infrastructure. GET responses
 // are independent DB snapshots taken before their deferred delivery. POST gates
-// pause before the actual handler runs, so typing can overlap a real save.
+// pause before the actual handler runs, so typing can overlap a real save. A
+// GET gate with phase:'json' delivers headers immediately and pauses body read.
 async function openMistakesBrowser(options = {}) {
     const { domainId = 'system', uid = 42 } = options;
     const f = options.fixture || await fixture({ domainId });
@@ -86,6 +87,10 @@ async function openMistakesBrowser(options = {}) {
         });
         const run = async () => {
             const snapshot = method === 'GET' ? await produce() : null;
+            if (gate?.phase === 'json') return { ...snapshot, json: async () => {
+                await gate.promise;
+                return snapshot.json();
+            } };
             const override = gate ? await gate.promise : null;
             if (override) return { ok: override.httpOk !== false, json: async () => structuredClone(override.body) };
             return snapshot || produce();
