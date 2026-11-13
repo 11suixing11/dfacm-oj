@@ -764,7 +764,8 @@ function activationFixture(liveName = 'live') {
     shipped.push(path.join(deployed, 'landing', file));
     put(path.join(deployed, 'landing', file), `old source ${file}\n`);
   }
-  for (const file of ['theme/00-brand.css', 'deploy/install-theme.sh', 'deploy/install-landing.sh', 'deploy/service-worker-killswitch.js', 'deploy/smoke.sh', 'deploy/activate.sh']) {
+  for (const file of ['theme/00-brand.css', 'deploy/install-theme.sh', 'deploy/install-landing.sh', 'deploy/service-worker-killswitch.js', 'deploy/smoke.sh', 'deploy/activate.sh',
+    'scripts/taxonomy/run-solutions.sh', 'scripts/taxonomy/solutions-apply.cjs', 'scripts/taxonomy/verify-solutions.cjs', 'scripts/taxonomy/verification-state.cjs']) {
     shipped.push(path.join(deployed, file));
     put(path.join(deployed, file), `old source ${file}\n`);
   }
@@ -902,6 +903,32 @@ test('activation reports incomplete rollback instead of restarting or deleting b
   assert.match(result.stderr, /recovery.tsv/);
   assert.ok(fs.readdirSync(f.backups).some((name) => name.startsWith('batch.')));
   assert.doesNotMatch(f.events(), /^restart /m);
+});
+
+test('activation delivers the taxonomy runtime and its installed ops adapter imports fail closed', () => {
+  const f = activationFixture();
+  const result = f.run(['--sync-only']);
+  assert.equal(result.status, 0, result.stdout + result.stderr);
+  const runtime = path.join(f.deployed, 'scripts/taxonomy');
+  for (const file of ['run-solutions.sh', 'solutions-apply.cjs', 'verify-solutions.cjs', 'verification-state.cjs']) {
+    assert.ok(fs.existsSync(path.join(runtime, file)), `activation omitted taxonomy runtime ${file}`);
+    assert.deepEqual(fs.readFileSync(path.join(runtime, file)), fs.readFileSync(path.join(repo, 'scripts/taxonomy', file)));
+  }
+  const adapter = path.join(f.live, 'addons/swpu-ops/controlled-history.cjs');
+  assert.deepEqual(fs.readFileSync(adapter), fs.readFileSync(path.join(repo, 'plugin-dfacm-ops/controlled-history.cjs')));
+  const imported = spawnSync(process.execPath, ['-e', `
+    const assert = require('node:assert/strict');
+    require(process.argv[1]);
+    const { assertCapability } = require(process.argv[2]);
+    assert.rejects(assertCapability({}, {
+      id: 'installed-fixture', domainId: 'system', uid: 3, uname: 'hydsvc-fixture', entries: [],
+    }), /Controlled history ownership unavailable/).then(() => console.log('installed runtime blocked without capability'));
+  `, path.join(runtime, 'solutions-apply.cjs'), path.join(runtime, 'verify-solutions.cjs')], {
+    env: { ...process.env, DFACM_CONTROLLED_HISTORY_MODULE: adapter }, encoding: 'utf8', timeout: 10000,
+  });
+  assert.equal(imported.status, 0, imported.stdout + imported.stderr);
+  assert.match(imported.stdout, /installed runtime blocked without capability/);
+  assert.doesNotMatch(f.events(), /^(restart |smoke$)/m);
 });
 
 test('activation stage-only leaves live files intact and sync-only installs every derived target without restart', () => {

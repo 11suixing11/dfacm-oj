@@ -10,7 +10,7 @@
 
 **Spec:** 本文的“修复范围与批次”“迁移与既有数据”“设计边界”构成六份模块计划共同的修复需求。审查依据保存在本机 `qa/audit-2026-11-13/audit-report.md`，执行不依赖该私有目录。
 
-**Status:** 修复计划，尚未执行。基线 main / 31afcb8。
+**Status（2026-11-14）:** A–F 实现已提交，C1/C2/D1/F1–F5 的独立任务评审完成；I1 本地 CI/发货/文档集成及最终验证完成。恢复的 A/B/E 独立评审证据与最终全分支评审尚待补齐，生产发布、真实页面/服务验收和实际数据修正仍未执行。原审查基线 main / 31afcb8；原计划日期与修复分支标识保留 2026-11-13。
 
 ## Global Constraints
 
@@ -50,12 +50,12 @@ K01 是之前发现的历史积分回填无游标问题。编号 01–20 与深�
 
 - [ ] 把现有 QA 的缺陷断言转为“预期正确行为”的可提交回归，确认红→绿；复现脚本 exit 0 原本表示缺陷存在，不能直接当修复验收。
 - [ ] 各任务独立评审；共享消费锁、恢复游标、迁移、补偿顺序必须审查异常/中断/重跑条件。
-- [ ] 使用 using-git-worktrees 在实施时检查或建立隔离分支；本次计划阶段不创建实现分支、不提交业务代码。
-- [ ] 集成后执行原有全部 Node 用例（原基线 535 项）及新增回归、Python 6 项 unittest/采集 fixtures、广播新增测试；修复后测试总数应增加，不能用固定 535 当目标。
-- [ ] train check:build、assistant check-build、watch check-build/check-public、根 preview/repository/deployment 检查通过；新增文件进入 CI 与发布包。
+- [x] 使用既有隔离工作树 `/home/core/.codex/worktrees/afd6/dfacm` 与 `fix/project-audit-2026-11-13` 分支实施，保留原批准计划。
+- [x] 集成后执行七个 Node 包及根/题库新增回归：716/716，零失败/跳过；Python 3.14 collector 14 个 unittest 方法加原有导入时 fixtures，广播 57 个纯离线方法通过，不用旧 535 固定计数。
+- [x] train check:build、assistant check-build、watch check-build/check-public、根 preview/repository/deployment 检查通过；新增运行文件进入实际发货/安装清单和 CI。最终归档与哈希清单在全分支评审之后准备。
 - [ ] Hydro 5.0.7/ui-default 4.58.5 测试实例验收正式提交与自测、同 UID 并发消费、system/poj 多域、第二因素、两进程提示/补扫、重判和进程重启。
-- [ ] Python 在项目支持的版本上验收；补测 CI 的 Python 3.14，不能仅引用本次 3.12 本地结果。
-- [ ] 广播用假消息通道和本地源验证投递结果；如需真实群验收，另行准备明确测试对象，避免把普通用户当测试流量。
+- [x] 使用 Python 3.14.4 与现有 collector requirements.lock 安装的隔离环境完成 fixtures/广播本地验收；CI 保持 Python 3.14，未声称远端工作流已运行。
+- [x] 广播用假消息通道和本地源验证投递结果；真实消息通道验收仍未执行，须另备明确测试对象。
 - [ ] 每批记录提交、版本、测试输出、发布文件哈希、旧文件备份与回退命令。发布失败先恢复本批文件，避免继续重启混合版本。
 
 ## 迁移与既有数据
@@ -77,4 +77,8 @@ F：SQLite 加列使用独立 delivery_schema，禁止触发现有 records_schem
 
 ## 当前状态
 
-本次仅创建总计划和六份模块计划。所有任务复选框均未完成，业务源码未修改，尚未开始实施、真实数据修正或生产发布。
+A–F 代码已提交并通过本地最终验证，I1 完成共享发货与 CI 集成。实际提交及新当前证据详见 [2026-11-14 修复报告](../reports/2026-11-14-project-repairs.md)。原始 A/B/E 的历史 RED 和独立评审记录未完整恢复，不由提交或本地绿色结果补造；相关历史证据复选框保持未勾选，最终全分支评审由负责人继续核对。C1/C2/D1/F1–F5 当前独立任务评审已有记录。
+
+当前本地证据：七包 595 项 + 根 preview/landing/repository/deployment 90 项 + taxonomy 31 项，共 716/716；collector 14 方法和 legacy fixtures、broadcast 57 方法、四项 build/public 与 12 个 shell 脚本语法/ShellCheck 通过。A3 146 项原生断言、C2 原生回调/计数/重启与 D1 三阶段卸载证据为本执行链中已核验的既有结果，未重复计入 I1 测试总数。
+
+真实 Hydro 登录/第二因素、多域页面操作、正式 Web 提交与消费、生产 worker/CLI/callback 拓扑、隔离服务器故障注入、真实 daemon/WebSocket/沙箱验收、真实消息通道以及实际数据纠正仍未完成。未升级依赖、部署、推送或合并；最终全分支评审、Git 归档与哈希清单在 I1 之后执行。

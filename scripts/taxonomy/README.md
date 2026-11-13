@@ -157,8 +157,15 @@ Ship the taxonomy runner, `solutions-apply.cjs`, `verify-solutions.cjs`, and
 `DFACM_CONTROLLED_HISTORY_MODULE` to the absolute installed ops helper path when
 taxonomy scripts live elsewhere. Existing ops runtime CJS modules remain
 required. Use the installed Hydro package and locked dependencies; do not run
-`npm ci` in the addon runtime. The shared deploy/CI shipping changes and process
-inventory remain release work outside this local task.
+`npm ci` in the addon runtime. The shared deploy now ships all four taxonomy
+runtime files to `$REMOTE_DEPLOY/scripts/taxonomy` (default
+`/root/swpu-theme-deploy/scripts/taxonomy`). For that delivered layout set
+`DFACM_CONTROLLED_HISTORY_MODULE=/root/.hydro/addons/swpu-ops/controlled-history.cjs`
+to the installed helper, adjusting the absolute path for `REMOTE_ADDONS`.
+Deployment tests execute the delivered import chain and verify missing native
+capability still blocks operation. Node 22 CI runs the offline taxonomy suite;
+native fixtures remain explicit opt-in acceptance outside normal CI. Process
+inventory, daemon/sandbox validation and production activation remain release gates.
 
 Input is now an immutable versioned batch object (old bare arrays fail safely):
 

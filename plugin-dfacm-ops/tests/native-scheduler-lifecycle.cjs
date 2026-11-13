@@ -155,7 +155,7 @@ module.exports = async () => {
       const stages=stagesAfter(unloaded);
       assert.deepEqual(stages,{purge:0,reconcile:0,rp:0},'retained callbacks must start no purge/reconcile/RP');
       assert.equal(timers.size,0,'retained callbacks must not rearm timers');
-      const beforeEvent=timers.size;await event();assert.equal(timers.size,beforeEvent,'native record/change listener removed on unload');
+      const beforeEvent=timers.size;await event();assert.equal(timers.size,beforeEvent,'native record/change must start no new timer work after unload');
       log('armed.observed',{stages,remainingTimers:timers.size});
     }else if(phase==='inflight'){
       blockPurge=true;

@@ -132,6 +132,9 @@ stage_manifest() {
     for f in install-theme.sh install-landing.sh service-worker-killswitch.js smoke.sh activate.sh; do
         printf 'deploy/%s\t%s/deploy/%s\n' "$f" "$REMOTE_DEPLOY" "$f"
     done
+    for f in run-solutions.sh solutions-apply.cjs verify-solutions.cjs verification-state.cjs; do
+        printf 'scripts/taxonomy/%s\t%s/scripts/taxonomy/%s\n' "$f" "$REMOTE_DEPLOY" "$f"
+    done
 }
 
 preflight() {

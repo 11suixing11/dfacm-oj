@@ -10,7 +10,7 @@
 
 **Spec:** [2026-11-13-project-repairs.md](2026-11-13-project-repairs.md)；审查编号和全局验收约束以总计划为准。
 
-**Status:** 修复计划，尚未执行。基线 main / 31afcb8。
+**Status（2026-11-14）:** D1 代码、原生生命周期补充 RED→GREEN 和独立任务评审完成，本地 Node 22 集成测试已执行。锁只保证同 worker，实际 worker/独立 CLI 入口拓扑仍须发布前核对。 原计划与分支日期保留 2026-11-13；原审查基线 main / 31afcb8。
 
 ## Global Constraints
 
@@ -38,13 +38,19 @@
 
 **回归用例和通过条件：** 真实 apply 注册的网页脚本与自动事件 maxActive=1；manual/scheduled/live 任意组合不重叠；队列 stop 后 purge/reconcile/rp 全0次；运行中 stop 后不启动下一阶段；异常不毒化队列；独立 CLI 不冒充同进程覆盖。
 
-- [ ] 将上述案例写入列出的可提交测试文件，加载真实生产模块；Mongo 替身的 findOne 返回独立快照，外部网络/消息使用明确的本地替身。
-- [ ] 先运行下面命令，确认新增案例因当前缺陷失败；记录具体失败断言。
-- [ ] 按上述设计修改实现，保持接口、数据兼容和失败分支；禁止用弱化断言让测试通过。
-- [ ] 重跑同一命令，确认新旧测试全部通过，并执行本任务涉及的构建/语法检查。
-- [ ] 独立评审通过后形成一个提交，建议提交主题：`fix(ops): share RP lock and cancel stopped queued work`。
+- [x] 将上述案例写入列出的可提交测试文件，加载真实生产模块；Mongo 替身的 findOne 返回独立快照，外部网络/消息使用明确的本地替身。
+- [x] 先运行下面命令，确认新增案例因当前缺陷失败；记录具体失败断言。
+- [x] 按上述设计修改实现，保持接口、数据兼容和失败分支；禁止用弱化断言让测试通过。
+- [x] 重跑同一命令，确认新旧测试全部通过，并执行本任务涉及的构建/语法检查。
+- [x] 独立评审通过后形成一个提交，建议提交主题：`fix(ops): share RP lock and cancel stopped queued work`。
 
 ```bash
 cd plugin-dfacm-ops
 npm test
 ```
+
+## 当前状态（2026-11-14）
+
+D1 `eb6280b` / `6b98a26`。真实 Cordis 4.0.0-rc.8 / Hydro 5.0.7 原生卸载采用 `ctx.effect`，三进程 queued/armed/inflight fixture 确认三类 scheduler 各 stop 一次，卸载后不启动后续 purge/reconcile/RP 或定时器。I1 仅收窄原生 fixture 的定时器断言描述，不改变其行为。独立 CLI 与主进程不共享内存锁；未宣称多进程 RP 互斥。
+
+最终本地命令、计数与证据范围见 [本轮修复报告](../reports/2026-11-14-project-repairs.md)。未勾选项保留历史 RED/独立评审证据未恢复或真实发布验收限制；已勾选的实现与本地测试不表示线上验收。最终全分支评审和归档哈希清单由集成负责人在评审后完成。

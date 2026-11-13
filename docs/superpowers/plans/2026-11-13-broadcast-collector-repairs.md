@@ -10,7 +10,7 @@
 
 **Spec:** [2026-11-13-project-repairs.md](2026-11-13-project-repairs.md)；审查编号和全局验收约束以总计划为准。
 
-**Status:** 修复计划，尚未执行。基线 main / 31afcb8。
+**Status（2026-11-14）:** F1–F5 代码、RED→GREEN 和独立任务评审完成，Python 3.14 纯离线广播与锁定采集 fixtures 已纳入 CI；本地集成检查已执行。未联系真实消息通道或赛事源，未生产发布或纠正既有数据。 原计划与分支日期保留 2026-11-13；原审查基线 main / 31afcb8。
 
 ## Global Constraints
 
@@ -37,11 +37,11 @@
 
 **回归用例和通过条件：** 首次历史静默、跨页/中途重启仍静默；已有水位停机AC可入队；挂起队列保留；迁移重复执行不清表/重置水位；重复摄入不重复入队。
 
-- [ ] 将上述案例写入列出的可提交测试文件，加载真实生产模块；Mongo 替身的 findOne 返回独立快照，外部网络/消息使用明确的本地替身。
-- [ ] 先运行下面命令，确认新增案例因当前缺陷失败；记录具体失败断言。
-- [ ] 按上述设计修改实现，保持接口、数据兼容和失败分支；禁止用弱化断言让测试通过。
-- [ ] 重跑同一命令，确认新旧测试全部通过，并执行本任务涉及的构建/语法检查。
-- [ ] 独立评审通过后形成一个提交，建议提交主题：`fix(broadcast): preserve pending delivery across restarts`。
+- [x] 将上述案例写入列出的可提交测试文件，加载真实生产模块；Mongo 替身的 findOne 返回独立快照，外部网络/消息使用明确的本地替身。
+- [x] 先运行下面命令，确认新增案例因当前缺陷失败；记录具体失败断言。
+- [x] 按上述设计修改实现，保持接口、数据兼容和失败分支；禁止用弱化断言让测试通过。
+- [x] 重跑同一命令，确认新旧测试全部通过，并执行本任务涉及的构建/语法检查。
+- [x] 独立评审通过后形成一个提交，建议提交主题：`fix(broadcast): preserve pending delivery across restarts`。
 
 ```bash
 python -m unittest discover -s plugin-dfacm-broadcast/tests -p "test_*.py"
@@ -61,11 +61,11 @@ python -m unittest discover -s plugin-dfacm-broadcast/tests -p "test_*.py"
 
 **回归用例和通过条件：** AC→WA和Accepted/100→Accepted/50均不发送；未实际发的WA→AC可恢复；已实际发同RID不重复；源删除撤队、源故障保留；通道关闭/冷却不丢队列。
 
-- [ ] 将上述案例写入列出的可提交测试文件，加载真实生产模块；Mongo 替身的 findOne 返回独立快照，外部网络/消息使用明确的本地替身。
-- [ ] 先运行下面命令，确认新增案例因当前缺陷失败；记录具体失败断言。
-- [ ] 按上述设计修改实现，保持接口、数据兼容和失败分支；禁止用弱化断言让测试通过。
-- [ ] 重跑同一命令，确认新旧测试全部通过，并执行本任务涉及的构建/语法检查。
-- [ ] 独立评审通过后形成一个提交，建议提交主题：`fix(broadcast): revalidate queued AC cards before sending`。
+- [x] 将上述案例写入列出的可提交测试文件，加载真实生产模块；Mongo 替身的 findOne 返回独立快照，外部网络/消息使用明确的本地替身。
+- [x] 先运行下面命令，确认新增案例因当前缺陷失败；记录具体失败断言。
+- [x] 按上述设计修改实现，保持接口、数据兼容和失败分支；禁止用弱化断言让测试通过。
+- [x] 重跑同一命令，确认新旧测试全部通过，并执行本任务涉及的构建/语法检查。
+- [x] 独立评审通过后形成一个提交，建议提交主题：`fix(broadcast): revalidate queued AC cards before sending`。
 
 ```bash
 python -m unittest discover -s plugin-dfacm-broadcast/tests -p "test_*.py"
@@ -85,11 +85,11 @@ python -m unittest discover -s plugin-dfacm-broadcast/tests -p "test_*.py"
 
 **回归用例和通过条件：** 展示名碰撞不归他人QQ；改用户名不改UID归属；两种卡一致；旧无UID不猜测；确认/解绑更新配套字段；多绑定输出稳定。
 
-- [ ] 将上述案例写入列出的可提交测试文件，加载真实生产模块；Mongo 替身的 findOne 返回独立快照，外部网络/消息使用明确的本地替身。
-- [ ] 先运行下面命令，确认新增案例因当前缺陷失败；记录具体失败断言。
-- [ ] 按上述设计修改实现，保持接口、数据兼容和失败分支；禁止用弱化断言让测试通过。
-- [ ] 重跑同一命令，确认新旧测试全部通过，并执行本任务涉及的构建/语法检查。
-- [ ] 独立评审通过后形成一个提交，建议提交主题：`fix(broadcast): attribute cards by verified user ID`。
+- [x] 将上述案例写入列出的可提交测试文件，加载真实生产模块；Mongo 替身的 findOne 返回独立快照，外部网络/消息使用明确的本地替身。
+- [x] 先运行下面命令，确认新增案例因当前缺陷失败；记录具体失败断言。
+- [x] 按上述设计修改实现，保持接口、数据兼容和失败分支；禁止用弱化断言让测试通过。
+- [x] 重跑同一命令，确认新旧测试全部通过，并执行本任务涉及的构建/语法检查。
+- [x] 独立评审通过后形成一个提交，建议提交主题：`fix(broadcast): attribute cards by verified user ID`。
 
 ```bash
 python -m unittest discover -s plugin-dfacm-broadcast/tests -p "test_*.py"
@@ -109,11 +109,11 @@ python -m unittest discover -s plugin-dfacm-broadcast/tests -p "test_*.py"
 
 **回归用例和通过条件：** 402条同秒最后2条重判同步；多页跨poll/重启完整覆盖；不滑动窗口丢尾页；新提交水位不受影响；查询失败不跳页；永久未决首屏不饿死后续记录。
 
-- [ ] 将上述案例写入列出的可提交测试文件，加载真实生产模块；Mongo 替身的 findOne 返回独立快照，外部网络/消息使用明确的本地替身。
-- [ ] 先运行下面命令，确认新增案例因当前缺陷失败；记录具体失败断言。
-- [ ] 按上述设计修改实现，保持接口、数据兼容和失败分支；禁止用弱化断言让测试通过。
-- [ ] 重跑同一命令，确认新旧测试全部通过，并执行本任务涉及的构建/语法检查。
-- [ ] 独立评审通过后形成一个提交，建议提交主题：`fix(broadcast): paginate recent verdict reconciliation`。
+- [x] 将上述案例写入列出的可提交测试文件，加载真实生产模块；Mongo 替身的 findOne 返回独立快照，外部网络/消息使用明确的本地替身。
+- [x] 先运行下面命令，确认新增案例因当前缺陷失败；记录具体失败断言。
+- [x] 按上述设计修改实现，保持接口、数据兼容和失败分支；禁止用弱化断言让测试通过。
+- [x] 重跑同一命令，确认新旧测试全部通过，并执行本任务涉及的构建/语法检查。
+- [x] 独立评审通过后形成一个提交，建议提交主题：`fix(broadcast): paginate recent verdict reconciliation`。
 
 ```bash
 python -m unittest discover -s plugin-dfacm-broadcast/tests -p "test_*.py"
@@ -134,11 +134,11 @@ python -m unittest discover -s plugin-dfacm-broadcast/tests -p "test_*.py"
 
 **回归用例和通过条件：** 正常fixtures不变；合法空列表成功；HTTP200错误JSON/维护HTML失败且ok=0；旧内容/last_seen不被坏源覆盖；其他源继续；首次失败无数据源出现total=active=0且有真实失败；最新日志选择和总数正确。
 
-- [ ] 将上述案例写入列出的可提交测试文件，加载真实生产模块；Mongo 替身的 findOne 返回独立快照，外部网络/消息使用明确的本地替身。
-- [ ] 先运行下面命令，确认新增案例因当前缺陷失败；记录具体失败断言。
-- [ ] 按上述设计修改实现，保持接口、数据兼容和失败分支；禁止用弱化断言让测试通过。
-- [ ] 重跑同一命令，确认新旧测试全部通过，并执行本任务涉及的构建/语法检查。
-- [ ] 独立评审通过后形成一个提交，建议提交主题：`fix(collector): validate source responses and expose failed sources`。
+- [x] 将上述案例写入列出的可提交测试文件，加载真实生产模块；Mongo 替身的 findOne 返回独立快照，外部网络/消息使用明确的本地替身。
+- [x] 先运行下面命令，确认新增案例因当前缺陷失败；记录具体失败断言。
+- [x] 按上述设计修改实现，保持接口、数据兼容和失败分支；禁止用弱化断言让测试通过。
+- [x] 重跑同一命令，确认新旧测试全部通过，并执行本任务涉及的构建/语法检查。
+- [x] 独立评审通过后形成一个提交，建议提交主题：`fix(collector): validate source responses and expose failed sources`。
 
 ```bash
 cd plugin-dfacm-ai-contests
@@ -150,8 +150,14 @@ npm test
 
 ## CI、迁移与回退
 
-- [ ] 用支持的隔离Python安装现有requirements.lock，CI补充broadcast纯离线unittest，禁止测试向真实群/赛事源发送请求。
-- [ ] support.py加载真实生产方法与SQLite，替换框架注册/外部边界，不复制镜像业务实现。测试明确覆盖本次新增迁移和恢复字段。
+- [x] 用支持的隔离Python安装现有requirements.lock，CI补充broadcast纯离线unittest，禁止测试向真实群/赛事源发送请求。
+- [x] support.py加载真实生产方法与SQLite，替换框架注册/外部边界，不复制镜像业务实现。测试明确覆盖本次新增迁移和恢复字段。
 - [ ] SQLite Connection.backup和state.json备份后执行幂等加列；原records_schema与mongo_last_id保持。
 - [ ] 回滚旧代码保留新增字段和meta，不删表；旧代码运行期间不会维护delivered_at，再上线新代码前核对该段状态，不能直接假定可无损自动重播。
-- [ ] F1→F2→F3顺序实施；F4可在F1状态接口稳定后并行；F5可独立开发。部署分别遵循bot和collector的独立安装文档。
+- [x] F1→F2→F3顺序实施；F4可在F1状态接口稳定后并行；F5可独立开发。部署分别遵循bot和collector的独立安装文档。
+
+## 当前状态（2026-11-14）
+
+F1 `78d883f`，F2 `b20d624`，F3 `02a8f1b`，F4 `610807e`，F5 `198f3a9`。SQLite additive delivery_schema 保留已发证据和水位；每次 image/text 投递前复查原始来源，错误保留 pending；QQ 归属取原始 submission UID，统计合并后的 personID 仍用于计数/展示；固定分页快照与独立 meta 游标推进；坏采集响应保存失败且保留旧数据，stats 包括首次失败源。既有已填 legacyUID 的猜测来源无法恢复，未授权历史自动修正；空 UID 需重新确认。旧 card_sent=1 不自动重播。
+
+最终本地命令、计数与证据范围见 [本轮修复报告](../reports/2026-11-14-project-repairs.md)。未勾选项保留历史 RED/独立评审证据未恢复或真实发布验收限制；已勾选的实现与本地测试不表示线上验收。最终全分支评审和归档哈希清单由集成负责人在评审后完成。

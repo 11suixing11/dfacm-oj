@@ -74,6 +74,7 @@ jobs:
           grep -q "unregister" deploy/service-worker-killswitch.js
           grep -q "service-worker-killswitch" deploy/install-theme.sh
           test -f deploy/deploy.sh
+          test -f deploy/activate.sh
           test -f deploy/smoke.sh
           test -f deploy/patch-ranking-template.sh
           grep -q "SWPU ACM patch: ranking own-row dedup" deploy/patch-ranking-template.sh
@@ -84,7 +85,7 @@ jobs:
           grep -q "SWPU ACM patch: problem RP floor" deploy/patch-rating-floor.sh
           grep -q "problem RP floor" deploy/deployment.md
           grep -q "ranking own-row dedup" deploy/deployment.md
-          grep -q "pm2 restart hydrooj" deploy/deploy.sh
+          grep -q "pm2 restart hydrooj" deploy/activate.sh
           grep -q "deployment.md" deploy/deploy.sh
       - name: Reject reintroduced injection sinks
         run: |
@@ -186,11 +187,13 @@ jobs:
           fi
       - name: Check shell scripts
         run: |
-          bash -n deploy/*.sh scripts/*.sh
+          for script in deploy/*.sh scripts/*.sh scripts/taxonomy/run-solutions.sh; do
+            bash -n "$script"
+          done
           # bash -n only parses. shellcheck is what catches the quoting and
           # errexit gaps that turn a partial failure into a silent success.
           sudo apt-get update -qq && sudo apt-get install -y -qq shellcheck
-          shellcheck -S warning -e SC1091 deploy/*.sh scripts/*.sh
+          shellcheck -S warning -e SC1091 deploy/*.sh scripts/*.sh scripts/taxonomy/run-solutions.sh
       - name: Check Python syntax
         run: python -m py_compile scripts/subset_fonts.py && rm -rf scripts/__pycache__
 
@@ -218,8 +221,13 @@ jobs:
           npm run check:build
       - name: Check the local preview training flow
         run: node --test scripts/preview.test.cjs
+      - name: Install ops test dependencies
+        working-directory: plugin-dfacm-ops
+        run: npm ci --no-audit --no-fund
       - name: Run ops plugin tests
         run: node --test plugin-dfacm-ops/tests/*.test.cjs
+      - name: Run offline taxonomy verification tests
+        run: node --test scripts/taxonomy/tests/*.test.cjs
       - name: Install shop test dependencies
         working-directory: plugin-dfacm-shop
         run: npm ci --no-audit --no-fund
@@ -264,3 +272,8 @@ jobs:
           ACH_ENABLE_SCHEDULER: '0'
           PYTHONDONTWRITEBYTECODE: '1'
         run: python -B -m unittest discover -s tests -p 'test_*.py'
+      - name: Run pure offline broadcast tests
+        working-directory: plugin-dfacm-broadcast
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: python -B -W error::ResourceWarning -m unittest discover -s tests -p 'test_*.py'

@@ -147,7 +147,7 @@ pm2 restart hydrooj
 
 ```bash
 mkdir -p /root/.hydro/addons/swpu-ops
-cp /root/swpu-oj/plugin-dfacm-ops/{index.ts,operations.cjs,report.cjs,live-rp.cjs,rp-sweep.cjs,package.json} \
+cp /root/swpu-oj/plugin-dfacm-ops/{index.ts,operations.cjs,report.cjs,live-rp.cjs,rp-sweep.cjs,controlled-history.cjs,package.json} \
    /root/.hydro/addons/swpu-ops/
 mkdir -p /root/.hydro/addons/swpu-ops/node_modules
 ln -sfn /usr/local/share/.config/yarn/global/node_modules/hydrooj \
@@ -157,6 +157,26 @@ pm2 restart hydrooj
 ```
 
 安装后在“控制面板 → 脚本管理”用 `hydrooj cli script swpuWeeklyReport '{}'` 或后台表单运行，详见 [plugin-dfacm-ops/README.md](../plugin-dfacm-ops/README.md)。
+
+受控题解验证另见 [scripts/taxonomy/README.md](../scripts/taxonomy/README.md)。自动部署同时将 `run-solutions.sh`、`solutions-apply.cjs`、`verify-solutions.cjs`、`verification-state.cjs` 安装到 `$REMOTE_DEPLOY/scripts/taxonomy/`（默认 `/root/swpu-theme-deploy/scripts/taxonomy/`）；这些脚本与上述 ops 文件作为同一批次备份、核验和回退。手动安装的等价清单如下：
+
+```bash
+mkdir -p /root/swpu-theme-deploy/scripts/taxonomy
+cp /root/swpu-oj/scripts/taxonomy/{run-solutions.sh,solutions-apply.cjs,verify-solutions.cjs,verification-state.cjs} \
+   /root/swpu-theme-deploy/scripts/taxonomy/
+```
+
+交付布局中的脚本通过明确的绝对路径加载已有 `swpu-ops` helper。完成下述原生发布验收后，管理员 CLI 的调用方式为：
+
+```bash
+export DFACM_CONTROLLED_HISTORY=1
+export DFACM_CONTROLLED_HISTORY_MODULE=/root/.hydro/addons/swpu-ops/controlled-history.cjs
+bash /root/swpu-theme-deploy/scripts/taxonomy/run-solutions.sh /absolute/private/batch.json --dry
+```
+
+自定义 `REMOTE_ADDONS` / `REMOTE_DEPLOY` 时同步替换上述路径。保留仓库布局执行时可继续使用默认相对 helper；复制脚本到其他目录时必须设置此绝对 locator。复用已安装的 Hydro/Mongo 依赖，不在 addon 运行目录执行 `npm ci`。`DFACM_CONTROLLED_HISTORY=1` 还须在**每个原生 judge callback host** 的进程环境中显式启用，默认不开启；仅设置 CLI 不足以建立所有回调的所有权能力。该适配器仅接受已验证的 Hydro **5.0.7** 原生方法指纹及 ui-default **4.58.5**，Node **>=22.13**；不兼容、未加载、卸载或方法替换时拒绝提交和发布。原生 Hydro 缺少 RID/批次与私有 history ID 的关联，因此使用这项严格、可选的适配器；不得以 boolean 或猜测历史记录绕过检查。
+
+上线前须核对实际 worker、CLI、daemon 和 callback 消费拓扑，在隔离服务器验证完整判题/沙箱和断线恢复；本地原生 fixture 不代表这些生产门槛已通过。只允许已验收的本地 default `judge` 与完整原题数据，其他题型及远端 `remotejudge` 继续阻止。超时、调度结果未知、重复回调所有权冲突保持 pending，保留 RID/history/state，不盲目重判或删除；恢复时使用同一主机上同一不可变批次和状态路径，精确核对终态/取消及所属记录。清理封存本批 claim 后只删除精确 history/RID，不回写正式统计快照。历史统计修正须另备对象清单、备份和回退，不能随发布自动执行。
 
 两个报表脚本只读；同一 addon 默认启用的 RP 钩子会更新排名。它过滤评测过程并串行合并重算，设置 `SWPU_LIVE_RP=0` 后重启可以关闭。
 
@@ -479,7 +499,7 @@ bash /opt/swpu-oj/scripts/check-deployment.sh \
 
 在独立测试域准备一题明确的 A+B，用支持的 C++ 和 Python 各提交一份正确程序确认 AC；提交固定错误输出确认 WA、死循环确认 TLE、非法语法确认 CE。对照题目限时检查结果，确认有判题机执行、测试数据可读、沙箱限制生效。不要在正式比赛排名里运行这些测试。
 
-升级流程：记录当前组件与自研插件版本 → 保存并核验完整备份和异机副本 → 备用实例升级 → 注册/登录与人工判题验收 → 在人工确认的维护窗口应用到正式机。升级失败时，优先切换到验证过的备用实例，或按相匹配的程序版本和数据备份恢复；数据库迁移后不要直接降级 npm 包当作回退。本仓库没有自动发布、重启或回滚脚本。
+升级流程：记录当前组件与自研插件版本 → 保存并核验完整备份和异机副本 → 备用实例升级 → 注册/登录与人工判题验收 → 在人工确认的维护窗口应用到正式机。升级失败时，优先切换到验证过的备用实例，或按相匹配的程序版本和数据备份恢复；数据库迁移后不要直接降级 npm 包当作回退。本仓库的部署脚本发布自研插件与资产，不自动升级或回退 Hydro、依赖包及数据库迁移。
 
 ## 18. 排名页模板补丁（own-row 去重 + 自己行高亮）
 
