@@ -242,3 +242,39 @@ test('conflicting history ownership for the exact RID stays pending without dele
     assert.equal(result.ready.length, 0); assert.equal(result.pending.length, 1); assert.match(result.pending[0].reason, /ownership|reconciliation/i);
     assert.equal(f.history.rows.length, 2); assert.equal(f.record.rows.length, 2);
 });
+
+for (const operation of ['end', 'next']) test(`same controlled context ${operation} replay cannot recreate history across cleanup`, async () => {
+    const f = fixture(null), store = state(f);
+    await verification.verifySolutions(f.api, f.batch, store, { timeoutMs: 0 });
+    const rid = new f.api.ObjectId('000000000000000000000001');
+    const callback = new f.api.JudgeResultCallbackContext({ broadcast() {} }, {
+        ...await f.record.findOne({ _id: rid }), rid, type: 'judge',
+        meta: { rejudge: 'controlled', verificationBatch: f.batch.id, verificationEntry: f.batch.entries[0].id },
+    });
+    await callback.end({ status: 1 }); assert.equal(await callback, null);
+    const lookup = f.history.findOne;
+    let release, signalPaused, intercept = true;
+    const gate = new Promise(resolve => { release = resolve; });
+    const paused = new Promise(resolve => { signalPaused = resolve; });
+    f.history.findOne = async function(query) {
+        const snapshot = await lookup.call(this, query);
+        if (intercept && String(query._id) === String(callback.relatedId)) {
+            intercept = false; signalPaused(); await gate;
+        }
+        return snapshot;
+    };
+    const replay = callback[operation]({ status: 2 });
+    try {
+        // Before the fix, this deterministically pauses after the unsealed claim
+        // read. A terminal fence blocks replay before any history lookup.
+        await Promise.race([paused, replay]);
+        f.history.findOne = lookup;
+        const result = await verification.verifySolutions(f.api, f.batch, store, { timeoutMs: 0 });
+        assert.equal(result.ready.length, 1); assert.equal((await store.load()).entries['entry-one'].phase, 'cleaned');
+        release(); await replay;
+        assert.equal(f.history.rows.length, 0, 'replay must not recreate an unowned native history after cleanup');
+        assert.deepEqual(f.record.rows.map(r => r._id), ['real']);
+        const again = await verification.verifySolutions(f.api, f.batch, store, { timeoutMs: 0 });
+        assert.equal(again.ready.length, 1); assert.equal(f.history.rows.length, 0);
+    } finally { f.history.findOne = lookup; release(); await replay; }
+});

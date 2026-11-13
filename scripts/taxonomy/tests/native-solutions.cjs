@@ -52,7 +52,7 @@ module.exports = async function nativeSolutions(api, artifactDirectory) {
             users: await db.collection('domain.user').find({ domainId }).sort({ _id: 1 }).toArray(),
             ledger: await ledger.find({ ref: `solve:${domainId}:1` }).sort({ uid: 1 }).toArray(), judgeEvents };
     }
-    async function worker(task) {
+    async function worker(task, queueReplay = false) {
         assert.equal(task.type, 'judge'); assert.equal(task.source, `${domainId}/1`);
         assert.equal(task.data.length, 6, 'all six stored testdata files must reach the native payload');
         const callback = new JudgeResultCallbackContext(global.app, task);
@@ -76,8 +76,12 @@ module.exports = async function nativeSolutions(api, artifactDirectory) {
             }
             await callback.next({ cases });
         }
-        await callback.end({ status, score: status === 1 ? 100 : 0, time: 3, memory: 1, compilerText: compile.status ? compile.stderr : undefined });
-        return { historyId: callback.relatedId, status, cases: cases.length };
+        const ending = callback.end({ status, score: status === 1 ? 100 : 0, time: 3, memory: 1, compilerText: compile.status ? compile.stderr : undefined });
+        // Native message dispatch does not await end. Queue duplicates while the
+        // first end is still running, using the real operationPromise queue.
+        const queued = queueReplay ? [callback.end({ status: 2 }), callback.next({ status: 2 })] : [];
+        await ending; await Promise.all(queued);
+        return { historyId: callback.relatedId, status, cases: cases.length, callback };
     }
     let integration;
     const oldActivation = process.env.DFACM_CONTROLLED_HISTORY;
@@ -141,6 +145,46 @@ module.exports = async function nativeSolutions(api, artifactDirectory) {
             evidence.runs.push({ kind, concurrent, status: workerResult.status, testCases: workerResult.cases, counters: after.counters,
                 serviceStatusRows: 0, controlledJudgeEvents: 0, realJudgeEvents: concurrent ? 1 : 0, ledgerDeltaRows: after.ledger.length - before.ledger.length });
         }
+        evidence.replays = [];
+        for (const operation of ['end', 'next']) {
+            const batch = { id: `native-${domainId}-replay-${operation}`, domainId, uid: 3, uname: 'hydsvc-0074', entries: [{ id: 'one', docId: 1, t: 'native replay', c: programs.AC }] };
+            const store = createStateStore(path.join(artifactDirectory, `${batch.id}.json`));
+            const before = await snapshot();
+            let callback, replay, release, interception;
+            class ReplayRecordModel extends RecordModel {
+                static async judge(...args) {
+                    await super.judge(...args);
+                    const result = await worker(await TaskModel.getFirst({ rid: args[1] }), true);
+                    callback = result.callback;
+                    assert.equal((await RecordModel.collHistory.findOne({ _id: callback.relatedId })).status, 1, 'queued duplicate end/next must preserve first AC');
+                    const lookup = RecordModel.collHistory.findOne;
+                    let signalPaused, intercept = true;
+                    const gate = new Promise(resolve => { release = resolve; });
+                    const paused = new Promise(resolve => { signalPaused = resolve; });
+                    RecordModel.collHistory.findOne = async function(query, ...options) {
+                        const detachedSnapshot = await lookup.call(this, query, ...options);
+                        if (intercept && String(query._id) === String(callback.relatedId)) {
+                            intercept = false; signalPaused(); await gate;
+                        }
+                        return detachedSnapshot;
+                    };
+                    try {
+                        replay = callback[operation]({ status: 2 });
+                        interception = await Promise.race([paused.then(() => 'paused-after-claim'), replay.then(() => 'fenced-before-history')]);
+                    } finally { RecordModel.collHistory.findOne = lookup; }
+                }
+            }
+            try {
+                const result = await verifySolutions({ ...api, RecordModel: ReplayRecordModel }, batch, store, { timeoutMs: 0 });
+                assert.equal(result.ready.length, 1); assert.equal((await store.load()).entries.one.phase, 'cleaned');
+                release(); await replay;
+                assert.equal(await RecordModel.collHistory.countDocuments({ _id: callback.relatedId }), 0, 'same-context replay cannot recreate unowned history after cleanup');
+                assert.equal(await RecordModel.coll.countDocuments({ _id: callback.task.rid }), 0);
+                const again = await verifySolutions(api, batch, store, { timeoutMs: 0 });
+                assert.equal(again.ready.length, 1); assert.deepEqual(await snapshot(), before);
+                evidence.replays.push({ operation, queuedBeforeFirstEndFinished: ['end', 'next'], interception, ready: 1, phase: 'cleaned', remainingHistoriesAtNativeId: 0, accountingUnchanged: true });
+            } finally { if (release) release(); if (replay) await replay; }
+        }
         // Exercise every file checkpoint against real native records/history.
         // A crash after durable scheduling intent intentionally stays pending.
         evidence.restarts = [];
@@ -192,9 +236,18 @@ module.exports = async function nativeSolutions(api, artifactDirectory) {
                 await super.judge(...args); retryRid = args[1];
                 const task = await TaskModel.getFirst({ rid: retryRid });
                 const first = new JudgeResultCallbackContext(global.app, task), second = new JudgeResultCallbackContext(global.app, task);
-                await first.next({ status: 20 }); await second.next({ status: 20 });
-                await first.end({ status: 1, score: 100 }); await second.end({ status: 1, score: 100 });
-                assert.equal(await first, null); assert.equal(await second, null);
+                const diagnostics = [], previousWarn = console.warn;
+                console.warn = (...args) => diagnostics.push(args.join(' '));
+                try {
+                    await first.next({ status: 20 }); await second.next({ status: 20 });
+                    await first.end({ status: 1, score: 100 }); await second.end({ status: 1, score: 100 });
+                    assert.equal(await first, null); assert.equal(await second, null);
+                    assert.deepEqual(diagnostics, [
+                        'swpu-ops [W] controlled verification pending/manual reconciliation: Ambiguous controlled callback history; manual reconciliation required',
+                        'swpu-ops [W] controlled verification pending/manual reconciliation: Controlled history requires manual reconciliation or is sealed',
+                    ]);
+                    evidence.reconnectDiagnostics = diagnostics;
+                } finally { console.warn = previousWarn; }
             }
         }
         const retryStore = createStateStore(path.join(artifactDirectory, `${retryBatch.id}.json`));

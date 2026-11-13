@@ -34,7 +34,7 @@ function installControlledHistory(api) {
             || typeof api.RecordModel?.coll?.updateOne !== 'function' || typeof api.RecordModel?.collHistory?.insertOne !== 'function'
             || typeof api.UserModel?.getById !== 'function' || typeof api.ObjectId !== 'function') throw new Error('Unsupported Hydro 5.0.7 native callback shape/version');
         state = { active: true, refs: 0, RecordModel: api.RecordModel, UserModel: api.UserModel, ObjectId: api.ObjectId,
-            original: Object.fromEntries(Object.keys(SHAPES).map(k => [k, proto[k]])), wrappers: {}, failed: new WeakSet(),
+            original: Object.fromEntries(Object.keys(SHAPES).map(k => [k, proto[k]])), wrappers: {}, failed: new WeakSet(), terminalStarted: new WeakSet(),
             capability: Object.freeze({ version: 1, hydroVersion: '5.0.7', ownedHistory: true, taskTypes: Object.freeze(['judge']) }) };
         for (const name of ['_next', '_end']) {
             state.wrappers[name] = async function ownedCallback(body) {
@@ -46,7 +46,11 @@ function installControlledHistory(api) {
                 if (!(this instanceof api.JudgeResultCallbackContext) || !(this.relatedId instanceof api.ObjectId)
                     || typeof this.resolve !== 'function' || !(this.operationPromise instanceof Promise)
                     || !(this.finishPromise instanceof Promise)) throw new Error('Incompatible native controlled callback instance shape');
-                if (state.failed.has(this)) { this.resolve(null); return; }
+                if (state.failed.has(this) || state.terminalStarted.has(this)) { this.resolve(null); return; }
+                // Native next/end serialize their operations. Close this context
+                // before terminal I/O so queued replays cannot carry a stale
+                // ownership snapshot across cleanup and a native upsert.
+                if (name === '_end') state.terminalStarted.add(this);
                 let exact;
                 try {
                     if (!state.active || !getCapability(api)) throw new Error('Native controlled wrapper no longer installed');

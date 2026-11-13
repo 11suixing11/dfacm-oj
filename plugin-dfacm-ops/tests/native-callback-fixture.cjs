@@ -6,7 +6,13 @@ const methods = {
     "end": "end(body) {\n    if (!body) this.resolve(null);\n    else this.operationPromise = this.operationPromise.then(() => this._end(body));\n    return this.operationPromise;\n  }"
 };
 const { randomBytes } = require('node:crypto');
-const clone = x => structuredClone(x);
+function clone(value) {
+    if (!value || typeof value !== 'object') return value;
+    if (value instanceof Date) return new Date(value);
+    if (typeof value.toHexString === 'function') return new value.constructor(value.toHexString());
+    if (Buffer.isBuffer(value)) return Buffer.from(value);
+    return Array.isArray(value) ? value.map(clone) : Object.fromEntries(Object.entries(value).map(([key, item]) => [key, clone(item)]));
+}
 const get = (o, k) => k.split('.').reduce((v, p) => v?.[p], o);
 function matches(row, query) {
     return Object.entries(query).every(([key, value]) => {
@@ -19,15 +25,15 @@ function matches(row, query) {
 }
 function set(o, k, v) { const parts = k.split('.'); const last = parts.pop(); for (const p of parts) o = o[p] ||= {}; o[last] = v; }
 function collection(rows = []) {
-    return { rows, find: q => ({ toArray: async () => rows.filter(r => matches(r, q)).map(r => ({ ...r })) }),
-        findOne: async q => rows.find(r => matches(r, q)) || null,
-        insertOne: async row => { if (rows.some(r => String(r._id) === String(row._id))) { const e = new Error('duplicate'); e.code = 11000; throw e; } rows.push(row); },
+    return { rows, find: q => ({ toArray: async () => rows.filter(r => matches(r, q)).map(clone) }),
+        findOne: async q => clone(rows.find(r => matches(r, q)) || null),
+        insertOne: async row => { if (rows.some(r => String(r._id) === String(row._id))) { const e = new Error('duplicate'); e.code = 11000; throw e; } rows.push(clone(row)); },
         updateOne: async (q, update, options = {}) => {
             let row = rows.find(r => matches(r, q));
-            if (!row && options.upsert) { row = { ...q }; rows.push(row); }
+            if (!row && options.upsert) { row = clone(q); rows.push(row); }
             if (!row) return { matchedCount: 0 };
-            for (const [k,v] of Object.entries(update.$set || {})) set(row, k, v);
-            for (const [k,v] of Object.entries(update.$push || {})) { row[k] ||= []; row[k].push(...(v.$each || [v])); }
+            for (const [k,v] of Object.entries(update.$set || {})) set(row, k, clone(v));
+            for (const [k,v] of Object.entries(update.$push || {})) { row[k] ||= []; row[k].push(...clone(v.$each || [v])); }
             for (const [k,v] of Object.entries(update.$inc || {})) row[k] = (row[k] || 0) + v;
             for (const k of Object.keys(update.$unset || {})) delete row[k];
             return { matchedCount: 1 };

@@ -7,6 +7,9 @@ function install(t, f) {
     const old = process.env.DFACM_CONTROLLED_HISTORY; process.env.DFACM_CONTROLLED_HISTORY = '1';
     t.after(() => { if (old === undefined) delete process.env.DFACM_CONTROLLED_HISTORY; else process.env.DFACM_CONTROLLED_HISTORY = old; });
     assert.equal(typeof adapter.installControlledHistory, 'function', 'missing native ownership adapter');
+    const messages = []; f.expectedWarnings = [];
+    t.mock.method(console, 'warn', (...args) => messages.push(args.join(' ')));
+    t.after(() => assert.deepEqual(messages, f.expectedWarnings, 'controlled diagnostics must match the expected failure'));
     const dispose = adapter.installControlledHistory(f.api); t.after(dispose); return dispose;
 }
 test('capability requires explicit activation and actual supported wrappers, with repeatable disposal', t => {
@@ -45,6 +48,10 @@ for (const invalid of ['uid', 'domain', 'rid', 'code', 'marker', 'user', 'histor
     if (invalid === 'code') f.task.code += ' changed';
     if (invalid === 'marker') f.task.meta.verificationEntry = 'other';
     if (invalid === 'user') f.api.UserModel.getById = async () => ({ _id: 3, uname: 'person' });
+    f.expectedWarnings = ['swpu-ops [W] controlled verification pending/manual reconciliation: ' + ({
+        marker: 'Controlled verification task identity mismatch', mode: 'Controlled verification task identity mismatch',
+        history: 'Conflicting controlled history ownership',
+    }[invalid] || 'Controlled native record/service account identity mismatch')];
     const cb = f.callback();
     if (invalid === 'history') f.collHistory.rows.push({ _id: cb.relatedId, uid: 9, status: 1 });
     await cb.next({ status: 20 }); await cb.end({ status: 1 });
@@ -53,6 +60,8 @@ for (const invalid of ['uid', 'domain', 'rid', 'code', 'marker', 'user', 'histor
 });
 test('reconnected callback retains ambiguity evidence and releases both native consumer slots', async t => {
     const f = nativeFixture(); install(t, f); const first = f.callback(), second = f.callback();
+    f.expectedWarnings = ['swpu-ops [W] controlled verification pending/manual reconciliation: Ambiguous controlled callback history; manual reconciliation required',
+        'swpu-ops [W] controlled verification pending/manual reconciliation: Controlled history requires manual reconciliation or is sealed'];
     await first.next({ status: 20 }); await second.next({ status: 20 });
     await first.end({ status: 1 }); await second.end({ status: 1 });
     assert.equal(await first, null); assert.equal(await second, null);
@@ -61,6 +70,7 @@ test('reconnected callback retains ambiguity evidence and releases both native c
 });
 test('failed metadata persistence settles controlled context while ordinary consumer still runs', async t => {
     const f = nativeFixture(); install(t, f); f.collHistory.insertOne = async () => { throw new Error('database unavailable'); };
+    f.expectedWarnings = ['swpu-ops [W] controlled verification pending/manual reconciliation: database unavailable'];
     const cb = f.callback(); await cb.next({ status: 20 }); await cb.end({ status: 1 }); assert.equal(await cb, null);
     const ordinary = f.callback({ ...f.task, meta: {} }); await ordinary.end({ status: 1 }); assert.equal((await ordinary).status, 1);
 });
@@ -87,6 +97,7 @@ test('sealed cleanup prevents late callbacks from creating any new owned history
     const f = nativeFixture(); install(t, f); const first = f.callback();
     await first.end({ status: 1 }); await first;
     f.coll.rows[0].dfacmVerification.sealed = true;
+    f.expectedWarnings = ['swpu-ops [W] controlled verification pending/manual reconciliation: Controlled history is sealed for cleanup'];
     const late = f.callback(); await late.next({ status: 20 }); await late.end({ status: 1 }); assert.equal(await late, null);
     assert.equal(f.collHistory.rows.length, 1); assert.equal(f.coll.rows[0].dfacmVerification.failed, undefined);
 });
@@ -98,7 +109,16 @@ test('repeat installation rejects a mismatched advertised Hydro version', t => {
 
 test('history metadata type changes cannot authorize native terminal writes', async t => {
     const f = nativeFixture(); install(t, f); const cb = f.callback();
+    f.expectedWarnings = ['swpu-ops [W] controlled verification pending/manual reconciliation: Conflicting controlled history ownership'];
     await cb.next({ status: 20 }); f.collHistory.rows[0].uid = '3';
     await cb.end({ status: 1 }); assert.equal(await cb, null);
     assert.equal(f.collHistory.rows[0].status, 20); assert.equal(f.collHistory.rows[0].judgeAt, undefined);
+});
+
+test('model reads return independent nested snapshots with native IDs and dates', async () => {
+    const f = nativeFixture(); f.coll.rows[0].nested = { sealed: false }; f.coll.rows[0].at = new Date();
+    const one = await f.coll.findOne({ _id: f.task.rid }), rows = await f.coll.find({ _id: f.task.rid }).toArray();
+    one.nested.sealed = true; rows[0].nested.sealed = true; one.at.setTime(0);
+    assert.equal(f.coll.rows[0].nested.sealed, false); assert.notEqual(f.coll.rows[0].at.getTime(), 0);
+    assert.ok(one._id instanceof f.api.ObjectId); assert.notEqual(one._id, f.coll.rows[0]._id);
 });
