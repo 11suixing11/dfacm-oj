@@ -48,8 +48,12 @@ export async function apply(ctx: Context) {
         if (missing.length) console.warn('swpu-ops [W] SWPU_SERVICE_UIDS names uids with no user row:', missing.join(', '));
         if (dryRun) console.warn('swpu-ops [W] SWPU_SERVICE_UIDS_DRYRUN=1: the service-account purge will not delete anything.');
     }
+    // Shared by all RP entry points registered in this worker, including the
+    // administration web script. Independent CLI processes have their own lock.
+    const lock = createRpLock();
     const sanitize = createSanitize(statusColl, serviceUids, { dryRun });
-    const manualSweep = createRpSweep({ sanitize, reconcile });
+    const manualSweep = createRpSweep({ sanitize, reconcile, lock });
+    ctx.on('dispose', manualSweep.stop);
     ctx.addScript('swpuRpSweep', 'd&f算法网 RP 立即全域重算（清服务号残留 + 补齐域 join + 全域重算）', Schema.object({}),
         async () => ({ recalculated: await manualSweep.runOnce('manual'), failures: [...manualSweep.failures] }));
     // The v1.12.0 auto-join only covers /reg/complete. GitHub (and any OAuth)
@@ -71,7 +75,6 @@ export async function apply(ctx: Context) {
     // Both paths purge service-account rows before computing, so the judge
     // account can never resurrect phantom RP (the v1.12.0 incident).
     if (process.env.SWPU_LIVE_RP !== '0' && (!process.env.NODE_APP_INSTANCE || process.env.NODE_APP_INSTANCE === '0')) {
-        const lock = createRpLock();
         const live = createLiveRp({
             sanitize,
             purgeDoc: createPurgeDoc(statusColl),

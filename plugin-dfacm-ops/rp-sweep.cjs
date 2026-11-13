@@ -94,7 +94,7 @@ function createPurgeDoc(coll) {
     };
 }
 
-// Serializes RP computations across the live hook and the sweep: two
+// Serializes RP computations across manual, live and scheduled work: two
 // concurrent rating runs would reset each other's rpInfo mid-write. Work
 // submitted while a computation runs queues behind it (the compute is fast
 // and idempotent, so waiting beats skipping for the latency-sensitive path).
@@ -213,6 +213,10 @@ function createRpSweep(options = {}) {
         running = true;
         try {
             const work = async () => {
+                // This pass may have waited behind another entry point. Stop
+                // cancels queued work and prevents starting subsequent stages;
+                // a database/RP call already in progress finishes normally.
+                if (stopped) return false;
                 const rp = resolveScript();
                 if (!rp || typeof rp.run !== 'function') return false;
                 if (sanitize) {
@@ -223,12 +227,14 @@ function createRpSweep(options = {}) {
                         logger.info('purged service-account status rows:', purge.deletedCount);
                     }
                 }
+                if (stopped) return false;
                 if (reconcile) {
                     const result = await reconcile();
                     if (result && (result.created || result.joined)) {
                         logger.info('reconciled ranking-domain joins:', JSON.stringify(result));
                     }
                 }
+                if (stopped) return false;
                 const startedAt = Date.now();
                 await rp.run({}, () => {});
                 remember(sweeps, { trigger, at: new Date().toISOString(), durationMs: Date.now() - startedAt });

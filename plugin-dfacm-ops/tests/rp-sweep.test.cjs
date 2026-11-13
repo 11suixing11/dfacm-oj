@@ -200,7 +200,7 @@ test('the lock chain survives a failed job', async () => {
 function autoJoinFixture(docs) {
     const writes = [];
     const coll = {
-        findOne: async (filter) => docs.find((d) => d.domainId === filter.domainId && d.uid === filter.uid) || null,
+        findOne: async (filter) => structuredClone(docs.find((d) => d.domainId === filter.domainId && d.uid === filter.uid) || null),
         updateOne: async (filter, update) => {
             writes.push(['update', filter, update]);
             const doc = docs.find((d) => d.domainId === filter.domainId && d.uid === filter.uid);
@@ -341,4 +341,69 @@ test('a failed reconcile aborts the pass without computing', async () => {
     assert.equal(await sweep.runOnce('manual'), false);
     assert.deepEqual(ran, []);
     assert.match(sweep.failures[0].message, /db down/);
+});
+
+const flushScheduler = async () => { for (let i = 0; i < 30; i++) await Promise.resolve(); };
+
+for (const trigger of ['manual', 'scheduled']) {
+    test(`stopped ${trigger} sweep queued behind the lock starts no database or RP stage`, async () => {
+        const lock = createRpLock();
+        let release;
+        const blocker = lock(() => new Promise((resolve) => { release = resolve; }));
+        await flushScheduler();
+        const stages = [];
+        const sweep = createRpSweep({ lock,
+            sanitize: async () => { stages.push('purge'); },
+            reconcile: async () => { stages.push('reconcile'); },
+            script: { run: async () => { stages.push('rp'); } },
+        });
+        const queued = sweep.runOnce(trigger);
+        sweep.stop(); sweep.stop();
+        release(); await blocker;
+        assert.equal(await queued, false);
+        assert.deepEqual(stages, []);
+        assert.equal(sweep.sweeps.length, 0);
+        assert.equal(sweep.failures.length, 0);
+    });
+}
+
+for (const stoppedStage of ['purge', 'reconcile']) {
+    test(`stopping during ${stoppedStage} lets that sweep stage finish but starts no next stage`, async () => {
+        let release;
+        const stages = [];
+        const stage = async (name) => {
+            stages.push(`${name}:start`);
+            if (name === stoppedStage) await new Promise((resolve) => { release = resolve; });
+            stages.push(`${name}:end`);
+        };
+        const sweep = createRpSweep({ lock: createRpLock(),
+            sanitize: () => stage('purge'), reconcile: () => stage('reconcile'),
+            script: { run: () => stage('rp') },
+        });
+        const running = sweep.runOnce('manual');
+        await flushScheduler();
+        assert.equal(typeof release, 'function');
+        sweep.stop(); release();
+        assert.equal(await running, false);
+        assert.deepEqual(stages, stoppedStage === 'purge'
+            ? ['purge:start', 'purge:end']
+            : ['purge:start', 'purge:end', 'reconcile:start', 'reconcile:end']);
+        assert.equal(sweep.sweeps.length, 0);
+        assert.equal(sweep.failures.length, 0);
+    });
+}
+
+test('a failing lock job does not poison work already queued behind it', async () => {
+    const lock = createRpLock();
+    let release;
+    const first = lock(async () => {
+        await new Promise((resolve) => { release = resolve; });
+        throw new Error('first job failed');
+    });
+    const rejected = assert.rejects(first, /first job failed/);
+    const second = lock(async () => 'second completed');
+    const third = lock(async () => 'third completed');
+    await flushScheduler(); release();
+    await rejected;
+    assert.deepEqual(await Promise.all([second, third]), ['second completed', 'third completed']);
 });

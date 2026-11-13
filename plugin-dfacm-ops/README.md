@@ -7,12 +7,12 @@
 - `swpuWeeklyReport`：按域、提交时间和可选小组生成 UTF-8 BOM 的 CSV 及 Markdown。包含每个 UID 的提交数、本期不同 AC 题数、新增 AC 题数、活跃天数、WA/TLE/MLE/OLE/RE/CE/SE、未结束提交及其他状态。
 - `swpuHealthSummary`：读取原生 `task` / `record` 集合，生成 Markdown 及 JSON，区分尚未领取的任务队列、当前未结束提交、近期结果分布和较长时间未结束的原提交。
 - **RP 准实时重算**（`live-rp.cjs`）：监听 `record/change` 的最终结果，排除评测过程、自测和数据生成，30 秒后重算对应域。插件内始终串行执行，慢计算期间的新事件合并为下一轮，每域只补算一次；卸载后停止排队。只在 pm2 instance 0（或未设置实例号）注册，会通过 Hydro RP 脚本更新排名。设置环境变量 `SWPU_LIVE_RP=0` 并重启可关闭。
-- **RP 每小时清扫**（`rp-sweep.cjs`）：删比赛、管理页编辑、直接改库等绕过判题流程的变动不触发任何事件，原生 `task.daily` 又只在 03:00 重算——清扫在启动 3 分钟后（避开 75 秒就绪窗口）及此后每小时执行一次"服务号自洁 + 全域 RP 重算"，把这类漂移的自愈时间压缩到 1 小时内。与准实时重算共享同一把锁，两个 RP 计算永不并发。设置 `SWPU_RP_SWEEP=0` 可单独关闭。
+- **RP 每小时清扫**（`rp-sweep.cjs`）：删比赛、管理页编辑、直接改库等绕过判题流程的变动不触发任何事件，原生 `task.daily` 又只在 03:00 重算——清扫在启动 3 分钟后（避开 75 秒就绪窗口）及此后每小时执行一次"服务号自洁 + 全域 RP 重算"，把这类漂移的自愈时间压缩到 1 小时内。与同一 worker 中的准实时重算、管理网页 `swpuRpSweep` 脚本共享同一把锁。设置 `SWPU_RP_SWEEP=0` 可单独关闭。
 - **成员自动加入与对账**（`createAutoJoin` / `createJoinReconcile`）：v1.12.0 的自动加域只覆盖 `/reg/complete`，而 GitHub 等 OAuth 首次注册会走 Hydro core 的 `UserRegisterWithCodeHandler` 建号（不写 join 标记），管理员手建的账号同样不写——这些成员做过题也不会出现在排行榜。现在两层堵住：①挂钩 Hydro 的 `auth/login` serial 事件（所有登录/注册路径的必经收尾，登出不会触发），发现成员缺 join 立即补上（已有 role 保留，服务号跳过，`SWPU_AUTO_JOIN=0` 可关）；②每小时清扫对账全部成员：缺域文档补建（default 角色）、有文档缺 join 补标记，任何路径漏网 ≤1 小时自愈。
 - **服务号自洁（幽灵 RP 免疫）**：RP 脚本的打分依据是 `document.status` 而非 `record`，且 calcLevel 写入的存储排名不过滤 `join`——评测机服务号（hydsvc-0074，uid 3）只要在 `document.status` 留下一条解题状态，下次重算就会复活幽灵 RP 并把真人排名整体挤后一位（v1.12.0 事故）。现在每次 RP 重算前都会 `deleteMany` 掉服务号的全部状态行，实时钩子还会在服务号终态记录出现的瞬间删除对应状态行；这条 v1.12.0 的手工运维铁律由此变成系统自动执行。服务号列表用 `SWPU_SERVICE_UIDS` 配置（逗号分隔 uid，默认 `3`，留空关闭自洁）。
 - `swpuRpSweep`：立即执行一次"服务号自洁 + join 对账 + 全域重算"，用于绕过应用的数据库修补之后马上纠正排名与成员可见性，不必等清扫周期。
 
-RP 的本地成功/失败记录各保留最近 100 条，成功记录包含耗时。串行保证仅覆盖本插件的调用，原生每日 RP 任务及管理员手动调用仍独立运行；大站应结合实际耗时决定是否开启事件重算。
+RP 的本地成功/失败记录各保留最近 100 条，成功记录包含耗时。同一 worker 中，本插件注册的管理网页脚本、事件重算和定时清扫串行执行；一次失败不会阻塞锁队列中的后续工作。卸载会取消尚未取锁的工作，并在每次清理、对账和 RP 阶段开始前检查停止状态；已经开始的数据库或 RP 调用会正常结束，随后不再开始下一阶段或下一个域。原生每日 RP 任务、直接调用原生 RP 的管理脚本、独立 CLI 和其他 worker 不共享这把内存锁。部署时须核对实际 worker 与消费入口；多进程互斥需要持久锁和跨进程验证。
 
 默认只展示 UID，不读取或导出姓名、用户名、邮箱、学号、IP、提交源码或测试数据。报表仍包含训练统计，应由管理员保管。
 
@@ -47,7 +47,7 @@ hydrooj cli script swpuHealthSummary '{"domainId":"system","staleMinutes":10}'
 hydrooj cli script swpuRpSweep '{}'
 ```
 
-`swpuRpSweep` 无参数。先清服务号在 `document.status` 的全部残留，再对每个域重算 RP（含等级与排名分配）；返回 `{recalculated, failures}`，`recalculated:false` 表示本进程内已有另一个 RP 计算在执行（排队的清扫/实时重算）或脚本注册缺失，稍后重跑即可。注意 CLI 是独立进程，与主进程内的清扫互不感知，若恰好同时执行也只是重复计算一遍（幂等）。绕过应用修改数据（删比赛、清理状态行）之后运行一次，可立即恢复排名一致。
+`swpuRpSweep` 无参数。先清服务号的题目状态行（`document.status.docType=10`），再对账成员 join，最后对每个域重算 RP（含等级与排名分配）；返回 `{recalculated, failures}`。管理网页调用会等待同一 worker 中的清扫/实时重算结束后再执行；同一手动清扫实例已经执行或排队时，再次调用返回 `recalculated:false`。脚本注册缺失、插件已停止或任一阶段失败也会返回 false，失败详情见 `failures`。CLI 是独立进程，与主进程的锁互不感知，同时 RP 写入仍可能相互干扰，应先确保没有其他 RP 消费入口运行再执行。绕过应用修改数据（删比赛、清理状态行）之后运行一次，可立即恢复排名一致。
 
 周报参数：
 
@@ -84,13 +84,17 @@ hydrooj cli script swpuRpSweep '{}'
 
 ## 本地测试
 
-纯 Node 测试，不安装完整 Hydro，不连接 MongoDB 或线上服务：
+使用 Node.js **>=22.13**，在插件目录独立安装锁定的测试依赖，不安装完整 Hydro，不连接 MongoDB、外部网络或消息服务：
 
 ```bash
-node --test plugin-dfacm-ops/tests/*.test.cjs
+cd plugin-dfacm-ops
+npm ci
+npm test
 ```
 
-覆盖时间边界、北京时间默认窗口、无效参数、同题去重、历史 AC 排除、小组零提交、状态分类、文件导出及模拟原生模型的只读查询。
+`esbuild@0.25.12` 仅是本地开发依赖，用于将真实 `index.ts` 转换成 CommonJS，再以明确的本地 Hydro/数据库替身调用 `apply`；调度模块仍从生产文件加载。Hydro 的 peer 版本约束保持为 **5.0.7**，optional 标记只避免独立测试安装自动拉取整套 Hydro；运行 addon 时仍须按上面的安装步骤提供已有 Hydro 包。
+
+覆盖时间边界、北京时间默认窗口、无效参数、同题去重、历史 AC 排除、小组零提交、状态分类、文件导出及模拟原生模型的只读查询。调度回归覆盖真实 `apply` 注册的管理网页脚本与 live/scheduled 的各组合串行执行、卸载取消排队工作、运行中停止不启动下一阶段、锁链在失败后的恢复。这些断言只证明同一 worker 中本插件的调度行为。
 
 ## 已核实的 Hydro API
 
