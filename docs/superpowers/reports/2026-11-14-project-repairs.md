@@ -17,11 +17,11 @@
 | E1 / 09 | `0c8ee84` | SSE DONE 后无需等待 EOF；assistant 新旧流/客户端回归与构建通过。 |
 | E2 / 10、18 | `3fcb78e` | 有界迟到补扫、独立版本游标、重启后对账；人工复核与旧 key 保留。Watch 本地回归含隔离原生 Mongo 双进程/杀 owner 两例，零跳过。 |
 | E3 / 11 | `3057a7c` | ObjectId 使用秒区间，同秒来源保留为先后不确定上下文；规则、证据和 UI 同批更新，`time.cjs` 保留在 Watch 独立发布清单。 |
-| F1 / 12 | `78d883f` | additive delivery_schema、启动/停机恢复与成功投递证据，已 delivered RID 不因重队列再播；SQLite 资源关闭。 |
-| F2 / 13 | `b20d624` | 同步结果和每次 image/text 投递前复查原始来源；非 AC/失效撤队，错误保留资格/pending，重新有效可恢复。 |
-| F3 / 14 | `02a8f1b` | QQ 归属取原始 submission UID 的活动已验证绑定；兼容统计 personID，旧空 UID 不按名字猜测，提供重新确认。 |
-| F4 / 16 | `610807e` | recent/stale 固定快照与持久 after 游标，每轮有界跨页；只有成功同步/去重后推进，新记录水位独立。 |
-| F5 / 17、20 | `198f3a9` | Devpost/DataFountain 必要响应结构与真空列表区分；失败保存旧数据并继续其他源，stats 包括首次失败源且 latest 按 MAX(id)。 |
+| F1 / 13 | `78d883f` | additive delivery_schema、启动/停机恢复与成功投递证据，已 delivered RID 不因重队列再播；SQLite 资源关闭。 |
+| F2 / 12 | `b20d624` | 同步结果和每次 image/text 投递前复查原始来源；非 AC/失效撤队，错误保留资格/pending，重新有效可恢复。 |
+| F3 / 16 | `02a8f1b` | QQ 归属取原始 submission UID 的活动已验证绑定；兼容统计 personID，旧空 UID 不按名字猜测，提供重新确认。 |
+| F4 / 17 | `610807e` | recent/stale 固定快照与持久 after 游标，每轮有界跨页；只有成功同步/去重后推进，新记录水位独立。 |
+| F5 / 14、20 | `198f3a9` | Devpost/DataFountain 必要响应结构与真空列表区分；失败保存旧数据并继续其他源，stats 包括首次失败源且 latest 按 MAX(id)。 |
 | I1 / 集成 | 本报告所在集成提交 | ops helper 与四个 taxonomy runtime 实际安装，交付绝对 locator 验证；CI helper 重启检查、逐文件 shell 解析、锁定 ops 安装及 offline taxonomy/broadcast；总计划与六模块状态更新。 |
 
 ## 最终本地检查
