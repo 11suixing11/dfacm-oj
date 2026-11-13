@@ -83,6 +83,7 @@ class DfacmAcmBroadcast(star.Star):
     # store — MongoDB is the source of truth; the store is just a queue.
     PURGE_HORIZON_SECONDS = 172_800
     RECORDS_SCHEMA_VERSION = 2
+    DELIVERY_SCHEMA_VERSION = 1
     USER_QQ_MAP: dict[str, str] = {}
     DEFAULT_MERGE_ADMINS: tuple[str, ...] = ("1977717178",)
     # --- Ops health monitor: the OJ server writes a heartbeat doc into Mongo
@@ -199,9 +200,9 @@ class DfacmAcmBroadcast(star.Star):
             Path(get_astrbot_plugin_data_path()) / "swpu_acm_broadcast" / "records.db"
         )
         self._db: sqlite3.Connection | None = None
-        self._init_db()
         self._started_at = datetime.now()
         self._started_ts = int(self._started_at.timestamp())
+        self._init_db()
         self._rank_cache: dict[str, str] = {}
         self._rank_cache_at: datetime | None = None
         self._rank_refresh_task: asyncio.Task | None = None
@@ -405,26 +406,68 @@ class DfacmAcmBroadcast(star.Star):
 
         The store is a bounded queue: pending cards, in-flight verdicts and
         a recent-history window for rejudge detection. History, dedup and
-        statistics all read MongoDB directly, so a schema bump simply drops
-        the table — the next poll refetches everything silently.
+        statistics all read MongoDB directly. The legacy records-schema
+        rebuild is separate from additive delivery-state migrations, which
+        must preserve the queue and Mongo watermark.
         """
         self._db_path.parent.mkdir(parents=True, exist_ok=True)
         self._db = sqlite3.connect(self._db_path, isolation_level=None)
-        self._db.row_factory = sqlite3.Row
-        self._db.execute("PRAGMA journal_mode=WAL")
-        self._db.execute("PRAGMA synchronous=NORMAL")
-        self._db.executescript(self._RECORDS_DDL)
-        if self._db_get_meta("records_schema") != str(self.RECORDS_SCHEMA_VERSION):
-            self._db.executescript(
-                """
-                DROP TABLE IF EXISTS records;
-                DROP TABLE IF EXISTS users;
-                DROP TABLE IF EXISTS contest_solves;
-                """
-            )
+        try:
+            self._db.row_factory = sqlite3.Row
+            self._db.execute("PRAGMA journal_mode=WAL")
+            self._db.execute("PRAGMA synchronous=NORMAL")
             self._db.executescript(self._RECORDS_DDL)
-            self._db.execute("DELETE FROM meta WHERE key = 'mongo_last_id'")
-            self._db_set_meta("records_schema", str(self.RECORDS_SCHEMA_VERSION))
+            if self._db_get_meta("records_schema") != str(self.RECORDS_SCHEMA_VERSION):
+                self._db.executescript(
+                    """
+                    DROP TABLE IF EXISTS records;
+                    DROP TABLE IF EXISTS users;
+                    DROP TABLE IF EXISTS contest_solves;
+                    """
+                )
+                self._db.executescript(self._RECORDS_DDL)
+                self._db.execute("DELETE FROM meta WHERE key = 'mongo_last_id'")
+                self._db_set_meta("records_schema", str(self.RECORDS_SCHEMA_VERSION))
+            self._init_delivery_state()
+        except BaseException:
+            self._db.close()
+            self._db = None
+            raise
+
+    def _init_delivery_state(self) -> None:
+        """Add delivery metadata without rebuilding records or guessing sends.
+
+        Legacy card_sent=0 is known pending; card_sent=1 may mean delivered
+        or suppressed, so eligibility and delivery remain unknown (NULL).
+        Column checks and NULL-only backfill also resume partial migrations.
+        """
+        self._db.execute("BEGIN IMMEDIATE")
+        try:
+            columns = {
+                row["name"] for row in self._db.execute("PRAGMA table_info(records)")
+            }
+            if "notify_eligible" not in columns:
+                self._db.execute("ALTER TABLE records ADD COLUMN notify_eligible INTEGER")
+            if "delivered_at" not in columns:
+                self._db.execute("ALTER TABLE records ADD COLUMN delivered_at INTEGER")
+            self._db.execute(
+                "UPDATE records SET notify_eligible = 1 "
+                "WHERE notify_eligible IS NULL AND card_sent = 0"
+            )
+            # Persist before polling, including an empty first page. Once
+            # present this floor applies to every bootstrap page/restart.
+            # An existing watermark without a floor is an established
+            # installation; its unseen downtime records remain eligible.
+            if (
+                not self._db_get_meta("mongo_last_id")
+                and not self._db_get_meta("bootstrap_floor_ts")
+            ):
+                self._db_set_meta("bootstrap_floor_ts", str(self._started_ts))
+            self._db_set_meta("delivery_schema", str(self.DELIVERY_SCHEMA_VERSION))
+            self._db.execute("COMMIT")
+        except BaseException:
+            self._db.execute("ROLLBACK")
+            raise
 
     def _db_get_meta(self, key: str) -> str:
         row = self._db.execute(
@@ -453,8 +496,8 @@ class DfacmAcmBroadcast(star.Star):
         """Insert mapped records (oldest first).
 
         Card decisions are made by the poll flow (against MongoDB) and
-        carried in ``_card_sent``; this method only stores. Rows are
-        INSERT OR IGNORE so reprocessing is always safe.
+        carried in ``_card_sent`` and ``_notify_eligible``; this method only
+        stores. Rows are INSERT OR IGNORE so reprocessing is always safe.
         """
         new_count = 0
         for item in sorted(items, key=lambda entry: entry["ts"]):
@@ -463,8 +506,8 @@ class DfacmAcmBroadcast(star.Star):
                 "rid, user_id, user_name, status, domain_id, doc_id,"
                 " problem_url, problem_title, hidden, tid, contest_title,"
                 " contest_key, language, difficulty, time_ms, memory_kb, tags,"
-                " n_accept, avatar_url, submitted_at, ts, card_sent"
-                ") VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                " n_accept, avatar_url, submitted_at, ts, card_sent, notify_eligible"
+                ") VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 (
                     item["id"],
                     item["user_id"],
@@ -488,6 +531,7 @@ class DfacmAcmBroadcast(star.Star):
                     item["submitted_at"],
                     item["ts"],
                     int(item.get("_card_sent", 1)),
+                    item.get("_notify_eligible"),
                 ),
             )
             if cursor.rowcount:
@@ -883,18 +927,22 @@ class DfacmAcmBroadcast(star.Star):
             return f"{self.BASE_URL}/contest/{tid_hex}"
         return f"{self.BASE_URL}/d/{domain}/contest/{tid_hex}"
 
-    async def _broadcast_contest_ac(self, row: sqlite3.Row) -> bool:
-        """Send one contest-AC card (pastel layout) for a queued row."""
+    async def _broadcast_contest_ac(self, row: sqlite3.Row) -> bool | None:
+        """Return True if sent, False to retry, None for a deleted contest."""
         domain = str(row["domain_id"] or "system")
         tid_hex = str(row["tid"])
         tdoc = self._contest_cache.get(tid_hex)
         if tdoc is None:
-            fetched = await asyncio.to_thread(
-                self._db_contest_docs, self._mongo(), [tid_hex]
-            )
+            try:
+                fetched = await asyncio.to_thread(
+                    self._db_contest_docs, self._mongo(), [tid_hex]
+                )
+            except Exception:
+                self.logger.exception("Contest metadata lookup failed; keeping card queued")
+                return False
             tdoc = fetched.get(tid_hex) or {"missing": True}
         if tdoc.get("missing"):
-            return True  # contest deleted since; drop the card silently
+            return None  # contest deleted since; suppress without a send stamp
         try:
             solve_order, user_solved, participants, rank = await asyncio.to_thread(
                 self._db_contest_card_stats,
@@ -1664,12 +1712,19 @@ class DfacmAcmBroadcast(star.Star):
         """Card decision for freshly mapped records, then insert."""
         if not items or self._db is None:
             return
+        floor_ts = int(self._db_get_meta("bootstrap_floor_ts") or 0)
+        for item in items:
+            # Scope is independent of the current verdict and dedup result.
+            item["_notify_eligible"] = int(
+                item["ts"] >= floor_ts
+                and bool(item.get("tid") or not item.get("hidden"))
+            )
         candidates = [
             item
             for item in items
             if item["status"] == "Accepted"
             and item.get("score", 0) >= 100
-            and item["ts"] >= self._started_ts
+            and item["_notify_eligible"] == 1
             and (item.get("tid") or not item.get("hidden"))
         ]
         suppressed = await asyncio.to_thread(
@@ -1728,7 +1783,11 @@ class DfacmAcmBroadcast(star.Star):
         for row in rows:
             if row["hidden"] and not row["tid"]:
                 continue
-            if int(row["card_sent"]) != 1 or int(row["ts"]) < self._started_ts:
+            if (
+                int(row["card_sent"]) != 1
+                or row["notify_eligible"] != 1
+                or row["delivered_at"] is not None
+            ):
                 continue
             candidates.append(
                 {
@@ -2415,9 +2474,15 @@ class DfacmAcmBroadcast(star.Star):
                 if row["tid"]
                 else await self._broadcast_ac(self._card_item_from_row(row))
             )
-            if sent:
+            if sent is True:
                 self._db.execute(
-                    "UPDATE records SET card_sent = 1 WHERE rid = ?", (row["rid"],)
+                    "UPDATE records SET card_sent = 1, delivered_at = ? WHERE rid = ?",
+                    (int(time.time()), row["rid"]),
+                )
+            elif sent is None:
+                self._db.execute(
+                    "UPDATE records SET card_sent = 1, notify_eligible = 0 WHERE rid = ?",
+                    (row["rid"],),
                 )
 
     async def _refresh_rank_cache(self) -> None:
