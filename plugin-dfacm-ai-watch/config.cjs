@@ -27,13 +27,14 @@ function configFromEnv(env = process.env) {
     if (contests.length > 100 || contests.some(v => !RID.test(v) || RESERVED_CONTESTS.has(v))) {
         throw new WatchError('INVALID_CONFIG', '比赛白名单需要有效的 24 位比赛 ID。');
     }
+    const intervalMs = integer(env.DFACM_AI_WATCH_INTERVAL_MS, 2000, 500, 10000, '扫描间隔');
     return Object.freeze({
         enabled: env.DFACM_AI_WATCH_ENABLED !== '0', domains: [...new Set(domains)], scope,
         contests: [...new Set(contests)],
         retentionDays: integer(env.DFACM_AI_WATCH_RETENTION_DAYS, RETENTION_DAYS, 1, 90, '保留天数'),
-        intervalMs: integer(env.DFACM_AI_WATCH_INTERVAL_MS, 2000, 500, 10000, '扫描间隔'),
+        intervalMs, tickBudgetMs: Math.max(intervalMs, 1500),
         batchSize: integer(env.DFACM_AI_WATCH_BATCH_SIZE, 100, 10, 500, '补扫批量'),
-        sourceLookbackMs: 600000, leaseMs: 60000, maxAttempts: 3,
+        sourceLookbackMs: 600000, repairLookbackMs: 600000, retainedReconcileMs: 60000, leaseMs: 60000, maxAttempts: 3,
         maxCodeBytes: 65536, historyLimit: 20, peerLimit: 100,
     });
 }

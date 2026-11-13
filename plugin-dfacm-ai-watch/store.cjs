@@ -1,14 +1,14 @@
 'use strict';
 
 const { randomBytes, createHash } = require('node:crypto');
-const { WatchError, RID, eligible, recordId, submittedAt } = require('./config.cjs');
+const { WatchError, RID, RESERVED_CONTESTS, eligible, recordId, submittedAt } = require('./config.cjs');
 const { fingerprint, languageFamily } = require('./detector.cjs');
 
 const DAY = 86400000;
 const PROJECTION = { _id: 1, domainId: 1, uid: 1, pid: 1, contest: 1, lang: 1, code: 1, status: 1, hackTarget: 1, input: 1 };
 const unwrap = result => result && Object.prototype.hasOwnProperty.call(result, 'value') ? result.value : result;
-const queryRows = (collection, query, sort, limit, projection) => collection.find(query, projection ? { projection } : {})
-    .sort(sort).limit(limit).maxTimeMS(5000).toArray();
+const queryRows = (collection, query, sort, limit, projection, maxTimeMS = 5000) => collection.find(query, projection ? { projection } : {})
+    .sort(sort).limit(limit).maxTimeMS(maxTimeMS).toArray();
 const regexEscape = text => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 function publicReport(report, detail = false) {
@@ -32,9 +32,17 @@ function createMongoStore({ reports, sources, state, jobs, records, problemModel
     const scanTag = createHash('sha256').update(JSON.stringify({ scope: config.scope, contests: config.contests })).digest('hex').slice(0, 12);
     const idAt = millis => objectId(Math.max(0, Math.floor(millis / 1000)).toString(16).padStart(8, '0') + '0000000000000000');
 
-    async function getRecord(domainId, rid) {
+    const budgetEnd = () => now() + config.tickBudgetMs;
+    const queryTime = deadline => Math.max(1, Math.min(5000, deadline - now()));
+    function scoped(query, ids = objectId) {
+        if (config.contests.length) query.contest = { $in: config.contests.map(ids) };
+        else if (config.scope === 'contests') query.contest = { $exists: true, $ne: null, $nin: [...RESERVED_CONTESTS].map(ids) };
+        return query;
+    }
+
+    async function getRecord(domainId, rid, deadline = budgetEnd()) {
         if (!RID.test(rid)) return null;
-        return records.findOne({ domainId, _id: objectId(rid) }, { projection: PROJECTION, maxTimeMS: 5000 });
+        return records.findOne({ domainId, _id: objectId(rid) }, { projection: PROJECTION, maxTimeMS: queryTime(deadline) });
     }
 
     async function ensureRecord(record) {
@@ -73,9 +81,9 @@ function createMongoStore({ reports, sources, state, jobs, records, problemModel
         catch (error) { if (error?.code === 11000) return false; throw error; }
     }
 
-    async function captureSources(domainId) {
+    async function captureSources(domainId, deadline = budgetEnd()) {
         const key = `source-scan:${domainId}`;
-        const checkpoint = await state.findOne({ _id: key });
+        const checkpoint = await state.findOne({ _id: key }, { maxTimeMS: queryTime(deadline) });
         const lower = new Date(Math.max(now() - config.sourceLookbackMs, checkpoint?.completedAt ? new Date(checkpoint.completedAt).getTime() : 0));
         const query = { type: 'job', status: 'ready', scope: new RegExp(`^${regexEscape(domainId)}:[1-9]\\d*$`),
             'answer.mode': 'solve', completedAt: { $gte: lower, $lte: active() }, expireAt: { $gt: active() } };
@@ -83,9 +91,10 @@ function createMongoStore({ reports, sources, state, jobs, records, problemModel
             query.$or = [{ completedAt: { $gt: lower } }, { completedAt: lower, _id: { $gt: checkpoint.jobId || '' } }];
         }
         const rows = await queryRows(jobs, query, { completedAt: 1, _id: 1 }, config.batchSize,
-            { _id: 1, type: 1, status: 1, scope: 1, target: 1, answer: 1, completedAt: 1 });
+            { _id: 1, type: 1, status: 1, scope: 1, target: 1, answer: 1, completedAt: 1 }, queryTime(deadline));
         let count = 0;
         for (const job of rows) {
+            if (now() >= deadline) break;
             if (await archiveJob(job, domainId)) count++;
             // Monotonic checkpoint: a slower Hydro worker must not move it back.
             try {
@@ -97,22 +106,111 @@ function createMongoStore({ reports, sources, state, jobs, records, problemModel
         return { captured: count, scanned: rows.length };
     }
 
-    async function scan(domainId) {
+    async function scan(domainId, deadline = budgetEnd()) {
         const key = `record-scan:${domainId}:${scanTag}`;
-        const checkpoint = await state.findOne({ _id: key });
+        const checkpoint = await state.findOne({ _id: key }, { maxTimeMS: queryTime(deadline) });
         const floor = String(idAt(now() - (checkpoint ? config.retentionDays * DAY : config.sourceLookbackMs)));
         const cursor = checkpoint?.rid && checkpoint.rid > floor ? checkpoint.rid : floor;
-        const query = { domainId, _id: { $gt: objectId(cursor) }, uid: { $gt: 0 }, pid: { $gt: 0 } };
-        if (config.contests.length) query.contest = { $in: config.contests.map(objectId) };
-        else if (config.scope === 'contests') query.contest = { $exists: true, $ne: null, $nin: ['000000000000000000000000', '000000000000000000000001'].map(objectId) };
-        const rows = await queryRows(records, query, { _id: 1 }, config.batchSize, PROJECTION);
-        let queued = 0;
-        for (const record of rows) if (await ensureRecord(record)) queued++;
-        const rid = rows.length ? recordId(rows[rows.length - 1]) : cursor;
+        if (now() >= deadline) return { scanned: 0, queued: 0 };
+        const query = scoped({ domainId, _id: { $gt: objectId(cursor) }, uid: { $gt: 0 }, pid: { $gt: 0 } });
+        const rows = await queryRows(records, query, { _id: 1 }, config.batchSize, PROJECTION, queryTime(deadline));
+        let queued = 0; let rid = cursor;
+        for (const record of rows) {
+            if (now() >= deadline) break;
+            if (await ensureRecord(record)) queued++;
+            rid = recordId(record);
+        }
         try { await state.updateOne({ _id: key, $or: [{ rid: { $exists: false } }, { rid: { $lte: rid } }] },
             { $set: { rid, updatedAt: active(), expireAt: expires() } }, { upsert: true }); }
         catch (error) { if (error?.code !== 11000) throw error; }
         return { scanned: rows.length, queued };
+    }
+
+    // Tokens fence checkpoint writes even if an expired worker resumes after
+    // another process has acquired the same scanner. Report insertion is unique.
+    async function withScanLease(domainId, kind, deadline, work) {
+        if (!config.enabled || !config.domains.includes(domainId) || now() >= deadline) return { scanned: 0, queued: 0 };
+        const key = `${kind}:v1:${domainId}:${scanTag}`;
+        const token = `${owner}:${randomBytes(8).toString('hex')}`;
+        try {
+            await state.updateOne({ _id: key, $or: [{ leaseUntil: { $exists: false } }, { leaseUntil: { $lte: active() } }] },
+                { $set: { owner: token, leaseUntil: new Date(now() + config.leaseMs), expireAt: expires() },
+                    $setOnInsert: { version: 1, kind, domainId, scope: { scope: config.scope, contests: config.contests } } },
+                { upsert: true, maxTimeMS: queryTime(deadline) });
+        } catch (error) { if (error?.code === 11000) return { scanned: 0, queued: 0 }; throw error; }
+        const owned = () => ({ _id: key, owner: token, leaseUntil: { $gt: active() } });
+        const save = async change => (await state.updateOne(owned(), { $set: { ...change, updatedAt: active() } },
+            { maxTimeMS: queryTime(deadline) })).matchedCount > 0;
+        try {
+            const checkpoint = await state.findOne(owned(), { maxTimeMS: queryTime(deadline) });
+            if (!checkpoint || now() >= deadline) return { scanned: 0, queued: 0 };
+            return await work(checkpoint, save);
+        } finally {
+            await state.updateOne({ _id: key, owner: token }, { $unset: { owner: '', leaseUntil: '' } }, { maxTimeMS: 5000 });
+        }
+    }
+
+    async function repair(domainId, deadline = budgetEnd()) {
+        return withScanLease(domainId, 'record-overlap', deadline, async (checkpoint, save) => {
+            let cycle = checkpoint;
+            if (!cycle.upper || cycle.done) {
+                // Adjacent fixed windows overlap by ten minutes. Use the last
+                // upper bound too, so a slow, paginated round cannot create a gap.
+                const previousUpper = cycle.upper ? parseInt(cycle.upper.slice(0, 8), 16) * 1000 : now();
+                cycle = { lower: String(idAt(Math.max(now() - config.retentionDays * DAY,
+                    Math.min(now(), previousUpper) - config.repairLookbackMs))),
+                    upper: String(idAt(now() + 1000)), after: null, done: false };
+                if (!await save(cycle)) return { scanned: 0, queued: 0 };
+            }
+            const floor = String(idAt(now() - config.retentionDays * DAY));
+            const range = { $gte: objectId(cycle.lower > floor ? cycle.lower : floor), $lt: objectId(cycle.upper) };
+            if (cycle.after) range.$gt = objectId(cycle.after);
+            if (now() >= deadline) return { scanned: 0, queued: 0 };
+            const rows = await queryRows(records, scoped({ domainId, _id: range, uid: { $gt: 0 }, pid: { $gt: 0 } }),
+                { _id: 1 }, config.batchSize, PROJECTION, queryTime(deadline));
+            let processed = 0; let queued = 0; let after = cycle.after;
+            for (const record of rows) {
+                if (now() >= deadline) break;
+                if (await ensureRecord(record)) queued++;
+                after = recordId(record); processed++;
+            }
+            await save({ after, done: processed === rows.length && rows.length < config.batchSize });
+            return { scanned: rows.length, queued };
+        });
+    }
+
+    async function reconcile(domainId, mode = 'waiting', deadline = budgetEnd()) {
+        if (!['waiting', 'retained'].includes(mode)) throw new Error('Invalid verdict reconciliation mode');
+        return withScanLease(domainId, `verdict-${mode}`, deadline, async (checkpoint, save) => {
+            if (checkpoint.nextAt && new Date(checkpoint.nextAt).getTime() > now()) return { scanned: 0, queued: 0 };
+            const base = scoped({ domainId, expireAt: { $gt: active() } }, id => id);
+            // Hydro 5.0.7: waiting, judging, compiling, fetched. Missing legacy
+            // verdicts also need repair; analysis.state is deliberately unrelated.
+            if (mode === 'waiting') base.verdict = { $in: [0, 20, 21, 22, null] };
+            let cycle = checkpoint;
+            if (!cycle.upper || cycle.done) {
+                // Retention is based on report.expireAt, not submission age.
+                // Fix the current maximum so continuing arrivals cannot prevent
+                // wraparound to older reports which were rejudged meanwhile.
+                const latest = await queryRows(reports, base, { rid: -1 }, 1, { rid: 1 }, queryTime(deadline));
+                cycle = { lower: '000000000000000000000000', upper: latest[0]?.rid || '000000000000000000000000', after: null, done: false };
+                if (!await save(cycle)) return { scanned: 0, queued: 0 };
+            }
+            const query = { ...base, rid: { $gte: cycle.lower, $lte: cycle.upper, ...(cycle.after ? { $gt: cycle.after } : {}) } };
+            if (now() >= deadline) return { scanned: 0, queued: 0 };
+            const rows = await queryRows(reports, query, { rid: 1 }, config.batchSize,
+                { _id: 1, rid: 1, verdict: 1 }, queryTime(deadline));
+            let processed = 0; let after = cycle.after;
+            for (const report of rows) {
+                if (now() >= deadline) break;
+                const record = await getRecord(domainId, report.rid, deadline);
+                if (record) await updateVerdict(record, report.verdict, deadline);
+                after = report.rid; processed++;
+            }
+            const done = processed === rows.length && rows.length < config.batchSize;
+            await save({ after, done, nextAt: new Date(done && mode === 'retained' ? now() + config.retainedReconcileMs : 0) });
+            return { scanned: rows.length, queued: 0 };
+        });
     }
 
     async function pending() {
@@ -180,9 +278,12 @@ function createMongoStore({ reports, sources, state, jobs, records, problemModel
                 error: '分析暂时失败，未作出结论。', nextAttemptAt: new Date(now() + config.intervalMs * Math.max(1, report.attempts)) },
             $unset: { owner: '', leaseUntil: '' } });
     }
-    async function updateVerdict(record) {
+    async function updateVerdict(record, expectedVerdict, deadline = budgetEnd()) {
         if (!eligible(record, config)) return;
-        await reports.updateOne({ _id: reportKey(record.domainId, recordId(record)), expireAt: { $gt: active() } }, { $set: { verdict: record.status } });
+        const query = { _id: reportKey(record.domainId, recordId(record)), expireAt: { $gt: active() } };
+        // A stale reconciliation read must not overwrite a concurrent result event.
+        if (arguments.length >= 2) query.verdict = expectedVerdict ?? null;
+        await reports.updateOne(query, { $set: { verdict: record.status } }, { maxTimeMS: queryTime(deadline) });
     }
 
     async function get(domainId, rid) {
@@ -266,7 +367,7 @@ function createMongoStore({ reports, sources, state, jobs, records, problemModel
             scope: config.scope, contests: config.contests, retentionDays: config.retentionDays, intervalMs: config.intervalMs };
     }
 
-    return { ensureRecord, getRecord, archiveJob, captureSources, scan, pending, claim, context, complete, fail, updateVerdict,
+    return { ensureRecord, getRecord, archiveJob, captureSources, scan, repair, reconcile, pending, claim, context, complete, fail, updateVerdict,
         get, list, review, evidence, heartbeat, health, owner };
 }
 

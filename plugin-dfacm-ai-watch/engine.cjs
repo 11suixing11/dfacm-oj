@@ -19,34 +19,47 @@ function createEngine({ store, config, now = Date.now, log = () => {} }) {
         if (timer) { clearTimeout(timer); timer = null; }
         schedule(50);
     }
+    let nextTask = 0;
     async function run() {
-        const began = now(); const totals = { scanned: 0, captured: 0, analyzed: 0, error: false };
-        try {
-            // Archive AI output before analyzing a just-arrived submission.
-            for (const domainId of config.domains) {
-                const captured = await store.captureSources(domainId); totals.captured += captured.captured;
-            }
+        const deadline = now() + config.tickBudgetMs;
+        const totals = { scanned: 0, captured: 0, analyzed: 0, error: false };
+        const exhausted = () => stopped || now() >= deadline;
+        const tasks = [];
+        for (const domainId of config.domains) tasks.push(async () => {
+            const captured = await store.captureSources(domainId, deadline); totals.captured += captured.captured;
+        });
+        // Durable reconciliation runs independently of event delivery and discovery.
+        for (const mode of ['waiting', 'retained']) for (const domainId of config.domains) tasks.push(async () => {
+            await store.reconcile(domainId, mode, deadline);
+        });
+        for (const method of ['repair', 'scan']) for (const domainId of config.domains) tasks.push(async () => {
+            const scan = await store[method](domainId, deadline); totals.scanned += scan.scanned;
+        });
+        tasks.push(async () => {
             for (const [key, hint] of [...events.entries()].slice(0, config.batchSize)) {
-                if (stopped) break;
-                const record = await store.getRecord(hint.domainId, hint.rid);
+                if (exhausted()) break;
+                const record = await store.getRecord(hint.domainId, hint.rid, deadline);
                 if (record) { await store.ensureRecord(record); await store.updateVerdict(record); }
-                // A result event can arrive while the database read is in flight.
-                // Keep that newer hint so the final verdict is not lost.
+                // Keep a newer event that arrived during the database read.
                 if (events.get(key) === hint) events.delete(key);
             }
-            for (const domainId of config.domains) {
-                if (stopped) break;
-                const scan = await store.scan(domainId); totals.scanned += scan.scanned;
-            }
+        });
+        tasks.push(async () => {
             for (const candidate of await store.pending()) {
-                if (stopped) break;
+                if (exhausted()) break;
                 const claimed = await store.claim(candidate);
                 if (!claimed) continue;
                 try { const context = await store.context(claimed); await store.complete(claimed, analyze(context)); totals.analyzed++; }
                 catch (error) { await store.fail(claimed); totals.error = true; log('analysis', error); }
-                if (now() - began >= Math.max(config.intervalMs, 1500)) break;
             }
-        } catch (error) { totals.error = true; log('scan', error); }
+        });
+        // Resume at the next phase/domain when a slow query consumes the budget;
+        // otherwise early domains or discovery can permanently starve repair.
+        for (let count = 0; count < tasks.length && !exhausted(); count++) {
+            const task = tasks[nextTask]; nextTask = (nextTask + 1) % tasks.length;
+            try { await task(); }
+            catch (error) { totals.error = true; log('scan', error); }
+        }
         if (!stopped) await store.heartbeat(totals).catch(error => log('heartbeat', error));
         return totals;
     }

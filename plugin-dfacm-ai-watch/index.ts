@@ -21,6 +21,7 @@ export async function apply(ctx: Context) {
         { key: { expireAt: 1 }, name: 'expiry', expireAfterSeconds: 0 },
         { key: { domainId: 1, rid: -1 }, name: 'domain_rid', unique: true },
         { key: { domainId: 1, state: 1, submittedAt: 1 }, name: 'pending' },
+        { key: { domainId: 1, verdict: 1, rid: 1 }, name: 'verdict_reconcile' },
         { key: { domainId: 1, contest: 1, submittedAt: -1 }, name: 'contest' });
     await db.ensureIndexes(sources,
         { key: { expireAt: 1 }, name: 'expiry', expireAfterSeconds: 0 },
