@@ -1,14 +1,14 @@
 # d&f算法网认证插件（内部 addon 标识：swpu-regcode）
 
-Hydro v5 的原生注册流程是「邮箱 → 点邮件里的链接 → 设账密」。本插件提供验证码注册、验证码免密登录与密码登录三个标签页，登录后按安全的站内来源返回；第二因素通过常显的原生登录入口完成。验证码存储与消费独立到 `codes.ts`，登录策略独立到 `auth.ts`，真实客户端 IP 解析独立到 `logic.ts`。
+Hydro v5 的原生注册流程是「邮箱 → 点邮件里的链接 → 设账密」。本插件默认提供「邮箱 → 验证码」免密流程，未注册邮箱补填用户名即可建号；管理员另有密码面板。登录后按安全的站内来源返回。所有游客和管理员都能看到原生登录入口，启用两步验证或通行密钥的账号在 Hydro 原生页面完成认证。验证码存储与消费独立到 `codes.ts`，登录策略独立到 `auth.ts`，真实客户端 IP 解析独立到 `logic.ts`。
 
 ## 工作方式
 
 ```
-GET  /reg            注册 / 验证码 / 密码登录页（读取插件目录下的 reg.html）
-POST /reg/code       {mail, purpose}   发送 6 位验证码（purpose: reg=注册 / login=免密登录）
-POST /reg/complete   {mail, code, uname, password}   注册并自动登录
-POST /reg/login      {mail, code}      验证码免密登录
+GET  /reg            验证码登录 / 注册页（读取插件目录下的 reg.html）
+POST /reg/code       {mail, purpose}   发送 6 位验证码（auto=自动分流 / reg=注册 / login=免密登录）
+POST /reg/complete   {mail, code, uname, csrf}   注册并自动登录（password 保留为可选兼容字段）
+POST /reg/login      {mail, code, csrf}         验证码免密登录
 ```
 
 - 验证码存独立集合 `regcode`，数据库只保存随机盐和 SHA-256 摘要，**不保存明文**；发送成功后 5 分钟内有效（TTL 索引只负责清理，校验显式检查 `expireAt`）
@@ -78,7 +78,7 @@ npm ci
 npm test
 ```
 
-`npm ci` 按锁文件安装仅用于开发测试的 `tsx` / `esbuild`。`npm test` 运行 `logic/codes/config` 单元测试、使用 Hydro API 替身的 handler 回归测试，以及执行实际页面脚本的 DOM/fetch 替身测试。页面测试覆盖站外返回地址、密码登录落点、原生入口、OAuth 顶层导航和失败恢复。测试不连接线上数据库、SMTP 或判题机；真实认证仍需在同版本测试实例验收。
+`npm ci` 按锁文件安装仅用于开发测试的 `tsx` / `esbuild` / `linkedom`。`npm test` 运行 `logic/codes/config` 单元测试、使用 Hydro API 替身的 handler 回归测试，以及执行实际页面脚本的页面测试。原生入口回归使用真实 DOM，验证游客移除密码面板后仍可找到入口，并把页面请求交给实际 handler 验证第二因素拒绝后的恢复路径。页面测试还覆盖站外返回地址、密码登录落点、OAuth 顶层导航和失败恢复。测试不连接线上数据库、SMTP 或判题机；真实认证仍需在同版本测试实例验收。
 
 ## 依赖
 
@@ -90,6 +90,7 @@ npm test
 
 - `return` 及后端响应中的跳转只能指向同源站内路径；密码登录显式传 `redirect`，默认回首页。
 - 启用两步验证或通行密钥的账号使用常显入口 `/login?fallback=1`；它离开 iframe，在原生页面完成第二因素。
+- 原生入口位于两个面板和管理员页脚之外，不依赖 `canPwd`。其 `redirect` 只保留安全站内 `return`，拒绝站外、反斜线、控制字符和认证循环地址，默认回首页。管理员密码面板及找回密码链接仍由 `PRIV_EDIT_SYSTEM` 门控。
 - 第三方登录、找回密码同样在顶层打开，避免被 iframe / 响应头限制拦截。
 - 密码登录保留 15 秒超时、重复提交保护、限流提示和错误后的输入。测试实例还需验证普通密码、验证码、第二因素、OAuth 和弹层返回的完整流程。
 

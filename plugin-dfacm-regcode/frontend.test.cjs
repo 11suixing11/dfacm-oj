@@ -3,6 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const { test } = require('node:test');
+const { realPage, visible } = require('./frontend-fixture.cjs');
 
 const html = fs.readFileSync(path.join(__dirname, 'reg.html'), 'utf8');
 const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((match) => match[1]);
@@ -101,6 +102,61 @@ function page({
 }
 
 // ---- 单流无密码 UI ----
+
+test('a guest keeps a visible native second-factor entry when the administrator pane is removed', () => {
+    const p = realPage({ boot: { canPwd: false, tab: 'pwd' }, returnTo: '/p/100?lang=cpp#submit' });
+    assert.equal(p.$('f-pwd'), null, 'guest must not keep the administrator password form');
+    assert.equal(p.$('ft-admin-links'), null, 'guest must not keep administrator footer links');
+    const native = p.$('native-login');
+    assert.ok(visible(native), 'guest must retain a visible native second-factor login link');
+    const url = new URL(native.getAttribute('href'), p.location);
+    assert.equal(url.pathname, '/login');
+    assert.equal(url.searchParams.get('fallback'), '1');
+    assert.equal(url.searchParams.get('redirect'), '/p/100?lang=cpp#submit');
+});
+
+test('the guest native handoff leaves an iframe and rejects unsafe or authentication-loop returns', () => {
+    for (const [returnTo, expected] of [
+        ['/training?tid=42#progress', '/training?tid=42#progress'],
+        ['//evil.example/path', '/'], ['https://evil.example', '/'],
+        ['/\\evil.example/path', '/'], ['/\nevil', '/'],
+        ['/login?fallback=1', '/'], ['/reg?tab=pwd', '/'],
+    ]) {
+        const p = realPage({ embed: true, returnTo });
+        const native = p.$('native-login');
+        assert.ok(visible(native), 'embedded guest must retain the native login link');
+        assert.equal(native.target, '_top');
+        const url = new URL(native.getAttribute('href'), p.location);
+        assert.equal(url.origin, 'https://oj.example');
+        assert.equal(url.pathname, '/login');
+        assert.equal(url.searchParams.get('fallback'), '1');
+        assert.equal(url.searchParams.get('redirect'), expected, returnTo);
+    }
+});
+
+test('an operator retains the password pane and can return to the passwordless flow beside the native entry', async () => {
+    const p = realPage({ boot: { canPwd: true, tab: 'pwd' } });
+    assert.ok(visible(p.$('f-pwd')));
+    assert.ok(visible(p.$('native-login')));
+    assert.equal(p.$('ft-admin-links').hidden, false);
+    await p.click('p-back');
+    assert.ok(visible(p.$('f-flow')));
+    assert.equal(visible(p.$('f-pwd')), false);
+    assert.ok(visible(p.$('native-login')), 'entry remains visible in either panel');
+});
+
+test('the native noscript escape and guest OAuth login remain available outside the administrator pane', () => {
+    const p = realPage({ embed: true, returnTo: '/training', boot: {
+        oauth: [{ id: 'github', text: 'GitHub', icon: '<svg xmlns="http://www.w3.org/2000/svg"></svg>' }],
+    } });
+    const oauth = p.document.querySelector('#oauth-list a');
+    assert.ok(visible(oauth));
+    assert.equal(oauth.target, '_top');
+    assert.equal(new URL(oauth.getAttribute('href'), p.location).searchParams.get('redirect'), '/training');
+    const noScript = p.document.querySelector('noscript a');
+    assert.equal(noScript.getAttribute('href'), '/login?fallback=1');
+    assert.equal(noScript.target, '_top');
+});
 
 test('the flow asks for an email and posts it with purpose auto and the CSRF token', async () => {
     const p = page({ csrf: 'b'.repeat(64) });

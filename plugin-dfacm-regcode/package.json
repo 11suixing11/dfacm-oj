@@ -8,6 +8,7 @@
   },
   "devDependencies": {
     "esbuild": "0.25.12",
+    "linkedom": "0.18.12",
     "tsx": "4.20.3"
   },
   "scripts": {
