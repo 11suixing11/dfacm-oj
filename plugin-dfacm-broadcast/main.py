@@ -1359,26 +1359,59 @@ class DfacmAcmBroadcast(star.Star):
             key: self._problem_cache[key] for key in wanted if key in self._problem_cache
         }
 
-    def _db_fetch_increment(self, after_hex: str, recent_after_hex: str):
-        """Worker thread: records past the watermark + the recent window."""
+    def _db_fetch_increment(self, after_hex: str) -> list[dict]:
+        """Worker thread: new records past the independent ingest watermark."""
         db = self._mongo()
         query = {"_id": {"$gt": ObjectId(after_hex)}} if after_hex else {}
-        new_docs: list[dict] = list(
+        return list(
             db.record.find(query, self._RECORD_PROJECTION)
             .sort("_id", 1)
             .limit(400)
         )
-        recent_docs: list[dict] = []
-        if recent_after_hex:
-            recent_docs = list(
-                db.record.find(
-                    {"_id": {"$gte": ObjectId(recent_after_hex)}},
-                    self._RECORD_PROJECTION,
-                )
-                .sort("_id", 1)
-                .limit(400)
+
+    def _db_fetch_recent_page(
+        self, lower_hex: str, upper_hex: str, after_hex: str, limit: int = 400
+    ) -> list[dict]:
+        """Worker thread: one ordered page in the fixed [lower, upper) window."""
+        bounds = {"$gte": ObjectId(lower_hex), "$lt": ObjectId(upper_hex)}
+        if after_hex:
+            bounds["$gt"] = ObjectId(after_hex)
+        return list(
+            self._mongo().record.find({"_id": bounds}, self._RECORD_PROJECTION)
+            .sort("_id", 1)
+            .limit(limit)
+        )
+
+    async def _reconcile_recent(self) -> None:
+        """Finish a persisted window before starting another; two pages per poll."""
+        key = "recent_reconcile_scan"
+        saved = self._db_get_meta(key)
+        if saved:
+            scan = json.loads(saved)
+        else:
+            now = datetime.now(timezone.utc)
+            scan = {
+                "lower": str(ObjectId.from_datetime(
+                    now - timedelta(seconds=self.RECENT_WINDOW_SECONDS)
+                )),
+                # ObjectId clocks have one-second precision. Include the whole
+                # current second, even when its records differ only in the tail.
+                "upper": str(ObjectId.from_datetime(now + timedelta(seconds=1))),
+                "after": "",
+            }
+            self._db_set_meta(key, json.dumps(scan))
+        for _ in range(2):
+            docs = await asyncio.to_thread(
+                self._db_fetch_recent_page, scan["lower"], scan["upper"], scan["after"]
             )
-        return new_docs, recent_docs
+            await self._sync_recent(docs)
+            if len(docs) < 400:
+                self._db_set_meta(key, "")
+                break
+            scan["after"] = str(docs[-1]["_id"])
+            # Query, verdict writes and the AC decision all succeeded. An
+            # interruption before this write replays this page safely.
+            self._db_set_meta(key, json.dumps(scan))
 
     def _db_map_docs(self, docs: list[dict]) -> list[dict]:
         """Worker thread: enrich record documents into ingest items.
@@ -1680,29 +1713,17 @@ class DfacmAcmBroadcast(star.Star):
             }
         ]
 
-    async def _poll_new_records(self) -> None:
-        """Watermark poll + recent-window status sync, MongoDB as authority.
-
-        Query 1 ingests records past the watermark. Query 2 re-reads the
-        last RECENT_WINDOW_SECONDS so slow verdicts and in-place rejudges
-        converge;         an AC transition re-runs the card decision with the
-        earlier-AC lookup made directly against the source database.
-        """
+    async def _poll_new_records(self) -> int:
+        """Ingest new records, then resume the independent verdict snapshot."""
         if self._db is None:
             return 0
         last_hex = self._db_get_meta("mongo_last_id")
-        recent_after = ObjectId.from_datetime(
-            datetime.now(timezone.utc)
-            - timedelta(seconds=self.RECENT_WINDOW_SECONDS)
-        )
-        new_docs, recent_docs = await asyncio.to_thread(
-            self._db_fetch_increment, last_hex, str(recent_after)
-        )
+        new_docs = await asyncio.to_thread(self._db_fetch_increment, last_hex)
         items = await asyncio.to_thread(self._db_map_docs, new_docs)
         await self._decide_and_store(items)
         if new_docs:
             self._db_set_meta("mongo_last_id", str(new_docs[-1]["_id"]))
-        await self._sync_recent(recent_docs)
+        await self._reconcile_recent()
         # The recent window cannot prove that an older queued source exists.
         # Explicit RID reads also reconcile deletions while delivery is held.
         for row in self._db.execute(
@@ -1862,24 +1883,49 @@ class DfacmAcmBroadcast(star.Star):
         )
 
     async def _maybe_stale_sweep(self) -> None:
-        """Hourly: re-check stuck verdicts and publish contest end reports."""
-        now = time.time()
-        if now - self._stale_sweep_at < self.STALE_SWEEP_SECONDS:
-            return
-        self._stale_sweep_at = now
+        """Hourly bounded unresolved scan; resume two pages on every poll."""
         if self._db is None:
             return
+        now = time.time()
+        due = now - self._stale_sweep_at >= self.STALE_SWEEP_SECONDS
+        key = "stale_reconcile_scan"
+        saved = self._db_get_meta(key)
         placeholders = ",".join("?" for _ in self.NON_FINAL_TEXTS)
-        rows = self._db.execute(
-            f"SELECT * FROM records WHERE status IN ({placeholders}) LIMIT 200",
-            tuple(self.NON_FINAL_TEXTS),
-        ).fetchall()
-        if rows:
-            docs = await asyncio.to_thread(
-                self._db_fetch_by_rids, [str(row["rid"]) for row in rows]
-            )
-            await self._sync_recent(docs)
-        await self._contest_end_reports()
+        if saved:
+            scan = json.loads(saved)
+        else:
+            if not due:
+                return
+            bounds = self._db.execute(
+                f"SELECT MIN(rid) AS lower, MAX(rid) AS upper FROM records "
+                f"WHERE status IN ({placeholders})", self.NON_FINAL_TEXTS,
+            ).fetchone()
+            scan = None
+            if bounds["upper"] is not None:
+                scan = {"lower": bounds["lower"], "upper": bounds["upper"], "after": ""}
+                self._db_set_meta(key, json.dumps(scan))
+        if scan is not None:
+            for _ in range(2):
+                rows = self._db.execute(
+                    f"SELECT rid FROM records WHERE status IN ({placeholders}) "
+                    "AND rid >= ? AND rid <= ? AND rid > ? ORDER BY rid LIMIT 200",
+                    (*self.NON_FINAL_TEXTS, scan["lower"], scan["upper"], scan["after"]),
+                ).fetchall()
+                if rows:
+                    docs = await asyncio.to_thread(
+                        self._db_fetch_by_rids, [str(row["rid"]) for row in rows]
+                    )
+                    await self._sync_recent(docs)
+                if len(rows) < 200:
+                    self._db_set_meta(key, "")
+                    break
+                # Use the local page, including missing/still-unresolved source
+                # RIDs, so permanent failures cannot starve subsequent rows.
+                scan["after"] = str(rows[-1]["rid"])
+                self._db_set_meta(key, json.dumps(scan))
+        if due:
+            await self._contest_end_reports()
+            self._stale_sweep_at = now
 
     # ------------------------------------------------------------------
     # Ops health monitor: external eyes on the OJ.
