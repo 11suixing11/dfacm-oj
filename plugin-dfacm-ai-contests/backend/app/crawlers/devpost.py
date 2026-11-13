@@ -42,12 +42,19 @@ class DevpostCrawler(BaseCrawler):
         rows: list[Competition] = []
         for status in ("open", "upcoming"):
             for page in range(1, _STATUS_MAX_PAGES[status] + 1):
-                resp = await self.fetch(API_URL, params={"page": page, "status": status})
-                data = resp.json()
-                batch = data.get("hackathons") or []
-                meta = data.get("meta") or {}
+                data = await self.fetch_json(API_URL, params={"page": page, "status": status})
+                batch = data.get("hackathons")
+                meta = data.get("meta")
+                if not isinstance(batch, list) or any(not isinstance(h, dict) for h in batch):
+                    raise CrawlError("DevPost hackathons 必须是对象列表")
+                if not isinstance(meta, dict):
+                    raise CrawlError("DevPost 缺少分页对象 meta")
+                total = meta.get("total_count")
+                per_page = meta.get("per_page")
+                if type(total) is not int or total < 0 or type(per_page) is not int or per_page <= 0:
+                    raise CrawlError("DevPost meta.total_count/per_page 必须是非负/正整数")
                 rows.extend(parse_hackathons(batch, status))
-                if page * int(meta.get("per_page") or 9) >= int(meta.get("total_count") or 0):
+                if page * per_page >= total:
                     break
         # 去重（可能重复出现）
         seen: set[str] = set()

@@ -7,13 +7,14 @@ from urllib.parse import urljoin
 from bs4 import BeautifulSoup
 
 from ..models import Competition, parse_date, parse_prize
-from .base import BaseCrawler
+from .base import BaseCrawler, CrawlError
 
 BASE_URL = "https://www.datafountain.cn"
 LIST_URL = f"{BASE_URL}/competitions"
 
 _DATE_RE = re.compile(r"^\d{4}[.\-/]\d{1,2}[.\-/]\d{1,2}$")
 _USERS_RE = re.compile(r"([\d,]+)\s*users")
+_ERROR_TITLE_RE = re.compile(r"maintenance|\blog\s*in\b|\bsign\s*in\b|\berror\b|维护|登录|错误", re.I)
 
 
 class DataFountainCrawler(BaseCrawler):
@@ -41,15 +42,23 @@ class DataFountainCrawler(BaseCrawler):
 def parse_html(html: str) -> list[Competition]:
     """解析列表页 HTML → 统一模型列表（纯函数，便于用 fixture 测试）。"""
     soup = BeautifulSoup(html, "lxml")
+    page_headings = [el.get_text(" ", strip=True) for el in soup.select("title, h1")]
+    if any(_ERROR_TITLE_RE.search(text) for text in page_headings) or soup.select_one('form input[type="password"]'):
+        raise CrawlError("DataFountain 返回维护/登录/错误页面")
+    # This SSR list marker is present in df_p1.html. An empty list in the
+    # competition page is legitimate; a generic HTML page without it is not.
+    listing = soup.select_one(".df-page-competitions .compt-list")
+    if listing is None:
+        raise CrawlError("DataFountain 缺少比赛列表结构")
     out: list[Competition] = []
-    for card in soup.select("div.compt-item"):
+    for card in listing.select("div.compt-item"):
         title_a = card.select_one("a.compt__title")
         if title_a is None:
-            continue
+            raise CrawlError("DataFountain 比赛卡片缺少标题链接")
         title = title_a.get_text(strip=True)
         href = title_a.get("href") or ""
         if not title or not href:
-            continue
+            raise CrawlError("DataFountain 比赛卡片标题或链接为空")
         external_id = href.rstrip("/").split("/")[-1]
 
         organizer = None

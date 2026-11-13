@@ -22,14 +22,16 @@ def stats():
                WHERE id IN (SELECT MAX(id) FROM crawl_runs GROUP BY source)"""
         ).fetchall()
         last_runs = {r["source"]: r for r in run_rows}
+        competitions = {r["source"]: r for r in comp_rows}
 
         sources = []
-        for r in comp_rows:
-            last = last_runs.get(r["source"])
+        for source in sorted(competitions.keys() | last_runs.keys()):
+            r = competitions.get(source)
+            last = last_runs.get(source)
             sources.append({
-                "source": r["source"],
-                "total": r["total"],
-                "active": r["active"] or 0,
+                "source": source,
+                "total": r["total"] if r else 0,
+                "active": (r["active"] or 0) if r else 0,
                 "last_crawl": {
                     "ok": bool(last["ok"]) if last else None,
                     "count": last["count"] if last else None,
