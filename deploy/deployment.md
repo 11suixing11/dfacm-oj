@@ -30,7 +30,7 @@ bash deploy/deploy.sh              # 完整部署
 每批保留以下可审查证据：
 
 - `inventory.tsv`：目标绝对路径、原先是否存在、原始权限、SHA-256、对应 `original/<id>` 备份；不存在的原文件以 `present=0` 标记。
-- `journal.tsv`：每项的 `INTENT`（rename 前）与 `WRITTEN`（rename 后），包含批次期望哈希/权限，以及回退后的 `RESTORED` 和成功后的 `COMMITTED`。
+- `journal.tsv`：每项的 `INTENT`（rename 前）与 `WRITTEN`（rename 后），包含批次期望哈希/权限，以及回退后的 `RESTORED`、文件验证后的 `COMMITTED`、进入重启边界前的 `RESTART_PENDING` 与确认重启成功后的 `RESTART_SUCCEEDED`。
 - `recovery.tsv`：未能自动恢复的具体目标、原因、备份、原始存在状态/权限/哈希、批次哈希。发生冲突或回退失败时，stderr 同时打印该清单路径。
 - 根目录的 `INCOMPLETE`：正在运行或尚待人工核对的批次路径。自动回退完整通过或正常提交后删除；否则保留，并拒绝后续激活，防止新批次覆盖证据。
 
@@ -38,7 +38,7 @@ bash deploy/deploy.sh              # 完整部署
 
 人工恢复前先停止其他发布，并持有**同一个**锁（例如 `flock /root/swpu-deploy-backups/activation.lock bash` 进入维护 shell）。读取 `INCOMPLETE` 所指批次的三个 TSV，核对当前目标与原始哈希、批次哈希；先把冲突现状另存到私有位置，再逐项决定保留外部改动或使用 `original/<id>` 恢复，按 `inventory.tsv` 校验权限和 SHA-256。对原先不存在的文件也须确认属于本批后才删除。只有所有条目均已核对处理，才删除 `INCOMPLETE`；不要删除 `activation.lock` 文件或未核验的备份。恢复后是否重启必须结合当前进程版本决定，不能直接重跑完整部署来掩盖混合状态。
 
-此锁要求并行部署和人工文件维护共同遵守。脚本在写入及回退前检测可观测的外部改动，但不提供绕过锁的任意写入者之间的原子 compare-and-swap。HUP/INT/TERM 会触发回退；SIGKILL、断电或 SSH 超时导致远端状态不明时，不能从本地退出码推断回退已完成，应按 `INCOMPLETE` 和日志核对。文件全部核验通过后先成功写入 `COMMITTED`，再关闭自动回退并发起唯一重启；提交记录写入失败时仍回退全部已写目标。`pm2 restart` 自身报错可能已部分切换 worker：此时保留已验证的新文件，记录 `RESTART_FAILED` 并保留 `INCOMPLETE`，退出 71，须先检查进程状态再决定恢复；不把旧文件放到可能已经启动的新进程下。重启后的 readiness、smoke、外部探针失败保留诊断退出码，不自动把正在运行的新进程对应文件换回旧版本。
+此锁要求并行部署和人工文件维护共同遵守。脚本在写入及回退前检测可观测的外部改动，但不提供绕过锁的任意写入者之间的原子 compare-and-swap。HUP/INT/TERM 在重启边界前会触发回退；SIGKILL、断电或 SSH 超时导致远端状态不明时，不能从本地退出码推断回退已完成，应按 `INCOMPLETE` 和日志核对。文件全部核验通过后先成功写入 `COMMITTED`；进入重启边界前的中断或提交记录写入失败仍回退全部已写目标。准备调用唯一重启时先记录 `RESTART_PENDING`，再同时关闭自动回退并保留未完成状态，直到重启成功返回且 `RESTART_SUCCEEDED` 写入成功才清除待核对状态。HUP/INT/TERM 若发生在该重启边界内，会保留已验证新文件与 `INCOMPLETE`，退出 71 并指出进程核对所需的日志；后续激活被拒绝。`pm2 restart` 自身报错可能已部分切换 worker：此时保留已验证的新文件，记录 `RESTART_FAILED` 并保留 `INCOMPLETE`，退出 71，须先检查进程状态再决定恢复；不把旧文件放到可能已经启动的新进程下。重启后的 readiness、smoke、外部探针失败保留诊断退出码，不自动把正在运行的新进程对应文件换回旧版本。
 
 ## 1. Hydro 安装
 

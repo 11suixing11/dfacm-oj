@@ -792,7 +792,9 @@ case "$cmd" in
   "bash $ACT_LIVE/deployed/deploy/smoke.sh") printf 'smoke\\n' >> "$ACT_LOG"; exit "\${FAIL_SMOKE:-0}";;
 esac
 exec bash -c "$cmd"`);
-  script(bin, 'pm2', `printf 'restart %s\\n' "$*" >> "$ACT_LOG"; exit "\${FAIL_RESTART:-0}"`);
+  script(bin, 'pm2', `printf 'restart %s\\n' "$*" >> "$ACT_LOG"
+if [ -n "\${SIGNAL_DURING_RESTART:-}" ]; then kill "-$SIGNAL_DURING_RESTART" "$PPID"; fi
+exit "\${FAIL_RESTART:-0}"`);
   script(bin, 'curl', `[ \"\${FAIL_READY:-0}\" != 1 ] || exit 1\ncase "$*" in *--resolve*) printf 'm-mail';; *) printf '%s' "\${OUTSIDE_STATUS:-200}";; esac`);
   script(bin, 'sleep', ':');
   script(bin, 'install', `set -euo pipefail
@@ -1061,4 +1063,41 @@ test('activation rolls back verified files if writing its commit journal fails b
   assert.match(result.stderr, /journal\.tsv.*[Ii]s a directory/);
   f.unchanged();
   assert.doesNotMatch(f.events(), /^(restart |smoke$)/m);
+});
+
+
+test('activation rolls back a signal immediately after file commit before any restart begins', () => {
+  const f = activationFixture();
+  // Observe the existing command boundary using Bash instrumentation rather
+  // than adding a test-only hook to the production helper.
+  script(f.dir, 'signal-before-restart.sh', `
+if [[ "$0" == */deploy/activate.sh ]]; then
+  trap 'if [[ "$BASH_COMMAND" == echo*restarting*hydrooj* ]] && [ ! -f "$ACT_DIR/commit-signal-sent" ]; then : > "$ACT_DIR/commit-signal-sent"; kill -TERM "$$"; fi' DEBUG
+fi`);
+  const result = f.run([], { BASH_ENV: unixPath(path.join(f.dir, 'signal-before-restart.sh')) });
+  assert.equal(result.status, 143, result.stdout + result.stderr);
+  assert.ok(fs.existsSync(path.join(f.dir, 'commit-signal-sent')), 'signal injected after COMMITTED append');
+  f.unchanged();
+  assert.equal(fs.existsSync(path.join(f.backups, 'INCOMPLETE')), false, 'safe rollback clears the guard');
+  assert.doesNotMatch(f.events(), /^(restart |smoke$)/m);
+});
+
+for (const signal of ['TERM', 'HUP', 'INT']) test(`activation retains process inspection guard after ${signal} during restart`, () => {
+  const f = activationFixture();
+  const result = f.run([], { SIGNAL_DURING_RESTART: signal });
+  assert.ok(fs.existsSync(path.join(f.backups, 'INCOMPLETE')), 'ambiguous restart blocks another batch');
+  assert.equal(result.status, 71, result.stdout + result.stderr);
+  assert.ok(fs.readFileSync(path.join(f.custom, 'home.html')).equals(fs.readFileSync(path.join(repo, 'landing/index.html'))));
+  const batch = fs.readFileSync(path.join(f.backups, 'INCOMPLETE'), 'utf8').trim();
+  const journal = fs.readFileSync(path.join(batch, 'journal.tsv'), 'utf8');
+  assert.match(journal, /COMMITTED\nRESTART_PENDING\n/);
+  assert.doesNotMatch(journal, /RESTART_SUCCEEDED|RESTORED/);
+  assert.match(result.stderr, /restart.*process state/);
+  assert.ok(result.stderr.includes(path.join(batch, 'journal.tsv')), 'names retained process recovery evidence');
+  assert.equal(f.events().split('\n').filter((line) => line.startsWith('restart ')).length, 1);
+  assert.doesNotMatch(f.events(), /^smoke$/m);
+  const second = f.run(['--sync-only']);
+  assert.equal(second.status, 71, second.stdout + second.stderr);
+  assert.match(second.stderr, /unfinished activation/);
+  assert.equal(f.events().split('\n').filter((line) => line.startsWith('restart ')).length, 1);
 });

@@ -47,6 +47,7 @@ SOURCES=() TARGETS=() MODES=() PRESENT=() OLD_MODES=() OLD_HASHES=() HASHES=() A
 TEMPORARIES=()
 COMMITTED=0
 UNRESOLVED=0
+RESTART_PENDING=0
 hash() { local result; result="$(sha256sum -- "$1")" || return; printf '%s' "${result%% *}"; }
 mode() { stat -c '%a' -- "$1"; }
 matches() {
@@ -99,6 +100,10 @@ finish() {
         printf 'recovery list: %s/recovery.tsv; inventory and journal retained\n' "$BATCH" >&2
     fi
     for staged in "${TEMPORARIES[@]}"; do rm -f -- "$staged"; done
+    if [ "$RESTART_PENDING" = 1 ]; then
+        incomplete=1
+        echo "restart outcome unresolved; verified files retained; inspect process state and $BATCH/journal.tsv before clearing INCOMPLETE" >&2
+    fi
     if [ "$incomplete" = 0 ]; then rm -f "$BACKUP_ROOT/INCOMPLETE"; else rc=71; fi
     exit "$rc"
 }
@@ -171,19 +176,23 @@ for i in "${!TARGETS[@]}"; do
     matches "${TARGETS[$i]}" "${HASHES[$i]}" "${MODES[$i]}" || { echo "installed hash/mode verification failed: ${TARGETS[$i]}" >&2; exit 65; }
 done
 echo 'installed files and derived resources verified'
-# A restart error can mean pm2 partially replaced workers already. Commit the
-# verified files before that external boundary; never put old files beneath a
-# possibly new process. The same flock still covers the sole restart attempt.
-# Keep rollback enabled until the commit record itself has been written.
+# File commit remains rollback-capable until the external restart boundary.
+# Once pm2 could replace workers, retain verified files and the unresolved guard
+# even when a signal prevents observing its return. The same flock covers this.
 printf 'COMMITTED\n' >> "$BATCH/journal.tsv"
-COMMITTED=1
 if [ "$SYNC_ONLY" != 1 ]; then
     echo 'restarting hydrooj (all files verified in place)'
+    printf 'RESTART_PENDING\n' >> "$BATCH/journal.tsv"
+    # One assignment command makes signal traps see both sides of the boundary.
+    COMMITTED=1 RESTART_PENDING=1 UNRESOLVED=1
     if ! pm2 restart hydrooj; then
-        UNRESOLVED=1
         printf 'RESTART_FAILED\n' >> "$BATCH/journal.tsv"
         echo "restart failed; verified files retained; inspect process state and $BATCH/journal.tsv before clearing INCOMPLETE" >&2
         exit 71
     fi
+    printf 'RESTART_SUCCEEDED\n' >> "$BATCH/journal.tsv"
+    RESTART_PENDING=0 UNRESOLVED=0
+else
+    COMMITTED=1
 fi
 echo "activation committed; backups retained in $BATCH"
