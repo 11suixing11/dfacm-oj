@@ -10,7 +10,7 @@
 
 **Spec:** [2026-11-13-project-repairs.md](2026-11-13-project-repairs.md)；审查编号和全局验收约束以总计划为准。
 
-**Status（2026-11-14）:** E1/E2/E3 的代码与回归已提交，本地 Node 22 集成、构建和公开资源检查已执行；当前隔离 Watch 原生 Mongo 用例通过，历史独立评审记录未完整恢复，待最终全分支评审。生产补扫与真实页面/服务验收未完成。 原计划与分支日期保留 2026-11-13；原审查基线 main / 31afcb8。
+**Status（2026-11-14）:** E1/E2/E3 的代码与回归已提交，本地 Node 22 集成、构建和公开资源检查已执行；当前隔离 Watch 原生 Mongo 用例通过，2026-11-14 最终独立全分支评审明确确认 E1/E2/E3 当前本地规格 PASS；历史 RED 记录未完整恢复，不补造。生产补扫与真实页面/服务验收未完成。 原计划与分支日期保留 2026-11-13；原审查基线 main / 31afcb8。
 
 ## Global Constraints
 
@@ -41,7 +41,7 @@
 - [ ] 先运行下面命令，确认新增案例因当前缺陷失败；记录具体失败断言。
 - [x] 按上述设计修改实现，保持接口、数据兼容和失败分支；禁止用弱化断言让测试通过。
 - [x] 重跑同一命令，确认新旧测试全部通过，并执行本任务涉及的构建/语法检查。
-- [ ] 独立评审通过后形成一个提交，建议提交主题：`fix(assistant): finish SSE on terminal marker`。
+- [x] 当前独立全分支评审通过，实现已提交；原建议提交主题：`fix(assistant): finish SSE on terminal marker`。
 
 ```bash
 cd plugin-dfacm-assistant
@@ -67,7 +67,7 @@ npm run check-build
 - [ ] 先运行下面命令，确认新增案例因当前缺陷失败；记录具体失败断言。
 - [x] 按上述设计修改实现，保持接口、数据兼容和失败分支；禁止用弱化断言让测试通过。
 - [x] 重跑同一命令，确认新旧测试全部通过，并执行本任务涉及的构建/语法检查。
-- [ ] 独立评审通过后形成一个提交，建议提交主题：`fix(watch): reconcile late submissions and verdicts`。
+- [x] 当前独立全分支评审通过，实现已提交；原建议提交主题：`fix(watch): reconcile late submissions and verdicts`。
 
 ```bash
 cd plugin-dfacm-ai-watch
@@ -95,7 +95,7 @@ npm run check-public
 - [ ] 先运行下面命令，确认新增案例因当前缺陷失败；记录具体失败断言。
 - [x] 按上述设计修改实现，保持接口、数据兼容和失败分支；禁止用弱化断言让测试通过。
 - [x] 重跑同一命令，确认新旧测试全部通过，并执行本任务涉及的构建/语法检查。
-- [ ] 独立评审通过后形成一个提交，建议提交主题：`fix(watch): represent uncertain same-second source timing`。
+- [x] 当前独立全分支评审通过，实现已提交；原建议提交主题：`fix(watch): represent uncertain same-second source timing`。
 
 ```bash
 cd plugin-dfacm-ai-watch
@@ -112,4 +112,4 @@ E1 独立发布。E2/E3 的新 key、runtime time.cjs 和前后端资源必须�
 
 E1 `0c8ee84`，E2 `3fcb78e`，E3 `3057a7c`。DONE 无需 EOF；补扫游标有界、重启可对账，旧 key 与人工复核字段保留；同秒来源保留为先后不确定上下文，不冒充毫秒时间。`time.cjs` 已在 Watch 独立 deployment/public-files 清单；Watch/assistant 沿用各自的独立交付流程。隔离 Mongo 双进程/杀 owner 用例不替代实际生产 worker 配置核对。
 
-最终本地命令、计数与证据范围见 [本轮修复报告](../reports/2026-11-14-project-repairs.md)。未勾选项保留历史 RED/独立评审证据未恢复或真实发布验收限制；已勾选的实现与本地测试不表示线上验收。最终全分支评审和归档哈希清单由集成负责人在评审后完成。
+最终本地命令、计数与证据范围见 [本轮修复报告](../reports/2026-11-14-project-repairs.md)。2026-11-14 最终独立评审覆盖 `31afcb8..0cf0054` 的全部 96 个变更路径，明确确认本模块各任务当前规格 PASS，无 Critical/Important。该当前评审结论用于关闭评审复选框，不补造缺失的历史 RED/早期评审记录；未勾选的历史 RED 与真实发布验收门槛保留。本次仅跟进该评审的文档/空白 minor，收尾 scoped re-review 后再由负责人准备归档哈希清单。

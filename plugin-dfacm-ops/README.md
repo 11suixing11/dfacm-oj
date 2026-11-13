@@ -20,7 +20,7 @@ RP 的本地成功/失败记录各保留最近 100 条，成功记录包含耗�
 
 本仓库不会自动连接或修改线上实例。以下是后续在测试环境验证、再由管理员部署时使用的操作说明。
 
-1. 将整个目录放到 `/root/.hydro/addons/swpu-ops`（其他服务器账户请调整路径）。运行文件必须包含 `index.ts`、`operations.cjs`、`report.cjs`、`live-rp.cjs`、`rp-sweep.cjs`、`package.json`。
+1. 将整个目录放到 `/root/.hydro/addons/swpu-ops`（其他服务器账户请调整路径）。运行文件必须包含 `index.ts`、`operations.cjs`、`report.cjs`、`live-rp.cjs`、`rp-sweep.cjs`、`controlled-history.cjs`、`package.json`。
 2. 让 addon 复用服务器已经安装的 `hydrooj` 包，不要为此安装一整套新 Hydro。例如：
 
    ```bash

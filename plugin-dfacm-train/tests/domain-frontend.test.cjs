@@ -110,7 +110,7 @@ for (const page of ['/workbench', '/mistakes']) {
             data[0].url = 'https://evil.example/p/1001'; data[0].recordUrl = '//evil.example/record/rid';
         };
         const b = await browser(f, page);
-        assert.ok(!b.document.querySelector('a[href^="https://evil"], a[href^="//evil"]')); 
+        assert.ok(!b.document.querySelector('a[href^="https://evil"], a[href^="//evil"]'));
     });
 }
 

@@ -10,7 +10,7 @@
 
 **Spec:** [2026-11-13-project-repairs.md](2026-11-13-project-repairs.md)；审查编号和全局验收约束以总计划为准。
 
-**Status（2026-11-14）:** B1/B2 的代码与 DOM/API 回归已提交，本地 Node 22 集成与训练构建检查已执行；历史独立评审记录未完整恢复，待最终全分支评审。真实 Hydro 第二因素登录、system/poj 页面操作与完整判题仍为发布门槛。 原计划与分支日期保留 2026-11-13；原审查基线 main / 31afcb8。
+**Status（2026-11-14）:** B1/B2 的代码与 DOM/API 回归已提交，本地 Node 22 集成与训练构建检查已执行；2026-11-14 最终独立全分支评审明确确认 B1/B2 当前本地规格 PASS；历史 RED 记录未完整恢复，不补造。真实 Hydro 第二因素登录、system/poj 页面操作与完整判题仍为发布门槛。 原计划与分支日期保留 2026-11-13；原审查基线 main / 31afcb8。
 
 ## Global Constraints
 
@@ -42,7 +42,7 @@
 - [ ] 先运行下面命令，确认新增案例因当前缺陷失败；记录具体失败断言。
 - [x] 按上述设计修改实现，保持接口、数据兼容和失败分支；禁止用弱化断言让测试通过。
 - [x] 重跑同一命令，确认新旧测试全部通过，并执行本任务涉及的构建/语法检查。
-- [ ] 独立评审通过后形成一个提交，建议提交主题：`fix(auth): keep native second-factor login discoverable`。
+- [x] 当前独立全分支评审通过，实现已提交；原建议提交主题：`fix(auth): keep native second-factor login discoverable`。
 
 ```bash
 cd plugin-dfacm-regcode
@@ -68,7 +68,7 @@ npm test
 - [ ] 先运行下面命令，确认新增案例因当前缺陷失败；记录具体失败断言。
 - [x] 按上述设计修改实现，保持接口、数据兼容和失败分支；禁止用弱化断言让测试通过。
 - [x] 重跑同一命令，确认新旧测试全部通过，并执行本任务涉及的构建/语法检查。
-- [ ] 独立评审通过后形成一个提交，建议提交主题：`fix(train): preserve domain in API and training links`。
+- [x] 当前独立全分支评审通过，实现已提交；原建议提交主题：`fix(train): preserve domain in API and training links`。
 
 ```bash
 cd plugin-dfacm-train
@@ -82,4 +82,4 @@ node --test scripts/preview.test.cjs
 
 B1 `1afa86c`，B2 `dd8fddb`。原生登录入口保留管理员面板门控，域感知 API/链接通过本地回归；没有以 DOM/API 替身推断真实浏览器登录或多域生产验收完成。
 
-最终本地命令、计数与证据范围见 [本轮修复报告](../reports/2026-11-14-project-repairs.md)。未勾选项保留历史 RED/独立评审证据未恢复或真实发布验收限制；已勾选的实现与本地测试不表示线上验收。最终全分支评审和归档哈希清单由集成负责人在评审后完成。
+最终本地命令、计数与证据范围见 [本轮修复报告](../reports/2026-11-14-project-repairs.md)。2026-11-14 最终独立评审覆盖 `31afcb8..0cf0054` 的全部 96 个变更路径，明确确认本模块各任务当前规格 PASS，无 Critical/Important。该当前评审结论用于关闭评审复选框，不补造缺失的历史 RED/早期评审记录；未勾选的历史 RED 与真实发布验收门槛保留。本次仅跟进该评审的文档/空白 minor，收尾 scoped re-review 后再由负责人准备归档哈希清单。

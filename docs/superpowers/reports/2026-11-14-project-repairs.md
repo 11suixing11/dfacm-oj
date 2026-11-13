@@ -1,6 +1,6 @@
 # dfacm 项目修复本地集成报告（2026-11-14）
 
-原计划为 [2026-11-13-project-repairs.md](../plans/2026-11-13-project-repairs.md)，修复分支保留 `fix/project-audit-2026-11-13`。A–F 的实现已提交，I1 完成 CI、实际发货/安装清单及文档集成，本地最终检查通过。C1/C2/D1/F1–F5 已有独立任务评审记录；恢复的 A/B/E 独立评审证据未完整取得，最终全分支评审和归档哈希清单尚待负责人完成。没有执行生产发布、推送、合并、真实数据纠正或真实消息/赛事源访问。
+原计划为 [2026-11-13-project-repairs.md](../plans/2026-11-13-project-repairs.md)，修复分支保留 `fix/project-audit-2026-11-13`。A–F 的实现已提交，I1 完成 CI、实际发货/安装清单及文档集成，本地最终检查通过。2026-11-14 最终独立全分支评审覆盖全部 17 个任务并明确确认当前本地规格 PASS，无 Critical/Important；恢复的 A/B/E 当前评审状态已据此关闭，缺失的历史 RED/早期评审记录不补造。本次跟进三项非阻塞文档/空白 minor，仍待一次收尾 scoped re-review 和负责人准备归档哈希清单。没有执行生产发布、推送、合并、真实数据纠正或真实消息/赛事源访问。
 
 ## 问题与提交
 
@@ -22,7 +22,7 @@
 | F3 / 16 | `02a8f1b` | QQ 归属取原始 submission UID 的活动已验证绑定；兼容统计 personID，旧空 UID 不按名字猜测，提供重新确认。 |
 | F4 / 17 | `610807e` | recent/stale 固定快照与持久 after 游标，每轮有界跨页；只有成功同步/去重后推进，新记录水位独立。 |
 | F5 / 14、20 | `198f3a9` | Devpost/DataFountain 必要响应结构与真空列表区分；失败保存旧数据并继续其他源，stats 包括首次失败源且 latest 按 MAX(id)。 |
-| I1 / 集成 | 本报告所在集成提交 | ops helper 与四个 taxonomy runtime 实际安装，交付绝对 locator 验证；CI helper 重启检查、逐文件 shell 解析、锁定 ops 安装及 offline taxonomy/broadcast；总计划与六模块状态更新。 |
+| I1 / 集成 | `a667688`、`0cf0054` | ops helper 与四个 taxonomy runtime 实际安装，交付绝对 locator 验证；CI helper 重启检查、逐文件 shell 解析、锁定 ops 安装及 offline taxonomy/broadcast；总计划与六模块状态更新。 |
 
 ## 最终本地检查
 
@@ -46,6 +46,12 @@ I1 使用 Node **22.23.5**、Python **3.14.4**、ShellCheck **0.11.0**；支持�
 
 本地完整命令、退出码、计数与日志保存在本机 `.superpowers/sdd/2026-11-13-project-repairs/I1-report.md` 与 `verification/i1-*.log` / `i1-results.json`；报告不包含私有 QA 内容。既有 A3/C2/D1 原生验收源码未变，按范围复用已核验结果，不重复昂贵验收，也不计入 716。本机没有安装 Caddy 或运行远端 GitHub Actions，真实 Caddy download/adapt、完整历史 secret scan 和远端 CI 结果未在此宣称。
 
+## 最终独立评审与 minor 收尾
+
+评审的代码 HEAD 为 `0cf00540bac44bb73187e6ae7f468c5864c1702e`，基线为 `31afcb856a860bb88ba8b0efab2ebfe9479d5195`：22 个提交、96 个变更路径全部覆盖，17 项当前本地规格逐项 PASS，无 Critical/Important，结论为可在本地合并。恢复的 A1–A3/B1–B2/E1–E3 当前评审门槛由这一明确独立结论关闭；不表示原始 RED 或早期独立评审证据已恢复，也不表示生产验收完成。完整本机评审依据为 `.superpowers/sdd/2026-11-13-project-repairs/final-review.md`；其既有完整差异包 SHA-256 为 `fbb2f362846763e33cda6186b6c321922a1bdd322ded80caddd180b6a0fff91a`，这是评审材料标识，最终发布归档尚未生成。
+
+三项非阻塞 minor 在本次收尾中处理：shop README 移除旧 v1 接受双花窗口说明，改为共同 UID 锁的单 worker 保证及多 worker 前持久协调/原子扣款/真实跨进程测试要求；ops README 首个必需运行文件枚举补入无条件加载的 `controlled-history.cjs`；train 域回归仅去掉断言行尾空格。现有依赖/实验警告继续按冻结要求披露。没有运行逻辑变化，因此复用上述既有验证证据，不重复完整或原生测试。本次 prose/空白修正完成后由负责人一次 scoped re-review，再准备 Git archive 与哈希清单。
+
 ## 两项实现取舍与交付要求
 
 **受控 history：** stock Hydro 5.0.7 缺少 native RID/batch 到私有 history ID 的关联，选择在现有 ops addon 中安装 opt-in 严格 `controlled-history.cjs`。它校验准确版本/方法指纹、原生模型身份、service UID/username、代码和批次标记；默认关闭，卸载或不兼容就阻止提交/发布。代价是 loader/core 形态改变必须另行原生复核；判断错误时应保持 disabled，而非猜所有权。
@@ -61,4 +67,4 @@ I1 使用 Node **22.23.5**、Python **3.14.4**、ShellCheck **0.11.0**；支持�
 - C2 复用同主机同 canonical batch/state 路径；超时、调度不明或 history 冲突保留 pending，不盲目重判或清理。先证明终态/取消、精确 ownership 和数据身份，再人工决定恢复。真实 daemon、WebSocket 断线/消费拓扑、沙箱及未支持题型验收仍待完成，旧计数快照回写不能作为回退。
 - E 的旧 key、analysis/review/reviewHistory 保留；只在有界保留期重算，秒级时间不能提高成确定“提交前 AI”。需验证实际 worker 与真实页面证据展示。
 - F 发布前用 SQLite Connection.backup 同时保存数据库与 state.json；additive 加列不触发旧 DROP TABLE 路径、不删水位。旧 card_sent=1 不自动重播；回退旧代码保留新增字段，旧代码期间不维护 delivered_at，重新上线前需核对该段投递状态。实际备份/迁移、真实消息通道验收和历史身份修正未执行。
-- 真实 Hydro 第二因素登录、system/poj 浏览器操作、正式 Web 提交/消费以及生产发布仍待验收。最终全分支评审后再生成 Git archive 与哈希清单、准备可审查发布/备份/回退材料；本次未生成提前的发布归档。
+- 真实 Hydro 第二因素登录、system/poj 浏览器操作、正式 Web 提交/消费以及生产发布仍待验收。最终全分支评审已完成；收尾 scoped re-review 后再生成 Git archive 与哈希清单、准备可审查发布/备份/回退材料；本次未生成提前的发布归档。

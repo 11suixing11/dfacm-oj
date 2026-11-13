@@ -10,7 +10,7 @@
 
 **Spec:** [2026-11-13-project-repairs.md](2026-11-13-project-repairs.md)；审查编号和全局验收约束以总计划为准。
 
-**Status（2026-11-14）:** A1/A2/A3 的代码与回归已提交，本地 Node 22 集成测试已执行；A3 另有当前执行链中的 146 项隔离原生断言。历史独立评审记录未完整恢复，待最终全分支评审。生产 worker 拓扑、真实页面判题/消费和实际数据修正仍未验收。 原计划与分支日期保留 2026-11-13；原审查基线 main / 31afcb8。
+**Status（2026-11-14）:** A1/A2/A3 的代码与回归已提交，本地 Node 22 集成测试已执行；A3 另有当前执行链中的 146 项隔离原生断言。2026-11-14 最终独立全分支评审明确确认 A1/A2/A3 当前本地规格 PASS；历史 RED 记录未完整恢复，不补造。生产 worker 拓扑、真实页面判题/消费和实际数据修正仍未验收。 原计划与分支日期保留 2026-11-13；原审查基线 main / 31afcb8。
 
 ## Global Constraints
 
@@ -41,7 +41,7 @@
 - [ ] 先运行下面命令，确认新增案例因当前缺陷失败；记录具体失败断言。
 - [x] 按上述设计修改实现，保持接口、数据兼容和失败分支；禁止用弱化断言让测试通过。
 - [x] 重跑同一命令，确认新旧测试全部通过，并执行本任务涉及的构建/语法检查。
-- [ ] 独立评审通过后形成一个提交，建议提交主题：`fix(shop): exclude non-official judging from points`。
+- [x] 当前独立全分支评审通过，实现已提交；原建议提交主题：`fix(shop): exclude non-official judging from points`。
 
 ```bash
 cd plugin-dfacm-shop
@@ -67,7 +67,7 @@ npm test
 - [ ] 先运行下面命令，确认新增案例因当前缺陷失败；记录具体失败断言。
 - [x] 按上述设计修改实现，保持接口、数据兼容和失败分支；禁止用弱化断言让测试通过。
 - [x] 重跑同一命令，确认新旧测试全部通过，并执行本任务涉及的构建/语法检查。
-- [ ] 独立评审通过后形成一个提交，建议提交主题：`fix(shop): serialize all commerce and title mutations`。
+- [x] 当前独立全分支评审通过，实现已提交；原建议提交主题：`fix(shop): serialize all commerce and title mutations`。
 
 ```bash
 cd plugin-dfacm-shop
@@ -93,7 +93,7 @@ npm test
 - [ ] 先运行下面命令，确认新增案例因当前缺陷失败；记录具体失败断言。
 - [x] 按上述设计修改实现，保持接口、数据兼容和失败分支；禁止用弱化断言让测试通过。
 - [x] 重跑同一命令，确认新旧测试全部通过，并执行本任务涉及的构建/语法检查。
-- [ ] 独立评审通过后形成一个提交，建议提交主题：`fix(shop): make historical points backfill resumable`。
+- [x] 当前独立全分支评审通过，实现已提交；原建议提交主题：`fix(shop): make historical points backfill resumable`。
 
 ```bash
 cd plugin-dfacm-shop
@@ -108,4 +108,4 @@ A1 可以先独立提交。A2 必须验证运行 worker 数，单进程方案满
 
 A1 `fc3218e`，A2 `b28abc2`，A3 `8a9abaa`。保留原账本与 swpu 集合；`user-lock.ts`、`backfill.ts` 已在原有发货清单中。A3 当前原生证据覆盖 20,001 条跨页、BSON 游标重载、跨进程续跑、插入后异常与新轮次；没有执行生产回填或纠正历史积分。单 worker UID 锁不能代表多 worker 原子消费保证。
 
-最终本地命令、计数与证据范围见 [本轮修复报告](../reports/2026-11-14-project-repairs.md)。未勾选项保留历史 RED/独立评审证据未恢复或真实发布验收限制；已勾选的实现与本地测试不表示线上验收。最终全分支评审和归档哈希清单由集成负责人在评审后完成。
+最终本地命令、计数与证据范围见 [本轮修复报告](../reports/2026-11-14-project-repairs.md)。2026-11-14 最终独立评审覆盖 `31afcb8..0cf0054` 的全部 96 个变更路径，明确确认本模块各任务当前规格 PASS，无 Critical/Important。该当前评审结论用于关闭评审复选框，不补造缺失的历史 RED/早期评审记录；未勾选的历史 RED 与真实发布验收门槛保留。本次仅跟进该评审的文档/空白 minor，收尾 scoped re-review 后再由负责人准备归档哈希清单。
