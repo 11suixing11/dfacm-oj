@@ -1019,6 +1019,8 @@ class DfacmAcmBroadcast(star.Star):
                 image_path = self._render_contest_card(item, Path(temp_dir))
                 for attempt in range(3):
                     try:
+                        if not await self._validate_card_source(str(row["rid"])):
+                            return False
                         sent = await self._group_send(
                             MessageChain().file_image(str(image_path))
                         )
@@ -1041,6 +1043,8 @@ class DfacmAcmBroadcast(star.Star):
             )
         for attempt in range(2):
             try:
+                if not await self._validate_card_source(str(row["rid"])):
+                    return False
                 sent = await self._group_send(MessageChain().message(fallback))
                 if sent:
                     return True
@@ -1705,6 +1709,12 @@ class DfacmAcmBroadcast(star.Star):
         if new_docs:
             self._db_set_meta("mongo_last_id", str(new_docs[-1]["_id"]))
         await self._sync_recent(recent_docs)
+        # The recent window cannot prove that an older queued source exists.
+        # Explicit RID reads also reconcile deletions while delivery is held.
+        for row in self._db.execute(
+            "SELECT rid FROM records WHERE card_sent = 0 AND delivered_at IS NULL"
+        ).fetchall():
+            await self._validate_card_source(str(row["rid"]))
         self._purge_old_rows()
         return len(new_docs)
 
@@ -1751,6 +1761,35 @@ class DfacmAcmBroadcast(star.Star):
             "rid": item["id"],
         }
 
+    @staticmethod
+    def _is_full_ac(doc: dict | None) -> bool:
+        if doc is None or doc.get("status") != 1:
+            return False
+        try:
+            return float(doc.get("score") or 0) >= 100
+        except (TypeError, ValueError, OverflowError):
+            return False
+
+    def _db_card_source_valid(self, rid: str) -> bool:
+        doc = self._mongo().record.find_one(
+            {"_id": ObjectId(rid)}, {"status": 1, "score": 1}
+        )
+        return self._is_full_ac(doc)
+
+    async def _validate_card_source(self, rid: str) -> bool:
+        """Withdraw known-invalid sources; query failures remain retryable."""
+        try:
+            valid = await asyncio.to_thread(self._db_card_source_valid, rid)
+        except Exception:
+            self.logger.exception("Record source lookup failed; keeping card queued")
+            return False
+        if not valid and self._db is not None:
+            self._db.execute(
+                "UPDATE records SET card_sent = 1 WHERE rid = ? AND delivered_at IS NULL",
+                (rid,),
+            )
+        return valid
+
     async def _sync_recent(self, recent_docs: list[dict]) -> None:
         """Converge local row statuses with the recent Mongo window."""
         if not recent_docs or self._db is None:
@@ -1762,20 +1801,24 @@ class DfacmAcmBroadcast(star.Star):
             row = self._db.execute(
                 "SELECT * FROM records WHERE rid = ?", (rid,)
             ).fetchone()
-            if row is None or row["status"] == status_text:
+            if row is None:
                 continue
-            self._db.execute(
-                "UPDATE records SET status = ? WHERE rid = ?", (status_text, rid)
-            )
-            if (
-                int(doc.get("status") or 0) == 1
-                and int(doc.get("score") or 0) >= 100
-            ):
+            if row["status"] != status_text:
+                self._db.execute(
+                    "UPDATE records SET status = ? WHERE rid = ?", (status_text, rid)
+                )
+            if self._is_full_ac(doc):
+                # Accepted/50 -> Accepted/100 and restored sources keep the
+                # same display verdict, but must regain their unsent chance.
                 transitions.append(row)
+            elif row["card_sent"] == 0 and row["delivered_at"] is None:
+                self._db.execute(
+                    "UPDATE records SET card_sent = 1 WHERE rid = ?", (rid,)
+                )
         await self._queue_verdict_cards(transitions)
 
     async def _queue_verdict_cards(self, rows: list[sqlite3.Row]) -> None:
-        """Run the card decision for rows whose verdict just became AC."""
+        """Run the card decision for full-AC rows still eligible for delivery."""
         if not rows or self._db is None:
             return
         candidates: list[dict] = []
@@ -2464,11 +2507,13 @@ class DfacmAcmBroadcast(star.Star):
         if not self._group_delivery_ready():
             return
         rows = self._db.execute(
-            "SELECT * FROM records WHERE card_sent = 0 "
+            "SELECT * FROM records WHERE card_sent = 0 AND delivered_at IS NULL "
             "ORDER BY ts ASC, rid ASC LIMIT ?",
             (self.CARD_DRAIN_LIMIT,),
         ).fetchall()
         for row in rows:
+            if not await self._validate_card_source(str(row["rid"])):
+                continue
             sent = (
                 await self._broadcast_contest_ac(row)
                 if row["tid"]
@@ -2687,6 +2732,8 @@ class DfacmAcmBroadcast(star.Star):
                 image_path = self._render_ac_card(item, Path(temp_dir))
                 for attempt in range(3):
                     try:
+                        if not await self._validate_card_source(str(item["id"])):
+                            return False
                         sent = await self._group_send(
                             MessageChain().file_image(str(image_path))
                         )
@@ -2705,6 +2752,8 @@ class DfacmAcmBroadcast(star.Star):
             self.logger.exception("AC card rendering failed; sending text fallback")
         for attempt in range(2):
             try:
+                if not await self._validate_card_source(str(item["id"])):
+                    return False
                 sent = await self._group_send(MessageChain().message(fallback))
                 if sent:
                     return True
