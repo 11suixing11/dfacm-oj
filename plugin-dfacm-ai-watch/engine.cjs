@@ -32,6 +32,7 @@ function createEngine({ store, config, now = Date.now, log = () => {} }) {
         for (const mode of ['waiting', 'retained']) for (const domainId of config.domains) tasks.push(async () => {
             await store.reconcile(domainId, mode, deadline);
         });
+        for (const domainId of config.domains) tasks.push(async () => { await store.reanalyze(domainId, deadline); });
         for (const method of ['repair', 'scan']) for (const domainId of config.domains) tasks.push(async () => {
             const scan = await store[method](domainId, deadline); totals.scanned += scan.scanned;
         });

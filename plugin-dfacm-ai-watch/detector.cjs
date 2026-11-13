@@ -2,7 +2,8 @@
 
 const { createHash } = require('node:crypto');
 
-const VERSION = '0.1.0';
+const { submissionTime, sourceTiming, sourceWindow } = require('./time.cjs');
+const VERSION = '0.2.0';
 const MIN_TOKENS = 80;
 const MAX_BYTES = 65536;
 const KEYWORDS = new Set(('alignas alignof and asm auto bool break case catch char class const constexpr continue default delete do double else enum explicit export extern false float for friend goto if inline int long mutable namespace new noexcept not nullptr operator or private protected public register reinterpret_cast return short signed sizeof static static_cast struct switch template this throw true try typedef typename union unsigned using virtual void volatile wchar_t while xor abstract assert boolean byte extends final finally implements import instanceof interface native package strictfp super synchronized throws transient var def elif except from global in is lambda None nonlocal pass raise with yield async await del True False as fn let mut impl pub crate use mod trait match loop move self Self where type dyn str function null undefined console print input range len list dict set tuple std cin cout endl vector string include define').split(' '));
@@ -117,13 +118,25 @@ function styleChanges(current, history) {
     });
 }
 
+function assistantSignal(reference, metrics, timing) {
+    const uncertain = timing !== 'earlier';
+    return { kind: 'assistant_match', title: uncertain ? '匹配本人同秒获取的站内 AI 代码（先后未知）' : '匹配本人先前获取的站内 AI 代码',
+        strength: uncertain ? 'context' : 'traceable', weight: uncertain ? 0 : metrics.exact ? 90 : 80,
+        detail: uncertain ? '代码与本站题目助手返回的完整题解高度相似；生成时间落在提交时间区间内，无法确定两者先后。'
+            : metrics.exact ? '去除注释和空白后，代码与本站题目助手先前返回的完整题解完全一致。' : '代码与本站题目助手先前返回的完整题解高度相似。',
+        reference: { ...reference, timing }, metrics,
+        caveat: uncertain ? '同秒来源只作为相似度上下文，不计分，也不能证明提交前使用了 AI；需结合比赛规则与选手解释人工核实。'
+            : '这能关联到站内 AI 输出，不能单独证明违反比赛规则；短模板、参考解法和允许的辅助需核实。' };
+}
+
 function analyze({ current, sources = [], peers = [], history = [] }) {
     const fp = current.fingerprint || fingerprint(current.code, current.lang);
     const signals = []; const limitations = [];
     const at = new Date(current.submittedAt).getTime();
+    const time = submissionTime(current); const window = sourceWindow(time);
     const validSource = sources.filter(source => source.domainId === current.domainId && source.uid === current.uid && source.pid === current.pid
-        && Number.isFinite(new Date(source.completedAt).getTime()) && new Date(source.completedAt).getTime() <= at
-        && at - new Date(source.completedAt).getTime() <= 86400000 && source.mode === 'solve');
+        && ['earlier', 'uncertain'].includes(sourceTiming(source.completedAt, time))
+        && new Date(source.completedAt).getTime() >= window.$gte.getTime() && source.mode === 'solve');
     const validPeers = peers.filter(peer => peer.domainId === current.domainId && peer.uid !== current.uid && peer.pid === current.pid
         && (peer.contest || null) === (current.contest || null) && new Date(peer.submittedAt).getTime() <= at && peer.rid !== current.rid);
     const validHistory = history.filter(item => item.domainId === current.domainId && item.uid === current.uid && item.pid !== current.pid
@@ -135,14 +148,13 @@ function analyze({ current, sources = [], peers = [], history = [] }) {
             limitations: [reasons[fp.unavailable] || '程序较短，常见模板容易相同，暂不进行来源或相似度判断。', '缺少线索不能证明由选手独立完成。'] };
     }
     const rankedSources = validSource.map(source => ({ source, value: similarity(fp, source.fingerprint) })).sort((a, b) => b.value - a.value);
-    const match = rankedSources[0];
+    // A temporally certain qualifying source keeps the existing priority gate,
+    // even if a same-second source has a slightly higher similarity.
+    const match = rankedSources.find(item => item.value >= 0.92 && sourceTiming(item.source.completedAt, time) === 'earlier') || rankedSources[0];
     if (match?.value >= 0.92 && Math.min(fp.tokenCount, match.source.fingerprint.tokenCount) >= MIN_TOKENS) {
         const exact = fp.exactHash === match.source.fingerprint.exactHash;
-        signals.push({ kind: 'assistant_match', title: '匹配本人先前获取的站内 AI 代码', strength: 'traceable', weight: exact ? 90 : 80,
-            detail: exact ? '去除注释和空白后，代码与本站题目助手先前返回的完整题解完全一致。' : '代码与本站题目助手先前返回的完整题解高度相似。',
-            reference: { sourceId: match.source._id, jobId: match.source.jobId, completedAt: match.source.completedAt },
-            metrics: { similarity: Number(match.value.toFixed(4)), exact },
-            caveat: '这能关联到站内 AI 输出，不能单独证明违反比赛规则；短模板、参考解法和允许的辅助需核实。' });
+        signals.push(assistantSignal({ sourceId: match.source._id, jobId: match.source.jobId, completedAt: match.source.completedAt },
+            { similarity: Number(match.value.toFixed(4)), exact }, sourceTiming(match.source.completedAt, time)));
     }
     const rankedPeers = validPeers.filter(peer => (peer.fingerprint?.tokenCount || 0) >= 140 && fp.tokenCount >= 140)
         .map(peer => ({ peer, value: similarity(fp, peer.fingerprint) })).sort((a, b) => b.value - a.value);
@@ -160,11 +172,12 @@ function analyze({ current, sources = [], peers = [], history = [] }) {
         detail: `与 ${validHistory.length} 份同语言、不同题目的先前提交相比，${changes.map(v => v.label).join('、')}变化明显。`,
         metrics: { changes }, caveat: '换模板、练习新语言习惯或题型变化都可能产生差异，不能由此判定 AI 作答。' });
     if (validHistory.length < 5) limitations.push('本人同语言、不同题目的历史样本少于 5 份，未进行风格异常判断。');
+    if (validSource.some(source => sourceTiming(source.completedAt, time) === 'uncertain')) limitations.push('提交创建时间仅精确到秒；同秒来源只保留相似度上下文，不计分，也不证明提交前使用了 AI。');
     if (!validSource.length) limitations.push('未找到本人同题、提交之前的站内完整 AI 题解记录；站外 AI 使用无法追溯。');
     limitations.push('词法相似度会受公共模板和标准解法影响；分数是复核排序规则，不是 AI 作答概率。', '所有结论需结合比赛规则和选手解释，由人工复核。');
-    const hasTrace = signals.some(v => v.kind === 'assistant_match');
+    const hasTrace = signals.some(v => v.kind === 'assistant_match' && v.reference.timing === 'earlier');
     const score = Math.min(hasTrace ? 100 : 65, signals.reduce((sum, signal) => sum + signal.weight, 0));
     return { version: VERSION, conclusion: 'undetermined', priority: score >= 75 ? 'high' : score >= 35 ? 'medium' : 'low', score, signals, limitations, coverage };
 }
 
-module.exports = { VERSION, MIN_TOKENS, MAX_BYTES, languageFamily, lex, fingerprint, similarity, styleChanges, analyze };
+module.exports = { VERSION, MIN_TOKENS, MAX_BYTES, languageFamily, lex, fingerprint, similarity, styleChanges, assistantSignal, analyze };

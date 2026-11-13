@@ -7,7 +7,7 @@ const { createHash } = require('node:crypto');
 const { spawnSync } = require('node:child_process');
 
 const RUNTIME_FILES = Object.freeze([
-    'package.json', 'index.ts', 'config.cjs', 'detector.cjs', 'store.cjs', 'engine.cjs', 'http.cjs',
+    'package.json', 'index.ts', 'config.cjs', 'time.cjs', 'detector.cjs', 'store.cjs', 'engine.cjs', 'http.cjs',
     'templates/dfacm_ai_watch.html', 'templates/watch_content.html', 'public/watch.css', 'public/watch.js',
 ]);
 const hash = file => createHash('sha256').update(fs.readFileSync(file)).digest('hex');

@@ -1,5 +1,7 @@
 'use strict';
 
+const { submissionTime } = require('./time.cjs');
+
 const RETENTION_DAYS = 30;
 const RESERVED_CONTESTS = new Set(['000000000000000000000000', '000000000000000000000001']);
 const RID = /^[a-f0-9]{24}$/i;
@@ -41,9 +43,7 @@ function configFromEnv(env = process.env) {
 
 function recordId(record) { return String(record?._id || '').toLowerCase(); }
 function submittedAt(record) {
-    const id = recordId(record);
-    if (!RID.test(id)) return null;
-    return new Date(parseInt(id.slice(0, 8), 16) * 1000);
+    return submissionTime(record)?.lower || null;
 }
 function eligible(record, config) {
     if (!record || !config.enabled || !config.domains.includes(record.domainId) || !RID.test(recordId(record))) return false;

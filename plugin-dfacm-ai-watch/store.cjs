@@ -2,8 +2,8 @@
 
 const { randomBytes, createHash } = require('node:crypto');
 const { WatchError, RID, RESERVED_CONTESTS, eligible, recordId, submittedAt } = require('./config.cjs');
-const { fingerprint, languageFamily } = require('./detector.cjs');
-
+const { VERSION, fingerprint, languageFamily, assistantSignal } = require('./detector.cjs');
+const { submissionTime, sourceTiming, sourceWindow } = require('./time.cjs');
 const DAY = 86400000;
 const PROJECTION = { _id: 1, domainId: 1, uid: 1, pid: 1, contest: 1, lang: 1, code: 1, status: 1, hackTarget: 1, input: 1 };
 const unwrap = result => result && Object.prototype.hasOwnProperty.call(result, 'value') ? result.value : result;
@@ -13,14 +13,28 @@ const regexEscape = text => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 function publicReport(report, detail = false) {
     if (!report) return null;
+    const time = submissionTime(report); let analysis = report.analysis;
+    if (analysis && analysis.version !== VERSION) {
+        const signals = (analysis.signals || []).flatMap(signal => {
+            if (signal.kind !== 'assistant_match') return [signal];
+            const timing = sourceTiming(signal.reference?.completedAt, time);
+            return ['earlier', 'uncertain'].includes(timing)
+                ? [assistantSignal(signal.reference, signal.metrics || {}, timing)] : [];
+        });
+        const score = Math.min(signals.some(signal => signal.kind === 'assistant_match' && signal.reference.timing === 'earlier') ? 100 : 65,
+            signals.reduce((sum, signal) => sum + (signal.weight || 0), 0));
+        analysis = { ...analysis, signals, score, conclusion: 'undetermined',
+            priority: analysis.priority === 'insufficient' ? 'insufficient' : score >= 75 ? 'high' : score >= 35 ? 'medium' : 'low' };
+    }
     const result = {
         rid: report.rid, domainId: report.domainId, uid: report.uid, pid: report.pid, contest: report.contest,
-        lang: report.lang, verdict: report.verdict, submittedAt: report.submittedAt,
-        state: report.state, priority: report.analysis?.priority || 'insufficient', score: report.analysis?.score || 0,
-        signals: (report.analysis?.signals || []).map(signal => ({ kind: signal.kind, title: signal.title, strength: signal.strength })),
+        lang: report.lang, verdict: report.verdict, submittedAt: report.submittedAt, submissionTime: time,
+        analysisStale: Boolean(report.analysis && report.analysis.version !== VERSION),
+        state: report.state, priority: analysis?.priority || 'insufficient', score: analysis?.score || 0,
+        signals: (analysis?.signals || []).map(signal => ({ kind: signal.kind, title: signal.title, strength: signal.strength })),
         review: report.review, analyzedAt: report.analyzedAt || null,
     };
-    if (detail) { result.analysis = report.analysis || null; result.reviewHistory = report.reviewHistory || []; }
+    if (detail) { result.analysis = analysis || null; result.reviewHistory = report.reviewHistory || []; }
     return result;
 }
 
@@ -53,7 +67,7 @@ function createMongoStore({ reports, sources, state, jobs, records, problemModel
         const doc = {
             _id: key, domainId: record.domainId, rid, uid: record.uid, pid: record.pid,
             contest: record.contest ? String(record.contest).toLowerCase() : null,
-            lang: record.lang || '', verdict: record.status, submittedAt: submittedAt(record), firstSeenAt: active(), expireAt: expires(),
+            lang: record.lang || '', verdict: record.status, submittedAt: submittedAt(record), submissionTime: submissionTime(record), firstSeenAt: active(), expireAt: expires(),
             fingerprint: fingerprint(record.code, record.lang), state: 'pending', attempts: 0, nextAttemptAt: active(),
             review: { status: 'pending', note: '', reviewer: null, updatedAt: null, revision: 0 }, reviewHistory: [],
         };
@@ -213,6 +227,38 @@ function createMongoStore({ reports, sources, state, jobs, records, problemModel
         });
     }
 
+    // Versioned, durable pagination queues each retained report once per ruleset.
+    // The analysis worker still owns its normal lease/retry state; reviews and
+    // source/record/verdict scanner checkpoints are never replaced.
+    async function reanalyze(domainId, deadline = budgetEnd()) {
+        return withScanLease(domainId, `analysis-${VERSION}`, deadline, async (checkpoint, save) => {
+            if (checkpoint.nextAt && new Date(checkpoint.nextAt).getTime() > now()) return { scanned: 0, queued: 0 };
+            const base = scoped({ domainId, expireAt: { $gt: active() } }, id => id);
+            let cycle = checkpoint;
+            if (!cycle.upper || cycle.done) {
+                const latest = await queryRows(reports, base, { rid: -1 }, 1, { rid: 1 }, queryTime(deadline));
+                cycle = { upper: latest[0]?.rid || '000000000000000000000000', after: null, done: false };
+                if (!await save(cycle)) return { scanned: 0, queued: 0 };
+            }
+            if (now() >= deadline) return { scanned: 0, queued: 0 };
+            const rows = await queryRows(reports, { ...base, rid: { $lte: cycle.upper, ...(cycle.after ? { $gt: cycle.after } : {}) } },
+                { rid: 1 }, config.batchSize, { _id: 1, rid: 1 }, queryTime(deadline));
+            let processed = 0; let queued = 0; let after = cycle.after;
+            for (const report of rows) {
+                if (now() >= deadline) break;
+                const result = await reports.updateOne({ _id: report._id, expireAt: { $gt: active() },
+                    'analysis.version': { $ne: VERSION }, analysisTargetVersion: { $ne: VERSION },
+                    $or: [{ state: { $in: ['ready', 'failed'] } }, { state: 'analyzing', leaseUntil: { $lte: active() } }] },
+                { $set: { state: 'pending', attempts: 0, nextAttemptAt: active(), analysisTargetVersion: VERSION },
+                    $unset: { owner: '', leaseUntil: '', error: '' } }, { maxTimeMS: queryTime(deadline) });
+                queued += result.modifiedCount; after = report.rid; processed++;
+            }
+            const done = processed === rows.length && rows.length < config.batchSize;
+            await save({ after, done, nextAt: new Date(done ? now() + config.retainedReconcileMs : 0) });
+            return { scanned: rows.length, queued };
+        });
+    }
+
     async function pending() {
         return queryRows(reports, { domainId: { $in: config.domains }, expireAt: { $gt: active() },
             nextAttemptAt: { $lte: active() }, $or: [{ state: 'pending', attempts: { $lt: config.maxAttempts } }, { state: 'analyzing', leaseUntil: { $lte: active() } }] },
@@ -227,7 +273,7 @@ function createMongoStore({ reports, sources, state, jobs, records, problemModel
         }
         return unwrap(await reports.findOneAndUpdate({ _id: report._id, expireAt: { $gt: active() }, attempts: { $lt: config.maxAttempts },
             nextAttemptAt: { $lte: active() }, $or: [{ state: 'pending' }, { state: 'analyzing', leaseUntil: { $lte: active() } }] },
-        { $set: { state: 'analyzing', owner, leaseUntil: new Date(now() + config.leaseMs) }, $inc: { attempts: 1 } }, { returnDocument: 'after' }));
+        { $set: { state: 'analyzing', analysisTargetVersion: VERSION, owner, leaseUntil: new Date(now() + config.leaseMs) }, $inc: { attempts: 1 } }, { returnDocument: 'after' }));
     }
 
     function snapshot(record) {
@@ -238,18 +284,19 @@ function createMongoStore({ reports, sources, state, jobs, records, problemModel
 
     async function context(report) {
         const before = { $lt: objectId(report.rid) };
+        const completedAt = sourceWindow(submissionTime(report));
         // Global source scans are bounded. Fetch this contestant/problem's
         // completed jobs too, so a large scan backlog cannot hide a source.
         const pdoc = await problemModel.get(report.domainId, report.pid);
         const targets = [...new Set([`p:${report.pid}`, ...(pdoc?.pid ? [`p:${pdoc.pid}`] : [])])];
         const relevantJobs = await queryRows(jobs, { type: 'job', status: 'ready', scope: `${report.domainId}:${report.uid}`,
             target: { $in: targets }, 'answer.mode': 'solve', expireAt: { $gt: active() },
-            completedAt: { $gte: new Date(new Date(report.submittedAt).getTime() - DAY), $lte: report.submittedAt } },
+            completedAt },
         { completedAt: -1 }, 20, { _id: 1, type: 1, status: 1, scope: 1, target: 1, answer: 1, completedAt: 1 });
         for (const job of relevantJobs) await archiveJob(job, report.domainId);
         const [modelSources, recentPeers, recentHistory] = await Promise.all([
             queryRows(sources, { domainId: report.domainId, uid: report.uid, pid: report.pid, mode: 'solve', expireAt: { $gt: active() },
-                completedAt: { $gte: new Date(new Date(report.submittedAt).getTime() - DAY), $lte: report.submittedAt } },
+                completedAt },
             { completedAt: -1 }, 20, { code: 0 }),
             queryRows(records, { domainId: report.domainId, pid: report.pid, uid: { $ne: report.uid, $gt: 0 },
                 contest: report.contest ? objectId(report.contest) : null, _id: before }, { _id: -1 }, config.peerLimit, PROJECTION),
@@ -270,7 +317,7 @@ function createMongoStore({ reports, sources, state, jobs, records, problemModel
 
     async function complete(report, analysis) {
         return reports.updateOne({ _id: report._id, state: 'analyzing', owner, leaseUntil: { $gt: active() } },
-            { $set: { state: 'ready', analysis, analyzedAt: active() }, $unset: { owner: '', leaseUntil: '', error: '' } });
+            { $set: { state: 'ready', analysis, submissionTime: submissionTime(report), analyzedAt: active() }, $unset: { owner: '', leaseUntil: '', error: '' } });
     }
     async function fail(report) {
         await reports.updateOne({ _id: report._id, state: 'analyzing', owner },
@@ -341,8 +388,8 @@ function createMongoStore({ reports, sources, state, jobs, records, problemModel
         const result = { code, assistant: null, peer: null };
         if (assistant) {
             const source = await sources.findOne({ _id: assistant.reference.sourceId, domainId, uid: report.uid, pid: report.pid,
-                expireAt: { $gt: active() }, completedAt: { $lte: report.submittedAt }, mode: 'solve' }, { maxTimeMS: 5000 });
-            if (source) result.assistant = { code: source.code, jobId: source.jobId, completedAt: source.completedAt };
+                expireAt: { $gt: active() }, completedAt: sourceWindow(submissionTime(report)), mode: 'solve' }, { maxTimeMS: 5000 });
+            if (source) result.assistant = { code: source.code, jobId: source.jobId, completedAt: source.completedAt, timing: sourceTiming(source.completedAt, submissionTime(report)) };
         }
         if (peer && RID.test(peer.reference.rid)) {
             const reference = await getRecord(domainId, peer.reference.rid);
@@ -367,7 +414,7 @@ function createMongoStore({ reports, sources, state, jobs, records, problemModel
             scope: config.scope, contests: config.contests, retentionDays: config.retentionDays, intervalMs: config.intervalMs };
     }
 
-    return { ensureRecord, getRecord, archiveJob, captureSources, scan, repair, reconcile, pending, claim, context, complete, fail, updateVerdict,
+    return { ensureRecord, getRecord, archiveJob, captureSources, scan, repair, reconcile, reanalyze, pending, claim, context, complete, fail, updateVerdict,
         get, list, review, evidence, heartbeat, health, owner };
 }
 

@@ -433,3 +433,115 @@ test('E2 an expired scanner cannot rewind its successor checkpoint', async () =>
         await f.makeStore().repair('system'); assert.equal(f.reports.docs.size, 4);
     } finally { f.engine.stop(); }
 });
+
+test('E3 .100 source survives actual .900 submission with only ObjectId .000 known through store and evidence', async () => {
+    const f = await e2Fixture({ batchSize: 10 });
+    try {
+        const at = E2_NOW - 1000;
+        const same = await f.addJob(1086, at + 100); const later = await f.addJob(1086, at + 1000);
+        const record = await f.submit({ time: at + 900 });
+        await f.store.ensureRecord(record);
+        const report = await f.store.get('system', record._id);
+        const context = await f.store.context(report);
+        assert.deepEqual(context.sources.map(s => s.jobId), [same._id]);
+        assert.deepEqual(report.submissionTime, { precision: 'second', origin: 'objectId', lower: new Date(at), upper: new Date(at + 1000) });
+        const claimed = await f.store.claim(report); await f.store.complete(claimed, require('../detector.cjs').analyze(context));
+        const detail = await f.store.evidence('system', record._id);
+        assert.equal(detail.evidence.assistant.jobId, same._id); assert.equal(detail.evidence.assistant.code, GENERATED_CODE);
+        assert.equal(detail.evidence.assistant.timing, 'uncertain'); assert.equal(detail.report.analysis.conclusion, 'undetermined');
+        assert.notEqual(detail.report.priority, 'high'); assert.equal((await f.records.findOne({ _id: record._id })).status, 1);
+        // Legacy reports lacking the additive interval still expose the evidence.
+        await f.reports.updateOne({ _id: report._id }, { $unset: { submissionTime: '' } });
+        assert.equal((await f.store.evidence('system', record._id)).evidence.assistant.timing, 'uncertain');
+        await f.sources.updateOne({ jobId: same._id }, { $set: { completedAt: later.completedAt } });
+        assert.equal((await f.store.evidence('system', record._id)).evidence.assistant, null);
+    } finally { f.engine.stop(); }
+});
+
+test('E3 retained rule migration is bounded, resumes after restart, preserves review and does not steal leases', async () => {
+    const f = await e2Fixture();
+    try {
+        const original = [];
+        for (let i = 1; i <= 7; i++) {
+            const record = await f.insert(i, { _id: e2Id(E2_NOW - 40 * 86400000, i), status: 1 });
+            await f.store.ensureRecord(record);
+            await f.store.review('system', record._id, { status: 'cleared', note: '已核实', revision: 0, reviewer: 2 });
+            await f.reports.updateOne({ rid: record._id }, { $set: { state: 'ready', analysis: { version: '0.1.0', conclusion: 'undetermined', signals: [] } } });
+            original.push(await f.store.get('system', record._id));
+        }
+        await f.reports.updateOne({ _id: original[0]._id }, { $set: { state: 'analyzing', owner: 'other-worker', leaseUntil: new Date(f.now() + 60000) } });
+        await f.reports.updateOne({ _id: original[1]._id }, { $set: { expireAt: new Date(f.now() - 1) } });
+        const first = await f.store.reanalyze('system'); assert.ok(first.scanned <= 2);
+        assert.equal((await f.store.get('system', original[0].rid)).owner, 'other-worker');
+        const restarted = createEngine({ store: f.makeStore(), config: f.config, now: f.now });
+        try { for (let i = 0; i < 8; i++) await restarted.tick(); } finally { restarted.stop(); }
+        for (const before of original.slice(2)) {
+            const after = await f.store.get('system', before.rid);
+            assert.equal(after.analysis.version, require('../detector.cjs').VERSION);
+            for (const key of ['review', 'reviewHistory', 'expireAt', 'verdict']) assert.deepEqual(after[key], before[key]);
+        }
+        assert.equal(f.reports.docs.get(original[1]._id).analysis.version, '0.1.0');
+        f.advance(61000);
+        for (let i = 0; i < 8; i++) await f.engine.tick();
+        assert.equal((await f.store.get('system', original[0].rid)).analysis.version, require('../detector.cjs').VERSION);
+    } finally { f.engine.stop(); }
+});
+
+test('E3 migration cannot reset the exhausted retry budget of a report attempted under current rules', async () => {
+    const f = await e2Fixture();
+    try {
+        const record = await f.insert(1); await f.store.ensureRecord(record);
+        for (let attempt = 0; attempt < 3; attempt++) {
+            const claimed = await f.store.claim(await f.store.get('system', record._id));
+            assert.ok(claimed); await f.store.fail(claimed); f.advance(10000);
+        }
+        assert.equal((await f.store.get('system', record._id)).state, 'failed');
+        await f.store.reanalyze('system');
+        const after = await f.store.get('system', record._id);
+        assert.equal(after.state, 'failed', 'version migration must not grant another retry budget to current-rules failures');
+        assert.equal(after.attempts, 3);
+    } finally { f.engine.stop(); }
+});
+
+test('E3 native Mongo uses half-open source bounds and reanalyzes retained reports without changing manual review',
+    { skip: !process.env.DFACM_AI_WATCH_TEST_MONGO, timeout: 30000 }, async () => {
+        const uri = process.env.DFACM_AI_WATCH_TEST_MONGO;
+        assert.match(uri, /^mongodb:\/\/127\.0\.0\.1:27713\/?$/);
+        const { MongoClient, ObjectId } = require(require('node:path').resolve(__dirname, '../../qa/native-hydro/node_modules/mongodb'));
+        const client = new MongoClient(uri); await client.connect();
+        const dbName = `dfacm_watch_e3_${require('node:crypto').randomBytes(10).toString('hex')}`; const db = client.db(dbName);
+        const collections = Object.fromEntries(['reports', 'sources', 'state', 'jobs', 'records'].map(name => [name, db.collection(name)]));
+        const at = Date.parse('2026-10-31T08:00:00Z');
+        const config = { ...require('../config.cjs').configFromEnv({ DFACM_AI_WATCH_SCOPE: 'all' }), batchSize: 2 };
+        const makeStore = () => createMongoStore({ ...collections, config, now: () => at + 2000,
+            objectId: id => new ObjectId(id), problemModel: { get: async () => ({ docId: 2104, pid: 'P2104' }) } });
+        const store = makeStore();
+        try {
+            const record = { _id: new ObjectId(e2Id(at + 900, 1)), domainId: 'system', uid: 1086, pid: 2104,
+                code: GENERATED_CODE, lang: 'cpp', status: 1 };
+            await collections.records.insertOne(record); await store.ensureRecord(record);
+            for (const offset of [100, 1000]) await collections.jobs.insertOne({ _id: `native-${offset}`, type: 'job', status: 'ready',
+                scope: 'system:1086', target: 'p:2104', answer: { status: 'ok', mode: 'solve', level: 'solution', code: GENERATED_CODE },
+                completedAt: new Date(at + offset), expireAt: new Date(at + 60000) });
+            const rid = String(record._id); const before = await store.get('system', rid);
+            const context = await store.context(before);
+            assert.deepEqual(context.sources.map(s => s.jobId), ['native-100']);
+            const claimed = await store.claim(before); await store.complete(claimed, require('../detector.cjs').analyze(context));
+            const detail = await store.evidence('system', rid);
+            assert.equal(detail.report.score, 0); assert.equal(detail.evidence.assistant.timing, 'uncertain');
+            assert.equal(detail.evidence.assistant.code, GENERATED_CODE);
+            await store.review('system', rid, { status: 'cleared', note: '本地原生测试人工记录', revision: 0, reviewer: 2 });
+            const reviewed = await store.get('system', rid);
+            await collections.reports.updateOne({ rid }, { $set: { 'analysis.version': '0.1.0', analysisTargetVersion: '0.1.0' }, $unset: { submissionTime: '' } });
+            const resumedStore = makeStore(); await resumedStore.reanalyze('system');
+            const queued = await store.get('system', rid); assert.equal(queued.state, 'pending');
+            const resumed = await resumedStore.claim(queued); const analysis = require('../detector.cjs').analyze(await resumedStore.context(resumed));
+            assert.equal((await store.complete(resumed, analysis)).matchedCount, 0, 'another owner cannot complete migrated analysis');
+            assert.equal((await resumedStore.complete(resumed, analysis)).matchedCount, 1);
+            const after = await store.get('system', rid); assert.equal(after.analysis.version, require('../detector.cjs').VERSION);
+            for (const key of ['review', 'reviewHistory', 'expireAt', 'verdict']) assert.deepEqual(after[key], reviewed[key]);
+            assert.equal((await collections.records.findOne({ _id: record._id })).status, 1);
+        } finally {
+            assert.match(dbName, /^dfacm_watch_e3_[a-f0-9]{20}$/); await db.dropDatabase(); await client.close();
+        }
+    });

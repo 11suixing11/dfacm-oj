@@ -15,6 +15,7 @@
     function node(tag, className, text) { const element = document.createElement(tag); if (className) element.className = className; if (text !== undefined) element.textContent = String(text); return element; }
     function safeUrl(value) { const url = new URL(value, location.href); if (url.origin !== location.origin) throw new Error('接口地址无效。'); return url; }
     function stamp(value) { const date = new Date(value); return Number.isFinite(date.getTime()) ? date.toLocaleString('zh-CN', { hour12: false, timeZone: 'Asia/Shanghai' }) : '—'; }
+    function preciseStamp(value) { const date = new Date(value); return Number.isFinite(date.getTime()) ? `${stamp(value)}.${String(date.getUTCMilliseconds()).padStart(3, '0')}` : '—'; }
     function time(value) { const date = new Date(value); return Number.isFinite(date.getTime()) ? date.toLocaleTimeString('zh-CN', { hour12: false, timeZone: 'Asia/Shanghai' }) : '—'; }
     async function request(value, options = {}) {
         const controller = new AbortController(); const deadline = setTimeout(() => controller.abort(), 10000);
@@ -95,13 +96,16 @@
         get('aw-detail-title').textContent = `P${report.pid} · UID ${report.uid}`;
         const meta = node('div', 'aw-detail-meta'); meta.append(priority(report), node('span', '', `复核分 ${report.score} / 100`), node('span', '', stamp(report.submittedAt)), link(report.recordUrl, '原始提交 ↗'));
         content.append(meta);
+        const interval = report.submissionTime;
+        if (interval) content.append(node('p', 'aw-caveat', `提交时间区间：[${preciseStamp(interval.lower)}, ${preciseStamp(interval.upper)})（不含上界）；创建时间仅精确到秒，同秒生成来源与提交的先后未知。`));
+        if (report.analysisStale) content.append(node('p', 'aw-caveat', '此报告来自旧规则，正在等待后台重算；人工复核及历史记录保留。'));
         const evidence = section('线索与依据');
         if (!analysis?.signals.length) evidence.append(node('p', '', report.state === 'ready' ? '当前规则未提供足以判断作者的线索。' : '分析尚未完成或暂时失败，不能据此形成结论。'));
         for (const signal of analysis?.signals || []) {
             const card = node('article', 'aw-evidence-card'); const title = node('h3', '', signal.title); title.append(node('span', 'aw-evidence-strength', strengths[signal.strength]));
             card.append(title, node('p', '', signal.detail));
             if (signal.metrics?.similarity !== undefined) card.append(node('p', 'aw-mono', `词法指纹相似度 ${(signal.metrics.similarity * 100).toFixed(1)}% · 非 AI 概率`));
-            if (signal.reference?.completedAt) card.append(node('p', '', `站内生成时间：${stamp(signal.reference.completedAt)}`));
+            if (signal.reference?.completedAt) card.append(node('p', '', `站内生成时间：${preciseStamp(signal.reference.completedAt)}`));
             if (signal.reference?.uid) card.append(node('p', '', `对照提交选手：UID ${signal.reference.uid}`));
             card.append(node('p', 'aw-caveat', signal.caveat)); evidence.append(card);
         }
@@ -113,7 +117,7 @@
         const ul = node('ul'); for (const value of analysis?.limitations || ['检测仍在处理中，未作出作者判断。']) ul.append(node('li', '', value)); limits.append(ul); content.append(limits);
         const sources = section('源码对照'); const grid = node('div', 'aw-code-grid'); const comparison = payload.evidence.assistant || payload.evidence.peer;
         if (!comparison) grid.classList.add('is-single'); grid.append(codeBlock('本次提交', payload.evidence.code));
-        if (payload.evidence.assistant) grid.append(codeBlock('本人先前获取的站内 AI 输出', payload.evidence.assistant.code));
+        if (payload.evidence.assistant) grid.append(codeBlock(payload.evidence.assistant.timing === 'uncertain' ? '本人同秒获取的站内 AI 输出（先后未知）' : '本人先前获取的站内 AI 输出', payload.evidence.assistant.code));
         else if (payload.evidence.peer) grid.append(codeBlock(`同场对照 · UID ${payload.evidence.peer.uid}`, payload.evidence.peer.code));
         sources.append(grid); content.append(sources);
         const review = section('记录人工复核'); const reviewForm = node('form', 'aw-review-form');

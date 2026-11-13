@@ -10,8 +10,8 @@ const { createDemo } = require('../demo.cjs');
 const { createHandlers, csrfToken } = require('../http.cjs');
 const { createPreviewServer } = require('../preview.cjs');
 
-async function fixture() {
-    const demo = await createDemo(); const session = {}; const calls = [];
+async function fixture(options) {
+    const demo = await createDemo(options); const session = {}; const calls = [];
     class Handler {
         constructor() { this.args = { domainId: 'system' }; this.domain = { _id: 'system' }; this.session = session;
             this.request = { body: {}, query: {} }; this.user = { _id: 2, hasPriv: () => true };
@@ -104,4 +104,76 @@ test('standalone preview serves real analysis, new submit events, CSRF review an
         const reviewed = await fetch(base + high.detailUrl, { method: 'POST', headers: { 'Content-Type': 'application/json', Origin: base }, body: JSON.stringify({ csrf: token, status: 'escalated', note: '需要核实来源使用规则', revision: 0 }) });
         assert.equal(reviewed.status, 200); assert.equal((await reviewed.json()).report.review.status, 'escalated');
     } finally { demo.engine.stop(); await new Promise(resolve => server.close(resolve)); }
+});
+
+// Minimal browser boundary: execute the complete shipped UI against real HTTP
+// handler payloads. Only DOM/timers/fetch are local doubles; detector/store and
+// all page rendering code remain real. No browser packages required in releases.
+async function renderDetail(payload) {
+    class Element {
+        constructor(tag = 'div') { this.tagName = tag; this.dataset = {}; this.children = []; this.listeners = {}; this.isConnected = true;
+            this.classList = { add() {}, toggle() {} }; this._text = ''; }
+        set textContent(value) { this._text = String(value); this.children = []; }
+        get textContent() { return this._text + this.children.map(v => v.textContent).join(''); }
+        append(...children) { this.children.push(...children); }
+        replaceChildren(...children) { this._text = ''; this.children = children; }
+        setAttribute() {}
+        addEventListener(type, callback) { this.listeners[type] = callback; }
+        showModal() { this.open = true; }
+    }
+    const template = fs.readFileSync(path.join(__dirname, '../templates/watch_content.html'), 'utf8');
+    const elements = Object.fromEntries([...template.matchAll(/id="([^"]+)"/g)].map(v => [v[1], new Element()]));
+    elements['ai-watch'].dataset = { endpoint: '/data' }; elements['aw-filters'].elements = { days: { value: '1' } };
+    const document = { getElementById: id => elements[id], createElement: tag => new Element(tag),
+        createTextNode: text => { const node = new Element(); node.textContent = text; return node; },
+        addEventListener() {}, documentElement: new Element(), hidden: false };
+    const list = { reports: [payload.report], stats: { total: 1, high: 0, pending: 1, cleared: 0, escalated: 0 },
+        health: { scope: 'all', contests: [], retentionDays: 30, intervalMs: 1000 }, generatedAt: '2026-10-31T08:00:02Z' };
+    const vm = require('node:vm');
+    vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../public/watch.js'), 'utf8'), {
+        document, window: { addEventListener() {} }, location: { href: 'http://localhost/', origin: 'http://localhost' },
+        URL, URLSearchParams, AbortController, setTimeout: () => 1, clearTimeout() {},
+        fetch: async url => ({ ok: true, json: async () => url.pathname === '/data' ? list : payload }),
+    });
+    await new Promise(setImmediate);
+    elements['aw-rows'].listeners.click({ target: { closest: () => ({ dataset: { rid: payload.report.rid } }) } });
+    await new Promise(setImmediate);
+    return elements['aw-detail-content'];
+}
+
+test('E3 HTTP and UI retain same-second comparison with precision and neutral timing labels', async () => {
+    const at = Date.parse('2026-10-31T08:00:00Z'); const f = await fixture({ now: () => at + 2000, seed: false });
+    try {
+        await f.demo.addJob(1086, at + 100); const record = await f.demo.submit({ time: at + 900 }); await f.demo.engine.tick();
+        const detail = new f.WatchReportHandler(); detail.args.rid = record._id; await detail.get();
+        assert.equal(detail.response.status, 200); const payload = detail.response.body;
+        assert.equal(payload.evidence.assistant.timing, 'uncertain'); assert.equal(payload.report.submissionTime.precision, 'second');
+        assert.equal(payload.report.analysis.conclusion, 'undetermined'); assert.equal(payload.report.score, 0);
+        const page = await renderDetail(payload);
+        const sourceSection = page.children.find(child => child.children[0]?.textContent === '源码对照');
+        assert.match(sourceSection.textContent, /同秒.*先后未知/);
+        assert.doesNotMatch(sourceSection.textContent, /本人先前获取/);
+        assert.match(page.textContent, /提交时间区间/); assert.match(page.textContent, /不含上界/);
+        assert.match(page.textContent, /\.100/); // Source milliseconds remain visible beside the second-wide interval.
+        assert.equal(f.demo.records.docs.get(record._id).status, 1);
+    } finally { f.demo.engine.stop(); }
+});
+
+test('E3 legacy same-second high report is readable without repeating an earlier-source claim while reanalysis is pending', async () => {
+    const at = Date.parse('2026-10-31T08:00:00Z'); const f = await fixture({ now: () => at + 2000, seed: false });
+    try {
+        await f.demo.addJob(1086, at); const record = await f.demo.submit({ time: at + 900 }); await f.demo.engine.tick();
+        const report = await f.demo.store.get('system', record._id); const signal = report.analysis.signals[0];
+        const old = { ...report.analysis, version: '0.1.0', priority: 'high', score: 90, signals: [{ ...signal, strength: 'traceable', weight: 90,
+            title: '匹配本人先前获取的站内 AI 代码', detail: '先前返回的题解', reference: { ...signal.reference, timing: undefined } }] };
+        await f.demo.reports.updateOne({ _id: report._id }, { $set: { analysis: old }, $unset: { submissionTime: '' } });
+        const detail = new f.WatchReportHandler(); detail.args.rid = record._id; await detail.get();
+        const payload = detail.response.body;
+        assert.equal(payload.report.analysisStale, true); assert.equal(payload.report.priority, 'low');
+        assert.equal(payload.report.analysis.signals[0].reference.timing, 'uncertain');
+        assert.equal(payload.evidence.assistant.timing, 'uncertain');
+        const page = await renderDetail(payload); assert.match(page.textContent, /旧规则.*重算/);
+        assert.doesNotMatch(page.textContent, /先前返回|本人先前获取/);
+        assert.equal((await f.demo.store.get('system', record._id)).analysis.version, '0.1.0', 'read compatibility does not rewrite persisted history');
+    } finally { f.demo.engine.stop(); }
 });

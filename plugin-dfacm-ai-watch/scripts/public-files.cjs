@@ -11,7 +11,7 @@ const RELEASE_FILES = Object.freeze([
     'scripts/check-build.cjs', 'scripts/check-live.cjs', 'scripts/check-native.cjs',
     'scripts/deployment.cjs', 'scripts/install.sh', 'scripts/rollback.sh', 'scripts/package.cjs',
     'scripts/public-files.cjs', 'scripts/check-public.cjs',
-    'tests/detector.test.cjs', 'tests/http.test.cjs', 'tests/store-engine.test.cjs',
+    'tests/time.test.cjs', 'tests/detector.test.cjs', 'tests/http.test.cjs', 'tests/store-engine.test.cjs',
     'tests/deployment.test.cjs', 'tests/public-source.test.cjs',
 ]);
 const PUBLIC_FILES = Object.freeze([...RELEASE_FILES, '.github/workflows/ci.yml']);
