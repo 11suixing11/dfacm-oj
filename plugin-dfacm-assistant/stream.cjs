@@ -37,8 +37,8 @@ async function readChatStream(response, onText, onUsage) {
     let content = '', finish = null, done = false, failed = false;
     const calls = new Map();
     const parser = sseParser(({ data, event }) => {
-        if (event === 'error') { failed = true; return; }
         if (done) return;
+        if (event === 'error') { failed = true; return; }
         if (data === '[DONE]') { done = true; return; }
         let value;
         try { value = JSON.parse(data); } catch { throw new AssistantError('INVALID_RESPONSE', '模型返回的流式内容不完整，请重试。', 502); }
@@ -64,11 +64,11 @@ async function readChatStream(response, onText, onUsage) {
     if (!reader) throw new AssistantError('INVALID_RESPONSE', '模型没有返回可读取的内容，请重试。', 502);
     const decoder = new TextDecoder();
     try {
-        for (;;) {
+        while (!done) {
             const { value, done: end } = await reader.read(); if (end) break;
             parser.push(decoder.decode(value, { stream: true }));
         }
-        parser.push(decoder.decode()); parser.finish();
+        if (!done) { parser.push(decoder.decode()); parser.finish(); }
     } finally { await reader.cancel().catch(() => {}); }
     if (failed) throw new AssistantError('UPSTREAM_ERROR', '模型生成中断，请稍后重试。', 502);
     if (!done || !finish || finish === 'length') throw new AssistantError('INCOMPLETE_RESPONSE', '模型答案未生成完整，请重试。', 502);

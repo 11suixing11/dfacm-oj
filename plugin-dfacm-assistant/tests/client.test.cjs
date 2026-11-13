@@ -3,12 +3,74 @@
 const assert = require('node:assert/strict');
 const { test } = require('node:test');
 const path = require('node:path');
+const http = require('node:http');
 const { createModelClient, modelConfig, personalModelConfig, loadSkill } = require('../client.cjs');
 const { request, answer } = require('./fixtures.cjs');
 
 const root = path.resolve(__dirname, '../skill/acm-trainer');
 const cfg = () => modelConfig({ apiKey: 'fixture-key' });
 const response = (message, finish_reason = 'stop') => new Response(JSON.stringify({ choices: [{ message, finish_reason }] }), { status: 200 });
+const sseEvent = value => 'data: ' + JSON.stringify(value) + '\n\n';
+const sseResponse = raw => new Response(raw, { headers: { 'content-type': 'text/event-stream' } });
+
+test('client completes a localhost SSE answer with post-finish usage before HTTP EOF', async () => {
+    let calls = 0;
+    const server = http.createServer((incoming, reply) => {
+        calls++; incoming.resume();
+        reply.writeHead(200, { 'content-type': 'text/event-stream' });
+        reply.write(sseEvent({ choices: [{ delta: { content: JSON.stringify(answer('solve', 'hint')) }, finish_reason: 'stop' }] }));
+        reply.write(sseEvent({ choices: [], usage: { prompt_tokens: 10, completion_tokens: 20 } }) + 'data: [DONE]\n\n');
+    });
+    await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+    const client = createModelClient({ resourceRoot: root, fetchImpl: (_endpoint, options) => fetch(`http://127.0.0.1:${server.address().port}/`, options) });
+    const config = { ...cfg(), timeoutMs: 750 };
+    try {
+        const observed = await client.generate(request('solve', 'hint'), config).then(result => ({ result }), error => ({ error: error.code }));
+        assert.equal(observed.error, undefined, 'complete DONE must succeed before the client timeout');
+        assert.equal(observed.result.status, 'ok'); assert.equal(observed.result.level, 'hint');
+        assert.deepEqual(observed.result.usage, { inputTokens: 10, outputTokens: 20, totalTokens: 30, cachedInputTokens: null });
+        assert.equal(calls, 1, 'finishing a stream must not retry a billable request');
+    } finally {
+        server.closeAllConnections(); await new Promise(resolve => server.close(resolve));
+    }
+});
+
+test('terminal SSE marker preserves incomplete, error, template and answer validation failures without retry', async () => {
+    const badLocation = answer('debug'); badLocation.issues[0].locations[0].quote = 'incorrect';
+    for (const [raw, input, code] of [
+        [sseEvent({ choices: [{ delta: { content: JSON.stringify(answer()) } }] }), request(), 'INCOMPLETE_RESPONSE'],
+        [sseEvent({ choices: [{ delta: { content: JSON.stringify(answer()) }, finish_reason: 'length' }] }), request(), 'INCOMPLETE_RESPONSE'],
+        ['event: error\ndata: provider aborted\n\n', request(), 'UPSTREAM_ERROR'],
+        [sseEvent({ error: { message: 'provider aborted' } }), request(), 'UPSTREAM_ERROR'],
+        [sseEvent({ choices: [{ delta: { tool_calls: [{ index: 0, id: 'call1', type: 'function', function: { name: 'read_template', arguments: '{"name":"dsu.md"' } }] }, finish_reason: 'tool_calls' }] }), request(), 'INVALID_RESPONSE'],
+        [sseEvent({ choices: [{ delta: { tool_calls: [{ index: 0, id: 'call1', type: 'function', function: { name: 'read_', arguments: '{"name":"dsu.md"}' } }] }, finish_reason: 'tool_calls' }] }), request(), 'INVALID_RESPONSE'],
+        [sseEvent({ choices: [{ delta: { content: '{' }, finish_reason: 'stop' }] }), request(), 'INVALID_RESPONSE'],
+        [sseEvent({ choices: [{ delta: { content: JSON.stringify(badLocation) }, finish_reason: 'stop' }] }), request('debug'), 'INVALID_LOCATION'],
+    ]) {
+        let calls = 0;
+        const client = createModelClient({ resourceRoot: root, fetchImpl: async () => { calls++; return sseResponse(raw + 'data: [DONE]\n\n'); } });
+        await assert.rejects(client.generate(input, cfg()), { code });
+        assert.equal(calls, 1, 'invalid SSE must fail without a billable retry');
+    }
+});
+
+test('complete streamed template calls retain IDs and accumulate per-round usage', async () => {
+    const calls = [];
+    const client = createModelClient({ resourceRoot: root, fetchImpl: async (_endpoint, options) => {
+        calls.push(JSON.parse(options.body));
+        if (calls.length === 1) return sseResponse(
+            sseEvent({ choices: [{ delta: { tool_calls: [{ index: 0, id: 'call-fragmented', type: 'function', function: { name: 'read_', arguments: '{"name":' } }] } }] })
+            + sseEvent({ choices: [{ delta: { tool_calls: [{ index: 0, function: { name: 'template', arguments: '"dsu.md"}' } }] }, finish_reason: 'tool_calls' }] })
+            + sseEvent({ choices: [], usage: { prompt_tokens: 3, completion_tokens: 2 } }) + 'data: [DONE]\n\n');
+        return sseResponse(sseEvent({ choices: [{ delta: { content: JSON.stringify(answer()) }, finish_reason: 'stop' }] })
+            + sseEvent({ choices: [], usage: { prompt_tokens: 7, completion_tokens: 8 } }) + 'data: [DONE]\n\n');
+    } });
+    const result = await client.generate(request(), cfg());
+    assert.equal(result.status, 'ok'); assert.equal(calls.length, 2);
+    const loaded = calls[1].messages.find(message => message.role === 'tool');
+    assert.equal(loaded.tool_call_id, 'call-fragmented'); assert.equal(loaded.content, loadSkill(root).templates.get('dsu.md'));
+    assert.deepEqual(result.usage, { inputTokens: 10, outputTokens: 10, totalTokens: 20, cachedInputTokens: null });
+});
 
 test('AgentRouter config uses selected endpoint/model and rejects keys in URL', () => {
     assert.equal(cfg().endpoint, 'https://agentrouter.org/v1/chat/completions');
