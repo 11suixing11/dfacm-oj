@@ -19,6 +19,30 @@ const compiled = esbuild.buildSync({
 }).outputFiles[0].text;
 
 const NOW = new Date('2026-10-04T12:00:00Z');
+function matchesBackfill(doc, filter) {
+    return Object.entries(filter).every(([key, value]) => {
+        if (value && typeof value === 'object') return Object.entries(value).every(([op, operand]) => {
+            if (op === '$gt') return doc[key] > operand;
+            if (op === '$lte') return doc[key] <= operand;
+            throw new Error(`unsupported query operator ${op}`);
+        });
+        return doc[key] === value;
+    });
+}
+class FakeBackfillState {
+    constructor() { this.docs = []; }
+    async findOne(filter) { return structuredClone(this.docs.find((doc) => matchesBackfill(doc, filter)) || null); }
+    async insertOne(doc) {
+        if (this.docs.some((row) => row._id === doc._id)) { const error = new Error('duplicate'); error.code = 11000; throw error; }
+        this.docs.push(structuredClone(doc));
+    }
+    async updateOne(filter, update) {
+        const doc = this.docs.find((row) => matchesBackfill(row, filter));
+        if (doc) Object.assign(doc, structuredClone(update.$set));
+        return { matchedCount: doc ? 1 : 0 };
+    }
+}
+
 
 class FakeLedger {
     constructor() { this.docs = []; }
@@ -43,6 +67,7 @@ class FakeLedger {
             },
             skip(n) { this._rows = this._rows.slice(n); return this; },
             limit(n) { this._rows = this._rows.slice(0, n); return this; },
+                maxTimeMS() { return this; },
             project() { return this; },
             async toArray() { return [...this._rows]; },
             async close() {},
@@ -54,7 +79,7 @@ class FakeLedger {
         };
     }
     async countDocuments(filter) {
-        return this.docs.filter((d) => Object.entries(filter).every(([k, v]) => d[k] === v)).length;
+        return this.docs.filter((d) => matchesBackfill(d, filter)).length;
     }
     aggregate(pipeline) {
         let rows = [...this.docs];
@@ -158,7 +183,7 @@ async function fixture({ env = {}, badgeReady = true, badges = [], records = [],
     const problems = new Map();
     const recordColl = {
         find(filter) {
-            const rows = records.filter((d) => Object.entries(filter).every(([k, v]) => d[k] === v));
+            const rows = records.filter((d) => matchesBackfill(d, filter));
             return {
                 _rows: rows,
                 sort(spec) {
@@ -173,6 +198,7 @@ async function fixture({ env = {}, badgeReady = true, badges = [], records = [],
                     return this;
                 },
                 limit(n) { this._rows = this._rows.slice(0, n); return this; },
+                maxTimeMS() { return this; },
                 async toArray() { return [...this._rows]; },
                 async close() {},
                 [Symbol.asyncIterator]() {
@@ -186,6 +212,7 @@ async function fixture({ env = {}, badgeReady = true, badges = [], records = [],
 
     const collectionsByName = {
         swpuPointsLedger: ledger,
+        swpuShopBackfillState: new FakeBackfillState(),
         swpuBadgePrice: price,
         swpuTitles: titles,
         userBadge: { async findOne(f) { return structuredClone(userBadgeDocs.find((d) => d.owner === f.owner && d.badgeId === f.badgeId) || null); } },

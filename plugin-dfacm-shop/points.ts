@@ -67,7 +67,7 @@ export interface ShopCollections {
         insertOne(doc: any): Promise<any>;
         find(filter: any): any;
         aggregate(pipeline: any[]): any;
-        countDocuments(filter: any): Promise<number>;
+        countDocuments(filter: any, options?: any): Promise<number>;
     };
     price: {
         findOne(filter: any): Promise<any>;
@@ -150,7 +150,7 @@ export async function awardSolve(
     models: ShopModels,
     collections: ShopCollections,
     now: () => Date,
-    entry: { uid: number; domainId: string; docId: number; kind?: 'solve' | 'backfill' },
+    entry: { uid: number; domainId: string; docId: number; kind?: 'solve' | 'backfill'; backfillRound?: string; backfillRecord?: any },
 ): Promise<AwardResult> {
     const { uid, domainId, docId } = entry;
     if (!Number.isSafeInteger(uid) || uid <= 1) return { awarded: false, delta: 0 };
@@ -164,6 +164,9 @@ export async function awardSolve(
             uid,
             delta,
             kind: entry.kind || 'solve',
+            ...(entry.kind === 'backfill' && entry.backfillRound ? {
+                backfillRound: entry.backfillRound, backfillRecord: entry.backfillRecord,
+            } : {}),
             ref: solveRef(domainId, docId),
             detail: String(pdoc.title || docId),
             ts: now(),

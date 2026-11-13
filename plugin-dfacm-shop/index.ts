@@ -20,9 +20,10 @@ import {
     TITLE_MAX_CHARS, TITLE_PALETTES, TITLE_UNLOCK_PRICE, unlockTitle,
 } from './titles';
 
+import { runHistoricalBackfill } from './backfill';
+
 const logger = new Logger('swpu-shop');
 
-const STATUS_ACCEPTED = 1;
 // badge-for-hydrooj 把模型挂在 global.Hydro.model；只调用，绝不 fork。
 function badgeModels() {
     const hydro = global as unknown as {
@@ -411,53 +412,21 @@ function onRecordChange(rdoc: any, _set: any, _push: any, body: any) {
         .catch((e) => logger.error('solve award failed:', e));
 }
 
-// 回填历史 AC：按 (uid, domainId, pid) 去重逐条 awardSolve；幂等键保证
-// 脚本可重复跑、增量跑，且与事件入账天然互不冲突（同 ref 不重复入账）。
-//
-// 每域扫描上限 BACKFILL_SCAN_LIMIT：原来是无 limit 的游标，每条唯一记录都要
-// 一次 ProblemModel.get + 一次 insertOne，在大实例上会长时间占住单线程。幂等键
-// 让脚本可重复执行，所以截断只需报告、不需要断点续跑。
-const BACKFILL_SCAN_LIMIT = 20000;
+// Per-domain rounds use fixed BSON upper bounds and whole-page checkpoints.
+// A completed invocation starts a fresh round next time to cover old rejudges.
 async function runBackfill(args: { domainId?: string }, report: (progress: any) => void) {
     const domainIds = args.domainId ? [args.domainId] : ['system', 'poj'];
     const { ProblemModel } = require('hydrooj');
-    const models = {
-        badge: { badgeGetMulti() { return { async toArray() { return []; } }; }, async badgeGet() { return null; } },
-        userBadge: { async userBadgeAdd() {}, userBadgeGetMulti() { return { async toArray() { return []; } }; } },
-        problem: { get: (d: string, p: number) => ProblemModel.get(d, p) },
-    };
-    let awarded = 0;
-    let scanned = 0;
-    const truncated: string[] = [];
-    for (const domainId of domainIds) {
-        const seen = new Set<string>();
-        const cursor = RecordModel.coll.find({ domainId, status: STATUS_ACCEPTED })
-            .project({ domainId: 1, uid: 1, pid: 1, status: 1, contest: 1 }).sort({ _id: 1 }).limit(BACKFILL_SCAN_LIMIT);
-        for await (const rdoc of cursor) {
-            scanned++;
-            if (!isOfficialAcceptedRecord(rdoc)) continue;
-            const key = `${rdoc.uid}:${rdoc.pid}`;
-            if (seen.has(key)) continue;
-            seen.add(key);
-            try {
-                const result = await awardSolve(models, collections(), now, {
-                    uid: rdoc.uid, domainId, docId: rdoc.pid, kind: 'backfill',
-                });
-                if (result.awarded) awarded++;
-            } catch (e) {
-                logger.error('backfill award failed:', e);
-            }
-            if (scanned % 500 === 0) report({ progress: scanned, message: `${domainId}: 已扫描 ${scanned} 条` });
-        }
-        await cursor.close();
-        if (scanned >= BACKFILL_SCAN_LIMIT) truncated.push(domainId);
-        report({ message: `${domainId}: 扫描完成（${scanned} 条 AC，新入账 ${awarded} 条）` });
-    }
-    if (truncated.length) {
-        report({ message: `注意：以下域达到单次回填上限 ${BACKFILL_SCAN_LIMIT} 条，剩余部分需再次运行本脚本（幂等可续）：${truncated.join('、')}` });
-    }
-    report({ message: `回填完成：共新入账 ${awarded} 条（幂等，可重复运行）` });
-    return true;
+    return runHistoricalBackfill({
+        records: RecordModel.coll,
+        state: db.collection('swpuShopBackfillState' as any),
+        models: {
+            badge: { badgeGetMulti() { return { async toArray() { return []; } }; }, async badgeGet() { return null; } },
+            userBadge: { async userBadgeAdd() {}, userBadgeGetMulti() { return { async toArray() { return []; } }; } },
+            problem: { get: (d: string, p: number) => ProblemModel.get(d, p) },
+        },
+        collections: collections(), now,
+    }, domainIds, report);
 }
 
 export const inject = ['db'];
@@ -467,6 +436,12 @@ export async function apply(ctx: Context) {
         db.collection('swpuPointsLedger' as any),
         { key: { uid: 1, ref: 1 }, name: 'uid_ref', unique: true },
         { key: { uid: 1, ts: -1 }, name: 'uid_ts' },
+        { key: { backfillRound: 1, backfillRecord: 1 }, name: 'backfill_round_record', sparse: true },
+    );
+    // Unfiltered keyset scan; status filtering would miss old rejudges. State
+    // uses Mongo's native _id unique index (do not pass it to ensureIndexes).
+    await db.ensureIndexes(RecordModel.coll,
+        { key: { domainId: 1, _id: 1 }, name: 'swpu_shop_backfill_scan' },
     );
     // swpuTitles：一行一个会员的解锁状态，uid 唯一索引是解锁幂等的第二道闸
     // （第一道是 ledger 的 title_unlock 固定 ref），也保证 findOne({uid}) 快路径。
