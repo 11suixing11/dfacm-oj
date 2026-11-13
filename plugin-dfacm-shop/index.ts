@@ -12,7 +12,7 @@ import {
 } from 'hydrooj';
 import { randomBytes, timingSafeEqual } from 'crypto';
 import {
-    LEDGER_PAGE_SIZE, awardSolve, getBalance, listLedger, problemDifficulty,
+    LEDGER_PAGE_SIZE, awardSolve, getBalance, isOfficialAcceptedRecord, listLedger, problemDifficulty,
     redeem, setPrice, ShopError,
 } from './points';
 import {
@@ -400,9 +400,8 @@ class TitleManageSaveHandler extends Handler {
 // (rdoc, _set, _push, body)，终态判定 body.key === 'end'，AC 判定 rdoc.status。
 function onRecordChange(rdoc: any, _set: any, _push: any, body: any) {
     if (!body || body.key !== 'end') return;
-    if (!rdoc || rdoc.status !== STATUS_ACCEPTED) return;
+    if (!isOfficialAcceptedRecord(rdoc)) return;
     const { domainId, uid, pid } = rdoc;
-    if (!domainId || !uid || !pid) return;
     const { ProblemModel } = require('hydrooj');
     awardSolve({
         badge: { badgeGetMulti() { return { async toArray() { return []; } }; }, async badgeGet() { return null; } },
@@ -433,9 +432,10 @@ async function runBackfill(args: { domainId?: string }, report: (progress: any) 
     for (const domainId of domainIds) {
         const seen = new Set<string>();
         const cursor = RecordModel.coll.find({ domainId, status: STATUS_ACCEPTED })
-            .project({ uid: 1, pid: 1 }).sort({ _id: 1 }).limit(BACKFILL_SCAN_LIMIT);
+            .project({ domainId: 1, uid: 1, pid: 1, status: 1, contest: 1 }).sort({ _id: 1 }).limit(BACKFILL_SCAN_LIMIT);
         for await (const rdoc of cursor) {
             scanned++;
+            if (!isOfficialAcceptedRecord(rdoc)) continue;
             const key = `${rdoc.uid}:${rdoc.pid}`;
             if (seen.has(key)) continue;
             seen.add(key);

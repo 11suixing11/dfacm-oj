@@ -30,7 +30,7 @@ class FakeLedger {
         return { insertedId: 'ok' };
     }
     async findOne(filter) {
-        return this.docs.find((d) => Object.entries(filter).every(([k, v]) => d[k] === v)) || null;
+        return structuredClone(this.docs.find((d) => Object.entries(filter).every(([k, v]) => d[k] === v)) || null);
     }
     find(filter) {
         const rows = this.docs.filter((d) => Object.entries(filter).every(([k, v]) => d[k] === v));
@@ -68,7 +68,7 @@ class FakeLedger {
 
 class FakePrice {
     constructor(docs = []) { this.docs = [...docs]; }
-    async findOne(filter) { return this.docs.find((d) => d._id === filter._id) || null; }
+    async findOne(filter) { return structuredClone(this.docs.find((d) => d._id === filter._id) || null); }
     async updateOne(filter, update, options = {}) {
         let doc = this.docs.find((d) => d._id === filter._id);
         if (!doc && options.upsert) { doc = { _id: filter._id }; this.docs.push(doc); }
@@ -82,7 +82,7 @@ class FakePrice {
 class FakeTitles {
     constructor(docs = []) { this.docs = [...docs]; }
     async findOne(filter) {
-        return this.docs.find((d) => Object.entries(filter).every(([k, v]) => d[k] === v)) || null;
+        return structuredClone(this.docs.find((d) => Object.entries(filter).every(([k, v]) => d[k] === v)) || null);
     }
     async insertOne(doc) {
         if (this.docs.some((d) => d.uid === doc.uid)) {
@@ -166,7 +166,12 @@ async function fixture({ env = {}, badgeReady = true, badges = [], records = [],
                     this._rows = [...this._rows].sort((a, b) => (a[key] > b[key] ? 1 : a[key] < b[key] ? -1 : 0) * dir);
                     return this;
                 },
-                project() { return this; },
+                project(spec) {
+                    this._rows = this._rows.map((doc) => Object.fromEntries(
+                        Object.entries(doc).filter(([key]) => spec[key] === 1 || (key === '_id' && spec._id !== 0)),
+                    ));
+                    return this;
+                },
                 limit(n) { this._rows = this._rows.slice(0, n); return this; },
                 async toArray() { return [...this._rows]; },
                 async close() {},
@@ -183,7 +188,7 @@ async function fixture({ env = {}, badgeReady = true, badges = [], records = [],
         swpuPointsLedger: ledger,
         swpuBadgePrice: price,
         swpuTitles: titles,
-        userBadge: { async findOne(f) { return userBadgeDocs.find((d) => d.owner === f.owner && d.badgeId === f.badgeId) || null; } },
+        userBadge: { async findOne(f) { return structuredClone(userBadgeDocs.find((d) => d.owner === f.owner && d.badgeId === f.badgeId) || null); } },
     };
     const stub = {
         db: {
@@ -207,7 +212,11 @@ async function fixture({ env = {}, badgeReady = true, badges = [], records = [],
         post: () => () => {},
         PRIV: { PRIV_USER_PROFILE: 4, PRIV_MANAGE_ALL_DOMAIN: 4096 },
         Types: { String: [], UnsignedInt: [], PositiveInt: [], Boolean: [] },
-        RecordModel: { coll: recordColl },
+        RecordModel: {
+            coll: recordColl,
+            RECORD_PRETEST: { toString: () => '000000000000000000000000' },
+            RECORD_GENERATE: { toString: () => '000000000000000000000001' },
+        },
         Schema: { object: (shape) => shape, string: () => ({ default: (v) => v }) },
     };
     if (badgeReady) {
@@ -555,6 +564,92 @@ test('record/change hook awards on AC end events only, with instance-0 guard', a
     assert.equal(worker.listeners['record/change'], undefined);
     const main = await fixture({ env: { NODE_APP_INSTANCE: '0' }, ...base });
     assert.equal(typeof main.listeners['record/change'], 'function');
+});
+
+// A missing contest check must fail through points being credited, rather than
+// through an absent helper or a mock assertion. Both ObjectId-style values and
+// serialized strings occur at the Hydro boundary.
+for (const [name, hex] of [
+    ['pretest', '000000000000000000000000'],
+    ['generate', '000000000000000000000001'],
+]) {
+    test(`official AC: live ${name} never credits points or consumes the formal solve`, async () => {
+        const f = await fixture();
+        f.seedProblem('system', 1000, { title: 'P1000', hidden: false, owner: 9, difficulty: 6 });
+        const record = { domainId: 'system', uid: 42, pid: 1000, status: 1 };
+        const settle = () => new Promise((resolve) => setImmediate(resolve));
+        for (const contest of [hex, { toString: () => hex }]) {
+            assert.doesNotThrow(() => f.listeners['record/change']({ ...record, contest }, null, null, { key: 'end' }));
+            await settle();
+            assert.equal(f.ledger.docs.length, 0, `${name} is not a formal problem solve`);
+        }
+        f.listeners['record/change'](record, null, null, { key: 'end' });
+        await settle();
+        assert.deepEqual(f.ledger.docs.map(({ uid, delta, kind, ref }) => ({ uid, delta, kind, ref })),
+            [{ uid: 42, delta: 6, kind: 'solve', ref: 'solve:system:1000' }]);
+    });
+
+    test(`official AC: historical ${name} never credits points`, async () => {
+        const f = await fixture({ records: [
+            { _id: 'r1', domainId: 'system', uid: 42, pid: 1000, status: 1, contest: hex },
+            { _id: 'r2', domainId: 'system', uid: 42, pid: 1001, status: 1, contest: { toString: () => hex } },
+        ] });
+        for (const pid of [1000, 1001]) f.seedProblem('system', pid, { title: `P${pid}`, hidden: false, owner: 9, difficulty: 6 });
+        assert.equal(await f.scripts.get('swpuShopBackfill').run({ domainId: 'system' }, () => {}), true);
+        assert.equal(f.ledger.docs.length, 0, `${name} is not a formal problem solve`);
+    });
+}
+
+test('official AC: exact pseudo-contest exclusions preserve real contest IDs and live/backfill overlap', async () => {
+    const records = [
+        { _id: 'r1', domainId: 'system', uid: 42, pid: 1000, status: 1, contest: '000000000000000000000000' },
+        { _id: 'r2', domainId: 'system', uid: 42, pid: 1000, status: 1, contest: '000000000000000000000002' },
+        { _id: 'r3', domainId: 'system', uid: 42, pid: 1000, status: 1 },
+        { _id: 'r4', domainId: 'system', uid: 42, pid: 1001, status: 1, contest: '000000000000000000000001' },
+        { _id: 'r5', domainId: 'system', uid: 42, pid: 1001, status: 1, contest: '6a0000000000000000000001' },
+        { _id: 'r6', domainId: 'system', uid: 42, pid: 1002, status: 1 },
+    ];
+    const f = await fixture({ records });
+    for (const pid of [1000, 1001, 1002]) f.seedProblem('system', pid, { title: `P${pid}`, hidden: false, owner: 9, difficulty: 6 });
+    const emit = (record) => f.listeners['record/change'](record, null, null, { key: 'end' });
+    const settle = () => new Promise((resolve) => setImmediate(resolve));
+    // A real ObjectId sharing the reserved prefix must still earn points.
+    emit({ ...records[1], contest: { toString: () => '000000000000000000000002' } });
+    await settle();
+    assert.equal(f.ledger.docs.length, 1);
+    const run = f.scripts.get('swpuShopBackfill').run;
+    await run({ domainId: 'system' }, () => {});
+    assert.deepEqual(f.ledger.docs.map(({ ref, kind, delta }) => ({ ref, kind, delta })), [
+        { ref: 'solve:system:1000', kind: 'solve', delta: 6 },
+        { ref: 'solve:system:1001', kind: 'backfill', delta: 6 },
+        { ref: 'solve:system:1002', kind: 'backfill', delta: 6 },
+    ]);
+    emit(records[4]);
+    emit(records[5]);
+    await settle();
+    await run({ domainId: 'system' }, () => {});
+    assert.equal(f.ledger.docs.length, 3);
+});
+
+test('official AC: live and history retain service, hidden, owner and invalid-target exclusions', async () => {
+    const records = [
+        { _id: 'r1', domainId: 'system', uid: 3, pid: 1000, status: 1 },
+        { _id: 'r2', domainId: 'system', uid: 42, pid: 1001, status: 1 },
+        { _id: 'r3', domainId: 'system', uid: 42, pid: 1002, status: 1 },
+        { _id: 'r4', domainId: 'system', uid: 0, pid: 1000, status: 1 },
+        { _id: 'r5', domainId: 'system', uid: 42, pid: 0, status: 1 },
+        { _id: 'r6', domainId: 'system', uid: '42', pid: 1000, status: 1 },
+    ];
+    const f = await fixture({ records });
+    f.seedProblem('system', 1000, { title: 'P1000', hidden: false, owner: 9, difficulty: 6 });
+    f.seedProblem('system', 1001, { title: 'Hidden', hidden: true, owner: 9, difficulty: 6 });
+    f.seedProblem('system', 1002, { title: 'Self-owned', hidden: false, owner: 42, difficulty: 6 });
+    for (const record of records) {
+        assert.doesNotThrow(() => f.listeners['record/change'](record, null, null, { key: 'end' }));
+    }
+    await new Promise((resolve) => setImmediate(resolve));
+    await f.scripts.get('swpuShopBackfill').run({ domainId: 'system' }, () => {});
+    assert.equal(f.ledger.docs.length, 0);
 });
 
 test('backfill script deduplicates by (uid, pid) and stays idempotent with live awards', async () => {

@@ -24,7 +24,12 @@ function loadPoints() {
     const loaded = new Module(file, module);
     loaded.filename = file;
     loaded.paths = module.paths;
-    loaded.require = (id) => (id === 'hydrooj' ? {} : require(id));
+    loaded.require = (id) => (id === 'hydrooj' ? {
+        RecordModel: {
+            RECORD_PRETEST: { toString: () => '000000000000000000000000' },
+            RECORD_GENERATE: { toString: () => '000000000000000000000001' },
+        },
+    } : require(id));
     loaded._compile(compiled.points, file);
     return loaded.exports;
 }
@@ -96,7 +101,7 @@ class FakeLedger {
 
 class FakePrice {
     constructor(docs = []) { this.docs = [...docs]; }
-    async findOne(filter) { return this.docs.find((d) => d._id === filter._id) || null; }
+    async findOne(filter) { return structuredClone(this.docs.find((d) => d._id === filter._id) || null); }
     async updateOne(filter, update, options = {}) {
         let doc = this.docs.find((d) => d._id === filter._id);
         if (!doc && options.upsert) { doc = { _id: filter._id }; this.docs.push(doc); }
@@ -108,7 +113,7 @@ class FakePrice {
 
 class FakeUserBadge {
     constructor() { this.docs = []; this.added = []; }
-    async findOne(filter) { return this.docs.find((d) => d.owner === filter.owner && d.badgeId === filter.badgeId) || null; }
+    async findOne(filter) { return structuredClone(this.docs.find((d) => d.owner === filter.owner && d.badgeId === filter.badgeId) || null); }
     async userBadgeAdd(ctx, uid, badgeId) { this.added.push({ uid, badgeId }); this.docs.push({ owner: uid, badgeId }); return `oid-${this.docs.length}`; }
 }
 
@@ -188,6 +193,36 @@ test('awardSolve idempotency: a second insert on the same (uid, ref) is silently
     const second = await points.awardSolve(m, collections, now, { uid: 42, domainId: 'system', docId: 1000 });
     assert.deepEqual(second, { awarded: false, delta: 0 });
     assert.equal(ledger.docs.length, 1); // replay / re-submission never double-credits
+});
+
+test('awardSolve: concurrent live and backfill entries for one solve credit once', async () => {
+    const points = loadPoints();
+    const m = models();
+    m.seedProblem('system', 1000, { title: 'P1000', hidden: false, owner: 9, difficulty: 6 });
+    const ledger = new FakeLedger();
+    const collections = { ledger, price: new FakePrice(), userBadge: m.userBadge };
+    const results = await Promise.all(['solve', 'backfill'].map((kind) => points.awardSolve(m, collections, now,
+        { uid: 42, domainId: 'system', docId: 1000, kind })));
+    assert.equal(results.filter((result) => result.awarded).length, 1);
+    assert.equal(await points.getBalance(collections, 42), 6);
+    assert.deepEqual(ledger.docs.map(({ uid, delta, ref }) => ({ uid, delta, ref })),
+        [{ uid: 42, delta: 6, ref: 'solve:system:1000' }]);
+});
+
+test('awardSolve: malformed user or problem identifiers never credit', async () => {
+    const points = loadPoints();
+    const m = models();
+    m.seedProblem('system', 1000, { title: 'P1000', hidden: false, owner: 9, difficulty: 6 });
+    const ledger = new FakeLedger();
+    const collections = { ledger, price: new FakePrice(), userBadge: m.userBadge };
+    for (const invalid of [
+        { uid: '42' }, { uid: 0 }, { uid: -1 }, { uid: NaN }, { uid: 1.5 },
+        { domainId: '' }, { docId: 0 }, { docId: -1 }, { docId: '1000' }, { docId: Infinity },
+    ]) {
+        assert.deepEqual(await points.awardSolve(m, collections, now,
+            { uid: 42, domainId: 'system', docId: 1000, ...invalid }), { awarded: false, delta: 0 });
+    }
+    assert.equal(ledger.docs.length, 0);
 });
 
 test('awardSolve exclusions: hidden problems, self-owned problems and uid<=1 never credit', async () => {

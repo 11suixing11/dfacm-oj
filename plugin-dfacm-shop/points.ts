@@ -4,6 +4,7 @@
  * 集合与外部模型全部通过参数注入，node:test 用 stub 覆盖，不连真实 Mongo。
  */
 import type { Context } from 'hydrooj';
+import { RecordModel } from 'hydrooj';
 
 const _CACHE_INFO = {
     s: 0.0,
@@ -117,6 +118,22 @@ function isDuplicateKey(e: any) {
 export interface AwardResult {
     awarded: boolean;
     delta: number;
+}
+
+// Both event awards and historical scans must use the same definition of a
+// formal AC. Match Hydro's two reserved contests exactly: other contest IDs,
+// including IDs with the same zero prefix, still represent formal submissions.
+// The event caller additionally requires body.key === 'end'; stored AC records
+// in the backfill query have already reached that terminal result.
+export function isOfficialAcceptedRecord(rdoc: any): boolean {
+    if (!rdoc || rdoc.status !== 1) return false;
+    if (!Number.isSafeInteger(rdoc.uid) || rdoc.uid <= 1) return false;
+    if (typeof rdoc.domainId !== 'string' || !rdoc.domainId) return false;
+    if (!Number.isSafeInteger(rdoc.pid) || rdoc.pid <= 0) return false;
+    if (!rdoc.contest) return true;
+    const contest = String(rdoc.contest);
+    return contest !== String(RecordModel.RECORD_PRETEST)
+        && contest !== String(RecordModel.RECORD_GENERATE);
 }
 
 // 首次 AC 入账。uid<=1 早退（Guest/系统号；事件路径拿不到 udoc，
