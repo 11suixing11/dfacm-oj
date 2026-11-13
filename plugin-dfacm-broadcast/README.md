@@ -54,8 +54,39 @@ v2.1.0 五项升级（相对 v2.0.0）：
 
 - **隐藏题**（无 tid）：不播不计，与旧站一致；**比赛隐藏题**：播比赛卡（字母代号，不泄题面）。
 - **服务号**（uid 1 系统 / uid 3 评测）永不播报。
-- 首次部署：水位为空 → 全量拉取，历史按“提交时间 ≥ 进程启动”门静默，不补发。
-- SQLite schema 升级自动重建（元数据 `records_schema`），水位重置后自动重新收敛。
+- 首次部署：水位为空时，在第一次轮询前持久化 `bootstrap_floor_ts`；早于此时间的历史记录静默。后续分页和中途重启继续使用同一个门槛，首次启动之后的记录仍可播报。
+- 已有水位的实例继续摄入停机期间的新记录，不再按本次进程启动时间抑制它们；未决记录后续变为 AC 时使用持久资格。
+- 本次投递状态升级采用独立 `delivery_schema=1`，保留 `records_schema=2`，不触发旧记录表的重建逻辑，也不重置 `mongo_last_id` 或挂起队列。
+
+## 投递状态兼容与恢复
+
+启动时通过 SQLite 事务增量添加两个可空字段，字段添加、回填、首次历史门槛和版本标记一起提交。已存在的字段会跳过，只回填资格未知且 `card_sent=0` 的行；重复启动、缺列的中断迁移和迁移失败重试都不会清空记录或重置已有值。此迁移针对已有 `records_schema=2` 的队列；更早记录布局仍属于旧版迁移路径，应先核对和备份。
+
+| 字段/旧状态 | 含义与升级处理 |
+| --- | --- |
+| `notify_eligible=1` | 属于通知范围，独立于当前判题状态和 Mongo 去重结果；旧 `card_sent=0` 的确定待发记录回填为 1。 |
+| `notify_eligible=0` | 确定不在通知范围，例如首次历史、已删除比赛的静默抑制。 |
+| `notify_eligible=NULL` | 旧 `card_sent=1` 无法区分“已经发送”和“历史抑制”，保留未知，不猜测性重播。新摄入的正常记录显式写 0 或 1。 |
+| `delivered_at` | 仅实际发送成功后写入 Unix 秒；有投递证据的同一 RID 在重启和重判后不再次入队。未发送或旧记录没有可验证投递证据时保留 NULL。 |
+| `card_sent` | 保留原兼容字段，0 仍表示排队中；1 仍可能表示已发或已抑制，不能独立作为实际发送证明。 |
+
+比赛卡发送返回值区分 `True`（已发送）、`False`（待重试）和 `None`（比赛已删除，静默抑制）。抑制时仅关闭队列并置 `notify_eligible=0`，不填写 `delivered_at`；Mongo 查询异常仍保留队列。普通卡和比赛卡都只在实际发送成功分支返回 `True`。NapCat/官方 QQ 选择、被动窗口及冷却策略保持原规则。
+
+该投递状态迁移不修改已有 `state.json`，账号合并和显示名沿用原逻辑；QQ 身份绑定规则见下节。SQLite 的入库先于水位推进，入库后若崩溃，重启重读同一批时由原有 `INSERT OR IGNORE` 保留队列状态。远端发送成功与本地落盘不能组成同一个事务，二者之间崩溃仍可能重发，不能据此声称端到端恰好一次投递。
+
+## 已确认 UID 与 QQ 归属
+
+普通 AC 卡和比赛卡共用绑定查询，比较有效 `bindings` 对应的 `binding_profiles[qq].user_id` 与原始提交账号 UID。用户名、昵称及管理员设置的显示名仅用于展示，名称碰撞或账号改名不会转移 QQ 归属。账号合并继续用于统计和显示，不能代替原始账号的 QQ 身份确认；普通卡内部 `binding_user_id` 保留原始 UID，已有 `user_id` 仍用于合并统计。多个 QQ 合法绑定同一 UID 时仍只显示一个，按 QQ 字符串升序固定选择首个。
+
+缺少 UID 的旧绑定保留原记录并视为身份未确认，卡片显示“未绑定”；`/我的排名`、`/最近提交`、`/我的做题统计`、`/签到` 会提示重新发送 `/绑定 数字UID`，将验证码写入该账号个人简介后 `/绑定确认`。不会根据当前同名账号或旧主页链接自动补 UID。重新确认成功后一起更新 `bindings` 和 `binding_profiles` 并移除待确认记录；`/解绑` 一起删除这三项绑定字段，不清除已有签到、统计或记录。
+
+离线回归（本轮验证使用 Python 3.14）：
+
+```bash
+python3.14 -B -W always::ResourceWarning -m unittest discover -s plugin-dfacm-broadcast/tests -p 'test_*.py'
+```
+
+测试加载完整生产模块并使用临时真实 SQLite；AstrBot、Mongo、渲染和消息边界使用本地替身，不安装或启动 AstrBot，不访问外部服务。测试替身的 Mongo 查询结果为独立快照。
 
 ## 配置
 
@@ -90,5 +121,27 @@ docker restart astrbot
 
 ## 回滚
 
+本次升级前应停播并备份 `records.db` 和 `state.json`。使用 SQLite `Connection.backup` 创建包含 WAL 已提交内容的一致性数据库副本，不能只复制主文件而遗漏未合并的 WAL；`state.json` 另行备份。下面的脚本仅为人工迁移准备示例，应将路径替换为实际数据目录和一个新的备份目录，停播期间执行：
+
+```python
+from contextlib import closing
+from pathlib import Path
+import shutil
+import sqlite3
+
+data = Path("/path/to/plugin_data/swpu_acm_broadcast")
+backup = Path("/path/to/new-backup-directory")
+assert (data / "records.db").is_file()
+assert (data / "state.json").is_file()
+backup.mkdir(parents=True, exist_ok=False)
+with closing(sqlite3.connect(data / "records.db")) as source, \
+        closing(sqlite3.connect(backup / "records.db")) as target:
+    source.backup(target)
+shutil.copy2(data / "state.json", backup / "state.json")
+```
+
+- 这里只描述本地迁移兼容和备份方法，尚未执行线上备份或发布。启动迁移失败会回滚本次投递状态事务并关闭连接；排除错误后可使用原数据库重试。
+- 回退代码时保留升级后的 SQLite，新增列和元数据可由旧 `records_schema=2` 代码忽略，待发队列及原水位仍可读取；不要删除新增列、清表或重置水位来回退。旧代码运行会恢复原重启问题，且不能维护 `delivered_at`。如回退后曾实际播报，再升级前需核对这段期间的投递记录，不能自动推断新字段。
+- 恢复升级前的数据库快照会丢失快照后的摄入/投递状态，可能导致重播；仅在停播并核对差异后进行。正常重启恢复无需回退数据库。
 - 插件目录删除即完全下线；旧站历史数据归档在 `plugin_data/swpu_acm_broadcast.oldsite-*`。
 - v2.0.0 备份：服务器 `data/plugins/swpu_acm_broadcast/main.py.bak-v200`。

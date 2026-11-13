@@ -23,17 +23,6 @@ for (const page of ['workbench.html', 'mistakes.html']) {
     });
 }
 
-test('pages only call their own registered JSON endpoints', () => {
-    for (const page of ['workbench.html', 'mistakes.html']) {
-        const html = fs.readFileSync(path.join(__dirname, '..', page), 'utf8');
-        for (const match of html.matchAll(/fetch\('([^']+)'/g)) {
-            assert.match(match[1], /^\/(workbench\/data|mistakes\/(data|update|remove|sync))/, `${page} fetches ${match[1]}`);
-        }
-        assert.doesNotMatch(html, /https?:\/\/(?!dfacm\.website)/, 'no external fetch or asset origins');
-        assert.doesNotMatch(html, /https?:\/\/swpuacm\.xyz/, 'former public domain must not leak into training pages');
-    }
-});
-
 test('training pages carry the d&f identity and final meaning', () => {
     for (const page of ['workbench.html', 'mistakes.html']) {
         const html = fs.readFileSync(path.join(__dirname, '..', page), 'utf8');
@@ -41,5 +30,42 @@ test('training pages carry the d&f identity and final meaning', () => {
         assert.match(html, /<b>d&amp;f算法网<\/b>/);
         assert.match(html, /每个人都能在算法竞赛这条路上找到属于自己的 final/);
         assert.doesNotMatch(html, /DFACM OJ|SWPU ACM|西南石油大学|swpuacm\.xyz/);
+    }
+});
+
+
+// Run the shipped HTML through the real preview HTTP server. Missing explicit
+// preview routing must be caught by the browser behavior, not by source matching.
+test('root preview HTML scripts read their explicit local API routes', async (t) => {
+    const { parseHTML } = require('linkedom');
+    const { createServer } = require('../../scripts/preview.cjs');
+    const server = createServer();
+    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+    t.after(() => new Promise((resolve) => { server.close(resolve); server.closeAllConnections(); }));
+    const origin = `http://127.0.0.1:${server.address().port}`;
+    for (const [page, expected] of [['/workbench', '/workbench/data'], ['/mistakes', '/mistakes/data?filter=open&page=1']]) {
+        const html = await fetch(origin + page).then((response) => response.text());
+        const { document } = parseHTML(html);
+        const requests = [], pending = [];
+        const window = { addEventListener() {}, confirm: () => true };
+        const context = vm.createContext({ document, window, location: new URL(origin + page),
+            URL, URLSearchParams, AbortController, setTimeout: () => 1, clearTimeout() {},
+            localStorage: { getItem: () => null },
+            fetch: (value, options) => {
+                requests.push(String(value));
+                const task = fetch(new URL(value, origin), options).then(async (response) => {
+                    const data = await response.json(); return { ok: response.ok, json: async () => data };
+                });
+                pending.push(task); return task;
+            },
+        });
+        for (const script of document.querySelectorAll('script:not([src])')) vm.runInContext(script.textContent, context);
+        await Promise.all(pending);
+        await new Promise(setImmediate);
+        assert.deepEqual(requests, [expected]);
+        assert.equal(document.querySelector('#error').hidden, true);
+        assert.equal(document.querySelector('#loading').hidden, true);
+        if (page === '/workbench') assert.match(document.querySelector('#resume-next').getAttribute('href'), /^\/p\/P1001\?training=/);
+        else assert.ok(document.querySelector('#note-1002'), 'preview mistakes are visible');
     }
 });

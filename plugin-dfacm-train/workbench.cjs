@@ -106,9 +106,12 @@ function summarizeRecentFailed(entries, limit = 8) {
     return out;
 }
 
-function trainingUrl(tid, nid) {
+// Preserve the legacy (tid, nid) root helper for deliberate local fixtures.
+// Production DTO builders require a router and always supply the third argument.
+function trainingUrl(tid, nid, url) {
     const anchor = nid === null || nid === undefined ? '' : `#node-${encodeURIComponent(nid)}`;
-    return `/training/${encodeURIComponent(tid)}${anchor}`;
+    const route = url ? url('training_detail', { tid }) : `/training/${encodeURIComponent(tid)}`;
+    return `${route}${anchor}`;
 }
 
 // "tid" is reserved for Hydro contests. Training context uses its own query key.
@@ -164,12 +167,14 @@ function lastActiveByPlan(records, byPid) {
 async function buildRecentTrainings({
     domainId,
     uid,
+    url, // Required router; previews/tests deliberately inject their own routes.
     trainingModel,
     problemModel,
     records, // [{pid, at}] recent non-contest submissions (at: Date)
     now = new Date(),
     maxTrainings = 3,
 }) {
+    if (typeof url !== 'function') throw new TypeError('buildRecentTrainings requires a URL router');
     const tdocs = (await trainingModel.getMulti(domainId).toArray())
         .filter((tdoc) => tdoc && Array.isArray(tdoc.dag));
     const byPid = indexPlanPids(tdocs);
@@ -196,7 +201,7 @@ async function buildRecentTrainings({
         trainings.push({
             tid: summary.tid,
             title: summary.title,
-            url: `/training/${summary.tid}`,
+            url: trainingUrl(summary.tid, null, url),
             done: summary.done,
             total: summary.total,
             percent: summary.percent,
@@ -211,6 +216,7 @@ async function buildRecentTrainings({
 async function buildWorkbench({
     domainId,
     uid,
+    url, // Required router; previews/tests deliberately inject their own routes.
     uname = '',
     trainingModel,
     problemModel,
@@ -220,6 +226,7 @@ async function buildWorkbench({
     maxTrainings = 3,
     recentLimit = 8,
 }) {
+    if (typeof url !== 'function') throw new TypeError('buildWorkbench requires a URL router');
     const tsdocs = await trainingModel.getMultiStatus(domainId, { uid, enroll: 1 }).toArray();
     const tids = tsdocs.map((doc) => doc.docId);
     const tdict = tids.length ? await trainingModel.getList(domainId, tids) : {};
@@ -264,7 +271,7 @@ async function buildWorkbench({
         return {
             ...item,
             title: available ? pdoc.title : `#${item.pid}（不可见或已删除）`,
-            url: available ? `/p/${encodeURIComponent(pdoc.pid || item.pid)}` : null,
+            url: available ? url('problem_detail', { pid: pdoc.pid || item.pid }) : null,
         };
     };
     return {
@@ -281,14 +288,14 @@ async function buildWorkbench({
             const next = training.nextPid ? attach({ pid: training.nextPid }) : null;
             return {
                 ...training,
-                url: trainingUrl(training.tid),
-                currentUrl: trainingUrl(training.tid, training.currentNid),
+                url: trainingUrl(training.tid, null, url),
+                currentUrl: trainingUrl(training.tid, training.currentNid, url),
                 next: next ? { ...next, url: trainingProblemUrl(next.url, training.tid, training.currentNid) } : null,
             };
         }),
         recentFailed: recentFailed.map((item) => ({
             ...attach(item),
-            recordUrl: item.rid ? `/record/${item.rid}` : null,
+            recordUrl: item.rid ? url('record_detail', { rid: item.rid }) : null,
         })),
         recentlyResolved: recentlyResolved.map((item) => ({ ...attach(item), resolved: true })),
         mistakes: { open: openMistakes },

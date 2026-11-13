@@ -64,12 +64,33 @@ function csrfRejected(handler: Handler, sent: unknown): boolean {
 }
 
 function servePage(handler: Handler, page: string) {
-    // Only /mistakes mutates, and only that page carries the marker, so a
-    // read-only page mints no token at all. The replacement is a hex token, but
-    // a function replacer keeps that guarantee local.
-    let body = page;
+    const routes = {
+        home: handler.url('homepage'),
+        problemMain: handler.url('problem_main'),
+        trainingMain: handler.url('training_main'),
+        enrolledTrainings: handler.url('training_main', { query: { view: 'enrolled' } }),
+        workbench: handler.url('swpu_workbench'),
+        workbenchData: handler.url('swpu_workbench_data'),
+        mistakes: handler.url('swpu_mistakes'),
+        mistakesData: handler.url('swpu_mistakes_data'),
+        mistakesUpdate: handler.url('swpu_mistakes_update'),
+        mistakesRemove: handler.url('swpu_mistakes_remove'),
+        mistakesSync: handler.url('swpu_mistakes_sync'),
+    };
+    const escapeAttribute = (value: string) => value.replace(/[&<>"']/g, (char) => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+    }[char]!));
+    // JSON is placed inside a script element. Escape HTML delimiters so even a
+    // route containing a closing script tag remains data, and use replacers to
+    // keep dollar sequences in route values literal.
+    const json = JSON.stringify(routes).replace(/[<>&\u2028\u2029]/g,
+        (char) => `\\u${char.charCodeAt(0).toString(16).padStart(4, '0')}`);
+    let body = page.replace('/*__SWPU_ROUTES__*/', () => `window.__SWPU_ROUTES__=${json};`)
+        .replace(/href="[^"]*" data-swpu-route="([a-zA-Z]+)"/g, (_match, key: keyof typeof routes) =>
+            `href="${escapeAttribute(routes[key])}" data-swpu-route="${key}"`);
+    // The read-only workbench never mints a CSRF token.
     if (page.includes(CSRF_MARKER)) {
-        body = page.replace(CSRF_MARKER, () => `window.__SWPU_CSRF__=${JSON.stringify(csrfToken(handler))};`);
+        body = body.replace(CSRF_MARKER, () => `window.__SWPU_CSRF__=${JSON.stringify(csrfToken(handler))};`);
     }
     handler.response.body = body;
     handler.response.type = 'text/html; charset=utf-8';
@@ -138,6 +159,7 @@ class WorkbenchDataHandler extends Handler {
         const now = new Date();
         const data = await buildWorkbench({
             domainId,
+            url: (name: string, args: any) => this.url(name, args),
             uid: this.user._id,
             uname: this.user.uname,
             trainingModel: TrainingModel,
@@ -166,6 +188,7 @@ class RecentTrainingsHandler extends Handler {
         await this.limitRate('swpu_train_recent', 60, 30, `u${this.user._id}`);
         const data = await buildRecentTrainings({
             domainId,
+            url: (name: string, args: any) => this.url(name, args),
             uid: this.user._id,
             trainingModel: TrainingModel,
             problemModel: ProblemModel,
@@ -177,13 +200,13 @@ class RecentTrainingsHandler extends Handler {
     }
 }
 
-function mistakeDto(doc: any, pdocs: Record<number, any>) {
+function mistakeDto(doc: any, pdocs: Record<number, any>, url: (name: string, args: any) => string) {
     const pdoc = pdocs[doc.pid];
     const available = !!pdoc && pdoc.docId === doc.pid;
     return {
         pid: doc.pid,
         title: available ? pdoc.title : `#${doc.pid}（不可见或已删除）`,
-        url: available ? `/p/${pdoc.pid || doc.pid}` : null,
+        url: available ? url('problem_detail', { pid: pdoc.pid || doc.pid }) : null,
         status: doc.status,
         statusLabel: STATUS_LABELS[doc.status] || String(doc.status ?? ''),
         statusText: STATUS_TEXTS[doc.status] || '未通过',
@@ -193,7 +216,7 @@ function mistakeDto(doc: any, pdocs: Record<number, any>) {
         resolved: !!doc.resolved,
         firstAt: doc.firstAt instanceof Date ? doc.firstAt.toISOString() : null,
         lastAt: doc.lastAt instanceof Date ? doc.lastAt.toISOString() : null,
-        recordUrl: doc.rid ? `/record/${doc.rid}` : null,
+        recordUrl: doc.rid ? url('record_detail', { rid: doc.rid }) : null,
         resolvedAt: doc.resolvedAt instanceof Date ? doc.resolvedAt.toISOString() : null,
     };
 }
@@ -227,7 +250,7 @@ class MistakesDataHandler extends Handler {
             open: await mistakes.countOpen(domainId, this.user._id),
             reasons: REASONS,
             noteMaxLength: NOTE_MAX_LENGTH,
-            items: result.items.map((doc: any) => mistakeDto(doc, pdocs)),
+            items: result.items.map((doc: any) => mistakeDto(doc, pdocs, (name, args) => this.url(name, args))),
         };
     }
 }

@@ -3,6 +3,7 @@ const { test } = require('node:test');
 const path = require('node:path');
 const Module = require('node:module');
 const esbuild = require('esbuild');
+const { realPage, visible } = require('./frontend-fixture.cjs');
 
 const pluginPath = path.resolve(__dirname, 'index.ts');
 const BOOT_MARK = '/*__SWPU_BOOT__*/';
@@ -300,6 +301,55 @@ test('2FA, passkey, disabled accounts and disabled built-in login cannot issue l
     }
     const f = await fixture(); f.user(); f.settings['server.login'] = false;
     assert.equal((await f.issue('ab@school.example', 'login')).response.body.ok, false);
+});
+
+test('the rendered guest page offers native login after actual second-factor refusals at send and login', async () => {
+    for (const protection of ['tfa', 'authn']) {
+        const f = await fixture();
+        const user = f.user(42, { [protection]: true });
+        const render = f.handler('/reg', { tab: 'pwd', embed: '1' });
+        await render.get();
+        const p = realPage({ markup: String(render.response.body), returnTo: '/training',
+            fetchImpl: async (url, options) => {
+                const body = new URLSearchParams(options.body);
+                assert.equal(url, '/reg/code');
+                const send = f.handler(url);
+                await send.post('system', body.get('mail'), body.get('purpose'));
+                return { ok: true, status: 200, json: async () => send.response.body };
+            } });
+        p.$('m-mail').value = user.mail;
+        await p.click('m-next');
+        assert.match(p.$('m-msg').textContent, /两步验证或通行密钥.*原生登录/);
+        assert.ok(visible(p.$('native-login')), `${protection} refusal must leave a usable native entry`);
+        assert.equal(p.$('native-login').target, '_top');
+        assert.equal(new URL(p.$('native-login').getAttribute('href'), p.location).searchParams.get('redirect'), '/training');
+        assert.equal(p.$('f-pwd'), null);
+        assert.equal(f.mails.length, 0);
+        assert.equal(f.session.uid, undefined);
+
+        // Protect the login-time recheck as well: a code issued before the user
+        // enables a second factor must not establish a session afterward.
+        user[protection] = false;
+        const loginPage = realPage({ markup: String(render.response.body),
+            fetchImpl: async (url, options) => {
+                const body = new URLSearchParams(options.body);
+                const request = f.handler(url);
+                if (url === '/reg/code') await request.post('system', body.get('mail'), body.get('purpose'));
+                else {
+                    assert.equal(url, '/reg/login');
+                    await request.post('system', body.get('mail'), body.get('code'), body.get('csrf'));
+                }
+                return { ok: true, status: 200, json: async () => request.response.body };
+            } });
+        loginPage.$('m-mail').value = user.mail;
+        await loginPage.click('m-next');
+        user[protection] = true;
+        loginPage.$('m-code').value = f.mails[0].code;
+        await loginPage.submit('f-flow');
+        assert.match(loginPage.$('m-msg').textContent, /两步验证或通行密钥.*原生登录/);
+        assert.ok(visible(loginPage.$('native-login')));
+        assert.equal(f.session.uid, undefined);
+    }
 });
 
 test('an account enabling 2FA after issuance cannot use an earlier email code', async () => {

@@ -74,6 +74,19 @@ class BaseCrawler(ABC):
                     await asyncio.sleep(2.0 * (attempt + 1))
         raise CrawlError(f"GET {url} 失败: {last_exc!r}")
 
+    async def fetch_json(self, url: str, **kwargs) -> dict:
+        """读取 JSON 对象；HTTP 200 的错误页/错误载荷同样算源失败。"""
+        resp = await self.fetch(url, **kwargs)
+        try:
+            data = resp.json()
+        except ValueError as exc:
+            raise CrawlError(f"GET {url} 未返回有效 JSON") from exc
+        if not isinstance(data, dict):
+            raise CrawlError(f"GET {url} JSON 必须是对象")
+        if data.get("error") or data.get("errors"):
+            raise CrawlError(f"GET {url} 返回错误: {data.get('error') or data.get('errors')}")
+        return data
+
     @abstractmethod
     async def parse(self) -> list[Competition]:
         """抓取并解析本源全部比赛，返回统一模型列表。"""

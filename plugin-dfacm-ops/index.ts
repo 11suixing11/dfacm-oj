@@ -1,6 +1,8 @@
 import { Context, db, DomainModel, ObjectId, RecordModel, Schema, TaskModel, UserModel } from 'hydrooj';
+import * as HydroNative from 'hydrooj';
 
 const { createOperations } = require('./operations.cjs');
+const { installControlledHistory } = require('./controlled-history.cjs');
 const { createLiveRp } = require('./live-rp.cjs');
 const {
     assertServiceAccounts, createAutoJoin, createJoinReconcile, createPurgeDoc, createRpLock, createRpSweep, createSanitize, dryRunFromEnv, serviceUidsFromEnv,
@@ -11,6 +13,9 @@ const {
 // Deliberately register no HTTP route; the background work is the live-RP hook
 // plus the hourly sweep (see rp-sweep.cjs).
 export async function apply(ctx: Context) {
+    if (process.env.DFACM_CONTROLLED_HISTORY === '1') {
+        ctx.effect(() => installControlledHistory({ ...HydroNative, version: require('hydrooj/package.json').version }));
+    }
     const ops = createOperations({ DomainModel, ObjectId, RecordModel, TaskModel, UserModel });
     const windowFields = {
         domainId: Schema.string().default('system'),
@@ -48,8 +53,12 @@ export async function apply(ctx: Context) {
         if (missing.length) console.warn('swpu-ops [W] SWPU_SERVICE_UIDS names uids with no user row:', missing.join(', '));
         if (dryRun) console.warn('swpu-ops [W] SWPU_SERVICE_UIDS_DRYRUN=1: the service-account purge will not delete anything.');
     }
+    // Shared by all RP entry points registered in this worker, including the
+    // administration web script. Independent CLI processes have their own lock.
+    const lock = createRpLock();
     const sanitize = createSanitize(statusColl, serviceUids, { dryRun });
-    const manualSweep = createRpSweep({ sanitize, reconcile });
+    const manualSweep = createRpSweep({ sanitize, reconcile, lock });
+    ctx.effect(() => manualSweep.stop);
     ctx.addScript('swpuRpSweep', 'd&f算法网 RP 立即全域重算（清服务号残留 + 补齐域 join + 全域重算）', Schema.object({}),
         async () => ({ recalculated: await manualSweep.runOnce('manual'), failures: [...manualSweep.failures] }));
     // The v1.12.0 auto-join only covers /reg/complete. GitHub (and any OAuth)
@@ -71,7 +80,6 @@ export async function apply(ctx: Context) {
     // Both paths purge service-account rows before computing, so the judge
     // account can never resurrect phantom RP (the v1.12.0 incident).
     if (process.env.SWPU_LIVE_RP !== '0' && (!process.env.NODE_APP_INSTANCE || process.env.NODE_APP_INSTANCE === '0')) {
-        const lock = createRpLock();
         const live = createLiveRp({
             sanitize,
             purgeDoc: createPurgeDoc(statusColl),
@@ -79,11 +87,10 @@ export async function apply(ctx: Context) {
             lock,
         });
         ctx.on('record/change', live.hook);
-        ctx.on('dispose', live.stop);
+        ctx.effect(() => live.stop);
         if (process.env.SWPU_RP_SWEEP !== '0') {
             const sweep = createRpSweep({ sanitize, reconcile, lock });
-            sweep.start();
-            ctx.on('dispose', sweep.stop);
+            ctx.effect(() => { sweep.start(); return sweep.stop; });
         }
     }
 }

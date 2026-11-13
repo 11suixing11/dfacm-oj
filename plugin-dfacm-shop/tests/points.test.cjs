@@ -24,7 +24,12 @@ function loadPoints() {
     const loaded = new Module(file, module);
     loaded.filename = file;
     loaded.paths = module.paths;
-    loaded.require = (id) => (id === 'hydrooj' ? {} : require(id));
+    loaded.require = (id) => (id === 'hydrooj' ? {
+        RecordModel: {
+            RECORD_PRETEST: { toString: () => '000000000000000000000000' },
+            RECORD_GENERATE: { toString: () => '000000000000000000000001' },
+        },
+    } : require(id));
     loaded._compile(compiled.points, file);
     return loaded.exports;
 }
@@ -96,7 +101,7 @@ class FakeLedger {
 
 class FakePrice {
     constructor(docs = []) { this.docs = [...docs]; }
-    async findOne(filter) { return this.docs.find((d) => d._id === filter._id) || null; }
+    async findOne(filter) { return structuredClone(this.docs.find((d) => d._id === filter._id) || null); }
     async updateOne(filter, update, options = {}) {
         let doc = this.docs.find((d) => d._id === filter._id);
         if (!doc && options.upsert) { doc = { _id: filter._id }; this.docs.push(doc); }
@@ -108,7 +113,7 @@ class FakePrice {
 
 class FakeUserBadge {
     constructor() { this.docs = []; this.added = []; }
-    async findOne(filter) { return this.docs.find((d) => d.owner === filter.owner && d.badgeId === filter.badgeId) || null; }
+    async findOne(filter) { return structuredClone(this.docs.find((d) => d.owner === filter.owner && d.badgeId === filter.badgeId) || null); }
     async userBadgeAdd(ctx, uid, badgeId) { this.added.push({ uid, badgeId }); this.docs.push({ owner: uid, badgeId }); return `oid-${this.docs.length}`; }
 }
 
@@ -188,6 +193,36 @@ test('awardSolve idempotency: a second insert on the same (uid, ref) is silently
     const second = await points.awardSolve(m, collections, now, { uid: 42, domainId: 'system', docId: 1000 });
     assert.deepEqual(second, { awarded: false, delta: 0 });
     assert.equal(ledger.docs.length, 1); // replay / re-submission never double-credits
+});
+
+test('awardSolve: concurrent live and backfill entries for one solve credit once', async () => {
+    const points = loadPoints();
+    const m = models();
+    m.seedProblem('system', 1000, { title: 'P1000', hidden: false, owner: 9, difficulty: 6 });
+    const ledger = new FakeLedger();
+    const collections = { ledger, price: new FakePrice(), userBadge: m.userBadge };
+    const results = await Promise.all(['solve', 'backfill'].map((kind) => points.awardSolve(m, collections, now,
+        { uid: 42, domainId: 'system', docId: 1000, kind })));
+    assert.equal(results.filter((result) => result.awarded).length, 1);
+    assert.equal(await points.getBalance(collections, 42), 6);
+    assert.deepEqual(ledger.docs.map(({ uid, delta, ref }) => ({ uid, delta, ref })),
+        [{ uid: 42, delta: 6, ref: 'solve:system:1000' }]);
+});
+
+test('awardSolve: malformed user or problem identifiers never credit', async () => {
+    const points = loadPoints();
+    const m = models();
+    m.seedProblem('system', 1000, { title: 'P1000', hidden: false, owner: 9, difficulty: 6 });
+    const ledger = new FakeLedger();
+    const collections = { ledger, price: new FakePrice(), userBadge: m.userBadge };
+    for (const invalid of [
+        { uid: '42' }, { uid: 0 }, { uid: -1 }, { uid: NaN }, { uid: 1.5 },
+        { domainId: '' }, { docId: 0 }, { docId: -1 }, { docId: '1000' }, { docId: Infinity },
+    ]) {
+        assert.deepEqual(await points.awardSolve(m, collections, now,
+            { uid: 42, domainId: 'system', docId: 1000, ...invalid }), { awarded: false, delta: 0 });
+    }
+    assert.equal(ledger.docs.length, 0);
 });
 
 test('awardSolve exclusions: hidden problems, self-owned problems and uid<=1 never credit', async () => {
@@ -390,8 +425,69 @@ test('redeem: a failed badge grant refunds the points instead of losing them', a
     assert.equal(ledger.docs[2].delta, 10);
     assert.equal(ledger.docs[2].kind, 'refund');
     assert.equal(ledger.docs.reduce((sum, d) => sum + d.delta, 0), 25, 'balance is unchanged');
-    // Each retry gets a fresh refund key, so a repeated failure still balances.
+    // The refund identifies this exact debit; the existing product rule still
+    // blocks another purchase attempt for the same badge after compensation.
     assert.notEqual(ledger.docs[2].ref, ledger.docs[1].ref);
+    assert.equal(typeof ledger.docs[1].operationId, 'string');
+    assert.equal(ledger.docs[2].operationId, ledger.docs[1].operationId);
+    assert.equal(ledger.docs[2].debitRef, 'redeem:7');
+    await assert.rejects(points.redeem({}, m, collections, now, 42, 7), /已拥有/);
+    assert.equal(ledger.docs.length, 3, 'retry policy does not issue a second debit or refund');
+});
+
+test('redeem refund failure records the unmatched debit without falsely reporting returned points', async () => {
+    const points = loadPoints();
+    const m = models();
+    m.seedBadge(7, { _id: 7, title: '队长' });
+    m.userBadge.userBadgeAdd = async () => { throw new Error('grant unavailable'); };
+    const ledger = new FakeLedger();
+    const collections = { ledger, price: new FakePrice([{ _id: 7, price: 10, enabled: true }]), userBadge: m.userBadge };
+    await ledger.insertOne({ uid: 42, delta: 25, ref: 'seed', kind: 'solve', ts: now() });
+    const insert = ledger.insertOne.bind(ledger);
+    ledger.insertOne = async (doc) => {
+        if (doc.kind === 'refund') throw new Error('refund unavailable');
+        return insert(doc);
+    };
+    await assert.rejects(points.redeem({}, m, collections, now, 42, 7), (error) => {
+        assert.match(error.message, /退款未确认.*联系管理员/);
+        assert.doesNotMatch(error.message, /已退回/);
+        return true;
+    });
+    const debit = ledger.docs.find((doc) => doc.kind === 'redeem');
+    const pending = ledger.docs.find((doc) => doc.kind === 'refund_pending');
+    assert.ok(pending, 'failed compensation leaves an audit record');
+    assert.equal(pending.delta, 0);
+    assert.equal(pending.debitRef, 'redeem:7');
+    assert.equal(pending.operationId, debit.operationId);
+    assert.equal(await points.getBalance(collections, 42), 15);
+    assert.equal(points.pendingLockCount(), 0);
+});
+
+test('redeem refund audit outage retains operation identity in the thrown error and original debit', async () => {
+    const points = loadPoints();
+    const m = models();
+    m.seedBadge(7, { _id: 7, title: '队长' });
+    m.userBadge.userBadgeAdd = async () => { throw new Error('grant unavailable'); };
+    const ledger = new FakeLedger();
+    const collections = { ledger, price: new FakePrice([{ _id: 7, price: 10, enabled: true }]), userBadge: m.userBadge };
+    await ledger.insertOne({ uid: 42, delta: 25, ref: 'seed', kind: 'solve', ts: now() });
+    const insert = ledger.insertOne.bind(ledger);
+    ledger.insertOne = async (doc) => {
+        if (doc.kind === 'refund' || doc.kind === 'refund_pending') throw new Error('ledger unavailable');
+        return insert(doc);
+    };
+    await assert.rejects(points.redeem({}, m, collections, now, 42, 7), (error) => {
+        assert.match(error.message, /退款未确认.*联系管理员/);
+        const debit = ledger.docs.find((doc) => doc.kind === 'redeem');
+        assert.equal(typeof debit.operationId, 'string');
+        assert.ok(error.message.includes(debit.operationId), 'operators can identify the durable debit when audit insert also fails');
+        assert.ok(error.cause instanceof AggregateError, 'both failed writes remain inspectable');
+        assert.equal(error.cause.errors.length, 3, 'grant, refund and audit errors are retained');
+        return true;
+    });
+    assert.equal(await points.getBalance(collections, 42), 15);
+    assert.equal(ledger.docs.length, 2);
+    assert.equal(points.pendingLockCount(), 0);
 });
 
 test('redeem: success debits once and grants the badge exactly once', async () => {

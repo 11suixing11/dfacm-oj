@@ -4,6 +4,11 @@
  * 集合与外部模型全部通过参数注入，node:test 用 stub 覆盖，不连真实 Mongo。
  */
 import type { Context } from 'hydrooj';
+import { RecordModel } from 'hydrooj';
+import { randomUUID } from 'node:crypto';
+import { withUserLock } from './user-lock';
+
+export { pendingLockCount } from './user-lock';
 
 const _CACHE_INFO = {
     s: 0.0,
@@ -62,7 +67,7 @@ export interface ShopCollections {
         insertOne(doc: any): Promise<any>;
         find(filter: any): any;
         aggregate(pipeline: any[]): any;
-        countDocuments(filter: any): Promise<number>;
+        countDocuments(filter: any, options?: any): Promise<number>;
     };
     price: {
         findOne(filter: any): Promise<any>;
@@ -119,6 +124,22 @@ export interface AwardResult {
     delta: number;
 }
 
+// Both event awards and historical scans must use the same definition of a
+// formal AC. Match Hydro's two reserved contests exactly: other contest IDs,
+// including IDs with the same zero prefix, still represent formal submissions.
+// The event caller additionally requires body.key === 'end'; stored AC records
+// in the backfill query have already reached that terminal result.
+export function isOfficialAcceptedRecord(rdoc: any): boolean {
+    if (!rdoc || rdoc.status !== 1) return false;
+    if (!Number.isSafeInteger(rdoc.uid) || rdoc.uid <= 1) return false;
+    if (typeof rdoc.domainId !== 'string' || !rdoc.domainId) return false;
+    if (!Number.isSafeInteger(rdoc.pid) || rdoc.pid <= 0) return false;
+    if (!rdoc.contest) return true;
+    const contest = String(rdoc.contest);
+    return contest !== String(RecordModel.RECORD_PRETEST)
+        && contest !== String(RecordModel.RECORD_GENERATE);
+}
+
 // 首次 AC 入账。uid<=1 早退（Guest/系统号；事件路径拿不到 udoc，
 // 与 rp 脚本 udoc?.hasPriv(PRIV_USER_PROFILE) 的过滤目标一致）；
 // 服务号（SWPU_SERVICE_UIDS，默认判题号 uid 3）不入账——判题链路测试的 AC
@@ -129,7 +150,7 @@ export async function awardSolve(
     models: ShopModels,
     collections: ShopCollections,
     now: () => Date,
-    entry: { uid: number; domainId: string; docId: number; kind?: 'solve' | 'backfill' },
+    entry: { uid: number; domainId: string; docId: number; kind?: 'solve' | 'backfill'; backfillRound?: string; backfillRecord?: any },
 ): Promise<AwardResult> {
     const { uid, domainId, docId } = entry;
     if (!Number.isSafeInteger(uid) || uid <= 1) return { awarded: false, delta: 0 };
@@ -143,6 +164,9 @@ export async function awardSolve(
             uid,
             delta,
             kind: entry.kind || 'solve',
+            ...(entry.kind === 'backfill' && entry.backfillRound ? {
+                backfillRound: entry.backfillRound, backfillRecord: entry.backfillRecord,
+            } : {}),
             ref: solveRef(domainId, docId),
             detail: String(pdoc.title || docId),
             ts: now(),
@@ -177,41 +201,42 @@ export function refundRef(badgeId: number) {
     return `refund:${badgeId}`;
 }
 
-// Serializes redemptions per user inside this process.
-//
-// The debit is a check-then-insert across two collections with no transaction,
-// so two different badges requested at the same moment could both pass the
-// balance check and both insert, driving the balance negative. The {uid, ref}
-// unique key only prevents buying the *same* badge twice.
-//
-// A per-user lock closes the window for the single-instance pm2 deployment this
-// instance already assumes elsewhere (the RP hook and the hourly sweep are
-// registered on NODE_APP_INSTANCE 0 for exactly this reason). Scaling Hydro to
-// several app instances would need a real multi-node lock or a Mongo
-// transaction, not this map.
-const redeemLocks = new Map<number, Promise<unknown>>();
-
-// Exposed for tests: the lock map must not accumulate one entry per user who
-// ever redeemed.
-export function pendingLockCount() {
-    return redeemLocks.size;
+export interface LedgerDebit {
+    uid: number;
+    delta: number;
+    ref: string;
+    operationId: string;
 }
 
-async function withUserLock<T>(uid: number, work: () => Promise<T>): Promise<T> {
-    const previous = redeemLocks.get(uid) || Promise.resolve();
-    // Swallow the predecessor's rejection: one failed redemption must not poison
-    // the queue for that user.
-    const run = previous.then(work, work);
-    const tracked = run.catch(() => undefined);
-    redeemLocks.set(uid, tracked);
+// Called only after this operation's debit was acknowledged. The refund key
+// derives from that debit's identity, so compensation is both unique and
+// auditable. A failed/ambiguous write is never reported as a successful refund.
+export async function refundDebit(
+    ledger: { insertOne(doc: any): Promise<any> }, now: () => Date,
+    debit: LedgerDebit, detail: string, operationError: unknown,
+) {
+    const link = { uid: debit.uid, operationId: debit.operationId, debitRef: debit.ref };
     try {
-        return await run;
-    } finally {
-        // Only drop the entry when nobody has chained onto us. Comparing against
-        // our own promise matters: a later request for the same user will already
-        // have replaced the slot, and deleting on any other condition either
-        // strands that waiter behind a resolved promise or leaks the entry.
-        if (redeemLocks.get(uid) === tracked) redeemLocks.delete(uid);
+        await ledger.insertOne({
+            ...link, delta: -debit.delta, kind: 'refund',
+            ref: `refund:${debit.operationId}`, detail, ts: now(),
+        });
+    } catch (refundError) {
+        const errors = [operationError, refundError];
+        try {
+            await ledger.insertOne({
+                ...link, delta: 0, kind: 'refund_pending',
+                ref: `refund_pending:${debit.operationId}`, detail: `${detail}（退款待核对）`,
+                failure: String(refundError), ts: now(),
+            });
+        } catch (auditError) {
+            // If Mongo is unavailable, the original debit still carries the
+            // operation ID and this error retains both failed write attempts.
+            errors.push(auditError);
+        }
+        throw new ShopError(`操作失败，积分退款未确认，请联系管理员核对。流水号：${debit.operationId}`, {
+            cause: new AggregateError(errors, 'Shop refund requires reconciliation'),
+        });
     }
 }
 
@@ -221,8 +246,8 @@ async function withUserLock<T>(uid: number, work: () => Promise<T>): Promise<T> 
 // 顺序刻意是"先扣分、后发徽章"：{uid, ref} 唯一键保证扣分至多发生一次，
 // 所以并发重复请求最多变成一次扣分。反过来（先发徽章）一旦扣分失败就会
 // 白送徽章。代价是 userBadgeAdd 失败时积分已经扣掉，因此这里写入一条
-// refund 冲正流水（ref 带后缀，不会撞唯一键），保证最终一致且有审计痕迹。
-// 单机部署无法给跨集合操作开事务，冲正比 abortTransaction 更实际。
+// refund 冲正流水关联本次扣款；退款失败保留待核对记录。商品退款后的重试
+// 仍由原 redeem:{badgeId} 唯一键拒绝，保持现有规则。共享 UID 锁仅限单进程。
 export async function redeem(
     ctx: Context,
     models: ShopModels,
@@ -243,12 +268,11 @@ export async function redeem(
         const balance = await getBalance(collections, uid);
         const price = +priceDoc.price;
         if (balance < price) throw new ShopError(`积分不足：当前 ${balance} 分，兑换需 ${price} 分。`);
+        const debit: LedgerDebit = { uid, delta: -price, ref: redeemRef(badgeId), operationId: randomUUID() };
         try {
             await collections.ledger.insertOne({
-                uid,
-                delta: -price,
+                ...debit,
                 kind: 'redeem',
-                ref: redeemRef(badgeId),
                 detail: `兑换徽章：${bdoc.title}`,
                 ts: now(),
             });
@@ -261,14 +285,7 @@ export async function redeem(
         } catch (e) {
             // The debit already landed; hand the points back so a badge-plugin
             // failure cannot silently destroy them.
-            await collections.ledger.insertOne({
-                uid,
-                delta: price,
-                kind: 'refund',
-                ref: `${refundRef(badgeId)}:${now().getTime()}`,
-                detail: `兑换失败冲正：${bdoc.title}`,
-                ts: now(),
-            });
+            await refundDebit(collections.ledger, now, debit, `兑换失败冲正：${bdoc.title}`, e);
             throw new ShopError('徽章发放失败，积分已退回，请联系管理员。');
         }
         return { badgeTitle: bdoc.title, price, refunded: false };

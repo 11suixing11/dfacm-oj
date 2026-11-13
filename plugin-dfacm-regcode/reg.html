@@ -163,10 +163,10 @@ input{min-height:48px}.remember{min-height:44px}
         <button type="submit" id="p-go" class="btn btn-go">登录</button>
         <div class="msg" id="p-msg" role="status" aria-live="polite"></div>
       </form>
-      <p class="native-login"><a id="native-login" href="/login?fallback=1" target="_top">使用两步验证 / 通行密钥登录</a></p>
       <button type="button" id="p-back" class="link-back">← 返回验证码登录</button>
     </div>
 
+    <p class="native-login"><a id="native-login" href="/login?fallback=1" target="_top">使用两步验证 / 通行密钥登录</a></p>
     <noscript><p class="noscript-hint">本页需要 JavaScript；如不便启用，可前往 <a href="/login?fallback=1" target="_top">原生登录页</a>。</p></noscript>
     <div class="oauth-row" aria-hidden="true">或使用以下方式登录</div>
     <div class="oauth-list" id="oauth-list"></div>
@@ -334,11 +334,12 @@ input{min-height:48px}.remember{min-height:44px}
   }
   var BOOT=window.__SWPU_BOOT||{};
   var isPwd=BOOT.canPwd===true&&BOOT.tab==='pwd';
+  /* 原生登录负责第二因素，游客与管理员都需要可见入口。 */
+  var nl=$('native-login');if(nl)nl.href='/login?fallback=1&redirect='+encodeURIComponent(RETURN||'/');
   if(BOOT.canPwd===true){
     $('ft-admin-links').hidden=false;
     $('ft-pwd').addEventListener('click',function(e){e.preventDefault();showPane('pwd');$('p-uname').focus()});
     $('p-back').addEventListener('click',function(){showPane('flow')});
-    var nl=$('native-login');if(nl)nl.href='/login?fallback=1&redirect='+encodeURIComponent(RETURN||'/');
   }else{
     /* 学生看不到密码面板与找回密码（无密码语义下无用） */
     $('pwd-note').parentNode&&panes.pwd.remove();

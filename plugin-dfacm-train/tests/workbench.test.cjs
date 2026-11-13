@@ -2,6 +2,7 @@
 
 const assert = require('node:assert/strict');
 const { test } = require('node:test');
+const { fixtureUrl } = require('./fixture-url.cjs');
 const {
     analyzeTraining, buildWorkbench, summarizeRecentFailed, summarizeWeek, trainingProblemUrl, weekStartShanghai,
 } = require('../workbench.cjs');
@@ -131,7 +132,7 @@ function fakeModels() {
 }
 
 test('buildWorkbench assembles routes, next problems, week stats and recent failures', async () => {
-    const data = await buildWorkbench({
+    const data = await buildWorkbench({ url: fixtureUrl,
         domainId: 'system',
         uid: 42,
         uname: 'student',
@@ -168,7 +169,7 @@ test('workbench checks current AC before limiting failures, even when AC is outs
         { pid: 103, status: 2, rid: 'duplicate' },
         { pid: 201, status: 7 },
     ];
-    const data = await buildWorkbench({ domainId: 'system', uid: 42, ...models, recentLimit: 2 });
+    const data = await buildWorkbench({ url: fixtureUrl, domainId: 'system', uid: 42, ...models, recentLimit: 2 });
     assert.deepEqual(data.recentFailed.map((item) => item.pid), [103, 201]);
     assert.equal(data.recentFailed[0].rid, 'latest-failure');
     assert.deepEqual(data.recentlyResolved.map((item) => item.pid), [101]);
@@ -182,7 +183,7 @@ test('real recent activity takes priority over pinned routes', async () => {
         { pid: 201, at: new Date('2026-10-19T03:00:00Z') },
         { pid: 102, at: new Date('2026-10-20T03:00:00Z') },
     ];
-    const data = await buildWorkbench({ domainId: 'system', uid: 42, ...models, maxTrainings: 1 });
+    const data = await buildWorkbench({ url: fixtureUrl, domainId: 'system', uid: 42, ...models, maxTrainings: 1 });
     assert.equal(data.trainings[0].tid, 'aaa');
     assert.equal(data.trainings[0].lastActiveAt, '2026-10-20T03:00:00.000Z');
 });
@@ -198,7 +199,7 @@ test('many joined trainings remain counted and an unfinished route survives comp
     const plans = Array.from({ length: 12 }, (_, i) => ({ docId: 'route-' + i, title: '训练 ' + i,
         dag: [{ _id: 1, title: '第一章', pids: [i + 1], requireNids: [] }] }));
     let statusReads = 0;
-    const result = await buildWorkbench({ domainId: 'system', uid: 42, maxTrainings: 3,
+    const result = await buildWorkbench({ url: fixtureUrl, domainId: 'system', uid: 42, maxTrainings: 3,
         trainingModel: {
             getMultiStatus: () => ({ toArray: async () => [...plans.map((p) => ({ docId: p.docId })), { docId: 'deleted' }] }),
             getList: async () => Object.fromEntries(plans.map((p) => [p.docId, p])),
@@ -218,7 +219,7 @@ test('many joined trainings remain counted and an unfinished route survives comp
 });
 
 test('buildWorkbench handles a newcomer without enrollments or submissions', async () => {
-    const data = await buildWorkbench({
+    const data = await buildWorkbench({ url: fixtureUrl,
         domainId: 'system',
         uid: 43,
         uname: 'newbie',
@@ -234,4 +235,17 @@ test('buildWorkbench handles a newcomer without enrollments or submissions', asy
     assert.deepEqual(data.trainings, []);
     assert.equal(data.week.submissions, 0);
     assert.deepEqual(data.recentFailed, []);
+});
+
+test('DTO assembly requires an explicit router even for empty responses', async () => {
+    const trainingModel = { getMultiStatus: () => ({ toArray: async () => [] }), getMulti: () => ({ toArray: async () => [] }) };
+    await assert.rejects(buildWorkbench({ domainId: 'poj', uid: 42, trainingModel, problemModel: {}, records: { weekly: async () => [], recentFailed: async () => [] } }), /requires a URL router/);
+    const { buildRecentTrainings } = require('../workbench.cjs');
+    await assert.rejects(buildRecentTrainings({ domainId: 'poj', uid: 42, trainingModel, problemModel: {}, records: [] }), /requires a URL router/);
+});
+
+test('legacy trainingUrl argument order remains usable while an explicit router preserves domains', () => {
+    const { trainingUrl } = require('../workbench.cjs');
+    assert.equal(trainingUrl('t1', 2), '/training/t1#node-2');
+    assert.equal(trainingUrl('t1', 2, () => '/d/poj/training/t1'), '/d/poj/training/t1#node-2');
 });

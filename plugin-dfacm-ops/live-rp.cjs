@@ -34,7 +34,7 @@ function createLiveRp(options = {}) {
         serviceUids = [],
         purgeDoc = null,
         sanitize = null,
-        // Shared with the hourly sweep so two RP computations never overlap.
+        // Shared with manual/hourly sweeps so RP computations never overlap.
         lock = null,
     } = options;
     if (!Number.isSafeInteger(debounceMs) || debounceMs < 1) throw new TypeError('debounceMs must be a positive integer');
@@ -65,6 +65,8 @@ function createLiveRp(options = {}) {
         running = true;
         try {
             const work = async () => {
+                // Stop may occur while this batch waits for the shared lock.
+                if (stopped) return;
                 const domains = [...pending];
                 pending.clear();
                 const rp = resolveScript();

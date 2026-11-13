@@ -45,4 +45,11 @@ const mistakes = [
   { pid: 1005, title: problems[5].title, url: '/p/P1005', statusLabel: 'WA', statusText: 'Wrong Answer', attempts: 1, lastAt: '2026-10-21T14:00:00+08:00', resolved: true, resolvedAt: '2026-10-22T15:00:00+08:00', recordUrl: '', reason: 'implement', note: '排序后合并相交区间，注意最后一段也需要计入答案。' },
 ];
 
-module.exports = { problems, trainingId, chapters, workbench, mistakes };
+// Standalone HTML pages intentionally use this local root routing fixture.
+const trainingRoutes = {
+  home: '/', problemMain: '/p', trainingMain: '/training', enrolledTrainings: '/training?view=enrolled',
+  workbench: '/workbench', workbenchData: '/workbench/data', mistakes: '/mistakes',
+  mistakesData: '/mistakes/data', mistakesUpdate: '/mistakes/update',
+  mistakesRemove: '/mistakes/remove', mistakesSync: '/mistakes/sync',
+};
+module.exports = { problems, trainingId, chapters, workbench, mistakes, trainingRoutes };

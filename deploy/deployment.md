@@ -4,7 +4,7 @@
 
 ## 0. 一键部署（推荐入口）
 
-`deploy/deploy.sh` 在**本地仓库**运行（Git Bash 可用）：把全部文件上传到服务器上的临时暂存目录 → **对暂存副本**做双端 sha256 对账 → 通过后才安装到真实位置并安装主题/门面 → 再对已安装文件对账 → 才执行**唯一一次** `pm2 restart hydrooj` → 等新进程就绪（≥75s）→ 在服务器上跑 `deploy/smoke.sh` 匿名冒烟电池。
+`deploy/deploy.sh` 在**本地仓库**运行（Git Bash 可用）：把全部文件上传到服务器上的临时暂存目录 → **对暂存副本**做双端 sha256 对账 → 通过后由远端 `activate.sh` 在同一互斥锁内准备主题/门面、备份整批目标、逐项原子写入 → 对运行文件与派生资源一起核对哈希和权限 → 才执行**唯一一次** `pm2 restart hydrooj` → 等新进程就绪（≥75s）→ 在服务器上跑 `deploy/smoke.sh` 匿名冒烟电池。
 
 ```bash
 bash deploy/deploy.sh --stage-only # 只上传并对账暂存副本，完全不碰线上（演练用）
@@ -17,10 +17,28 @@ bash deploy/deploy.sh              # 完整部署
 - SSH 默认 `StrictHostKeyChecking=accept-new`：首次连接固定主机密钥，之后任何变更都会被拒绝（本次会话以 root 同时走 Tailscale 与公网）。应急可用 `SSH_STRICT_HOST_KEY_CHECKING=no` 临时关闭。
 - 发货清单覆盖 `landing/` **整棵树**（两个子集化 woff2 字体与整套图标）。早期清单只有 `landing/index.html`，换字体或图标必须手工跑 `install-landing.sh`，而本脚本永远不会替你做。
 - 插件文件清单直接解析第 4 节的 `cp /root/swpu-oj/<插件>/{...}` 块，文档与实际发货不会漂移；**新增插件文件必须先改本文档**。
-- 退出码：64 用法；65 双端哈希不一致（**绝不重启**）；66 本地缺文件或服务器不可达；67 新进程 75 秒内未就绪；68 冒烟有失败项。
+- 退出码：64 用法；65 哈希/权限不一致（激活阶段**绝不重启**）；66 缺文件、无效路径或服务器不可达；67 新进程 75 秒内未就绪；68 冒烟失败；69 外部探针失败；70 另一激活持锁；71 有冲突、回退失败或上次未完成。底层安装/叶脚本失败保留其非零退出码，完成可安全执行的回退后退出。
 - 环境变量：`SSH_TARGET`（默认 `root@100.69.19.62` 走 Tailscale，断连时用 `root@107.151.246.137`）、`SSH_KEY`、`SSH_STRICT_HOST_KEY_CHECKING`、`WAIT_SECONDS`、`SMOKE_HOST`。
+- 隔离实例可覆盖 `REMOTE_ADDONS`、`REMOTE_CUSTOM`、`REMOTE_DEPLOY`；生产默认路径不变。`ACTIVATION_BACKUP_DIR` 默认 `/root/swpu-deploy-backups`，必须是所有静态/门面/上游资源目录之外的独立私有目录，也不能包含这些线上目录。主题目标支持 `STATIC_DIR`、`THEME_VERSION`、`STATIC_THEME`、`SOURCE_THEME`、`STATIC_SW`、`SOURCE_SW`，会显式传给远端。
 - Caddyfile 与 footer 的 mongosh 迁移仍按第 7/4 节手动执行（改动频率远低于插件代码）。
 - 冒烟电池覆盖：boot 三维度服务端注入（tab/embed/oauth）、裸 /login /register 收敛、访客门禁 302、regcode 恶意 purpose 拒绝、安全头、缓存头、字体与图标可达、404 无缓存、308、Service Worker killswitch。**教训**：2026-10-04 曾因文件在重启之后才落盘，线上进程跑旧代码而磁盘哈希全对——顺序即正确性。
+
+### 激活备份和失败恢复协议
+
+远端批次自行执行 `set -euo pipefail`，不依赖本地 shell 的选项。它对 `/root/swpu-deploy-backups/activation.lock` 使用非等待 `flock`，锁覆盖准备、备份、激活、验证及重启。备份根目录与随机 `batch.*` 子目录为 0700，日志为 0600；备份不随临时上传目录清理，也不自动轮替删除。`install-landing.sh` 与 `install-theme.sh` 先在批次私有目录内生成产物，叶脚本失败时尚未写入线上文件。运行文件和全部派生目标都备份完成后，才逐项写入同文件系统临时文件并 rename。
+
+每批保留以下可审查证据：
+
+- `inventory.tsv`：目标绝对路径、原先是否存在、原始权限、SHA-256、对应 `original/<id>` 备份；不存在的原文件以 `present=0` 标记。
+- `journal.tsv`：每项的 `INTENT`（rename 前）与 `WRITTEN`（rename 后），包含批次期望哈希/权限，以及回退后的 `RESTORED`、文件验证后的 `COMMITTED`、进入重启边界前的 `RESTART_PENDING` 与确认重启成功后的 `RESTART_SUCCEEDED`。
+- `recovery.tsv`：未能自动恢复的具体目标、原因、备份、原始存在状态/权限/哈希、批次哈希。发生冲突或回退失败时，stderr 同时打印该清单路径。
+- 根目录的 `INCOMPLETE`：正在运行或尚待人工核对的批次路径。自动回退完整通过或正常提交后删除；否则保留，并拒绝后续激活，防止新批次覆盖证据。
+
+任一安装、叶脚本或安装后哈希失败即停止，不执行后续重启。已发布的文件按日志逆序恢复，并重新核验原始哈希和权限；原先不存在的文件，仅在当前内容/权限仍等于本批产物时删除。当前文件已被另一操作改动时保留它，报告 `CONFLICT`，不会用旧备份覆盖。即使某一项恢复失败，仍继续尝试恢复其他可安全恢复的项。
+
+人工恢复前先停止其他发布，并持有**同一个**锁（例如 `flock /root/swpu-deploy-backups/activation.lock bash` 进入维护 shell）。读取 `INCOMPLETE` 所指批次的三个 TSV，核对当前目标与原始哈希、批次哈希；先把冲突现状另存到私有位置，再逐项决定保留外部改动或使用 `original/<id>` 恢复，按 `inventory.tsv` 校验权限和 SHA-256。对原先不存在的文件也须确认属于本批后才删除。只有所有条目均已核对处理，才删除 `INCOMPLETE`；不要删除 `activation.lock` 文件或未核验的备份。恢复后是否重启必须结合当前进程版本决定，不能直接重跑完整部署来掩盖混合状态。
+
+此锁要求并行部署和人工文件维护共同遵守。脚本在写入及回退前检测可观测的外部改动，但不提供绕过锁的任意写入者之间的原子 compare-and-swap。HUP/INT/TERM 在重启边界前会触发回退；SIGKILL、断电或 SSH 超时导致远端状态不明时，不能从本地退出码推断回退已完成，应按 `INCOMPLETE` 和日志核对。文件全部核验通过后先成功写入 `COMMITTED`；进入重启边界前的中断或提交记录写入失败仍回退全部已写目标。准备调用唯一重启时先记录 `RESTART_PENDING`，再同时关闭自动回退并保留未完成状态，直到重启成功返回且 `RESTART_SUCCEEDED` 写入成功才清除待核对状态。HUP/INT/TERM 若发生在该重启边界内，会保留已验证新文件与 `INCOMPLETE`，退出 71 并指出进程核对所需的日志；后续激活被拒绝。`pm2 restart` 自身报错可能已部分切换 worker：此时保留已验证的新文件，记录 `RESTART_FAILED` 并保留 `INCOMPLETE`，退出 71，须先检查进程状态再决定恢复；不把旧文件放到可能已经启动的新进程下。重启后的 readiness、smoke、外部探针失败保留诊断退出码，不自动把正在运行的新进程对应文件换回旧版本。
 
 ## 1. Hydro 安装
 
@@ -129,7 +147,7 @@ pm2 restart hydrooj
 
 ```bash
 mkdir -p /root/.hydro/addons/swpu-ops
-cp /root/swpu-oj/plugin-dfacm-ops/{index.ts,operations.cjs,report.cjs,live-rp.cjs,rp-sweep.cjs,package.json} \
+cp /root/swpu-oj/plugin-dfacm-ops/{index.ts,operations.cjs,report.cjs,live-rp.cjs,rp-sweep.cjs,controlled-history.cjs,package.json} \
    /root/.hydro/addons/swpu-ops/
 mkdir -p /root/.hydro/addons/swpu-ops/node_modules
 ln -sfn /usr/local/share/.config/yarn/global/node_modules/hydrooj \
@@ -139,6 +157,26 @@ pm2 restart hydrooj
 ```
 
 安装后在“控制面板 → 脚本管理”用 `hydrooj cli script swpuWeeklyReport '{}'` 或后台表单运行，详见 [plugin-dfacm-ops/README.md](../plugin-dfacm-ops/README.md)。
+
+受控题解验证另见 [scripts/taxonomy/README.md](../scripts/taxonomy/README.md)。自动部署同时将 `run-solutions.sh`、`solutions-apply.cjs`、`verify-solutions.cjs`、`verification-state.cjs` 安装到 `$REMOTE_DEPLOY/scripts/taxonomy/`（默认 `/root/swpu-theme-deploy/scripts/taxonomy/`）；这些脚本与上述 ops 文件作为同一批次备份、核验和回退。手动安装的等价清单如下：
+
+```bash
+mkdir -p /root/swpu-theme-deploy/scripts/taxonomy
+cp /root/swpu-oj/scripts/taxonomy/{run-solutions.sh,solutions-apply.cjs,verify-solutions.cjs,verification-state.cjs} \
+   /root/swpu-theme-deploy/scripts/taxonomy/
+```
+
+交付布局中的脚本通过明确的绝对路径加载已有 `swpu-ops` helper。完成下述原生发布验收后，管理员 CLI 的调用方式为：
+
+```bash
+export DFACM_CONTROLLED_HISTORY=1
+export DFACM_CONTROLLED_HISTORY_MODULE=/root/.hydro/addons/swpu-ops/controlled-history.cjs
+bash /root/swpu-theme-deploy/scripts/taxonomy/run-solutions.sh /absolute/private/batch.json --dry
+```
+
+自定义 `REMOTE_ADDONS` / `REMOTE_DEPLOY` 时同步替换上述路径。保留仓库布局执行时可继续使用默认相对 helper；复制脚本到其他目录时必须设置此绝对 locator。复用已安装的 Hydro/Mongo 依赖，不在 addon 运行目录执行 `npm ci`。`DFACM_CONTROLLED_HISTORY=1` 还须在**每个原生 judge callback host** 的进程环境中显式启用，默认不开启；仅设置 CLI 不足以建立所有回调的所有权能力。该适配器仅接受已验证的 Hydro **5.0.7** 原生方法指纹及 ui-default **4.58.5**，Node **>=22.13**；不兼容、未加载、卸载或方法替换时拒绝提交和发布。原生 Hydro 缺少 RID/批次与私有 history ID 的关联，因此使用这项严格、可选的适配器；不得以 boolean 或猜测历史记录绕过检查。
+
+上线前须核对实际 worker、CLI、daemon 和 callback 消费拓扑，在隔离服务器验证完整判题/沙箱和断线恢复；本地原生 fixture 不代表这些生产门槛已通过。只允许已验收的本地 default `judge` 与完整原题数据，其他题型及远端 `remotejudge` 继续阻止。超时、调度结果未知、重复回调所有权冲突保持 pending，保留 RID/history/state，不盲目重判或删除；恢复时使用同一主机上同一不可变批次和状态路径，精确核对终态/取消及所属记录。清理封存本批 claim 后只删除精确 history/RID，不回写正式统计快照。历史统计修正须另备对象清单、备份和回退，不能随发布自动执行。
 
 两个报表脚本只读；同一 addon 默认启用的 RP 钩子会更新排名。它过滤评测过程并串行合并重算，设置 `SWPU_LIVE_RP=0` 后重启可以关闭。
 
@@ -168,7 +206,7 @@ pm2 restart hydrooj
 
 ```bash
 mkdir -p /root/.hydro/addons/swpu-shop/templates
-cp /root/swpu-oj/plugin-dfacm-shop/{index.ts,points.ts,titles.ts,package.json} \
+cp /root/swpu-oj/plugin-dfacm-shop/{index.ts,points.ts,titles.ts,user-lock.ts,backfill.ts,package.json} \
    /root/.hydro/addons/swpu-shop/
 cp /root/swpu-oj/plugin-dfacm-shop/{templates/shop.html,templates/history.html,templates/manage.html,templates/title.html} \
    /root/.hydro/addons/swpu-shop/templates/
@@ -461,7 +499,7 @@ bash /opt/swpu-oj/scripts/check-deployment.sh \
 
 在独立测试域准备一题明确的 A+B，用支持的 C++ 和 Python 各提交一份正确程序确认 AC；提交固定错误输出确认 WA、死循环确认 TLE、非法语法确认 CE。对照题目限时检查结果，确认有判题机执行、测试数据可读、沙箱限制生效。不要在正式比赛排名里运行这些测试。
 
-升级流程：记录当前组件与自研插件版本 → 保存并核验完整备份和异机副本 → 备用实例升级 → 注册/登录与人工判题验收 → 在人工确认的维护窗口应用到正式机。升级失败时，优先切换到验证过的备用实例，或按相匹配的程序版本和数据备份恢复；数据库迁移后不要直接降级 npm 包当作回退。本仓库没有自动发布、重启或回滚脚本。
+升级流程：记录当前组件与自研插件版本 → 保存并核验完整备份和异机副本 → 备用实例升级 → 注册/登录与人工判题验收 → 在人工确认的维护窗口应用到正式机。升级失败时，优先切换到验证过的备用实例，或按相匹配的程序版本和数据备份恢复；数据库迁移后不要直接降级 npm 包当作回退。本仓库的部署脚本发布自研插件与资产，不自动升级或回退 Hydro、依赖包及数据库迁移。
 
 ## 18. 排名页模板补丁（own-row 去重 + 自己行高亮）
 

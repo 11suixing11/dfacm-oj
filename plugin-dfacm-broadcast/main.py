@@ -83,6 +83,7 @@ class DfacmAcmBroadcast(star.Star):
     # store — MongoDB is the source of truth; the store is just a queue.
     PURGE_HORIZON_SECONDS = 172_800
     RECORDS_SCHEMA_VERSION = 2
+    DELIVERY_SCHEMA_VERSION = 1
     USER_QQ_MAP: dict[str, str] = {}
     DEFAULT_MERGE_ADMINS: tuple[str, ...] = ("1977717178",)
     # --- Ops health monitor: the OJ server writes a heartbeat doc into Mongo
@@ -199,9 +200,9 @@ class DfacmAcmBroadcast(star.Star):
             Path(get_astrbot_plugin_data_path()) / "swpu_acm_broadcast" / "records.db"
         )
         self._db: sqlite3.Connection | None = None
-        self._init_db()
         self._started_at = datetime.now()
         self._started_ts = int(self._started_at.timestamp())
+        self._init_db()
         self._rank_cache: dict[str, str] = {}
         self._rank_cache_at: datetime | None = None
         self._rank_refresh_task: asyncio.Task | None = None
@@ -405,26 +406,68 @@ class DfacmAcmBroadcast(star.Star):
 
         The store is a bounded queue: pending cards, in-flight verdicts and
         a recent-history window for rejudge detection. History, dedup and
-        statistics all read MongoDB directly, so a schema bump simply drops
-        the table — the next poll refetches everything silently.
+        statistics all read MongoDB directly. The legacy records-schema
+        rebuild is separate from additive delivery-state migrations, which
+        must preserve the queue and Mongo watermark.
         """
         self._db_path.parent.mkdir(parents=True, exist_ok=True)
         self._db = sqlite3.connect(self._db_path, isolation_level=None)
-        self._db.row_factory = sqlite3.Row
-        self._db.execute("PRAGMA journal_mode=WAL")
-        self._db.execute("PRAGMA synchronous=NORMAL")
-        self._db.executescript(self._RECORDS_DDL)
-        if self._db_get_meta("records_schema") != str(self.RECORDS_SCHEMA_VERSION):
-            self._db.executescript(
-                """
-                DROP TABLE IF EXISTS records;
-                DROP TABLE IF EXISTS users;
-                DROP TABLE IF EXISTS contest_solves;
-                """
-            )
+        try:
+            self._db.row_factory = sqlite3.Row
+            self._db.execute("PRAGMA journal_mode=WAL")
+            self._db.execute("PRAGMA synchronous=NORMAL")
             self._db.executescript(self._RECORDS_DDL)
-            self._db.execute("DELETE FROM meta WHERE key = 'mongo_last_id'")
-            self._db_set_meta("records_schema", str(self.RECORDS_SCHEMA_VERSION))
+            if self._db_get_meta("records_schema") != str(self.RECORDS_SCHEMA_VERSION):
+                self._db.executescript(
+                    """
+                    DROP TABLE IF EXISTS records;
+                    DROP TABLE IF EXISTS users;
+                    DROP TABLE IF EXISTS contest_solves;
+                    """
+                )
+                self._db.executescript(self._RECORDS_DDL)
+                self._db.execute("DELETE FROM meta WHERE key = 'mongo_last_id'")
+                self._db_set_meta("records_schema", str(self.RECORDS_SCHEMA_VERSION))
+            self._init_delivery_state()
+        except BaseException:
+            self._db.close()
+            self._db = None
+            raise
+
+    def _init_delivery_state(self) -> None:
+        """Add delivery metadata without rebuilding records or guessing sends.
+
+        Legacy card_sent=0 is known pending; card_sent=1 may mean delivered
+        or suppressed, so eligibility and delivery remain unknown (NULL).
+        Column checks and NULL-only backfill also resume partial migrations.
+        """
+        self._db.execute("BEGIN IMMEDIATE")
+        try:
+            columns = {
+                row["name"] for row in self._db.execute("PRAGMA table_info(records)")
+            }
+            if "notify_eligible" not in columns:
+                self._db.execute("ALTER TABLE records ADD COLUMN notify_eligible INTEGER")
+            if "delivered_at" not in columns:
+                self._db.execute("ALTER TABLE records ADD COLUMN delivered_at INTEGER")
+            self._db.execute(
+                "UPDATE records SET notify_eligible = 1 "
+                "WHERE notify_eligible IS NULL AND card_sent = 0"
+            )
+            # Persist before polling, including an empty first page. Once
+            # present this floor applies to every bootstrap page/restart.
+            # An existing watermark without a floor is an established
+            # installation; its unseen downtime records remain eligible.
+            if (
+                not self._db_get_meta("mongo_last_id")
+                and not self._db_get_meta("bootstrap_floor_ts")
+            ):
+                self._db_set_meta("bootstrap_floor_ts", str(self._started_ts))
+            self._db_set_meta("delivery_schema", str(self.DELIVERY_SCHEMA_VERSION))
+            self._db.execute("COMMIT")
+        except BaseException:
+            self._db.execute("ROLLBACK")
+            raise
 
     def _db_get_meta(self, key: str) -> str:
         row = self._db.execute(
@@ -453,8 +496,8 @@ class DfacmAcmBroadcast(star.Star):
         """Insert mapped records (oldest first).
 
         Card decisions are made by the poll flow (against MongoDB) and
-        carried in ``_card_sent``; this method only stores. Rows are
-        INSERT OR IGNORE so reprocessing is always safe.
+        carried in ``_card_sent`` and ``_notify_eligible``; this method only
+        stores. Rows are INSERT OR IGNORE so reprocessing is always safe.
         """
         new_count = 0
         for item in sorted(items, key=lambda entry: entry["ts"]):
@@ -463,8 +506,8 @@ class DfacmAcmBroadcast(star.Star):
                 "rid, user_id, user_name, status, domain_id, doc_id,"
                 " problem_url, problem_title, hidden, tid, contest_title,"
                 " contest_key, language, difficulty, time_ms, memory_kb, tags,"
-                " n_accept, avatar_url, submitted_at, ts, card_sent"
-                ") VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                " n_accept, avatar_url, submitted_at, ts, card_sent, notify_eligible"
+                ") VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 (
                     item["id"],
                     item["user_id"],
@@ -488,6 +531,7 @@ class DfacmAcmBroadcast(star.Star):
                     item["submitted_at"],
                     item["ts"],
                     int(item.get("_card_sent", 1)),
+                    item.get("_notify_eligible"),
                 ),
             )
             if cursor.rowcount:
@@ -883,18 +927,22 @@ class DfacmAcmBroadcast(star.Star):
             return f"{self.BASE_URL}/contest/{tid_hex}"
         return f"{self.BASE_URL}/d/{domain}/contest/{tid_hex}"
 
-    async def _broadcast_contest_ac(self, row: sqlite3.Row) -> bool:
-        """Send one contest-AC card (pastel layout) for a queued row."""
+    async def _broadcast_contest_ac(self, row: sqlite3.Row) -> bool | None:
+        """Return True if sent, False to retry, None for a deleted contest."""
         domain = str(row["domain_id"] or "system")
         tid_hex = str(row["tid"])
         tdoc = self._contest_cache.get(tid_hex)
         if tdoc is None:
-            fetched = await asyncio.to_thread(
-                self._db_contest_docs, self._mongo(), [tid_hex]
-            )
+            try:
+                fetched = await asyncio.to_thread(
+                    self._db_contest_docs, self._mongo(), [tid_hex]
+                )
+            except Exception:
+                self.logger.exception("Contest metadata lookup failed; keeping card queued")
+                return False
             tdoc = fetched.get(tid_hex) or {"missing": True}
         if tdoc.get("missing"):
-            return True  # contest deleted since; drop the card silently
+            return None  # contest deleted since; suppress without a send stamp
         try:
             solve_order, user_solved, participants, rank = await asyncio.to_thread(
                 self._db_contest_card_stats,
@@ -909,21 +957,12 @@ class DfacmAcmBroadcast(star.Star):
             solve_order, user_solved, participants, rank = 1, 0, 0, 1
         begin_ts = int(tdoc.get("begin_ts") or 0)
         elapsed = int(row["ts"]) - begin_ts if begin_ts else 0
-        bindings = self._state.get("bindings", {})
-        raw_name = str(row["user_name"]).strip().casefold()
         item = {
             "contest_name": tdoc.get("title") or "比赛",
             "contest_url": self._contest_url(domain, tid_hex),
             "user": self._display_name_for(str(row["user_id"])),
             "oj_user": str(row["user_name"]),
-            "qq": next(
-                (
-                    qq
-                    for qq, name in bindings.items()
-                    if str(name).strip().casefold() == raw_name
-                ),
-                "未绑定",
-            ),
+            "qq": self._bound_qq_for_user(row["user_id"]),
             "avatar_url": str(row["avatar_url"]),
             "problem_key": str(row["contest_key"] or "?"),
             "problem_title": str(row["problem_title"] or ""),
@@ -971,6 +1010,8 @@ class DfacmAcmBroadcast(star.Star):
                 image_path = self._render_contest_card(item, Path(temp_dir))
                 for attempt in range(3):
                     try:
+                        if not await self._validate_card_source(str(row["rid"])):
+                            return False
                         sent = await self._group_send(
                             MessageChain().file_image(str(image_path))
                         )
@@ -993,6 +1034,8 @@ class DfacmAcmBroadcast(star.Star):
             )
         for attempt in range(2):
             try:
+                if not await self._validate_card_source(str(row["rid"])):
+                    return False
                 sent = await self._group_send(MessageChain().message(fallback))
                 if sent:
                     return True
@@ -1073,6 +1116,9 @@ class DfacmAcmBroadcast(star.Star):
             "user": self._display_name_for(row["user_id"]),
             "oj_user": row["user_name"],
             "user_id": self._person_id(row["user_id"]),
+            # Statistics/display may merge accounts; QQ ownership uses the
+            # original submitted account, never the merge's main account.
+            "binding_user_id": str(row["user_id"]),
             "avatar_url": row["avatar_url"],
             "qq": "未绑定",
             "difficulty": str(row["difficulty"] or "") or "暂未标注",
@@ -1313,26 +1359,59 @@ class DfacmAcmBroadcast(star.Star):
             key: self._problem_cache[key] for key in wanted if key in self._problem_cache
         }
 
-    def _db_fetch_increment(self, after_hex: str, recent_after_hex: str):
-        """Worker thread: records past the watermark + the recent window."""
+    def _db_fetch_increment(self, after_hex: str) -> list[dict]:
+        """Worker thread: new records past the independent ingest watermark."""
         db = self._mongo()
         query = {"_id": {"$gt": ObjectId(after_hex)}} if after_hex else {}
-        new_docs: list[dict] = list(
+        return list(
             db.record.find(query, self._RECORD_PROJECTION)
             .sort("_id", 1)
             .limit(400)
         )
-        recent_docs: list[dict] = []
-        if recent_after_hex:
-            recent_docs = list(
-                db.record.find(
-                    {"_id": {"$gte": ObjectId(recent_after_hex)}},
-                    self._RECORD_PROJECTION,
-                )
-                .sort("_id", 1)
-                .limit(400)
+
+    def _db_fetch_recent_page(
+        self, lower_hex: str, upper_hex: str, after_hex: str, limit: int = 400
+    ) -> list[dict]:
+        """Worker thread: one ordered page in the fixed [lower, upper) window."""
+        bounds = {"$gte": ObjectId(lower_hex), "$lt": ObjectId(upper_hex)}
+        if after_hex:
+            bounds["$gt"] = ObjectId(after_hex)
+        return list(
+            self._mongo().record.find({"_id": bounds}, self._RECORD_PROJECTION)
+            .sort("_id", 1)
+            .limit(limit)
+        )
+
+    async def _reconcile_recent(self) -> None:
+        """Finish a persisted window before starting another; two pages per poll."""
+        key = "recent_reconcile_scan"
+        saved = self._db_get_meta(key)
+        if saved:
+            scan = json.loads(saved)
+        else:
+            now = datetime.now(timezone.utc)
+            scan = {
+                "lower": str(ObjectId.from_datetime(
+                    now - timedelta(seconds=self.RECENT_WINDOW_SECONDS)
+                )),
+                # ObjectId clocks have one-second precision. Include the whole
+                # current second, even when its records differ only in the tail.
+                "upper": str(ObjectId.from_datetime(now + timedelta(seconds=1))),
+                "after": "",
+            }
+            self._db_set_meta(key, json.dumps(scan))
+        for _ in range(2):
+            docs = await asyncio.to_thread(
+                self._db_fetch_recent_page, scan["lower"], scan["upper"], scan["after"]
             )
-        return new_docs, recent_docs
+            await self._sync_recent(docs)
+            if len(docs) < 400:
+                self._db_set_meta(key, "")
+                break
+            scan["after"] = str(docs[-1]["_id"])
+            # Query, verdict writes and the AC decision all succeeded. An
+            # interruption before this write replays this page safely.
+            self._db_set_meta(key, json.dumps(scan))
 
     def _db_map_docs(self, docs: list[dict]) -> list[dict]:
         """Worker thread: enrich record documents into ingest items.
@@ -1634,29 +1713,23 @@ class DfacmAcmBroadcast(star.Star):
             }
         ]
 
-    async def _poll_new_records(self) -> None:
-        """Watermark poll + recent-window status sync, MongoDB as authority.
-
-        Query 1 ingests records past the watermark. Query 2 re-reads the
-        last RECENT_WINDOW_SECONDS so slow verdicts and in-place rejudges
-        converge;         an AC transition re-runs the card decision with the
-        earlier-AC lookup made directly against the source database.
-        """
+    async def _poll_new_records(self) -> int:
+        """Ingest new records, then resume the independent verdict snapshot."""
         if self._db is None:
             return 0
         last_hex = self._db_get_meta("mongo_last_id")
-        recent_after = ObjectId.from_datetime(
-            datetime.now(timezone.utc)
-            - timedelta(seconds=self.RECENT_WINDOW_SECONDS)
-        )
-        new_docs, recent_docs = await asyncio.to_thread(
-            self._db_fetch_increment, last_hex, str(recent_after)
-        )
+        new_docs = await asyncio.to_thread(self._db_fetch_increment, last_hex)
         items = await asyncio.to_thread(self._db_map_docs, new_docs)
         await self._decide_and_store(items)
         if new_docs:
             self._db_set_meta("mongo_last_id", str(new_docs[-1]["_id"]))
-        await self._sync_recent(recent_docs)
+        await self._reconcile_recent()
+        # The recent window cannot prove that an older queued source exists.
+        # Explicit RID reads also reconcile deletions while delivery is held.
+        for row in self._db.execute(
+            "SELECT rid FROM records WHERE card_sent = 0 AND delivered_at IS NULL"
+        ).fetchall():
+            await self._validate_card_source(str(row["rid"]))
         self._purge_old_rows()
         return len(new_docs)
 
@@ -1664,12 +1737,19 @@ class DfacmAcmBroadcast(star.Star):
         """Card decision for freshly mapped records, then insert."""
         if not items or self._db is None:
             return
+        floor_ts = int(self._db_get_meta("bootstrap_floor_ts") or 0)
+        for item in items:
+            # Scope is independent of the current verdict and dedup result.
+            item["_notify_eligible"] = int(
+                item["ts"] >= floor_ts
+                and bool(item.get("tid") or not item.get("hidden"))
+            )
         candidates = [
             item
             for item in items
             if item["status"] == "Accepted"
             and item.get("score", 0) >= 100
-            and item["ts"] >= self._started_ts
+            and item["_notify_eligible"] == 1
             and (item.get("tid") or not item.get("hidden"))
         ]
         suppressed = await asyncio.to_thread(
@@ -1696,6 +1776,35 @@ class DfacmAcmBroadcast(star.Star):
             "rid": item["id"],
         }
 
+    @staticmethod
+    def _is_full_ac(doc: dict | None) -> bool:
+        if doc is None or doc.get("status") != 1:
+            return False
+        try:
+            return float(doc.get("score") or 0) >= 100
+        except (TypeError, ValueError, OverflowError):
+            return False
+
+    def _db_card_source_valid(self, rid: str) -> bool:
+        doc = self._mongo().record.find_one(
+            {"_id": ObjectId(rid)}, {"status": 1, "score": 1}
+        )
+        return self._is_full_ac(doc)
+
+    async def _validate_card_source(self, rid: str) -> bool:
+        """Withdraw known-invalid sources; query failures remain retryable."""
+        try:
+            valid = await asyncio.to_thread(self._db_card_source_valid, rid)
+        except Exception:
+            self.logger.exception("Record source lookup failed; keeping card queued")
+            return False
+        if not valid and self._db is not None:
+            self._db.execute(
+                "UPDATE records SET card_sent = 1 WHERE rid = ? AND delivered_at IS NULL",
+                (rid,),
+            )
+        return valid
+
     async def _sync_recent(self, recent_docs: list[dict]) -> None:
         """Converge local row statuses with the recent Mongo window."""
         if not recent_docs or self._db is None:
@@ -1707,20 +1816,24 @@ class DfacmAcmBroadcast(star.Star):
             row = self._db.execute(
                 "SELECT * FROM records WHERE rid = ?", (rid,)
             ).fetchone()
-            if row is None or row["status"] == status_text:
+            if row is None:
                 continue
-            self._db.execute(
-                "UPDATE records SET status = ? WHERE rid = ?", (status_text, rid)
-            )
-            if (
-                int(doc.get("status") or 0) == 1
-                and int(doc.get("score") or 0) >= 100
-            ):
+            if row["status"] != status_text:
+                self._db.execute(
+                    "UPDATE records SET status = ? WHERE rid = ?", (status_text, rid)
+                )
+            if self._is_full_ac(doc):
+                # Accepted/50 -> Accepted/100 and restored sources keep the
+                # same display verdict, but must regain their unsent chance.
                 transitions.append(row)
+            elif row["card_sent"] == 0 and row["delivered_at"] is None:
+                self._db.execute(
+                    "UPDATE records SET card_sent = 1 WHERE rid = ?", (rid,)
+                )
         await self._queue_verdict_cards(transitions)
 
     async def _queue_verdict_cards(self, rows: list[sqlite3.Row]) -> None:
-        """Run the card decision for rows whose verdict just became AC."""
+        """Run the card decision for full-AC rows still eligible for delivery."""
         if not rows or self._db is None:
             return
         candidates: list[dict] = []
@@ -1728,7 +1841,11 @@ class DfacmAcmBroadcast(star.Star):
         for row in rows:
             if row["hidden"] and not row["tid"]:
                 continue
-            if int(row["card_sent"]) != 1 or int(row["ts"]) < self._started_ts:
+            if (
+                int(row["card_sent"]) != 1
+                or row["notify_eligible"] != 1
+                or row["delivered_at"] is not None
+            ):
                 continue
             candidates.append(
                 {
@@ -1766,24 +1883,49 @@ class DfacmAcmBroadcast(star.Star):
         )
 
     async def _maybe_stale_sweep(self) -> None:
-        """Hourly: re-check stuck verdicts and publish contest end reports."""
-        now = time.time()
-        if now - self._stale_sweep_at < self.STALE_SWEEP_SECONDS:
-            return
-        self._stale_sweep_at = now
+        """Hourly bounded unresolved scan; resume two pages on every poll."""
         if self._db is None:
             return
+        now = time.time()
+        due = now - self._stale_sweep_at >= self.STALE_SWEEP_SECONDS
+        key = "stale_reconcile_scan"
+        saved = self._db_get_meta(key)
         placeholders = ",".join("?" for _ in self.NON_FINAL_TEXTS)
-        rows = self._db.execute(
-            f"SELECT * FROM records WHERE status IN ({placeholders}) LIMIT 200",
-            tuple(self.NON_FINAL_TEXTS),
-        ).fetchall()
-        if rows:
-            docs = await asyncio.to_thread(
-                self._db_fetch_by_rids, [str(row["rid"]) for row in rows]
-            )
-            await self._sync_recent(docs)
-        await self._contest_end_reports()
+        if saved:
+            scan = json.loads(saved)
+        else:
+            if not due:
+                return
+            bounds = self._db.execute(
+                f"SELECT MIN(rid) AS lower, MAX(rid) AS upper FROM records "
+                f"WHERE status IN ({placeholders})", self.NON_FINAL_TEXTS,
+            ).fetchone()
+            scan = None
+            if bounds["upper"] is not None:
+                scan = {"lower": bounds["lower"], "upper": bounds["upper"], "after": ""}
+                self._db_set_meta(key, json.dumps(scan))
+        if scan is not None:
+            for _ in range(2):
+                rows = self._db.execute(
+                    f"SELECT rid FROM records WHERE status IN ({placeholders}) "
+                    "AND rid >= ? AND rid <= ? AND rid > ? ORDER BY rid LIMIT 200",
+                    (*self.NON_FINAL_TEXTS, scan["lower"], scan["upper"], scan["after"]),
+                ).fetchall()
+                if rows:
+                    docs = await asyncio.to_thread(
+                        self._db_fetch_by_rids, [str(row["rid"]) for row in rows]
+                    )
+                    await self._sync_recent(docs)
+                if len(rows) < 200:
+                    self._db_set_meta(key, "")
+                    break
+                # Use the local page, including missing/still-unresolved source
+                # RIDs, so permanent failures cannot starve subsequent rows.
+                scan["after"] = str(rows[-1]["rid"])
+                self._db_set_meta(key, json.dumps(scan))
+        if due:
+            await self._contest_end_reports()
+            self._stale_sweep_at = now
 
     # ------------------------------------------------------------------
     # Ops health monitor: external eyes on the OJ.
@@ -2405,19 +2547,27 @@ class DfacmAcmBroadcast(star.Star):
         if not self._group_delivery_ready():
             return
         rows = self._db.execute(
-            "SELECT * FROM records WHERE card_sent = 0 "
+            "SELECT * FROM records WHERE card_sent = 0 AND delivered_at IS NULL "
             "ORDER BY ts ASC, rid ASC LIMIT ?",
             (self.CARD_DRAIN_LIMIT,),
         ).fetchall()
         for row in rows:
+            if not await self._validate_card_source(str(row["rid"])):
+                continue
             sent = (
                 await self._broadcast_contest_ac(row)
                 if row["tid"]
                 else await self._broadcast_ac(self._card_item_from_row(row))
             )
-            if sent:
+            if sent is True:
                 self._db.execute(
-                    "UPDATE records SET card_sent = 1 WHERE rid = ?", (row["rid"],)
+                    "UPDATE records SET card_sent = 1, delivered_at = ? WHERE rid = ?",
+                    (int(time.time()), row["rid"]),
+                )
+            elif sent is None:
+                self._db.execute(
+                    "UPDATE records SET card_sent = 1, notify_eligible = 0 WHERE rid = ?",
+                    (row["rid"],),
                 )
 
     async def _refresh_rank_cache(self) -> None:
@@ -2460,34 +2610,38 @@ class DfacmAcmBroadcast(star.Star):
             f"链接：{info['url']}"
         )
 
+    def _binding_user_id(self, qq: str) -> str:
+        """Return the confirmed UID of an active binding, never infer by name."""
+        if not self._state.get("bindings", {}).get(qq):
+            return ""
+        profile = self._state.get("binding_profiles", {}).get(qq)
+        if not isinstance(profile, dict):
+            return ""
+        return str(profile.get("user_id") or "").strip()
+
+    def _bound_qq_for_user(self, user_id: object) -> str:
+        """Keep the single-QQ card rule, with stable ordering of verified matches."""
+        uid = str(user_id or "").strip()
+        if uid:
+            for qq in sorted(self._state.get("bindings", {})):
+                if self._binding_user_id(qq) == uid:
+                    return qq
+        return "未绑定"
+
+    def _binding_required_message(self, qq: str) -> str:
+        if self._state.get("bindings", {}).get(qq):
+            return (
+                "旧绑定身份未确认，请重新发送 /绑定 数字UID，"
+                "将验证码写入个人简介后发送 /绑定确认。"
+            )
+        return "你还没有绑定 d&f算法网账号，请先发送 /绑定 用户名"
+
     async def _get_bound_user(self, qq: str) -> tuple[str, str] | None:
-        """Resolve a QQ binding to its OJ user ID, using the local cache first.
-
-        Args:
-            qq: QQ identifier associated with the binding.
-
-        Returns:
-            The bound username and OJ user ID, or ``None`` when unbound or
-            unresolved.
-        """
-        bindings = self._state.setdefault("bindings", {})
-        username = bindings.get(qq)
-        if not username:
+        """Read the confirmed username/UID; legacy names require reconfirmation."""
+        user_id = self._binding_user_id(qq)
+        if not user_id:
             return None
-        cached_profile = self._state.setdefault("binding_profiles", {}).get(qq)
-        if isinstance(cached_profile, dict) and cached_profile.get("user_id"):
-            return str(username), str(cached_profile["user_id"])
-        profile_url = await self._resolve_user_profile(str(username))
-        if not profile_url:
-            return None
-        user_id = profile_url.rstrip("/").rsplit("/", 1)[-1]
-        self._state.setdefault("binding_profiles", {})[qq] = {
-            "username": str(username),
-            "user_id": user_id,
-            "profile_url": profile_url,
-        }
-        self._save_state()
-        return str(username), user_id
+        return str(self._state["bindings"][qq]), user_id
 
     async def _fetch_user_records(self, user_id: str) -> list[dict]:
         try:
@@ -2553,20 +2707,9 @@ class DfacmAcmBroadcast(star.Star):
             )
 
     async def _broadcast_ac(self, item: dict) -> bool:
-        bindings = self._state.get("bindings", {})
-        item_name = str(item.get("user", "")).strip().casefold()
-        item_oj_name = str(item.get("oj_user", "")).strip().casefold()
-        item_user_id = str(item.get("user_id", "")).strip()
-        bound_qq = next(
-            (
-                qq
-                for qq, name in bindings.items()
-                if str(name).strip().casefold()
-                in {item_name, item_oj_name, item_user_id.casefold()}
-            ),
-            "未绑定",
+        item["qq"] = self._bound_qq_for_user(
+            item.get("binding_user_id", item.get("user_id"))
         )
-        item["qq"] = bound_qq
         item["rank"] = await self._fetch_user_rank(item.get("user_id") or item["user"])
         item["difficulty"] = str(item.get("difficulty") or "") or "暂未标注"
         total_count = await self._user_ac_count(item["user_id"])
@@ -2622,6 +2765,8 @@ class DfacmAcmBroadcast(star.Star):
                 image_path = self._render_ac_card(item, Path(temp_dir))
                 for attempt in range(3):
                     try:
+                        if not await self._validate_card_source(str(item["id"])):
+                            return False
                         sent = await self._group_send(
                             MessageChain().file_image(str(image_path))
                         )
@@ -2640,6 +2785,8 @@ class DfacmAcmBroadcast(star.Star):
             self.logger.exception("AC card rendering failed; sending text fallback")
         for attempt in range(2):
             try:
+                if not await self._validate_card_source(str(item["id"])):
+                    return False
                 sent = await self._group_send(MessageChain().message(fallback))
                 if sent:
                     return True
@@ -3420,7 +3567,7 @@ class DfacmAcmBroadcast(star.Star):
     async def my_rank(self, event: AstrMessageEvent):
         bound = await self._get_bound_user(event.get_sender_id())
         if not bound:
-            yield event.plain_result("你还没有绑定 d&f算法网账号，请先发送 /绑定 用户名")
+            yield event.plain_result(self._binding_required_message(event.get_sender_id()))
             return
         username, _ = bound
         rank = await self._fetch_user_rank(username)
@@ -3430,7 +3577,7 @@ class DfacmAcmBroadcast(star.Star):
     async def recent_submissions(self, event: AstrMessageEvent):
         bound = await self._get_bound_user(event.get_sender_id())
         if not bound:
-            yield event.plain_result("你还没有绑定 d&f算法网账号，请先发送 /绑定 用户名")
+            yield event.plain_result(self._binding_required_message(event.get_sender_id()))
             return
         username, user_id = bound
         records = await self._fetch_user_records(user_id)
@@ -3448,7 +3595,7 @@ class DfacmAcmBroadcast(star.Star):
     async def my_stats(self, event: AstrMessageEvent):
         bound = await self._get_bound_user(event.get_sender_id())
         if not bound:
-            yield event.plain_result("你还没有绑定 d&f算法网账号，请先发送 /绑定 用户名")
+            yield event.plain_result(self._binding_required_message(event.get_sender_id()))
             return
         username, user_id = bound
         try:
@@ -3475,7 +3622,7 @@ class DfacmAcmBroadcast(star.Star):
         qq = event.get_sender_id()
         bound = await self._get_bound_user(qq)
         if not bound:
-            yield event.plain_result("请先绑定 d&f算法网账号，再使用 /签到")
+            yield event.plain_result(self._binding_required_message(qq))
             return
         today = datetime.now().strftime("%Y-%m-%d")
         checkins = self._state.setdefault("checkins", {})

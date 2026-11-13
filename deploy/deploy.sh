@@ -12,9 +12,8 @@ set -euo pipefail
 #   preflight          - local sources exist, server reachable
 #   upload_stage       - ship every file into a private staging directory
 #   verify_stage       - sha256 both ends; NOTHING has been activated yet
-#   activate           - install staged files into their real locations
-#   verify_installed   - sha256 the installed paths
-#   restart_hydrooj    - the ONE restart, only after everything is in place
+#   activate           - under one remote lock: prepare, back up, publish,
+#                        verify installed hashes and perform the ONE restart
 #   wait_ready         - poll until the new process serves the branded /reg
 #   run_smoke          - anonymous smoke battery on the server
 #
@@ -29,7 +28,8 @@ set -euo pipefail
 #
 # Exit codes: 64 usage, 65 hash mismatch, 66 missing local source or
 # unreachable server, 67 service never became ready, 68 smoke battery failed,
-# 69 external probe failed.
+# 69 external probe failed, 70 another activation holds the lock,
+# 71 unresolved rollback/conflict (see retained recovery.tsv).
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SSH_BIN="${SSH_BIN:-ssh}"
@@ -50,9 +50,9 @@ SSH_OPTS=(-o BatchMode=yes -o ConnectTimeout=15 -o ConnectionAttempts=3
 # step is bounded so a hang fails loudly instead of pinning the deploy. Bash
 # dynamic scoping lets a caller `local REMOTE_TIMEOUT=...` to override.
 REMOTE_TIMEOUT="${REMOTE_TIMEOUT:-180}"
-REMOTE_ADDONS=/root/.hydro/addons
-REMOTE_CUSTOM=/root/.hydro/custom
-REMOTE_DEPLOY=/root/swpu-theme-deploy
+REMOTE_ADDONS="${REMOTE_ADDONS:-/root/.hydro/addons}"
+REMOTE_CUSTOM="${REMOTE_CUSTOM:-/root/.hydro/custom}"
+REMOTE_DEPLOY="${REMOTE_DEPLOY:-/root/swpu-theme-deploy}"
 WAIT_SECONDS="${WAIT_SECONDS:-75}"
 SMOKE_HOST="${SMOKE_HOST:-dfacm.website}"
 STAGE_ONLY=0
@@ -83,6 +83,10 @@ Environment overrides:
   WAIT_SECONDS readiness budget, default 75
   REMOTE_TIMEOUT per-step ssh timeout in seconds, default 180
   SMOKE_HOST   site hostname for probes, default dfacm.website
+  REMOTE_ADDONS, REMOTE_CUSTOM, REMOTE_DEPLOY  override remote install roots
+  ACTIVATION_BACKUP_DIR  private backup/lock root, default /root/swpu-deploy-backups
+  STATIC_DIR, THEME_VERSION, STATIC_THEME, SOURCE_THEME, STATIC_SW, SOURCE_SW
+               optional remote theme target overrides
 EOF
     exit 64
 }
@@ -125,8 +129,11 @@ stage_manifest() {
         printf 'landing/%s\t%s/landing/%s\n' "$f" "$REMOTE_DEPLOY" "$f"
     done < <(cd "$ROOT/landing" && find . -type f | sed 's#^\./##' | LC_ALL=C sort)
     printf 'theme/00-brand.css\t%s/theme/00-brand.css\n' "$REMOTE_DEPLOY"
-    for f in install-theme.sh install-landing.sh service-worker-killswitch.js smoke.sh; do
+    for f in install-theme.sh install-landing.sh service-worker-killswitch.js smoke.sh activate.sh; do
         printf 'deploy/%s\t%s/deploy/%s\n' "$f" "$REMOTE_DEPLOY" "$f"
+    done
+    for f in run-solutions.sh solutions-apply.cjs verify-solutions.cjs verification-state.cjs; do
+        printf 'scripts/taxonomy/%s\t%s/scripts/taxonomy/%s\n' "$f" "$REMOTE_DEPLOY" "$f"
     done
 }
 
@@ -142,7 +149,9 @@ preflight() {
     done < "$MANIFEST"
     [ "$missing" -eq 0 ] || exit 66
     remote true || { echo "server unreachable: $SSH_TARGET" >&2; exit 66; }
-    remote "command -v pm2 >/dev/null && test -d $REMOTE_ADDONS && test -d $REMOTE_CUSTOM" \
+    local layout_command
+    printf -v layout_command 'command -v pm2 >/dev/null && test -d %q && test -d %q' "$REMOTE_ADDONS" "$REMOTE_CUSTOM"
+    remote "$layout_command" \
         || { echo "server layout check failed (connection dropped, or pm2/$REMOTE_ADDONS/$REMOTE_CUSTOM missing)" >&2; exit 66; }
 }
 
@@ -150,7 +159,7 @@ preflight() {
 # remote side hashes: "stage" the uploaded copy, "live" the installed path.
 compare_hashes() {
     local label="$1" target="$2" local_path remote_path
-    local local_hashes remote_hashes remote_command=''
+    local local_hashes remote_hashes command remote_command=$'set -euo pipefail\n'
     local_hashes="$(
         while IFS=$'\t' read -r local_path remote_path; do
             sha256sum "$ROOT/$local_path" | cut -d' ' -f1
@@ -165,9 +174,10 @@ compare_hashes() {
     # limits.
     while IFS=$'\t' read -r local_path remote_path; do
         case "$target" in
-            stage) remote_command+="sha256sum '$STAGE/$local_path'"$'\n' ;;
-            live) remote_command+="sha256sum '$remote_path'"$'\n' ;;
+            stage) printf -v command 'sha256sum -- %q' "$STAGE/$local_path" ;;
+            live) printf -v command 'sha256sum -- %q' "$remote_path" ;;
         esac
+        remote_command+="$command"$'\n'
     done < "$MANIFEST"
     if ! remote_hashes="$(remote "$remote_command" | cut -d' ' -f1)"; then
         echo "remote hash probe failed for $label" >&2
@@ -202,22 +212,20 @@ upload_stage() {
 }
 
 activate() {
-    local local_path remote_path
+    # One remote shell owns backup, activation, verification and restart. Its
+    # EXIT trap remains installed throughout; local SSH failure never triggers
+    # an unconditional second restart. printf %q protects configured paths.
     {
-        while IFS=$'\t' read -r local_path remote_path; do
-            printf "install -D -m 0644 '%s/%s' '%s'\n" "$STAGE" "$local_path" "$remote_path"
-        done < "$MANIFEST"
+        printf 'set -euo pipefail\n'
+        local name
+        for name in REMOTE_ADDONS REMOTE_DEPLOY ACTIVATION_BACKUP_DIR STATIC_DIR THEME_VERSION STATIC_THEME SOURCE_THEME STATIC_SW SOURCE_SW; do
+            if [ -n "${!name:-}" ]; then printf 'export %s=%q\n' "$name" "${!name}"; fi
+        done
+        printf "cat > %q <<'SWPU_ACTIVATION_MANIFEST'\n" "$STAGE/.activation-manifest"
+        cat "$MANIFEST"
+        printf 'SWPU_ACTIVATION_MANIFEST\n'
+        printf 'exec bash %q %q %q %q %q\n' "$STAGE/deploy/activate.sh" "$STAGE" "$STAGE/.activation-manifest" "$REMOTE_CUSTOM" "$SYNC_ONLY"
     } | remote bash -s
-    remote "chmod +x $REMOTE_DEPLOY/deploy/install-theme.sh $REMOTE_DEPLOY/deploy/install-landing.sh $REMOTE_DEPLOY/deploy/smoke.sh"
-    # Idempotent, no restart needed. install-theme.sh rolls itself back if its
-    # own post-write verification fails.
-    remote "bash $REMOTE_DEPLOY/deploy/install-landing.sh"
-    remote "bash $REMOTE_DEPLOY/deploy/install-theme.sh"
-}
-
-restart_hydrooj() {
-    echo "restarting hydrooj (all files verified in place)"
-    remote pm2 restart hydrooj
 }
 
 wait_ready() {
@@ -237,7 +245,9 @@ wait_ready() {
 }
 
 run_smoke() {
-    if ! remote "bash $REMOTE_DEPLOY/deploy/smoke.sh"; then
+    local command
+    printf -v command 'bash %q' "$REMOTE_DEPLOY/deploy/smoke.sh"
+    if ! remote "$command"; then
         echo "smoke battery failed on the server" >&2
         exit 68
     fi
@@ -262,12 +272,10 @@ main() {
         return 0
     fi
     activate
-    compare_hashes "installed files" live
     if [ "$SYNC_ONLY" = 1 ]; then
         echo "sync-only: files in place and verified, restart skipped"
         return 0
     fi
-    restart_hydrooj
     wait_ready
     run_smoke
     verify_from_outside

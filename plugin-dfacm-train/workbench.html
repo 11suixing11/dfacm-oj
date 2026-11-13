@@ -100,7 +100,7 @@ h1 i{font-style:normal;color:var(--accent)}
 </head>
 <body>
 <header class="top">
-  <a class="brand" href="/" aria-label="返回首页">
+  <a class="brand" href="/" data-swpu-route="home" aria-label="返回首页">
     <svg viewBox="0 0 64 64" aria-hidden="true">
       <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1c3e78"/><stop offset="1" stop-color="#0c1a36"/></linearGradient></defs>
       <rect x="1.5" y="1.5" width="61" height="61" rx="15" fill="url(#g)" stroke="#c9a227" stroke-opacity=".8" stroke-width="1.6"/>
@@ -113,11 +113,11 @@ h1 i{font-style:normal;color:var(--accent)}
     <span><b>d&amp;f算法网</b><span>ONLINE JUDGE</span></span>
   </a>
   <nav class="nav" aria-label="站点导航">
-    <a href="/">首页</a>
-    <a href="/workbench" class="on" aria-current="page">工作台</a>
-    <a href="/p">题库</a>
-    <a href="/training">训练</a>
-    <a href="/mistakes">错题本</a>
+    <a href="/" data-swpu-route="home">首页</a>
+    <a href="/workbench" data-swpu-route="workbench" class="on" aria-current="page">工作台</a>
+    <a href="/p" data-swpu-route="problemMain">题库</a>
+    <a href="/training" data-swpu-route="trainingMain">训练</a>
+    <a href="/mistakes" data-swpu-route="mistakes">错题本</a>
     <button type="button" class="theme-toggle" id="theme-toggle" aria-label="切换到夜间模式" aria-pressed="false">夜间</button>
   </nav>
 </header>
@@ -138,10 +138,10 @@ h1 i{font-style:normal;color:var(--accent)}
       <a class="btn" id="resume-next">继续做题</a>
     </section>
     <section class="panel" id="routes-panel" aria-labelledby="h-route">
-      <h2 id="h-route"><span id="routes-label">最近练习的路线</span> <a href="/training">浏览训练目录</a></h2>
-      <p class="route-overview" id="route-overview" hidden><span id="route-overview-text"></span><a href="/training?view=enrolled" id="all-enrolled">查看全部已加入训练</a></p>
+      <h2 id="h-route"><span id="routes-label">最近练习的路线</span> <a href="/training" data-swpu-route="trainingMain">浏览训练目录</a></h2>
+      <p class="route-overview" id="route-overview" hidden><span id="route-overview-text"></span><a href="/training?view=enrolled" data-swpu-route="enrolledTrainings" id="all-enrolled">查看全部已加入训练</a></p>
       <div id="routes"></div>
-      <div id="routes-empty" hidden><p class="empty">还没有加入训练路线，先选一条适合自己的路线。</p><a class="btn" href="/training">选择训练路线</a></div>
+      <div id="routes-empty" hidden><p class="empty">还没有加入训练路线，先选一条适合自己的路线。</p><a class="btn" href="/training" data-swpu-route="trainingMain">选择训练路线</a></div>
     </section>
     <section class="panel week-panel" aria-labelledby="h-week">
       <h2 id="h-week">本周进度 <small id="week-range"></small></h2>
@@ -154,7 +154,7 @@ h1 i{font-style:normal;color:var(--accent)}
       <p class="empty" id="week-empty" hidden>本周还没有训练提交，从下一题开始吧。</p>
     </section>
     <section class="panel" aria-labelledby="h-fail">
-      <h2 id="h-fail">最近待补题 <a href="/mistakes">错题本 <span id="open-count"></span></a></h2>
+      <h2 id="h-fail">最近待补题 <a href="/mistakes" data-swpu-route="mistakes">错题本 <span id="open-count"></span></a></h2>
       <div class="list" id="failed"></div>
       <p class="empty" id="failed-empty" hidden>近期没有待补题，继续训练吧。</p>
       <details id="resolved-group" hidden><summary>已通过的历史记录 <span id="resolved-count"></span></summary><div class="list" id="resolved"></div></details>
@@ -162,7 +162,7 @@ h1 i{font-style:normal;color:var(--accent)}
     <section class="panel" aria-labelledby="h-mistake">
       <h2 id="h-mistake">错题复习</h2>
       <p class="empty" style="padding-bottom:14px">未通过的题目会自动收入错题本；记录错误原因与复盘笔记，补题 AC 后自动标记完成。</p>
-      <a class="btn ghost" href="/mistakes">打开错题本</a>
+      <a class="btn ghost" href="/mistakes" data-swpu-route="mistakes">打开错题本</a>
     </section>
   </div>
 </main>
@@ -172,10 +172,16 @@ h1 i{font-style:normal;color:var(--accent)}
 </footer>
 <script>
 'use strict';
+/*__SWPU_ROUTES__*/
 (function(){
   var $=function(id){return document.getElementById(id)};
+  var routes=window.__SWPU_ROUTES__||{};
+  function sameOriginUrl(value){
+    if(typeof value!=='string'||!/^\/(?!\/)/.test(value)||/[\\\u0000-\u0020]/.test(value))return '';
+    try{var parsed=new URL(value,location.origin);return parsed.origin===location.origin?parsed.pathname+parsed.search+parsed.hash:''}catch(e){return ''}
+  }
+  function localUrl(value){var safe=sameOriginUrl(value);return /^\/(?:d\/[^/]+\/)?(?:p|training|record)\/[^/]+(?:[?#].*)?$/.test(safe)?safe:''}
   function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
-  function localUrl(value){return typeof value==='string'&&/^\/(?:p|training|record)\/[a-zA-Z0-9_%.-]+(?:[?#][a-zA-Z0-9_%=&.#-]*)?$/.test(value)?value:''}
   function number(value){return Number.isFinite(Number(value))?Math.max(0,Math.floor(Number(value))):0}
   function rel(iso){
     if(!iso)return'';
@@ -199,7 +205,8 @@ h1 i{font-style:normal;color:var(--accent)}
     var controller=new AbortController(),timer=setTimeout(function(){controller.abort()},15000);
     var d;
     try{
-      var resp=await fetch('/workbench/data',{headers:{'Accept':'application/json'},credentials:'same-origin',cache:'no-store',signal:controller.signal});
+      var dataUrl=sameOriginUrl(routes.workbenchData);if(!dataUrl)throw new Error('invalid route');
+      var resp=await fetch(dataUrl,{headers:{'Accept':'application/json'},credentials:'same-origin',cache:'no-store',signal:controller.signal});
       d=await resp.json();
       if(!resp.ok||!d||!d.ok||!d.data||!d.data.user||!d.data.week||!d.data.mistakes||!Array.isArray(d.data.trainings)||!Array.isArray(d.data.recentFailed))throw new Error('bad');
       render(d.data);

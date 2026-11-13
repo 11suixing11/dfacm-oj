@@ -86,7 +86,7 @@ textarea:focus,select:focus{outline:none;border-color:var(--focus)}
 </head>
 <body>
 <header class="top">
-  <a class="brand" href="/" aria-label="返回首页">
+  <a class="brand" href="/" data-swpu-route="home" aria-label="返回首页">
     <svg viewBox="0 0 64 64" aria-hidden="true">
       <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1c3e78"/><stop offset="1" stop-color="#0c1a36"/></linearGradient></defs>
       <rect x="1.5" y="1.5" width="61" height="61" rx="15" fill="url(#g)" stroke="#c9a227" stroke-opacity=".8" stroke-width="1.6"/>
@@ -99,11 +99,11 @@ textarea:focus,select:focus{outline:none;border-color:var(--focus)}
     <span><b>d&amp;f算法网</b><span>ONLINE JUDGE</span></span>
   </a>
   <nav class="nav" aria-label="站点导航">
-    <a href="/">首页</a>
-    <a href="/workbench">工作台</a>
-    <a href="/p">题库</a>
-    <a href="/training">训练</a>
-    <a href="/mistakes" class="on" aria-current="page">错题本</a>
+    <a href="/" data-swpu-route="home">首页</a>
+    <a href="/workbench" data-swpu-route="workbench">工作台</a>
+    <a href="/p" data-swpu-route="problemMain">题库</a>
+    <a href="/training" data-swpu-route="trainingMain">训练</a>
+    <a href="/mistakes" data-swpu-route="mistakes" class="on" aria-current="page">错题本</a>
     <button type="button" class="theme-toggle" id="theme-toggle" aria-label="切换到夜间模式" aria-pressed="false">夜间</button>
   </nav>
 </header>
@@ -134,9 +134,16 @@ textarea:focus,select:focus{outline:none;border-color:var(--focus)}
 </footer>
 <script>
 'use strict';
+/*__SWPU_ROUTES__*/
 /*__SWPU_CSRF__*/
 (function(){
   var $=function(id){return document.getElementById(id)};
+  var routes=window.__SWPU_ROUTES__||{};
+  function sameOriginUrl(value){
+    if(typeof value!=='string'||!/^\/(?!\/)/.test(value)||/[\\\u0000-\u0020]/.test(value))return '';
+    try{var parsed=new URL(value,location.origin);return parsed.origin===location.origin?parsed.pathname+parsed.search+parsed.hash:''}catch(e){return ''}
+  }
+  function localUrl(value){var safe=sameOriginUrl(value);return /^\/(?:d\/[^/]+\/)?(?:p|training|record)\/[^/]+(?:[?#].*)?$/.test(safe)?safe:''}
   var REASON_TEXT={idea:'思路不会',boundary:'边界情况没考虑到',complexity:'复杂度不够（超时）',implement:'实现细节出错',misread:'题意理解偏差',other:'其他'};
   var EMPTY_TEXT={open:'太棒了，当前没有待补的错题。',done:'还没有已补题的记录。',all:'错题本还是空的。日常训练或比赛中未通过的题目会自动收入这里。'};
   var state={filter:'open',page:1,pages:1,noteMaxLength:2000};
@@ -157,6 +164,7 @@ textarea:focus,select:focus{outline:none;border-color:var(--focus)}
       /* Every state-changing request goes through here, so the CSRF token is
          attached once. It is minted per session server-side and embedded in this
          page; a cross-site caller can send the session cookie but cannot read it. */
+      url=sameOriginUrl(url);if(!url)throw new Error('invalid route');
       var body=new URLSearchParams(data);body.set('csrf',window.__SWPU_CSRF__||'');
       var resp=await fetch(url,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:body,signal:controller.signal});
       var d;try{d=await resp.json()}catch(e){return {ok:false,message:'服务暂时不可用，请稍后重试。'}}
@@ -175,7 +183,7 @@ textarea:focus,select:focus{outline:none;border-color:var(--focus)}
     load();
   }
   function itemHtml(item){
-    var title=item.url?'<a href="'+esc(item.url)+'">'+esc(item.title)+'</a>':'<span class="off">'+esc(item.title)+'</span>';
+    var title=localUrl(item.url)?'<a href="'+esc(localUrl(item.url))+'">'+esc(item.title)+'</a>':'<span class="off">'+esc(item.title)+'</span>';
     var opts='<option value="">未分类</option>';
     Object.keys(REASON_TEXT).forEach(function(k){
       opts+='<option value="'+k+'"'+(item.reason===k?' selected':'')+'>'+esc(REASON_TEXT[k])+'</option>';
@@ -188,7 +196,7 @@ textarea:focus,select:focus{outline:none;border-color:var(--focus)}
       +'<span>'+esc(item.statusText)+' · 失败 '+item.attempts+' 次</span>'
       +'<span>最近 '+esc(rel(item.lastAt))+'</span>'
       +(item.resolved&&item.resolvedAt?'<span>补题于 '+esc(rel(item.resolvedAt))+'</span>':'')
-      +(item.recordUrl?'<a href="'+esc(item.recordUrl)+'">查看最近提交</a>':'')
+      +(localUrl(item.recordUrl)?'<a href="'+esc(localUrl(item.recordUrl))+'">查看最近提交</a>':'')
       +'</div>'
       +'<div class="editor">'
       +'<div class="rowline"><label for="reason-'+item.pid+'">错误原因</label><select id="reason-'+item.pid+'">'+opts+'</select></div>'
@@ -204,7 +212,8 @@ textarea:focus,select:focus{outline:none;border-color:var(--focus)}
     $('loading').hidden=false;$('error').hidden=true;$('list').innerHTML='';$('empty').hidden=true;$('pager').hidden=true;
     var d;
     try{
-      var resp=await fetch('/mistakes/data?filter='+encodeURIComponent(state.filter)+'&page='+state.page,{headers:{'Accept':'application/json'}});
+      var dataUrl=sameOriginUrl(routes.mistakesData);if(!dataUrl)throw new Error('invalid route');
+      var resp=await fetch(dataUrl+(dataUrl.indexOf('?')>=0?'&':'?')+'filter='+encodeURIComponent(state.filter)+'&page='+state.page,{headers:{'Accept':'application/json'}});
       d=await resp.json();
       if(!resp.ok||!d||!d.ok)throw new Error('bad');
     }catch(e){
@@ -235,18 +244,18 @@ textarea:focus,select:focus{outline:none;border-color:var(--focus)}
     var pid=btn.getAttribute('data-pid'),act=btn.getAttribute('data-act');
     if(act==='save'){
       btn.disabled=true;itemMsg(pid,'保存中…','');
-      var d=await api('/mistakes/update',{pid:pid,reason:$('reason-'+pid).value,note:$('note-'+pid).value});
+      var d=await api(routes.mistakesUpdate,{pid:pid,reason:$('reason-'+pid).value,note:$('note-'+pid).value});
       btn.disabled=false;
       itemMsg(pid,d.ok?'已保存。':(d.message||'保存失败，请稍后重试。'),d.ok?'ok':'err');
     }else if(act==='toggle'){
       btn.disabled=true;
       var resolved=btn.textContent==='标记已补';
-      var d2=await api('/mistakes/update',{pid:pid,resolved:resolved?'1':'0'});
+      var d2=await api(routes.mistakesUpdate,{pid:pid,resolved:resolved?'1':'0'});
       if(d2.ok){load()}else{btn.disabled=false;itemMsg(pid,d2.message||'操作失败，请稍后重试。','err')}
     }else if(act==='remove'){
       if(!window.confirm('确定把这道题移出错题本吗？复盘笔记会一并删除。'))return;
       btn.disabled=true;
-      var d3=await api('/mistakes/remove',{pid:pid});
+      var d3=await api(routes.mistakesRemove,{pid:pid});
       if(d3.ok){load()}else{btn.disabled=false;itemMsg(pid,d3.message||'移除失败，请稍后重试。','err')}
     }
   });
@@ -260,7 +269,7 @@ textarea:focus,select:focus{outline:none;border-color:var(--focus)}
     var btn=$('sync');
     if(btn.disabled)return;
     btn.disabled=true;btn.textContent='同步中…';
-    var d=await api('/mistakes/sync',{});
+    var d=await api(routes.mistakesSync,{});
     btn.textContent=d&&d.ok?('已同步（新收 '+d.collected+' 题）'):'同步近期记录';
     if(d&&d.ok){load();setTimeout(function(){btn.disabled=false;btn.textContent='同步近期记录'},60000)}
     else{btn.disabled=false}

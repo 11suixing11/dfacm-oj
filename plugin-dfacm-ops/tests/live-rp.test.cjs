@@ -208,3 +208,67 @@ test('the shared lock keeps live runs out of a concurrent RP computation', async
     assert.equal(live.runs.length, 1);
     live.stop();
 });
+
+const flushScheduler = async () => { for (let i = 0; i < 30; i++) await Promise.resolve(); };
+
+test('stopped live work queued behind the shared lock never purges or recalculates', async (t) => {
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    const lock = createRpLock();
+    let release;
+    const blocker = lock(() => new Promise((resolve) => { release = resolve; }));
+    await flushScheduler();
+    const stages = [];
+    const live = createLiveRp({ debounceMs: 10, lock,
+        sanitize: async () => { stages.push('purge'); },
+        script: { run: async () => { stages.push('rp'); } },
+    });
+    t.after(live.stop);
+    live.hook({ domainId: 'system', uid: 42, pid: 1, status: 1 });
+    t.mock.timers.tick(10); await flushScheduler();
+    live.stop(); live.stop();
+    release(); await blocker; await flushScheduler();
+    t.mock.timers.tick(100); await flushScheduler();
+    assert.deepEqual(stages, []);
+    assert.deepEqual(live.runs, []);
+    assert.deepEqual(live.failures, []);
+});
+
+test('stopping during live sanitize finishes purge and starts no domain RP', async (t) => {
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    let release;
+    const stages = [];
+    const live = createLiveRp({ debounceMs: 10, lock: createRpLock(),
+        sanitize: async () => {
+            stages.push('purge:start');
+            await new Promise((resolve) => { release = resolve; });
+            stages.push('purge:end');
+        },
+        script: { run: async ({ domainId }) => { stages.push(`rp:${domainId}`); } },
+    });
+    t.after(live.stop);
+    live.hook({ domainId: 'system', uid: 42, pid: 1, status: 1 });
+    live.hook({ domainId: 'poj', uid: 42, pid: 1, status: 1 });
+    t.mock.timers.tick(10); await flushScheduler();
+    assert.deepEqual(stages, ['purge:start']);
+    live.stop(); release(); await flushScheduler();
+    assert.deepEqual(stages, ['purge:start', 'purge:end']);
+    assert.deepEqual(live.runs, []);
+});
+
+test('stopping during domain RP finishes that domain and skips the next domain', async (t) => {
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    let release;
+    const started = [];
+    const live = createLiveRp({ debounceMs: 10, lock: createRpLock(), script: { run: async ({ domainId }) => {
+        started.push(domainId);
+        await new Promise((resolve) => { release = resolve; });
+    } } });
+    t.after(live.stop);
+    live.hook({ domainId: 'system', uid: 42, pid: 1, status: 1 });
+    live.hook({ domainId: 'poj', uid: 42, pid: 1, status: 1 });
+    t.mock.timers.tick(10); await flushScheduler();
+    assert.deepEqual(started, ['system']);
+    live.stop(); release(); await flushScheduler();
+    assert.deepEqual(started, ['system']);
+    assert.deepEqual(live.runs.map((run) => run.domainId), ['system']);
+});
