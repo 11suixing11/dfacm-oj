@@ -957,21 +957,12 @@ class DfacmAcmBroadcast(star.Star):
             solve_order, user_solved, participants, rank = 1, 0, 0, 1
         begin_ts = int(tdoc.get("begin_ts") or 0)
         elapsed = int(row["ts"]) - begin_ts if begin_ts else 0
-        bindings = self._state.get("bindings", {})
-        raw_name = str(row["user_name"]).strip().casefold()
         item = {
             "contest_name": tdoc.get("title") or "比赛",
             "contest_url": self._contest_url(domain, tid_hex),
             "user": self._display_name_for(str(row["user_id"])),
             "oj_user": str(row["user_name"]),
-            "qq": next(
-                (
-                    qq
-                    for qq, name in bindings.items()
-                    if str(name).strip().casefold() == raw_name
-                ),
-                "未绑定",
-            ),
+            "qq": self._bound_qq_for_user(row["user_id"]),
             "avatar_url": str(row["avatar_url"]),
             "problem_key": str(row["contest_key"] or "?"),
             "problem_title": str(row["problem_title"] or ""),
@@ -1125,6 +1116,9 @@ class DfacmAcmBroadcast(star.Star):
             "user": self._display_name_for(row["user_id"]),
             "oj_user": row["user_name"],
             "user_id": self._person_id(row["user_id"]),
+            # Statistics/display may merge accounts; QQ ownership uses the
+            # original submitted account, never the merge's main account.
+            "binding_user_id": str(row["user_id"]),
             "avatar_url": row["avatar_url"],
             "qq": "未绑定",
             "difficulty": str(row["difficulty"] or "") or "暂未标注",
@@ -2570,34 +2564,38 @@ class DfacmAcmBroadcast(star.Star):
             f"链接：{info['url']}"
         )
 
+    def _binding_user_id(self, qq: str) -> str:
+        """Return the confirmed UID of an active binding, never infer by name."""
+        if not self._state.get("bindings", {}).get(qq):
+            return ""
+        profile = self._state.get("binding_profiles", {}).get(qq)
+        if not isinstance(profile, dict):
+            return ""
+        return str(profile.get("user_id") or "").strip()
+
+    def _bound_qq_for_user(self, user_id: object) -> str:
+        """Keep the single-QQ card rule, with stable ordering of verified matches."""
+        uid = str(user_id or "").strip()
+        if uid:
+            for qq in sorted(self._state.get("bindings", {})):
+                if self._binding_user_id(qq) == uid:
+                    return qq
+        return "未绑定"
+
+    def _binding_required_message(self, qq: str) -> str:
+        if self._state.get("bindings", {}).get(qq):
+            return (
+                "旧绑定身份未确认，请重新发送 /绑定 数字UID，"
+                "将验证码写入个人简介后发送 /绑定确认。"
+            )
+        return "你还没有绑定 d&f算法网账号，请先发送 /绑定 用户名"
+
     async def _get_bound_user(self, qq: str) -> tuple[str, str] | None:
-        """Resolve a QQ binding to its OJ user ID, using the local cache first.
-
-        Args:
-            qq: QQ identifier associated with the binding.
-
-        Returns:
-            The bound username and OJ user ID, or ``None`` when unbound or
-            unresolved.
-        """
-        bindings = self._state.setdefault("bindings", {})
-        username = bindings.get(qq)
-        if not username:
+        """Read the confirmed username/UID; legacy names require reconfirmation."""
+        user_id = self._binding_user_id(qq)
+        if not user_id:
             return None
-        cached_profile = self._state.setdefault("binding_profiles", {}).get(qq)
-        if isinstance(cached_profile, dict) and cached_profile.get("user_id"):
-            return str(username), str(cached_profile["user_id"])
-        profile_url = await self._resolve_user_profile(str(username))
-        if not profile_url:
-            return None
-        user_id = profile_url.rstrip("/").rsplit("/", 1)[-1]
-        self._state.setdefault("binding_profiles", {})[qq] = {
-            "username": str(username),
-            "user_id": user_id,
-            "profile_url": profile_url,
-        }
-        self._save_state()
-        return str(username), user_id
+        return str(self._state["bindings"][qq]), user_id
 
     async def _fetch_user_records(self, user_id: str) -> list[dict]:
         try:
@@ -2663,20 +2661,9 @@ class DfacmAcmBroadcast(star.Star):
             )
 
     async def _broadcast_ac(self, item: dict) -> bool:
-        bindings = self._state.get("bindings", {})
-        item_name = str(item.get("user", "")).strip().casefold()
-        item_oj_name = str(item.get("oj_user", "")).strip().casefold()
-        item_user_id = str(item.get("user_id", "")).strip()
-        bound_qq = next(
-            (
-                qq
-                for qq, name in bindings.items()
-                if str(name).strip().casefold()
-                in {item_name, item_oj_name, item_user_id.casefold()}
-            ),
-            "未绑定",
+        item["qq"] = self._bound_qq_for_user(
+            item.get("binding_user_id", item.get("user_id"))
         )
-        item["qq"] = bound_qq
         item["rank"] = await self._fetch_user_rank(item.get("user_id") or item["user"])
         item["difficulty"] = str(item.get("difficulty") or "") or "暂未标注"
         total_count = await self._user_ac_count(item["user_id"])
@@ -3534,7 +3521,7 @@ class DfacmAcmBroadcast(star.Star):
     async def my_rank(self, event: AstrMessageEvent):
         bound = await self._get_bound_user(event.get_sender_id())
         if not bound:
-            yield event.plain_result("你还没有绑定 d&f算法网账号，请先发送 /绑定 用户名")
+            yield event.plain_result(self._binding_required_message(event.get_sender_id()))
             return
         username, _ = bound
         rank = await self._fetch_user_rank(username)
@@ -3544,7 +3531,7 @@ class DfacmAcmBroadcast(star.Star):
     async def recent_submissions(self, event: AstrMessageEvent):
         bound = await self._get_bound_user(event.get_sender_id())
         if not bound:
-            yield event.plain_result("你还没有绑定 d&f算法网账号，请先发送 /绑定 用户名")
+            yield event.plain_result(self._binding_required_message(event.get_sender_id()))
             return
         username, user_id = bound
         records = await self._fetch_user_records(user_id)
@@ -3562,7 +3549,7 @@ class DfacmAcmBroadcast(star.Star):
     async def my_stats(self, event: AstrMessageEvent):
         bound = await self._get_bound_user(event.get_sender_id())
         if not bound:
-            yield event.plain_result("你还没有绑定 d&f算法网账号，请先发送 /绑定 用户名")
+            yield event.plain_result(self._binding_required_message(event.get_sender_id()))
             return
         username, user_id = bound
         try:
@@ -3589,7 +3576,7 @@ class DfacmAcmBroadcast(star.Star):
         qq = event.get_sender_id()
         bound = await self._get_bound_user(qq)
         if not bound:
-            yield event.plain_result("请先绑定 d&f算法网账号，再使用 /签到")
+            yield event.plain_result(self._binding_required_message(qq))
             return
         today = datetime.now().strftime("%Y-%m-%d")
         checkins = self._state.setdefault("checkins", {})

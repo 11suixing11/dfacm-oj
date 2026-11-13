@@ -159,12 +159,18 @@ class Mongo:
     def __init__(self, docs=()):
         self.record = Collection(docs)
         self.user = Collection([{"_id": 99, "uname": "fixture-user", "avatar": ""}])
+        self.domain_user = Collection()
         self.document = Collection([
             {"domainId": "system", "docType": 10, "docId": index,
              "pid": str(index), "title": f"Problem {index}", "hidden": False,
              "difficulty": 1, "tag": [], "nAccept": 1}
             for index in range(1, 1001)
         ])
+
+    def __getitem__(self, name):
+        if name == "domain.user":
+            return self.domain_user
+        raise AssertionError(f"Unsupported Mongo collection: {name}")
 
 
 class Context:
