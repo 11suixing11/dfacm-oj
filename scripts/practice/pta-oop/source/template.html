@@ -1,0 +1,443 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="description" content="204 道 PTA 面向对象程序设计练习，附参考答案、讲解与 Java 代码。题型筛选、乱序练习、作答保存、自测与错题重练。">
+  <link rel="canonical" href="https://dfacm.website/practice/pta-oop/">
+  <title>面向对象程序设计 · 综合练习 | d&amp;f算法网</title>
+  <style>:root {
+  color-scheme: light;
+  --bg: #f4f6f8;
+  --surface: #fff;
+  --text: #1c2939;
+  --muted: #657287;
+  --line: #e3e8ef;
+  --accent: #355ade;
+  --accent-soft: #edf1ff;
+  --green: #147b52;
+  --green-soft: #eaf7f0;
+  --red: #b53948;
+  --red-soft: #fff0f1;
+  --shadow: 0 8px 28px rgb(29 43 71 / 4%);
+  font-family: "Segoe UI", "Microsoft YaHei", "PingFang SC", sans-serif;
+  font-synthesis: none;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font-size: 15px; line-height: 1.65; }
+button, input, select, textarea { font: inherit; }
+button, select, summary, label { -webkit-tap-highlight-color: transparent; }
+button, select, summary { cursor: pointer; }
+button:disabled { cursor: default; }
+a { color: inherit; }
+button:focus-visible, a:focus-visible, select:focus-visible, input:focus-visible, summary:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+[hidden] { display: none !important; }
+h1, h2, p { margin-top: 0; }
+h1 { font-size: clamp(25px, 2.6vw, 34px); line-height: 1.35; letter-spacing: -.6px; margin-bottom: 12px; font-weight: 700; }
+.page-shell { max-width: 1192px; margin: auto; padding: 0 32px; }
+.site-header { min-height: 104px; display: flex; align-items: center; justify-content: space-between; gap: 24px; border-bottom: 1px solid var(--line); }
+.brand { display: flex; align-items: center; gap: 13px; text-decoration: none; flex-shrink: 0; }
+.brand-mark { width: 48px; height: 48px; background: var(--text); color: var(--surface); display: grid; place-items: center; font-size: 14px; font-weight: 800; border-radius: 13px; letter-spacing: -.8px; }
+.brand-subtitle { display: block; color: var(--muted); font-size: 12px; line-height: 1.5; }
+.brand strong { display: block; font-size: 17px; letter-spacing: .1px; }
+.header-actions { display: flex; align-items: center; gap: 20px; }
+.offline-label { display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--muted); }
+.status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
+.count-pill { font-size: 12px; min-width: 23px; padding: 1px 7px; background: var(--line); border-radius: 7px; }
+.button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 42px; padding: 10px 17px; border-radius: 9px; border: 1px solid transparent; font-weight: 600; font-size: 13px; line-height: 1.4; transition: background .15s, border-color .15s; }
+.button-primary { background: var(--accent); color: #fff; }
+.button-primary:hover:not(:disabled) { background: #294ccb; }
+.button-secondary { background: var(--surface); border-color: var(--line); color: var(--text); }
+.button-secondary:hover:not(:disabled) { border-color: var(--accent); background: var(--accent-soft); }
+.button-quiet { background: transparent; color: var(--muted); }
+.button-quiet:hover:not(:disabled) { background: var(--line); color: var(--text); }
+.button:disabled { opacity: .45; }
+.button-large { padding: 14px 24px; min-height: 49px; font-size: 14px; }
+.button-large span { margin-left: 14px; font-size: 18px; }
+.button-wide { width: 100%; }
+.intro { padding: 43px 0 26px; }
+.eyebrow { color: var(--accent); font-size: 12px; font-weight: 600; letter-spacing: .8px; margin-bottom: 12px; }
+.intro-copy { color: var(--muted); font-size: 14px; margin: 0; max-width: 680px; }
+.setup-grid { display: grid; grid-template-columns: minmax(0, 1fr) 278px; gap: 24px; align-items: start; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); }
+.setup-panel { padding: 28px; }
+fieldset { margin: 0 0 25px; padding: 0; border: 0; min-width: 0; }
+legend { display: block; font-size: 14px; font-weight: 650; margin-bottom: 13px; padding: 0; }
+.source-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.source-option { display: flex; align-items: center; position: relative; padding: 15px 14px; border: 1px solid var(--line); border-radius: 10px; cursor: pointer; gap: 8px; background: var(--surface); }
+.source-option input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.source-option strong { display: block; font-size: 13px; font-weight: 650; }
+.source-option small { display: block; font-size: 12px; color: var(--muted); margin-top: 3px; }
+.selection-check { width: 18px; height: 18px; line-height: 18px; text-align: center; font-size: 11px; margin-left: auto; color: transparent; border: 1px solid var(--line); border-radius: 50%; flex-shrink: 0; }
+.source-option:has(input:checked) { background: var(--accent-soft); border-color: #aebef8; }
+.source-option:has(input:checked) .selection-check { background: var(--accent); color: #fff; border-color: var(--accent); }
+.source-option:has(input:focus-visible), .filter-chip:has(input:focus-visible), .mode-option:has(input:focus-visible) { outline: 3px solid var(--accent); outline-offset: 3px; }
+.type-options { display: flex; gap: 10px; flex-wrap: wrap; }
+.filter-chip { cursor: pointer; display: flex; align-items: center; gap: 7px; border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; min-height: 40px; font-size: 12px; }
+.filter-chip input, .shuffle-switch input { width: 14px; height: 14px; margin: 0; accent-color: var(--accent); }
+.filter-chip small { color: var(--muted); font-size: 11px; margin-left: 4px; }
+.filter-chip:has(input:checked) { border-color: #bac7f5; background: var(--accent-soft); }
+.configuration-row { display: flex; align-items: end; gap: 32px; margin: 0 0 25px; }
+.field-label { display: grid; gap: 9px; font-weight: 650; font-size: 13px; }
+select { min-height: 42px; width: 240px; padding: 9px 35px 9px 12px; background: var(--surface); color: var(--text); border: 1px solid var(--line); border-radius: 8px; font-size: 13px; }
+.shuffle-switch { display: inline-flex; align-items: center; gap: 9px; min-height: 42px; font-size: 13px; color: var(--muted); cursor: pointer; font-weight: 400; }
+.mode-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.mode-option { padding: 14px; border: 1px solid var(--line); border-radius: 10px; display: flex; align-items: start; gap: 9px; cursor: pointer; }
+.mode-option input { accent-color: var(--accent); margin: 4px 0 0; }
+.mode-option strong { display: block; font-size: 13px; }
+.mode-option small { display: block; color: var(--muted); font-size: 11px; margin-top: 3px; }
+.mode-option:has(input:checked) { border-color: #bac7f5; background: var(--accent-soft); }
+.start-row { border-top: 1px solid var(--line); margin-top: 6px; padding-top: 23px; display: flex; justify-content: space-between; align-items: center; gap: 18px; }
+.start-row p { font-size: 12px; color: var(--muted); margin: 0; }
+.bank-summary { padding: 28px 25px; }
+.bank-summary h2 { font-size: 54px; line-height: 1; font-weight: 700; letter-spacing: -2px; margin: 6px 0 12px; }
+.bank-summary h2 span { font-size: 16px; font-weight: 400; color: var(--muted); margin-left: 8px; letter-spacing: 0; }
+.bank-summary > p:not(.eyebrow) { font-size: 13px; color: var(--muted); margin-bottom: 20px; }
+hr { border: 0; border-top: 1px solid var(--line); margin: 0 0 19px; }
+.bank-rows { display: grid; gap: 14px; }
+.bank-rows > span { display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); }
+.bank-rows strong { font-weight: 600; color: var(--text); font-variant-numeric: tabular-nums; }
+.study-note { margin: 26px 6px; font-size: 12px; color: var(--muted); line-height: 1.85; }
+.study-note strong { font-size: 13px; color: var(--text); }
+.study-note p { margin-top: 8px; margin-bottom: 12px; }
+.resume-banner { display: flex; align-items: center; gap: 24px; justify-content: space-between; background: var(--accent-soft); border: 1px solid #bac7f5; padding: 18px 23px; border-radius: 12px; margin-bottom: 23px; }
+.resume-banner strong { font-size: 13px; }
+.resume-banner p { margin: 4px 0 0; font-size: 12px; color: var(--muted); }
+.notice { color: var(--red); background: var(--red-soft); padding: 12px 18px; border-radius: 8px; font-size: 13px; margin-top: 18px; }
+.site-footer { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; border-top: 1px solid var(--line); margin: 39px 0 0; padding: 20px 0 27px; color: var(--muted); font-size: 11px; }
+.round-topbar { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 34px 0 23px; }
+.round-topbar .eyebrow { margin-bottom: 5px; }
+.round-topbar h1 { font-size: 26px; margin: 0; }
+.quiz-grid { display: grid; grid-template-columns: minmax(0, 1fr) 252px; gap: 23px; align-items: start; }
+.question-column { min-width: 0; }
+.question-panel { padding: 27px 30px 22px; }
+.question-meta { display: flex; gap: 8px; align-items: center; font-size: 11px; margin-bottom: 23px; }
+.type-badge, .source-badge { border-radius: 6px; padding: 4px 8px; background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.source-badge { background: var(--bg); color: var(--muted); font-weight: 400; }
+.question-position { margin-left: auto; color: var(--muted); font-variant-numeric: tabular-nums; }
+.question-stem { font-size: 17px; line-height: 1.85; margin: 0 0 18px; overflow-wrap: anywhere; font-weight: 550; }
+.question-stem p { margin: 0 0 12px; }
+.question-stem p:last-child, .option-copy p:last-child { margin-bottom: 0; }
+.question-stem img { display: block; max-width: 100%; height: auto; margin: 17px 0; background: #fff; border-radius: 3px; }
+.question-stem table, .option-copy table { border-collapse: collapse; max-width: 100%; font-size: 13px; }
+.question-stem th, .question-stem td, .option-copy th, .option-copy td { border: 1px solid var(--line); padding: 5px 9px; }
+pre { overflow-x: auto; max-width: 100%; background: var(--bg); padding: 17px; border-radius: 9px; line-height: 1.8; font-size: 12px; font-weight: 400; tab-size: 4; }
+code { font-family: Consolas, "Cascadia Code", monospace; }
+.blank-marker { display: inline; color: var(--accent); white-space: nowrap; font-size: 14px; padding: 0 5px; border-bottom: 1px solid var(--accent); margin: 0 3px; }
+.blank-sequence { margin-top: 12px !important; }
+.answer-instruction { margin: 0 0 13px; font-size: 12px; color: var(--muted); }
+.option-list { display: grid; gap: 10px; }
+.option-row { display: grid; grid-template-columns: 17px 28px minmax(0, 1fr); align-items: start; gap: 10px; padding: 15px; border: 1px solid var(--line); border-radius: 10px; cursor: pointer; font-size: 14px; position: relative; overflow-wrap: anywhere; }
+.option-row input { accent-color: var(--accent); width: 16px; height: 16px; margin: 4px 0 0; }
+.option-letter { border: 1px solid var(--line); border-radius: 6px; width: 27px; height: 27px; line-height: 25px; text-align: center; font-size: 12px; color: var(--muted); font-weight: 600; }
+.option-copy { min-width: 0; padding-top: 1px; font-size: 14px; line-height: 1.8; }
+.option-copy p { margin: 0 0 7px; }
+.option-row.is-selected { border-color: #9caff7; background: var(--accent-soft); }
+.option-row.is-correct { border-color: #9ccdb8; background: var(--green-soft); }
+.option-row.is-wrong { border-color: #edb2b9; background: var(--red-soft); }
+.option-row.is-locked { cursor: default; }
+.option-result-label { display: block; color: var(--green); font-size: 11px; font-weight: 600; margin-top: 6px; }
+.is-wrong .option-result-label { color: var(--red); }
+.fill-fields { display: grid; gap: 13px; }
+.fill-field { display: grid; grid-template-columns: 66px minmax(0, 1fr); align-items: center; gap: 10px; font-size: 13px; }
+.fill-field > span { color: var(--muted); }
+.fill-field input { width: 100%; padding: 11px 13px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--text); min-height: 45px; font-size: 15px; }
+.fill-field input:disabled { opacity: 1; background: var(--bg); }
+.fill-field input.is-correct { border-color: #9ccdb8; background: var(--green-soft); }
+.fill-field input.is-wrong { border-color: #edb2b9; background: var(--red-soft); }
+.question-actions { display: flex; align-items: center; justify-content: space-between; gap: 10px; border-top: 1px solid var(--line); margin-top: 24px; padding-top: 20px; }
+.forward-actions { display: flex; gap: 9px; }
+.feedback { border-radius: 10px; padding: 18px; margin-top: 23px; background: var(--green-soft); font-size: 13px; line-height: 1.85; overflow-wrap: anywhere; }
+.feedback.is-wrong { background: var(--red-soft); }
+.feedback-heading { margin: 0 0 9px; font-size: 14px; color: var(--green); font-weight: 650; }
+.feedback.is-wrong .feedback-heading { color: var(--red); }
+.feedback .answer-detail { margin: 6px 0; }
+.answer-detail > strong { display: inline-block; font-size: 12px; color: var(--muted); margin-right: 8px; font-weight: 500; }
+.feedback details { margin-top: 13px; }
+.feedback summary { font-size: 12px; font-weight: 600; }
+.analysis-copy { padding-top: 8px; }
+.analysis-copy p { margin: 0 0 8px; }
+.question-message { color: var(--red); font-size: 12px; margin: 14px 0 0; }
+.question-message:empty { display: none; }
+.keyboard-hint { margin: 13px 6px 0; color: var(--muted); font-size: 11px; }
+.round-progress { padding: 22px 20px 15px; margin-bottom: 17px; }
+.progress-caption { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 12px; margin-bottom: 13px; }
+.progress-caption span { color: var(--muted); font-variant-numeric: tabular-nums; }
+progress { display: block; width: 100%; height: 5px; border: 0; border-radius: 8px; overflow: hidden; background: var(--line); }
+progress::-webkit-progress-bar { background: var(--line); }
+progress::-webkit-progress-value { background: var(--accent); border-radius: 8px; }
+progress::-moz-progress-bar { background: var(--accent); }
+.round-progress > p { font-size: 11px; color: var(--muted); margin: 11px 0 19px; }
+.round-progress .button + .button { margin-top: 7px; }
+.answer-card { padding: 18px 18px 16px; }
+.answer-card summary { display: flex; align-items: center; justify-content: space-between; font-size: 12px; font-weight: 600; list-style: none; }
+.answer-card summary::-webkit-details-marker { display: none; }
+.answer-card summary span { color: var(--muted); font-size: 11px; font-weight: 400; }
+.question-navigation { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 7px; margin-top: 16px; max-height: 376px; overflow-y: auto; padding: 3px; }
+.nav-question { min-height: 32px; padding: 3px; font-size: 11px; color: var(--muted); border: 1px solid var(--line); border-radius: 6px; background: var(--surface); font-variant-numeric: tabular-nums; }
+.nav-question.is-answered { background: var(--accent-soft); color: var(--accent); border-color: #c5d0fa; }
+.nav-question.is-correct { background: var(--green-soft); color: var(--green); border-color: #b5d8c9; }
+.nav-question.is-wrong { background: var(--red-soft); color: var(--red); border-color: #efc1c7; }
+.nav-question.is-current { outline: 2px solid var(--accent); outline-offset: 1px; }
+.navigation-legend { display: flex; flex-wrap: wrap; gap: 6px 11px; padding-top: 15px; font-size: 10px; color: var(--muted); }
+.navigation-legend span { display: inline-flex; align-items: center; gap: 4px; }
+.legend-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
+.pending { background: #bdc6d2; }.answered { background: var(--accent); }.correct { background: var(--green); }.wrong { background: var(--red); }
+.result-panel { padding: 38px; }
+.score-area { text-align: center; max-width: 490px; margin: 0 auto 30px; }
+.score-number { font-size: 77px; line-height: 1.2; font-weight: 700; letter-spacing: -3px; color: var(--accent); }
+.score-number small { font-size: 20px; letter-spacing: 0; margin-left: 10px; font-weight: 400; color: var(--muted); }
+.score-area p { font-size: 13px; color: var(--muted); margin: 12px 0 20px; }
+.result-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 24px 0; gap: 16px; }
+.result-stats > div { text-align: center; }
+.result-stats strong { display: block; font-size: 25px; font-weight: 650; font-variant-numeric: tabular-nums; }
+.result-stats span { font-size: 12px; color: var(--muted); }
+.result-actions { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin-top: 30px; }
+.scoring-note { text-align: center; color: var(--muted); font-size: 11px; margin: 17px 0 0; }
+.result-footer { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin: 25px 0; }
+.mistakes-panel { padding: 27px; }
+.mistakes-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding-bottom: 22px; border-bottom: 1px solid var(--line); }
+.mistakes-toolbar p { font-size: 13px; color: var(--muted); margin: 0; }
+.mistake-row { display: flex; justify-content: space-between; align-items: center; gap: 20px; padding: 20px 0; border-bottom: 1px solid var(--line); }
+.mistake-row:last-child { border: 0; padding-bottom: 0; }
+.mistake-info { min-width: 0; }
+.mistake-info p { font-size: 13px; line-height: 1.85; margin: 8px 0 0; overflow-wrap: anywhere; }
+.mistake-info small { color: var(--muted); font-size: 11px; margin-left: 7px; }
+.mistake-row .button { flex-shrink: 0; }
+.empty-state { text-align: center; padding: 45px 20px; color: var(--muted); }
+.empty-state strong { display: block; color: var(--text); font-size: 17px; margin-bottom: 8px; }
+dialog { width: min(450px, calc(100% - 32px)); padding: 28px; border: 1px solid var(--line); border-radius: 15px; background: var(--surface); color: var(--text); box-shadow: 0 16px 60px rgb(0 0 0 / 14%); }
+dialog::backdrop { background: rgb(16 24 38 / 36%); }
+dialog h2 { font-size: 20px; margin-bottom: 12px; }
+dialog p { font-size: 13px; color: var(--muted); margin-bottom: 22px; }
+.dialog-actions { display: flex; justify-content: flex-end; gap: 10px; }
+.toast { position: fixed; z-index: 10; left: 50%; bottom: 28px; transform: translateX(-50%); padding: 11px 20px; border-radius: 9px; background: var(--text); color: var(--surface); font-size: 13px; box-shadow: var(--shadow); max-width: calc(100% - 32px); text-align: center; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+@media (prefers-color-scheme: dark) {
+  :root { color-scheme: dark; --bg: #151b25; --surface: #1e2734; --text: #e8edf6; --muted: #a1aec0; --line: #354154; --accent: #91a9ff; --accent-soft: #283653; --green: #7ed7ad; --green-soft: #233e35; --red: #f59da8; --red-soft: #472e39; --shadow: none; }
+  .button-primary { background: #6987f4; color: #101b36; }
+  .button-primary:hover:not(:disabled) { background: #88a0fa; }
+  .source-option:has(input:checked), .filter-chip:has(input:checked), .mode-option:has(input:checked), .resume-banner { border-color: #536799; }
+  .option-row.is-selected { border-color: #6783c5; }
+  .option-row.is-correct { border-color: #467e64; }.option-row.is-wrong { border-color: #965462; }
+  .nav-question.is-answered { border-color: #536799; }.nav-question.is-correct { border-color: #467e64; }.nav-question.is-wrong { border-color: #965462; }
+  .fill-field input.is-correct { border-color: #467e64; }.fill-field input.is-wrong { border-color: #965462; }
+}
+@media (max-width: 900px) {
+  .page-shell { padding: 0 24px; }
+  .setup-grid { grid-template-columns: minmax(0, 1fr) 235px; gap: 18px; }
+  .setup-panel { padding: 23px; }
+  .source-grid { gap: 8px; }.source-option { padding: 13px 10px; }
+  .source-option strong { font-size: 12px; }
+  .selection-check { width: 15px; height: 15px; line-height: 15px; font-size: 9px; }
+  .type-options { gap: 7px; }
+  .filter-chip { padding: 8px; }
+  .configuration-row { gap: 18px; }
+  select { width: 195px; }
+  .start-row { align-items: start; flex-direction: column; }
+  .start-row .button { width: 100%; }
+  .quiz-grid { grid-template-columns: minmax(0, 1fr) 218px; gap: 16px; }
+  .question-panel { padding: 24px; }
+  .question-actions { flex-wrap: wrap; }
+  .question-navigation { gap: 5px; }
+}
+@media (max-width: 720px) {
+  .page-shell { padding: 0 18px; }
+  .site-header { min-height: 83px; gap: 12px; }
+  .brand-mark { width: 39px; height: 39px; border-radius: 10px; font-size: 12px; }
+  .brand { gap: 9px; }.brand strong { font-size: 14px; }.brand-subtitle { font-size: 11px; }
+  .offline-label { display: none; }.header-actions { gap: 6px; }.header-actions .button { padding: 8px 10px; font-size: 12px; }
+  .intro { padding: 30px 0 23px; }.intro-copy { font-size: 13px; }.eyebrow { font-size: 11px; }
+  .setup-grid { grid-template-columns: 1fr; }.setup-aside { display: none; }
+  .setup-panel { padding: 23px; }.start-row { flex-direction: row; align-items: center; }.start-row .button { width: auto; }
+  .quiz-grid { display: flex; flex-direction: column; }.question-column, .quiz-aside { width: 100%; }
+  .quiz-aside { display: grid; grid-template-columns: 1fr; gap: 14px; }.round-progress { margin: 0; }
+  .round-progress { display: grid; grid-template-columns: 1fr auto; column-gap: 20px; align-items: center; padding: 18px; }
+  .progress-caption { margin: 0 0 9px; }.round-progress progress { grid-column: 1; }.round-progress > p { margin: 8px 0 0; grid-column: 1; }
+  .round-progress #finish-button, .round-progress #back-results { grid-column: 2; grid-row: 1 / 4; width: auto; }
+  .answer-card { padding: 17px; }.question-navigation { grid-template-columns: repeat(8, minmax(0, 1fr)); max-height: 252px; }
+  .nav-question { min-height: 36px; }
+  .round-topbar { padding: 26px 0 20px; }.round-topbar h1 { font-size: 22px; }
+  .question-stem { font-size: 16px; }.option-copy { font-size: 14px; }
+  .result-panel { padding: 28px 23px; }.score-number { font-size: 64px; }.result-stats { gap: 10px; }.result-stats strong { font-size: 22px; }.result-stats span { font-size: 11px; }
+  .result-actions .button { flex: 1 1 auto; }
+  .mistakes-panel { padding: 20px; }.mistakes-toolbar { flex-direction: column; align-items: stretch; gap: 14px; }.mistake-row { gap: 12px; }.mistake-row .button { padding: 10px 12px; }
+  .keyboard-hint { display: none; }
+}
+@media (max-width: 420px) {
+  .page-shell { padding: 0 12px; }.setup-panel { padding: 20px 16px; }.question-panel { padding: 20px 16px; }
+  .source-option { padding: 11px 8px; }.source-option strong { font-size: 11px; }.source-option small { font-size: 11px; }.selection-check { display: none; }
+  .type-options { display: grid; grid-template-columns: 1fr 1fr; }.filter-chip { font-size: 12px; padding: 9px 11px; }
+  .configuration-row { gap: 14px; flex-wrap: wrap; }.field-label { flex: 1; }.field-label select { width: 100%; }.shuffle-switch { font-size: 12px; }
+  .mode-grid { gap: 8px; }.mode-option { padding: 12px 9px; gap: 6px; }.mode-option strong { font-size: 12px; }.mode-option small { font-size: 10px; }
+  .start-row { align-items: stretch; flex-direction: column; }.start-row .button { width: 100%; }
+  .resume-banner { padding: 16px; gap: 14px; }.resume-banner .button { padding: 10px 12px; }
+  .option-row { padding: 12px; gap: 8px; grid-template-columns: 16px 24px minmax(0, 1fr); }.option-letter { width: 24px; height: 24px; line-height: 22px; }
+  .question-actions { gap: 9px; }.question-actions .button { font-size: 12px; padding: 10px 11px; }.forward-actions { gap: 7px; }
+  .question-stem { font-size: 15px; }.option-copy { font-size: 13px; }.fill-field { grid-template-columns: 57px minmax(0, 1fr); gap: 8px; }
+  .round-progress { column-gap: 12px; }.round-progress .button { font-size: 11px; padding: 11px; }
+  .question-navigation { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+  .result-stats { grid-template-columns: 1fr 1fr; }.mistake-row { align-items: start; }.site-footer { margin-top: 28px; }
+}
+@media (pointer: coarse) {
+  .button, .nav-question { min-height: 44px; }
+  .option-row, .filter-chip { min-height: 46px; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; scroll-behavior: auto !important; } }
+
+/* PTA statements retain original Java indentation and explicit blank markers. */
+.search-field { margin-bottom: 25px; }
+.search-field input { width: 100%; min-height: 44px; padding: 10px 12px; color: var(--text); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; }
+.shuffle-settings { display: grid; }
+.self-check-note { margin: 0 0 20px; color: var(--muted); font-size: 12px; line-height: 1.8; }
+.question-title { font-size: 19px; line-height: 1.6; margin: 0 0 14px; overflow-wrap: anywhere; }
+.question-context { font-size: 13px; color: var(--muted); padding: 10px 13px; border-left: 3px solid var(--accent); background: var(--accent-soft); border-radius: 0 6px 6px 0; margin: 0 0 18px; }
+.nav-question.is-review { background: #fff7e5; color: #986612; border-color: #dfc895; }
+.feedback.is-review { background: #fff7e5; color: #986612; }
+.legend-dot.review { background: #b98722; }
+@media (prefers-color-scheme: dark) { .nav-question.is-review, .feedback.is-review { background: #342b1c; color: #edc578; border-color: #776044; } }
+.question-limits { font-size: 12px; color: var(--muted); }
+.question-stem { overflow-wrap: anywhere; }
+.question-stem h1, .question-stem h2, .question-stem h3, .question-stem h4 { font-size: 17px; line-height: 1.6; margin: 22px 0 10px; letter-spacing: 0; }
+.question-stem pre { overflow: auto; max-width: 100%; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 16px; font-size: 13px; line-height: 1.65; white-space: pre; tab-size: 4; }
+.question-stem pre code { font-family: Consolas, 'Courier New', monospace; background: transparent; white-space: pre; padding: 0; font-size: inherit; }
+.question-stem table { display: block; max-width: 100%; overflow: auto; }
+.question-stem img { max-width: 100%; height: auto; }
+.question-stem pre .blank-marker { display: inline; white-space: nowrap; color: var(--accent); background: var(--accent-soft); padding: 0 6px; border: 1px solid #aebef8; border-radius: 3px; font-family: Consolas, monospace; }
+.option-copy p { margin: 0; }.option-copy pre { overflow: auto; white-space: pre; }
+.code-label { display: block; margin-bottom: 10px; font-size: 13px; color: var(--muted); }
+.code-answer, .fill-field textarea { width: 100%; min-width: 0; border: 1px solid var(--line); border-radius: 8px; padding: 12px; color: var(--text); background: var(--surface); font: 13px/1.65 Consolas, 'Courier New', monospace; resize: vertical; tab-size: 4; }
+.code-answer { min-height: 290px; white-space: pre; overflow: auto; }
+textarea:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.draft-actions { display: flex; justify-content: flex-end; align-items: center; gap: 7px; flex-wrap: wrap; margin: 14px 0; }
+.draft-actions > span { color: var(--muted); font-size: 11px; margin-right: auto; }
+.assessment-controls { padding: 15px 0; border-top: 1px solid var(--line); }
+.assessment-controls p { color: var(--muted); font-size: 12px; margin-bottom: 9px; }
+.assessment-controls > div { display: flex; gap: 9px; }
+.assessment-controls button[aria-pressed=true] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+.result-description { color: var(--muted); line-height: 1.8; }
+.reference-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 16px 0; border-top: 1px solid var(--line); }
+.reference-actions > span { color: var(--muted); font-size: 12px; }
+.reference-panel { min-width: 0; margin: 16px 0 22px; padding: 20px; border: 1px solid var(--line); border-radius: 12px; background: var(--bg); }
+.reference-heading { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 16px; }
+.reference-heading h3 { margin: 0; font-size: 16px; }
+.reference-answer { font-weight: 650; color: var(--accent); overflow-wrap: anywhere; }
+.reference-explanation { font-size: 14px; white-space: pre-line; overflow-wrap: anywhere; }
+.reference-remark { padding: 12px 14px; border-left: 3px solid var(--accent); background: var(--accent-soft); font-size: 13px; white-space: pre-line; overflow-wrap: anywhere; }
+.reference-blanks { display: grid; gap: 8px; margin-bottom: 20px; }
+.reference-blank { display: grid; grid-template-columns: 65px minmax(0, 1fr); gap: 8px; align-items: start; }
+.reference-blank > span { color: var(--muted); font-size: 12px; padding-top: 8px; }
+.reference-code-scope { font-size: 12px; font-weight: 650; margin: 20px 0 9px; }
+.reference-code, .reference-blank pre { max-width: 100%; margin: 0; padding: 12px; overflow: auto; white-space: pre; tab-size: 4; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); font: 12px/1.7 Consolas, 'Courier New', monospace; }
+.reference-code code, .reference-blank code { font: inherit; }
+.reference-code { max-height: 520px; }
+.reference-code-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.reference-validation, .reference-validation-notes, .reference-origin { font-size: 12px; color: var(--muted); margin: 15px 0 0; overflow-wrap: anywhere; }
+.reference-validation { color: var(--green); }
+.reference-origin { border-top: 1px solid var(--line); padding-top: 12px; }
+@media(max-width:420px) { .reference-panel { padding: 14px; }.reference-blank { grid-template-columns: 51px minmax(0, 1fr); }.reference-code-actions .button { flex: 1; font-size: 11px; }.reference-explanation { font-size: 13px; } }
+@media(max-width:720px) { .question-title { font-size: 17px; }.draft-actions > span { flex-basis: 100%; }.question-stem pre { padding: 12px; font-size: 12px; }.shuffle-settings { gap: 0; }.shuffle-switch { min-height: 34px; } }
+@media(max-width:420px) { .draft-actions .button { font-size: 11px; padding: 10px; }.header-actions .button-quiet { display: none; }.brand strong { font-size: 13px; }.question-stem h1, .question-stem h2, .question-stem h3, .question-stem h4 { font-size: 15px; }.assessment-controls button { flex: 1; }.fill-field textarea { font-size: 12px; } }
+.judge-panel { margin-top: 24px; padding: 20px; border: 1px solid var(--line); border-radius: 12px; background: var(--bg); }
+.judge-heading { display: flex; flex-wrap: wrap; gap: 8px; justify-content: space-between; align-items: center; }
+.judge-heading h3 { margin: 0; font-size: 16px; }
+.judge-scope, .judge-message { font-size: 13px; line-height: 1.7; overflow-wrap: anywhere; }
+.judge-note { margin: 10px 0; color: var(--muted); font-size: 12px; line-height: 1.8; }
+.judge-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0; }
+.judge-result { border-top: 1px solid var(--line); padding-top: 15px; }
+.judge-result strong { color: var(--accent); }
+.judge-result.is-accepted strong { color: var(--green); }
+.judge-result.is-failed strong { color: var(--red); }
+.judge-result p { font-size: 12px; color: var(--muted); }
+.judge-result pre { max-width: 100%; max-height: 300px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; padding: 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); font: 12px/1.7 Consolas, monospace; }
+.judge-cases { display: grid; gap: 7px; font-size: 12px; }
+.judge-case { padding: 8px 10px; border: 1px solid var(--line); border-radius: 7px; overflow-wrap: anywhere; }
+@media(max-width:420px) { .judge-panel { padding: 14px; }.judge-actions .button { flex: 1; font-size: 12px; }.judge-heading h3 { font-size: 15px; } }
+</style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="site-header">
+      <a class="brand" href="/p"><span class="brand-mark" aria-hidden="true">OOP</span><span><span class="brand-subtitle">面向对象程序设计</span><strong>综合练习 · 204 题</strong></span></a>
+      <div class="header-actions"><a class="button button-quiet" href="/p">返回题库</a><button class="button button-secondary" id="open-mistakes" type="button">错题本 <span class="count-pill" id="mistake-count">0</span></button></div>
+    </header>
+    <main>
+      <p id="storage-message" class="notice" role="status" hidden>浏览器暂时无法保存进度。你仍可继续练习，关闭页面前请导出作答记录。</p>
+      <section id="setup-view" aria-labelledby="setup-heading">
+        <div class="intro"><p class="eyebrow">课程练习 · PTA</p><h1 id="setup-heading">开始一轮面向对象练习</h1><p class="intro-copy">按题型或关键词选题，写下答案，再把不熟的题留到下一轮。</p></div>
+        <div id="resume-banner" class="resume-banner" hidden><div><strong>继续上次的练习</strong><p id="resume-description"></p></div><button id="resume-button" class="button button-secondary" type="button">继续作答 →</button></div>
+        <div class="setup-grid">
+          <form id="setup-form" class="panel setup-panel" aria-labelledby="setup-heading">
+            <fieldset><legend>练习题型</legend><div class="type-options">
+              <label class="filter-chip"><input type="checkbox" name="type" value="tf" checked>判断题 <small>55</small></label>
+              <label class="filter-chip"><input type="checkbox" name="type" value="single" checked>单选题 <small>67</small></label>
+              <label class="filter-chip"><input type="checkbox" name="type" value="fill" checked>程序填空 <small>30</small></label>
+              <label class="filter-chip"><input type="checkbox" name="type" value="function" checked>函数题 <small>29</small></label>
+              <label class="filter-chip"><input type="checkbox" name="type" value="program" checked>编程题 <small>23</small></label>
+            </div></fieldset>
+            <label class="field-label search-field" for="question-search">题号或关键词<input id="question-search" type="search" placeholder="例如：构造函数、继承、5-1" autocomplete="off"></label>
+            <div class="configuration-row"><label class="field-label" for="question-limit">本轮题数<select id="question-limit"><option value="10">10 题</option><option value="20">20 题</option><option value="30" selected>30 题</option><option value="50">50 题</option><option value="all">全部题目</option></select></label><div class="shuffle-settings"><label class="shuffle-switch"><input id="shuffle-questions" type="checkbox" checked>题目乱序</label><label class="shuffle-switch"><input id="shuffle-options" type="checkbox" checked>单选题选项乱序</label></div></div>
+            <fieldset><legend>作答模式</legend><div class="mode-grid"><label class="mode-option"><input type="radio" name="mode" value="practice" checked><span><strong>逐题练习</strong><small>选择后自动判定，可查看讲解</small></span></label><label class="mode-option"><input type="radio" name="mode" value="exam"><span><strong>自测模式</strong><small>完成后显示答案与客观题成绩</small></span></label></div></fieldset>
+            <p class="self-check-note">122 道判断、单选题选择后自动判定，82 道代码题可登录后提交评测。题面采用 Java 8/17 语境，均附参考答案与讲解。</p>
+            <button class="button button-quiet" id="download-references" type="button">下载全部参考答案与讲解 ↓</button>
+            <div class="start-row"><p id="pool-description" aria-live="polite">已选 204 题，本轮随机抽取 30 题</p><button class="button button-primary button-large" id="start-button" type="submit">开始练习 <span aria-hidden="true">→</span></button></div>
+          </form>
+          <aside class="setup-aside"><section class="panel bank-summary" aria-labelledby="bank-heading"><p class="eyebrow">一套题，五种练习</p><h2 id="bank-heading">204<span>题</span></h2><p>2026 秋 · 面向对象程序设计</p><hr><div class="bank-rows"><span>判断题<strong>55</strong></span><span>单选题<strong>67</strong></span><span>程序填空题<strong>30</strong></span><span>函数题<strong>29</strong></span><span>编程题<strong>23</strong></span></div></section><div class="study-note"><strong>把思路和代码留下来</strong><p>作答自动保存在当前浏览器，刷新页面可以接着练。程序题保留题面代码、样例与图片。</p><p>程序填空按编号填写，代码大小写与空白按原样保存。标记“已掌握”后，题目会从错题本移出。</p></div></aside>
+        </div>
+      </section>
+      <section id="quiz-view" aria-labelledby="round-heading" hidden>
+        <div class="round-topbar"><div><p class="eyebrow" id="round-mode"></p><h1 id="round-heading">面向对象综合练习</h1></div><button class="button button-quiet" id="change-settings" type="button">重新选题</button></div>
+        <div class="quiz-grid">
+          <div class="question-column"><article class="panel question-panel">
+            <div class="question-meta"><span id="question-type" class="type-badge"></span><span id="question-source" class="source-badge"></span><span class="question-position" id="question-position"></span></div>
+            <h2 id="question-heading" class="question-title"></h2><p id="question-limits" class="question-limits" hidden></p>
+            <div id="question-stem" class="question-stem" aria-labelledby="question-heading"></div>
+            <p id="question-context" class="question-context" hidden></p>
+            <p id="answer-instruction" class="answer-instruction"></p><form id="answer-form" aria-labelledby="question-heading"><div id="answer-controls"></div></form>
+            <div class="draft-actions"><span id="draft-status" role="status">作答自动保存</span><button class="button button-quiet" id="copy-answer" type="button">复制作答</button><a class="button button-secondary" id="pta-link" target="_blank" rel="noopener noreferrer">打开 PTA 原题 ↗</a></div>
+            <section id="judge-panel" class="judge-panel" aria-labelledby="judge-heading" hidden>
+              <div class="judge-heading"><h3 id="judge-heading">提交判题</h3><span class="source-badge">Java · 本站评测</span></div>
+              <p id="judge-scope" class="judge-scope"></p>
+              <p class="judge-note">使用题面样例与本站补充测试，判定编译、运行和输出结果。</p>
+              <div class="judge-actions"><button id="submit-judge" type="button" class="button button-primary">提交判题</button><button id="refresh-judge" type="button" class="button button-secondary" hidden>刷新结果</button><a id="judge-login" class="button button-secondary" hidden>登录后判题</a><a id="judge-record" class="button button-quiet" target="_blank" rel="noopener noreferrer" hidden>查看完整评测 ↗</a></div>
+              <p id="judge-message" class="judge-message" role="status"></p>
+              <div id="judge-result" class="judge-result" aria-live="polite" hidden><strong id="judge-verdict"></strong><p id="judge-statistics"></p><pre id="judge-diagnostics" hidden></pre><div id="judge-cases" class="judge-cases"></div></div>
+              <p class="judge-note">通过本站测试不代表通过 PTA 隐藏测试。判题需要登录网站，作答草稿会保留。</p>
+            </section>
+            <div id="reference-actions" class="reference-actions"><button class="button button-primary" id="check-answer" type="button">核对答案与讲解</button><span id="reference-hint"></span></div>
+            <div id="reference-verdict" class="feedback" role="status" hidden></div>
+            <section id="reference-panel" class="reference-panel" aria-labelledby="reference-heading" hidden>
+              <div class="reference-heading"><h3 id="reference-heading">参考答案与讲解</h3><span class="source-badge">Java 8/17 · 参考解答</span></div>
+              <p id="reference-answer" class="reference-answer" hidden></p>
+              <div id="reference-blanks" class="reference-blanks" hidden></div>
+              <p id="reference-explanation" class="reference-explanation"></p>
+              <p id="reference-remark" class="reference-remark" hidden></p>
+              <div id="reference-code-section" hidden><p id="reference-code-scope" class="reference-code-scope"></p><pre class="reference-code"><code id="reference-code"></code></pre><div class="reference-code-actions"><button class="button button-secondary" id="copy-reference" type="button">复制参考代码</button><button class="button button-quiet" id="download-reference-code" type="button">下载完整 Java 示例 ↓</button></div></div>
+              <p id="reference-validation" class="reference-validation" hidden></p>
+              <p id="reference-validation-notes" class="reference-validation-notes" hidden></p>
+            </section>
+            <div id="assessment-controls" class="assessment-controls"><p>核对后，记录这题的掌握情况</p><div><button class="button button-secondary" id="mark-mastered" type="button" aria-pressed="false">✓ 已掌握</button><button class="button button-secondary" id="mark-review" type="button" aria-pressed="false">＋ 加入错题</button></div></div>
+            <div id="feedback" class="feedback" role="status" hidden></div><p id="question-message" class="question-message" role="status"></p>
+            <div class="question-actions"><button class="button button-secondary" id="previous-button" type="button">← 上一题</button><button class="button button-primary" id="next-button" type="button">下一题 →</button></div>
+          </article><p class="keyboard-hint">可用数字键选择选项，左右方向键切换题目。作答进度只保存在当前浏览器。</p></div>
+          <aside class="quiz-aside"><section class="panel round-progress"><div class="progress-caption"><strong>本轮进度</strong><span id="progress-label"></span></div><progress id="round-progress" max="30" value="0" aria-label="本轮已作答题数"></progress><p id="round-status"></p><button class="button button-secondary button-wide" id="finish-button" type="button">完成本轮，查看记录</button><button class="button button-quiet button-wide" id="back-results" type="button" hidden>返回本轮记录</button></section><details class="panel answer-card" id="answer-card" open><summary>答题卡 <span id="navigation-count"></span></summary><div id="question-navigation" class="question-navigation" aria-label="题目导航"></div><div class="navigation-legend"><span><i class="legend-dot pending"></i>未答</span><span><i class="legend-dot answered"></i>已答</span><span><i class="legend-dot correct"></i>答对 / 通过</span><span><i class="legend-dot wrong"></i>答错</span><span><i class="legend-dot review"></i>待复习</span></div></details></aside>
+        </div>
+      </section>
+      <section id="results-view" aria-labelledby="results-heading" hidden>
+        <div class="intro"><p class="eyebrow">每一轮，都把薄弱点看得更清楚。</p><h1 id="results-heading">本轮自测记录</h1></div>
+        <div class="panel result-panel"><p id="result-description" class="result-description"></p><div id="result-score" class="score-area" hidden><p>客观题成绩</p><strong id="score-number" class="score-number"></strong><p id="score-description"></p></div><div class="result-stats"><div><strong id="result-total">0</strong><span>本轮题数</span></div><div><strong id="result-answered">0</strong><span>已完整作答</span></div><div><strong id="result-mastered">0</strong><span>已答对或掌握</span></div><div><strong id="result-review">0</strong><span>加入错题</span></div></div><div class="result-actions"><button class="button button-primary" id="review-all" type="button">逐题核对与标记</button><button class="button button-secondary" id="retry-wrong" type="button">重练本轮错题</button><button class="button button-quiet" id="export-record" type="button">导出作答记录</button></div><p class="scoring-note">全部判断、单选题自动判定；有多项合理答案的题目接受其中任意一项。填空、函数和编程题可在逐题回顾时提交评测。</p></div>
+        <div class="result-footer"><button class="button button-secondary" id="new-round" type="button">再来一轮</button><button class="button button-quiet" id="results-home" type="button">调整练习范围</button></div>
+      </section>
+      <section id="mistakes-view" aria-labelledby="mistakes-heading" hidden><div class="round-topbar"><div><p class="eyebrow">把不熟的题，再练一遍。</p><h1 id="mistakes-heading">错题本</h1></div><button class="button button-quiet" id="mistakes-home" type="button">返回练习</button></div><div class="panel mistakes-panel"><div class="mistakes-toolbar"><p id="mistakes-description" aria-live="polite"></p><button class="button button-primary" id="practice-mistakes" type="button">全部错题乱序练习</button></div><div id="mistake-list"></div></div></section>
+    </main>
+    <footer class="site-footer"><span>题目来自 PTA · 2026秋面向对象程序设计-练习题集</span><span>204 题 · 作答保存在当前浏览器</span></footer>
+  </div>
+  <dialog id="finish-dialog" aria-labelledby="finish-dialog-heading"><h2 id="finish-dialog-heading">完成本轮练习</h2><p id="finish-dialog-description"></p><div class="dialog-actions"><button class="button button-secondary" id="cancel-finish" type="button">继续作答</button><button class="button button-primary" id="confirm-finish" type="button">查看本轮记录</button></div></dialog>
+  <div class="toast" id="toast" role="status" hidden></div>
+  <noscript><p class="notice">请在支持 JavaScript 的浏览器中打开练习页面。</p></noscript>
+  <script type="application/json" id="question-bank">{{QUESTION_BANK}}</script>
+  <script>{{PRACTICE_CORE}}</script>
+  <script>{{PRACTICE_APP}}</script>
+</body>
+</html>
