@@ -1,6 +1,6 @@
 # dfacm 项目修复本地集成报告（2026-11-14）
 
-原计划为 [2026-11-13-project-repairs.md](../plans/2026-11-13-project-repairs.md)，修复分支保留 `fix/project-audit-2026-11-13`。A–F 的实现已提交，I1 完成 CI、实际发货/安装清单及文档集成，本地最终检查通过。2026-11-14 最终独立全分支评审覆盖全部 17 个任务并明确确认当前本地规格 PASS，无 Critical/Important；恢复的 A/B/E 当前评审状态已据此关闭，缺失的历史 RED/早期评审记录不补造。本次跟进三项非阻塞文档/空白 minor，仍待一次收尾 scoped re-review 和负责人准备归档哈希清单。没有执行生产发布、推送、合并、真实数据纠正或真实消息/赛事源访问。
+原计划为 [2026-11-13-project-repairs.md](../plans/2026-11-13-project-repairs.md)，修复分支保留 `fix/project-audit-2026-11-13`。A–F 的实现已提交，I1 完成 CI、实际发货/安装清单及文档集成，本地最终检查通过。2026-11-14 最终独立全分支评审覆盖全部 17 个任务并明确确认当前本地规格 PASS，无 Critical/Important；恢复的 A/B/E 当前评审状态已据此关闭，缺失的历史 RED/早期评审记录不补造。三项非阻塞文档/空白 minor 已于 `1e917c6` 修正，收尾 scoped re-review 已通过，无遗留发现。最终源码归档、逐文件清单与 SHA-256 由交付校验文件记录。没有执行生产发布、推送、合并、真实数据纠正或真实消息/赛事源访问。
 
 ## 问题与提交
 
@@ -48,9 +48,9 @@ I1 使用 Node **22.23.5**、Python **3.14.4**、ShellCheck **0.11.0**；支持�
 
 ## 最终独立评审与 minor 收尾
 
-评审的代码 HEAD 为 `0cf00540bac44bb73187e6ae7f468c5864c1702e`，基线为 `31afcb856a860bb88ba8b0efab2ebfe9479d5195`：22 个提交、96 个变更路径全部覆盖，17 项当前本地规格逐项 PASS，无 Critical/Important，结论为可在本地合并。恢复的 A1–A3/B1–B2/E1–E3 当前评审门槛由这一明确独立结论关闭；不表示原始 RED 或早期独立评审证据已恢复，也不表示生产验收完成。完整本机评审依据为 `.superpowers/sdd/2026-11-13-project-repairs/final-review.md`；其既有完整差异包 SHA-256 为 `fbb2f362846763e33cda6186b6c321922a1bdd322ded80caddd180b6a0fff91a`，这是评审材料标识，最终发布归档尚未生成。
+评审的代码 HEAD 为 `0cf00540bac44bb73187e6ae7f468c5864c1702e`，基线为 `31afcb856a860bb88ba8b0efab2ebfe9479d5195`：22 个提交、96 个变更路径全部覆盖，17 项当前本地规格逐项 PASS，无 Critical/Important，结论为可在本地合并。恢复的 A1–A3/B1–B2/E1–E3 当前评审门槛由这一明确独立结论关闭；不表示原始 RED 或早期独立评审证据已恢复，也不表示生产验收完成。完整本机评审依据为 `.superpowers/sdd/2026-11-13-project-repairs/final-review.md`；其既有完整差异包 SHA-256 为 `fbb2f362846763e33cda6186b6c321922a1bdd322ded80caddd180b6a0fff91a`，这是评审材料标识，最终源码归档的提交号和哈希另见交付校验文件。
 
-三项非阻塞 minor 在本次收尾中处理：shop README 移除旧 v1 接受双花窗口说明，改为共同 UID 锁的单 worker 保证及多 worker 前持久协调/原子扣款/真实跨进程测试要求；ops README 首个必需运行文件枚举补入无条件加载的 `controlled-history.cjs`；train 域回归仅去掉断言行尾空格。现有依赖/实验警告继续按冻结要求披露。没有运行逻辑变化，因此复用上述既有验证证据，不重复完整或原生测试。本次 prose/空白修正完成后由负责人一次 scoped re-review，再准备 Git archive 与哈希清单。
+三项非阻塞 minor 在本次收尾中处理：shop README 移除旧 v1 接受双花窗口说明，改为共同 UID 锁的单 worker 保证及多 worker 前持久协调/原子扣款/真实跨进程测试要求；ops README 首个必需运行文件枚举补入无条件加载的 `controlled-history.cjs`；train 域回归仅去掉断言行尾空格。现有依赖/实验警告继续按冻结要求披露。没有运行逻辑变化，因此复用上述既有验证证据，不重复完整或原生测试。修正范围 `0cf0054..1e917c6` 已完成一次 scoped re-review：三项发现全部关闭，状态记录与 17 项 PASS 一致，无新增问题。本机 `final-fix-review.md` 保存该结论；源码归档按最终 Git 提交生成并附独立哈希清单。
 
 ## 两项实现取舍与交付要求
 
@@ -67,4 +67,4 @@ I1 使用 Node **22.23.5**、Python **3.14.4**、ShellCheck **0.11.0**；支持�
 - C2 复用同主机同 canonical batch/state 路径；超时、调度不明或 history 冲突保留 pending，不盲目重判或清理。先证明终态/取消、精确 ownership 和数据身份，再人工决定恢复。真实 daemon、WebSocket 断线/消费拓扑、沙箱及未支持题型验收仍待完成，旧计数快照回写不能作为回退。
 - E 的旧 key、analysis/review/reviewHistory 保留；只在有界保留期重算，秒级时间不能提高成确定“提交前 AI”。需验证实际 worker 与真实页面证据展示。
 - F 发布前用 SQLite Connection.backup 同时保存数据库与 state.json；additive 加列不触发旧 DROP TABLE 路径、不删水位。旧 card_sent=1 不自动重播；回退旧代码保留新增字段，旧代码期间不维护 delivered_at，重新上线前需核对该段投递状态。实际备份/迁移、真实消息通道验收和历史身份修正未执行。
-- 真实 Hydro 第二因素登录、system/poj 浏览器操作、正式 Web 提交/消费以及生产发布仍待验收。最终全分支评审已完成；收尾 scoped re-review 后再生成 Git archive 与哈希清单、准备可审查发布/备份/回退材料；本次未生成提前的发布归档。
+- 真实 Hydro 第二因素登录、system/poj 浏览器操作、正式 Web 提交/消费以及生产发布仍待验收。最终全分支评审与收尾 scoped re-review 均已完成；源码归档、清单和哈希标识对应固定 Git 快照。实际生产发布、备份/迁移/回退和真实数据修正仍需逐项验收与授权。
