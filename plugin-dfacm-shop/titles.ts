@@ -12,7 +12,10 @@
  * 余额与业务错误复用 points.ts 的 getBalance / ShopError。
  */
 import type { Context } from 'hydrooj';
-import { getBalance, ShopError } from './points';
+import { randomUUID } from 'node:crypto';
+import { getBalance, refundDebit, ShopError } from './points';
+import type { LedgerDebit } from './points';
+import { withUserLock } from './user-lock';
 
 export const TITLE_UNLOCK_PRICE = 500;
 export const TITLE_EDIT_PRICE = 50;
@@ -114,9 +117,9 @@ async function mintWithRetry(
     }
 }
 
-// Serializes every mint/save: badgeAdd's max(_id)+1 allocation is not atomic,
-// so concurrent mints from different members could collide. Same single-instance
-// doctrine as points.ts's redeemLocks; multi-node would need a Mongo transaction.
+// badgeAdd's max(_id)+1 allocation is not atomic. Serialize mints from different
+// members in this process; callers MUST already hold their UID lock. Never
+// acquire a UID lock from inside this global lock (UID -> mint is the only order).
 let titleLock: Promise<unknown> = Promise.resolve();
 function runInTitleLock<T>(work: () => Promise<T>): Promise<T> {
     const run = titleLock.then(work, work);
@@ -130,32 +133,34 @@ function runInTitleLock<T>(work: () => Promise<T>): Promise<T> {
 // 余额必然被那笔 -500 拖着，余额检查会误伤——所以先查解锁流水，在则直接补建。
 export async function unlockTitle(collections: TitleCollections, now: () => Date, uid: number) {
     if (!Number.isSafeInteger(uid) || uid <= 0) throw new ShopError('请先登录。');
-    const row = await collections.titles.findOne({ uid });
-    if (row) throw new ShopError('你已解锁称号工坊。');
-    const paidBefore = await collections.ledger.findOne({ uid, ref: 'title_unlock' });
-    if (paidBefore) {
-        await insertTitleRow(collections, now, uid);
-        return;
-    }
-    const balance = await getBalance(collections, uid);
-    if (balance < TITLE_UNLOCK_PRICE) {
-        throw new ShopError(`积分不足：解锁称号工坊需 ${TITLE_UNLOCK_PRICE} 分，当前 ${balance} 分。`);
-    }
-    try {
-        await collections.ledger.insertOne({
-            uid, delta: -TITLE_UNLOCK_PRICE, kind: 'title', ref: 'title_unlock',
-            detail: '解锁称号工坊', ts: now(),
-        });
-    } catch (e) {
-        if (!isDuplicateKey(e)) throw e;
-        await insertTitleRow(collections, now, uid);
-        return;
-    }
-    try {
-        await insertTitleRow(collections, now, uid);
-    } catch (e) {
-        if (!isDuplicateKey(e)) throw e; // titles.uid 唯一索引撞 = 已解锁
-    }
+    return withUserLock(uid, async () => {
+        const row = await collections.titles.findOne({ uid });
+        if (row) throw new ShopError('你已解锁称号工坊。');
+        const paidBefore = await collections.ledger.findOne({ uid, ref: 'title_unlock' });
+        if (paidBefore) {
+            await insertTitleRow(collections, now, uid);
+            return;
+        }
+        const balance = await getBalance(collections, uid);
+        if (balance < TITLE_UNLOCK_PRICE) {
+            throw new ShopError(`积分不足：解锁称号工坊需 ${TITLE_UNLOCK_PRICE} 分，当前 ${balance} 分。`);
+        }
+        try {
+            await collections.ledger.insertOne({
+                uid, delta: -TITLE_UNLOCK_PRICE, kind: 'title', ref: 'title_unlock',
+                operationId: randomUUID(), detail: '解锁称号工坊', ts: now(),
+            });
+        } catch (e) {
+            if (!isDuplicateKey(e)) throw e;
+            await insertTitleRow(collections, now, uid);
+            return;
+        }
+        try {
+            await insertTitleRow(collections, now, uid);
+        } catch (e) {
+            if (!isDuplicateKey(e)) throw e; // titles.uid 唯一索引撞 = 已解锁
+        }
+    });
 }
 
 function insertTitleRow(collections: TitleCollections, now: () => Date, uid: number) {
@@ -164,11 +169,6 @@ function insertTitleRow(collections: TitleCollections, now: () => Date, uid: num
         active: true, createdAt: now(), updatedAt: now(),
     });
 }
-
-// 流水 ref 的时基问题：注入的 now() 在同一毫秒内的两次保存会产生同一个
-// `title_edit:{ts}`/`refund:title:{ts}` 而撞 {uid,ref} 唯一键（测试的固定
-// 时钟实锤了这个窗口）。进程内单调序号兜底唯一性，与时间戳拼接保持可读。
-let titleLedgerSeq = 0;
 
 // 保存（铸造或修改）：首次铸造含在解锁价里，之后每次保存扣 TITLE_EDIT_PRICE。
 // 顺序刻意「先扣分、后写徽章」：失败走 refund 冲正（同 points.ts redeem 教义，
@@ -179,22 +179,23 @@ export async function saveTitle(
     uid: number, rawText: string, paletteId: string,
 ) {
     if (!Number.isSafeInteger(uid) || uid <= 0) throw new ShopError('请先登录。');
-    const row = await collections.titles.findOne({ uid });
-    if (!row) throw new ShopError('请先解锁称号工坊。');
-    if (row.active === false) throw new ShopError('你的称号已被管理员停用，请联系管理员。');
-    const text = validateTitleText(rawText);
-    const palette = paletteById(paletteId);
-    const isEdit = row.minted === 1;
-    return runInTitleLock(async () => {
+    return withUserLock(uid, async () => {
+        // Re-read state only after all prior spending and moderation completed.
+        const row = await collections.titles.findOne({ uid });
+        if (!row) throw new ShopError('请先解锁称号工坊。');
+        if (row.active === false) throw new ShopError('你的称号已被管理员停用，请联系管理员。');
+        const text = validateTitleText(rawText);
+        const palette = paletteById(paletteId);
+        const isEdit = row.minted === 1;
+        let debit: LedgerDebit | undefined;
         if (isEdit) {
             const balance = await getBalance(collections, uid);
             if (balance < TITLE_EDIT_PRICE) {
                 throw new ShopError(`积分不足：修改称号需 ${TITLE_EDIT_PRICE} 分，当前 ${balance} 分。`);
             }
-            await collections.ledger.insertOne({
-                uid, delta: -TITLE_EDIT_PRICE, kind: 'title',
-                ref: `title_edit:${now().getTime()}:${++titleLedgerSeq}`, detail: `修改称号：${text}`, ts: now(),
-            });
+            const operationId = randomUUID();
+            debit = { uid, delta: -TITLE_EDIT_PRICE, ref: `title_edit:${operationId}`, operationId };
+            await collections.ledger.insertOne({ ...debit, kind: 'title', detail: `修改称号：${text}`, ts: now() });
         }
         try {
             let badgeId: number | null = row.badgeId;
@@ -205,19 +206,15 @@ export async function saveTitle(
                     palette.bg, palette.fg, TITLE_CONTENT, [uid], [uid],
                 );
             } else {
-                badgeId = await mintWithRetry(ctx, models, text, palette, uid);
+                badgeId = await runInTitleLock(() => mintWithRetry(ctx, models, text, palette, uid));
             }
             await collections.titles.updateOne({ uid }, { $set: {
                 badgeId, minted: 1, text, bg: palette.bg, fg: palette.fg, updatedAt: now(),
             } });
             return { text, bg: palette.bg, fg: palette.fg, badgeId, paid: isEdit };
         } catch (e) {
-            if (isEdit) {
-                // 扣分已落库：冲正退回，保证最终一致且有审计痕迹。
-                await collections.ledger.insertOne({
-                    uid, delta: TITLE_EDIT_PRICE, kind: 'refund',
-                    ref: `refund:title:${now().getTime()}:${++titleLedgerSeq}`, detail: `修改称号失败冲正：${text}`, ts: now(),
-                });
+            if (debit) {
+                await refundDebit(collections.ledger, now, debit, `修改称号失败冲正：${text}`, e);
                 throw new ShopError('称号保存失败，积分已退回，请稍后重试。');
             }
             throw e;
@@ -232,15 +229,19 @@ export async function revokeTitle(
     ctx: Context, models: TitleModels, collections: TitleCollections, now: () => Date, uid: number,
 ) {
     if (!Number.isSafeInteger(uid) || uid <= 0) throw new ShopError('成员无效。');
-    const row = await collections.titles.findOne({ uid });
-    if (!row) throw new ShopError('该成员尚未解锁称号工坊。');
-    if (row.badgeId) await models.userBadge.userBadgeDel(ctx, uid, row.badgeId);
-    await collections.titles.updateOne({ uid }, { $set: { active: false, updatedAt: now() } });
+    return withUserLock(uid, async () => {
+        const row = await collections.titles.findOne({ uid });
+        if (!row) throw new ShopError('该成员尚未解锁称号工坊。');
+        if (row.badgeId) await models.userBadge.userBadgeDel(ctx, uid, row.badgeId);
+        await collections.titles.updateOne({ uid }, { $set: { active: false, updatedAt: now() } });
+    });
 }
 
 export async function restoreTitle(collections: TitleCollections, now: () => Date, uid: number) {
     if (!Number.isSafeInteger(uid) || uid <= 0) throw new ShopError('成员无效。');
-    const row = await collections.titles.findOne({ uid });
-    if (!row) throw new ShopError('该成员尚未解锁称号工坊。');
-    await collections.titles.updateOne({ uid }, { $set: { active: true, updatedAt: now() } });
+    return withUserLock(uid, async () => {
+        const row = await collections.titles.findOne({ uid });
+        if (!row) throw new ShopError('该成员尚未解锁称号工坊。');
+        await collections.titles.updateOne({ uid }, { $set: { active: true, updatedAt: now() } });
+    });
 }

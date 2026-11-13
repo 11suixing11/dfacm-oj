@@ -425,8 +425,69 @@ test('redeem: a failed badge grant refunds the points instead of losing them', a
     assert.equal(ledger.docs[2].delta, 10);
     assert.equal(ledger.docs[2].kind, 'refund');
     assert.equal(ledger.docs.reduce((sum, d) => sum + d.delta, 0), 25, 'balance is unchanged');
-    // Each retry gets a fresh refund key, so a repeated failure still balances.
+    // The refund identifies this exact debit; the existing product rule still
+    // blocks another purchase attempt for the same badge after compensation.
     assert.notEqual(ledger.docs[2].ref, ledger.docs[1].ref);
+    assert.equal(typeof ledger.docs[1].operationId, 'string');
+    assert.equal(ledger.docs[2].operationId, ledger.docs[1].operationId);
+    assert.equal(ledger.docs[2].debitRef, 'redeem:7');
+    await assert.rejects(points.redeem({}, m, collections, now, 42, 7), /已拥有/);
+    assert.equal(ledger.docs.length, 3, 'retry policy does not issue a second debit or refund');
+});
+
+test('redeem refund failure records the unmatched debit without falsely reporting returned points', async () => {
+    const points = loadPoints();
+    const m = models();
+    m.seedBadge(7, { _id: 7, title: '队长' });
+    m.userBadge.userBadgeAdd = async () => { throw new Error('grant unavailable'); };
+    const ledger = new FakeLedger();
+    const collections = { ledger, price: new FakePrice([{ _id: 7, price: 10, enabled: true }]), userBadge: m.userBadge };
+    await ledger.insertOne({ uid: 42, delta: 25, ref: 'seed', kind: 'solve', ts: now() });
+    const insert = ledger.insertOne.bind(ledger);
+    ledger.insertOne = async (doc) => {
+        if (doc.kind === 'refund') throw new Error('refund unavailable');
+        return insert(doc);
+    };
+    await assert.rejects(points.redeem({}, m, collections, now, 42, 7), (error) => {
+        assert.match(error.message, /退款未确认.*联系管理员/);
+        assert.doesNotMatch(error.message, /已退回/);
+        return true;
+    });
+    const debit = ledger.docs.find((doc) => doc.kind === 'redeem');
+    const pending = ledger.docs.find((doc) => doc.kind === 'refund_pending');
+    assert.ok(pending, 'failed compensation leaves an audit record');
+    assert.equal(pending.delta, 0);
+    assert.equal(pending.debitRef, 'redeem:7');
+    assert.equal(pending.operationId, debit.operationId);
+    assert.equal(await points.getBalance(collections, 42), 15);
+    assert.equal(points.pendingLockCount(), 0);
+});
+
+test('redeem refund audit outage retains operation identity in the thrown error and original debit', async () => {
+    const points = loadPoints();
+    const m = models();
+    m.seedBadge(7, { _id: 7, title: '队长' });
+    m.userBadge.userBadgeAdd = async () => { throw new Error('grant unavailable'); };
+    const ledger = new FakeLedger();
+    const collections = { ledger, price: new FakePrice([{ _id: 7, price: 10, enabled: true }]), userBadge: m.userBadge };
+    await ledger.insertOne({ uid: 42, delta: 25, ref: 'seed', kind: 'solve', ts: now() });
+    const insert = ledger.insertOne.bind(ledger);
+    ledger.insertOne = async (doc) => {
+        if (doc.kind === 'refund' || doc.kind === 'refund_pending') throw new Error('ledger unavailable');
+        return insert(doc);
+    };
+    await assert.rejects(points.redeem({}, m, collections, now, 42, 7), (error) => {
+        assert.match(error.message, /退款未确认.*联系管理员/);
+        const debit = ledger.docs.find((doc) => doc.kind === 'redeem');
+        assert.equal(typeof debit.operationId, 'string');
+        assert.ok(error.message.includes(debit.operationId), 'operators can identify the durable debit when audit insert also fails');
+        assert.ok(error.cause instanceof AggregateError, 'both failed writes remain inspectable');
+        assert.equal(error.cause.errors.length, 3, 'grant, refund and audit errors are retained');
+        return true;
+    });
+    assert.equal(await points.getBalance(collections, 42), 15);
+    assert.equal(ledger.docs.length, 2);
+    assert.equal(points.pendingLockCount(), 0);
 });
 
 test('redeem: success debits once and grants the badge exactly once', async () => {

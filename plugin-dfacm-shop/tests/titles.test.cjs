@@ -42,7 +42,7 @@ class FakeLedger {
         return { insertedId: `oid-${this.docs.length}` };
     }
     async findOne(filter) {
-        return this.docs.find((d) => Object.entries(filter).every(([k, v]) => d[k] === v)) || null;
+        return structuredClone(this.docs.find((d) => Object.entries(filter).every(([k, v]) => d[k] === v)) || null);
     }
     aggregate(pipeline) {
         let rows = [...this.docs];
@@ -57,7 +57,7 @@ class FakeLedger {
 class FakeTitles {
     constructor(docs = []) { this.docs = [...docs]; }
     async findOne(filter) {
-        return this.docs.find((d) => Object.entries(filter).every(([k, v]) => d[k] === v)) || null;
+        return structuredClone(this.docs.find((d) => Object.entries(filter).every(([k, v]) => d[k] === v)) || null);
     }
     async insertOne(doc) {
         if (this.docs.some((d) => d.uid === doc.uid)) throw new DuplicateKeyError();
@@ -237,7 +237,6 @@ test('saveTitle 修改扣 50 走 badgeEdit 热更新；余额耗尽后拒绝', a
         { delta: ledger.docs[2].delta, kind: ledger.docs[2].kind, detail: ledger.docs[2].detail },
         { delta: -50, kind: 'title', detail: '修改称号：摆烂' },
     );
-    assert.match(ledger.docs[2].ref, /^title_edit:\d+:\d+$/, '时基同毫秒碰撞由序号兜底');
     assert.equal(models._state.edits.length, 1);
     assert.equal(models._state.edits[0].short, '摆烂');
     assert.equal(models._state.edits[0].backgroundColor, '#16233d');
@@ -245,6 +244,7 @@ test('saveTitle 修改扣 50 走 badgeEdit 热更新；余额耗尽后拒绝', a
     assert.deepEqual(models._state.edits[0].usersOld, [UID]);
     const second = await t.saveTitle({}, models, collections(ledger, titles), now, UID, 'AK', 'gold');
     assert.equal(second.paid, true);
+    assert.notEqual(ledger.docs[2].ref, ledger.docs[3].ref, '同毫秒的不同修改必须使用独立扣款键');
     await assert.rejects(
         () => t.saveTitle({}, models, collections(ledger, titles), now, UID, '再来', 'gold'),
         /积分不足：修改称号需 50 分，当前 0 分/,
@@ -269,6 +269,54 @@ test('saveTitle 修改失败自动冲正：扣费 + 退款两条流水', async (
     // 余额不变（100）：直接对流水求和（titles.ts 的 bundle 不转发 points 的导出）
     const bal = ledger.docs.reduce((s, d) => s + d.delta, 0);
     assert.equal(bal, 100, '冲正后余额不变');
+});
+
+// A separately generated refund identity loses its debit association. Two
+// failed edits at the same injected time must each have a unique, linked pair.
+test('failed title edits refund only their own operation, including across module reloads', async () => {
+    const { t, ledger, titles, models } = await unlockedFixture();
+    await t.saveTitle({}, models, collections(ledger, titles), now, UID, '卷王', 'gold');
+    models.badge.badgeEdit = async () => { throw new Error('edit unavailable'); };
+    for (const api of [t, t, loadTitles()]) {
+        await assert.rejects(api.saveTitle({}, models, collections(ledger, titles), now, UID, '新称', 'gold'), /积分已退回/);
+    }
+    const debits = ledger.docs.filter((doc) => doc.delta === -50);
+    const refunds = ledger.docs.filter((doc) => doc.kind === 'refund');
+    assert.equal(debits.length, 3);
+    assert.equal(refunds.length, 3);
+    assert.equal(new Set(debits.map((doc) => doc.operationId)).size, 3, 'each edit has its own operation identity');
+    for (const debit of debits) {
+        assert.equal(typeof debit.operationId, 'string');
+        const related = refunds.filter((doc) => doc.operationId === debit.operationId);
+        assert.equal(related.length, 1, 'exactly one refund belongs to each debit');
+        assert.equal(related[0].debitRef, debit.ref);
+        assert.equal(debit.delta + related[0].delta, 0);
+    }
+    assert.equal(ledger.docs.reduce((sum, doc) => sum + doc.delta, 0), 100);
+});
+
+test('title refund failure keeps the debit and a linked pending audit, without claiming success', async () => {
+    const { t, ledger, titles, models } = await unlockedFixture();
+    await t.saveTitle({}, models, collections(ledger, titles), now, UID, '卷王', 'gold');
+    models.badge.badgeEdit = async () => { throw new Error('edit unavailable'); };
+    const insert = ledger.insertOne.bind(ledger);
+    ledger.insertOne = async (doc) => {
+        if (doc.kind === 'refund') throw new Error('refund unavailable');
+        return insert(doc);
+    };
+    await assert.rejects(t.saveTitle({}, models, collections(ledger, titles), now, UID, '新称', 'gold'), (error) => {
+        assert.match(error.message, /退款未确认.*联系管理员/);
+        assert.doesNotMatch(error.message, /已退回/);
+        return true;
+    });
+    const debit = ledger.docs.find((doc) => doc.delta === -50);
+    const pending = ledger.docs.find((doc) => doc.kind === 'refund_pending');
+    assert.ok(pending, 'failed compensation leaves a non-crediting audit record');
+    assert.equal(pending.delta, 0);
+    assert.equal(pending.debitRef, debit.ref);
+    assert.equal(pending.operationId, debit.operationId);
+    assert.equal(ledger.docs.reduce((sum, doc) => sum + doc.delta, 0), 50);
+    assert.equal((await titles.findOne({ uid: UID })).text, '卷王');
 });
 
 test('saveTitle 徽章被清理后走重铸（照常 50 分）', async () => {
