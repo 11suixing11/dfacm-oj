@@ -58,7 +58,7 @@ export async function apply(ctx: Context) {
     const lock = createRpLock();
     const sanitize = createSanitize(statusColl, serviceUids, { dryRun });
     const manualSweep = createRpSweep({ sanitize, reconcile, lock });
-    ctx.on('dispose', manualSweep.stop);
+    ctx.effect(() => manualSweep.stop);
     ctx.addScript('swpuRpSweep', 'd&f算法网 RP 立即全域重算（清服务号残留 + 补齐域 join + 全域重算）', Schema.object({}),
         async () => ({ recalculated: await manualSweep.runOnce('manual'), failures: [...manualSweep.failures] }));
     // The v1.12.0 auto-join only covers /reg/complete. GitHub (and any OAuth)
@@ -87,11 +87,10 @@ export async function apply(ctx: Context) {
             lock,
         });
         ctx.on('record/change', live.hook);
-        ctx.on('dispose', live.stop);
+        ctx.effect(() => live.stop);
         if (process.env.SWPU_RP_SWEEP !== '0') {
             const sweep = createRpSweep({ sanitize, reconcile, lock });
-            sweep.start();
-            ctx.on('dispose', sweep.stop);
+            ctx.effect(() => { sweep.start(); return sweep.stop; });
         }
     }
 }

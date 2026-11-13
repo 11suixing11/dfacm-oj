@@ -11,20 +11,22 @@ const flush = async () => { for (let i = 0; i < 60; i++) await Promise.resolve()
 
 // Compile the real addon entry; only Hydro's external database/framework boundary
 // is replaced. The CJS scheduling modules load from their production paths.
-async function entryFixture(t, { automatic = true, rpRun, controlled = false } = {}) {
+async function entryFixture(t, { automatic = true, rpRun, purgeRun, controlled = false } = {}) {
     const envKeys = ['SWPU_SERVICE_UIDS', 'SWPU_SERVICE_UIDS_DRYRUN', 'SWPU_AUTO_JOIN', 'SWPU_RP_SWEEP', 'SWPU_LIVE_RP', 'NODE_APP_INSTANCE', 'DFACM_CONTROLLED_HISTORY'];
     const env = Object.fromEntries(envKeys.map((key) => [key, process.env[key]]));
     Object.assign(process.env, { SWPU_SERVICE_UIDS: '3', SWPU_SERVICE_UIDS_DRYRUN: '0', SWPU_AUTO_JOIN: '0',
         SWPU_RP_SWEEP: automatic ? '1' : '0', SWPU_LIVE_RP: automatic ? '1' : '0', NODE_APP_INSTANCE: '0', DFACM_CONTROLLED_HISTORY: controlled ? '1' : '0' });
     const previousHydro = global.Hydro;
     global.Hydro = { script: { rp: { run: rpRun || (async () => {}) } } };
-    const scripts = {}, events = {}, stages = [];
+    const scripts = {}, events = {}, stages = [], disposers = [];
+    // Native Cordis plugin unload runs effect disposers, not a 'dispose' event.
+    const dispose = () => { for (const stop of disposers.splice(0).reverse()) stop(); };
     const users = [{ _id: 3, uname: 'hydsvc-0074' }, { _id: 42, uname: 'member' }];
     const members = [{ domainId: 'system', uid: 42, role: 'default', join: true },
         { domainId: 'poj', uid: 42, role: 'default', join: true }];
     const statusColl = { deleteMany: async (filter) => {
         assert.deepEqual(filter, { uid: { $in: [3] }, docType: 10 });
-        stages.push('purge'); return { deletedCount: 0 };
+        stages.push('purge'); if (purgeRun) await purgeRun(); return { deletedCount: 0 };
     } };
     const userColl = { find: (filter) => ({ toArray: async () => {
         if (filter._id.$in) return structuredClone(users.filter((doc) => filter._id.$in.includes(doc._id)));
@@ -44,7 +46,7 @@ async function entryFixture(t, { automatic = true, rpRun, controlled = false } =
         DomainModel: {}, ObjectId: class {}, RecordModel: {}, TaskModel: {}, UserModel: {} };
     if (controlled) Object.assign(hydro, require('./native-callback-fixture.cjs').nativeFixture().api);
     t.after(() => {
-        for (const stop of events.dispose || []) stop();
+        dispose();
         global.Hydro = previousHydro;
         for (const [key, value] of Object.entries(env)) {
             if (value === undefined) delete process.env[key]; else process.env[key] = value;
@@ -59,9 +61,9 @@ async function entryFixture(t, { automatic = true, rpRun, controlled = false } =
     await entry.exports.apply({
         addScript(name, _title, _schema, run) { scripts[name] = run; },
         on(name, handler) { (events[name] ||= []).push(handler); },
-        effect(factory) { (events.dispose ||= []).push(factory()); },
+        effect(factory) { disposers.push(factory()); },
     });
-    return { scripts, events, stages, hydro, dispose() { for (const stop of events.dispose || []) stop(); } };
+    return { scripts, events, stages, hydro, dispose };
 }
 
 for (const order of [
@@ -132,6 +134,55 @@ test('real apply disposal cancels manual work queued behind an active live run',
     assert.equal(result.recalculated, false);
     assert.deepEqual(fixture.stages, []);
     assert.equal(rpCalls, 1);
+});
+
+test('real apply unload cancels armed live and scheduled timers and retained callbacks', async (t) => {
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    let rpCalls = 0;
+    const fixture = await entryFixture(t, { rpRun: async () => { rpCalls++; } });
+    const hook = fixture.events['record/change'][0];
+    const record = { domainId: 'system', uid: 42, pid: 1, status: 1 };
+    hook(record, {}, {}, { key: 'end' });
+    fixture.dispose(); fixture.dispose();
+    hook(record, {}, {}, { key: 'end' });
+    t.mock.timers.tick(3600000); await flush();
+    assert.deepEqual(fixture.stages, [], 'unload must cancel both timers and stop the retained live hook');
+    assert.equal(rpCalls, 0);
+});
+
+test('real apply unload cancels live and scheduled work queued behind active manual RP', async (t) => {
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    let release, rpCalls = 0;
+    const gate = new Promise((resolve) => { release = resolve; });
+    const fixture = await entryFixture(t, { rpRun: async () => { rpCalls++; await gate; } });
+    t.after(() => { fixture.dispose(); release(); });
+    const manual = fixture.scripts.swpuRpSweep({});
+    await flush();
+    assert.equal(rpCalls, 1);
+    fixture.events['record/change'][0]({ domainId: 'system', uid: 42, pid: 1, status: 1 }, {}, {}, { key: 'end' });
+    t.mock.timers.tick(180000); await flush();
+    assert.deepEqual(fixture.stages, ['purge', 'reconcile']);
+    fixture.dispose(); fixture.stages.length = 0;
+    release();
+    assert.equal((await manual).recalculated, true, 'the already-running RP call finishes normally');
+    await flush(); t.mock.timers.tick(3600000); await flush();
+    assert.deepEqual(fixture.stages, [], 'queued live/scheduled work must stop before purge');
+    assert.equal(rpCalls, 1);
+});
+
+test('real apply unload during purge prevents the next reconcile and RP stages', async (t) => {
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    let release, rpCalls = 0;
+    const gate = new Promise((resolve) => { release = resolve; });
+    const fixture = await entryFixture(t, { automatic: false, purgeRun: () => gate, rpRun: async () => { rpCalls++; } });
+    t.after(() => { fixture.dispose(); release(); });
+    const manual = fixture.scripts.swpuRpSweep({});
+    await flush();
+    assert.deepEqual(fixture.stages, ['purge']);
+    fixture.dispose(); release();
+    assert.equal((await manual).recalculated, false);
+    assert.deepEqual(fixture.stages, ['purge']);
+    assert.equal(rpCalls, 0);
 });
 
 test('real apply lets live work queued after a failed manual RP run complete', async (t) => {
