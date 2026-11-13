@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 import vm from 'node:vm';
@@ -121,7 +121,7 @@ const env = {
 };
 function run(name, args = [], overrides = {}) {
   return spawnSync(bash, ['-c', 'export PATH="$TEST_BIN:$TEST_HYDRO_BIN:$TEST_JUDGE_BIN:$PATH"; exec bash "$TEST_SCRIPT" "$@"', '_', ...args], {
-    env: { ...env, TEST_SCRIPT: unixPath(path.join(repo, 'scripts', name)), ...overrides }, encoding: 'utf8',
+    env: { ...env, TEST_SCRIPT: unixPath(path.join(repo, 'scripts', name)), ...overrides }, encoding: 'utf8', timeout: 30000,
   });
 }
 const backupArgs = ['--output-dir', unixPath(output), '--caddy-config', unixPath(caddy)];
@@ -141,7 +141,7 @@ test('backup creates a complete bundle, preserves an old copy, and hides credent
     assert.ok(fs.statSync(path.join(bundle, name)).size > 0, name);
   }
   const verification = spawnSync(bash, ['-c', 'cd "$TEST_BUNDLE" && sha256sum -c SHA256SUMS'], {
-    env: { ...env, TEST_BUNDLE: unixPath(bundle) }, encoding: 'utf8',
+    env: { ...env, TEST_BUNDLE: unixPath(bundle) }, encoding: 'utf8', timeout: 30000,
   });
   assert.equal(verification.status, 0, verification.stderr);
 });
@@ -519,9 +519,9 @@ test('points-shop plugin ships every documented file and its templates render th
   // 与 documented.sort() 的真实顺序逐项一致——v1.33.0 首次把 titles.ts 排错位
   // 挂过整个套件（另一会话实测 58/59 唯一失败），此后按真实序写死。
   assert.deepEqual(documented.sort(), [
-    'index.ts', 'package.json', 'points.ts',
+    'backfill.ts', 'index.ts', 'package.json', 'points.ts',
     'templates/history.html', 'templates/manage.html', 'templates/shop.html', 'templates/title.html',
-    'titles.ts',
+    'titles.ts', 'user-lock.ts',
   ]);
   for (const name of documented) {
     assert.ok(fs.existsSync(path.join(repo, 'plugin-dfacm-shop', name)), `missing ${name}`);
@@ -686,47 +686,8 @@ test('light default initialization supports a new site and preserves user choice
   assert.deepEqual(users, originalUsers);
 });
 
-test('deploy orchestrator locks the stage-verify-activate-restart-wait-smoke order', () => {
-  const source = fs.readFileSync(path.join(repo, 'deploy', 'deploy.sh'), 'utf8');
-  // main() must invoke the stages in the incident-proof order: the
-  // 2026-10-04 stale-process deploy shipped files AFTER the only restart, and
-  // the previous version installed before it verified, so a hash mismatch left
-  // the server on new assets with the old process still serving them.
-  const body = source.slice(source.indexOf('main() {'));
-  const calls = [...body.matchAll(/^ {4}(preflight|upload_stage|activate|restart_hydrooj|wait_ready|run_smoke)$/gm)]
-    .map((match) => match[1]);
-  assert.deepEqual(calls, ['preflight', 'upload_stage', 'activate', 'restart_hydrooj', 'wait_ready', 'run_smoke']);
-  // The staging copy is hash-verified before anything is installed.
-  const firstVerify = body.indexOf('compare_hashes "staging copy" stage');
-  const activate = body.indexOf('    activate\n');
-  assert.ok(firstVerify > 0 && activate > 0);
-  assert.ok(firstVerify < activate, 'staging must be verified before activation');
-  assert.match(body, /compare_hashes "installed files" live/);
-  // Every failure mode has its own documented exit code.
-  for (const code of ['64', '65', '66', '67', '68']) assert.match(source, new RegExp(`exit ${code}`));
-  // The readiness budget must cover the real boot window (>=75s).
-  assert.match(source, /WAIT_SECONDS:-75/);
-  assert.match(source, /pm2 restart hydrooj/);
-  // Plugin file lists come from deployment.md's documented cp blocks, so
-  // docs and shipping can never drift.
-  assert.match(source, /cp \/root\/swpu-oj\/\$1\/\{\\\(\[\^}\]\*\\\)}/);
-  // A dry run that changes nothing live, and a predictable staging path are both
-  // regression risks worth locking.
-  assert.match(source, /--stage-only/);
-  assert.match(source, /mktemp -d \/tmp\/swpu-deploy-stage/);
-  assert.ok(!/STAGE=\/tmp\/swpu-deploy-stage$/.test(source), 'the staging path must not be fixed');
-  assert.match(source, /StrictHostKeyChecking/);
-  // Smoke is executed from the synced copy, not from a stale leftover.
-  assert.match(source, /bash \$REMOTE_DEPLOY\/deploy\/smoke\.sh/);
-  // The readiness probe must grep a marker the branded /reg page actually
-  // contains. The passwordless rework (v1.29.0) replaced the `tab-reg`
-  // marker with `m-mail`, but the probe was missed in that sweep, so every
-  // deploy from 2026-10-12 false-failed at wait_ready while the service was
-  // healthy. Lock both directions: probe greps m-mail, and the dead marker
-  // is gone.
-  assert.match(source, /grep -a m-mail/, 'the readiness probe must grep the live m-mail marker');
-  assert.ok(!/grep -a tab-reg/.test(source), 'the readiness probe must not grep the removed tab-reg marker');
-});
+// End-to-end activation/order assertions below replace the former source-text
+// ordering test, since restart and installed verification now share one lock.
 
 // The two subsetted fonts and the icon set are served from custom/ but were
 // never in deploy.sh's manifest, so changing one needed a manual
@@ -736,7 +697,6 @@ test('the deploy manifest ships the whole landing tree, not just index.html', ()
   const manifest = source.slice(source.indexOf('stage_manifest()'), source.indexOf('preflight()'));
   assert.match(manifest, /find \. -type f/, 'the landing tree must be enumerated');
   assert.match(manifest, /'landing\/%s\\t%s\/landing\/%s\\n'/);
-  assert.match(source, /bash \$REMOTE_DEPLOY\/deploy\/install-landing\.sh/);
   for (const asset of ['landing/swpu-display.woff2', 'landing/swpu-mono.woff2', 'landing/assets/logo.png', 'landing/index.html']) {
     assert.ok(fs.existsSync(path.join(repo, asset)), `${asset} must exist to be shipped`);
   }
@@ -772,4 +732,333 @@ test('smoke battery locks the boot injection, auth gates and security headers', 
   // The overlay gate needs the brand marker twice (start + end comment) in
   // the served css; anything else means the brand layer was lost.
   assert.match(source, /DFACM brand overlay/);
+});
+
+// Activation tests execute the real orchestrator, uploaded shell scripts and
+// filesystem operations. Only SSH, HTTP/pm2 and one-shot OS failures are local
+// substitutes; every destination is under this temporary fixture.
+function activationFixture(liveName = 'live') {
+  const dir = fs.mkdtempSync(path.join(root, 'activation-'));
+  const live = path.join(dir, liveName), bin = path.join(dir, 'bin');
+  const addons = path.join(live, 'addons'), custom = path.join(live, 'custom');
+  const deployed = path.join(live, 'deployed'), backups = path.join(dir, 'private-backups');
+  for (const p of [bin, addons, custom, deployed]) fs.mkdirSync(p, { recursive: true });
+  const originals = new Map(), shipped = [];
+  const put = (target, value, mode = 0o640) => {
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.writeFileSync(target, value, { mode });
+    originals.set(target, { bytes: Buffer.from(value), mode });
+  };
+  const docs = fs.readFileSync(path.join(repo, 'deploy/deployment.md'), 'utf8');
+  for (const match of docs.matchAll(/cp \/root\/swpu-oj\/(plugin-dfacm-(?:regcode|ops|train|shop|calendar))\/\{([^}]+)\}/g)) {
+    for (const file of match[2].split(',')) {
+      const target = path.join(addons, match[1].replace('plugin-dfacm-', 'swpu-'), file);
+      shipped.push(target);
+      // New files must disappear after rollback, existing modes must survive.
+      if (!file.endsWith('package.json')) put(target, `original ${file}\n`);
+    }
+  }
+  const walk = (dir, prefix = '') => fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) =>
+    entry.isDirectory() ? walk(path.join(dir, entry.name), prefix + entry.name + '/') : [prefix + entry.name]);
+  for (const file of walk(path.join(repo, 'landing'))) {
+    shipped.push(path.join(deployed, 'landing', file));
+    put(path.join(deployed, 'landing', file), `old source ${file}\n`);
+  }
+  for (const file of ['theme/00-brand.css', 'deploy/install-theme.sh', 'deploy/install-landing.sh', 'deploy/service-worker-killswitch.js', 'deploy/smoke.sh', 'deploy/activate.sh']) {
+    shipped.push(path.join(deployed, file));
+    put(path.join(deployed, file), `old source ${file}\n`);
+  }
+  for (const file of ['home.html', 'swpu-display.woff2', 'swpu-mono.woff2']) put(path.join(custom, file), `old custom ${file}\n`, 0o600);
+  put(path.join(custom, 'unrelated.txt'), 'unrelated asset\n');
+  const theme = Object.fromEntries(['STATIC_THEME', 'SOURCE_THEME', 'STATIC_SW', 'SOURCE_SW'].map((key) => {
+    const target = path.join(live, key.startsWith('STATIC') ? 'static' : 'upstream', key.endsWith('THEME') ? 'theme-4.58.5.css' : 'service-worker.js');
+    put(target, key.endsWith('THEME') ? 'body{color:blue}' : 'originalWorker()', 0o640);
+    return [key, unixPath(target)];
+  }));
+  const log = path.join(dir, 'events');
+  fs.writeFileSync(log, '');
+  script(bin, 'ssh', `set -euo pipefail
+while [[ "$1" == -* ]]; do shift 2; done
+shift
+cmd="$*"
+# Map only the legacy orchestrator's fixed paths, before evaluating anything.
+[ "$cmd" != 'bash -s' ] || cmd="$(cat)"
+old='/root/.hydro/addons'; cmd="\${cmd//$old/$ACT_LIVE/addons}"
+old='/root/.hydro/custom'; cmd="\${cmd//$old/$ACT_LIVE/custom}"
+old='/root/swpu-theme-deploy'; cmd="\${cmd//$old/$ACT_LIVE/deployed}"
+case "$cmd" in *'/root/'*) echo 'unsafe fixture SSH command' >&2; exit 99;; esac
+case "$cmd" in
+  "bash $ACT_LIVE/deployed/deploy/install-landing.sh") echo 'legacy leaf reached' >&2; exit 88;;
+  "bash $ACT_LIVE/deployed/deploy/smoke.sh") printf 'smoke\\n' >> "$ACT_LOG"; exit "\${FAIL_SMOKE:-0}";;
+esac
+exec bash -c "$cmd"`);
+  script(bin, 'pm2', `printf 'restart %s\\n' "$*" >> "$ACT_LOG"; exit "\${FAIL_RESTART:-0}"`);
+  script(bin, 'curl', `[ \"\${FAIL_READY:-0}\" != 1 ] || exit 1\ncase "$*" in *--resolve*) printf 'm-mail';; *) printf '%s' "\${OUTSIDE_STATUS:-200}";; esac`);
+  script(bin, 'sleep', ':');
+  script(bin, 'install', `set -euo pipefail
+target="\${@: -1}"
+if [[ "$target" == "$ACT_LIVE/"* ]] && [[ "$1" != -d ]]; then
+  count=0; [ ! -f "$ACT_DIR/count" ] || read -r count < "$ACT_DIR/count"
+  count=$((count+1)); printf '%s\\n' "$count" > "$ACT_DIR/count"
+  printf 'install %s %s\\n' "$count" "$target" >> "$ACT_LOG"
+  if [ "$count" = 1 ] && [ -n "\${CONFLICT_BEFORE:-}" ]; then printf 'concurrent edit\\n' > "$CONFLICT_BEFORE"; fi
+  if [ "$count" = "\${FAIL_INSTALL:-none}" ]; then
+    [ -z "\${CONFLICT_TARGET:-}" ] || printf 'concurrent edit\\n' > "$CONFLICT_TARGET"
+    echo 'injected install failure' >&2; exit 73
+  fi
+fi
+case "$target" in
+  *'/prepared-landing/'*) [ "\${FAIL_LEAF:-}" != landing ] || { echo 'injected landing failure' >&2; exit 74; };;
+  *'/prepared-theme/'*) [ "\${FAIL_LEAF:-}" != theme ] || { echo 'injected theme failure' >&2; exit 75; };;
+esac
+exec /usr/bin/install "$@"`);
+  script(bin, 'mv', `set -euo pipefail
+source="\${@: -2:1}"; target="\${@: -1}"
+if [[ "$target" == "$ACT_LIVE/"* ]]; then
+  if [[ "$source" == *'.swpu-restore.'* ]] && [ "\${FAIL_ROLLBACK:-0}" = 1 ]; then echo 'injected restore failure' >&2; exit 76; fi
+  /usr/bin/mv "$@"
+  printf 'published %s\\n' "$target" >> "$ACT_LOG"
+  : > "$ACT_DIR/published"
+  [ "$target" != "$SOURCE_SW" ] || : > "$ACT_DIR/all-published"
+  if [ "\${SIGNAL_AFTER_PUBLISH:-0}" = 1 ] && [ ! -f "$ACT_DIR/signal-sent" ]; then : > "$ACT_DIR/signal-sent"; kill -TERM "$PPID"; fi
+else exec /usr/bin/mv "$@"; fi`);
+  script(bin, 'sha256sum', `set -euo pipefail
+file="\${@: -1}"
+if [ "\${FAIL_STAGE_HASH:-0}" = 1 ] && [[ "$file" == /tmp/swpu-deploy-stage.* ]]; then printf '%064d  %s\\n' 0 "$file"; exit 0; fi
+if [ "\${FAIL_HASH:-0}" = 1 ] && [ -f "$ACT_DIR/all-published" ] && [ ! -f "$ACT_DIR/hash-failed" ] && [[ "$file" == "$ACT_LIVE/"* ]] && [[ "$file" != *'.swpu-'* ]]; then
+  : > "$ACT_DIR/hash-failed"; echo 'injected installed hash failure' >&2; exit 77
+fi
+if [ "\${FAIL_COMMIT_JOURNAL:-0}" = 1 ] && [ -f "$ACT_DIR/all-published" ] && [ ! -f "$ACT_DIR/journal-failed" ] && [ "$file" = "$SOURCE_SW" ]; then
+  : > "$ACT_DIR/journal-failed"
+  for journal in "$ACTIVATION_BACKUP_DIR"/batch.*/journal.tsv; do
+    /usr/bin/mv "$journal" "$journal.before-failure.tsv"
+    mkdir "$journal"
+  done
+fi
+exec /usr/bin/sha256sum "$@"`);
+  const variables = {
+    ...process.env, PATH: `${unixPath(bin)}:${process.env.PATH}`, SSH_BIN: unixPath(path.join(bin, 'ssh')),
+    SSH_TARGET: 'fixture', REMOTE_ADDONS: unixPath(addons), REMOTE_CUSTOM: unixPath(custom), REMOTE_DEPLOY: unixPath(deployed),
+    ACTIVATION_BACKUP_DIR: unixPath(backups), BACKUP_DIR: unixPath(path.join(dir, 'theme-backups')),
+    ...theme, STATIC_DIR: unixPath(path.join(live, 'static')), THEME_VERSION: '4.58.5',
+    ACT_DIR: unixPath(dir), ACT_LIVE: unixPath(live), ACT_LOG: unixPath(log), WAIT_SECONDS: '3',
+  };
+  return {
+    dir, live, bin, custom, deployed, backups, originals, shipped, variables,
+    events: () => fs.readFileSync(log, 'utf8'),
+    run: (args = [], extra = {}) => spawnSync(bash, [unixPath(path.join(repo, 'deploy/deploy.sh')), ...args], { env: { ...variables, ...extra }, encoding: 'utf8', timeout: 30000 }),
+    unchanged(except) {
+      for (const [target, original] of originals) {
+        if (target === except) continue;
+        assert.ok(fs.readFileSync(target).equals(original.bytes), `restored bytes: ${target}`);
+        if (process.platform !== 'win32') assert.equal(fs.statSync(target).mode & 0o777, original.mode, `restored mode: ${target}`);
+      }
+      for (const target of shipped) if (!originals.has(target) && target !== except) assert.equal(fs.existsSync(target), false, `removed new target: ${target}`);
+      const unexpected = walk(live).filter((file) => !originals.has(path.join(live, file)) && path.join(live, file) !== except);
+      assert.deepEqual(unexpected, [], 'no new derived files or temporary writes remain live');
+    },
+  };
+}
+
+for (const position of ['first', 'middle', 'last']) test(`activation rolls back and stops at the ${position} runtime install failure`, () => {
+  const f = activationFixture();
+  const nth = position === 'first' ? 1 : position === 'middle' ? Math.floor(f.shipped.length / 2) : f.shipped.length;
+  const result = f.run([], { FAIL_INSTALL: String(nth) });
+  assert.notEqual(result.status, 0, result.stdout + result.stderr);
+  assert.match(result.stderr, /injected install failure/);
+  assert.equal(f.events().split('\n').filter((line) => line.startsWith('install ')).length, nth, 'must stop at the first failing install');
+  f.unchanged();
+  assert.doesNotMatch(f.events(), /^(restart |smoke$)/m);
+});
+
+for (const failure of ['landing', 'theme', 'hash']) test(`activation keeps the original batch after ${failure} failure`, () => {
+  const f = activationFixture();
+  const result = f.run([], failure === 'hash' ? { FAIL_HASH: '1' } : { FAIL_LEAF: failure });
+  assert.notEqual(result.status, 0, result.stdout + result.stderr);
+  assert.match(result.stderr, new RegExp(`injected ${failure === 'hash' ? 'installed hash' : failure} failure`));
+  f.unchanged();
+  assert.doesNotMatch(f.events(), /^(restart |smoke$)/m);
+});
+
+test('activation refuses to overwrite concurrent edits during rollback and names retained recovery evidence', () => {
+  const f = activationFixture(), target = f.shipped[0];
+  const result = f.run([], { FAIL_INSTALL: '3', CONFLICT_TARGET: unixPath(target) });
+  assert.notEqual(result.status, 0);
+  assert.equal(fs.readFileSync(target, 'utf8'), 'concurrent edit\n');
+  f.unchanged(target);
+  assert.match(result.stderr, /CONFLICT/);
+  assert.ok(result.stderr.includes(target));
+  assert.match(result.stderr, /recovery.tsv/);
+  assert.doesNotMatch(f.events(), /^restart /m);
+});
+
+test('activation reports incomplete rollback instead of restarting or deleting backups', () => {
+  const f = activationFixture();
+  const result = f.run([], { FAIL_INSTALL: '3', FAIL_ROLLBACK: '1' });
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /FAILED.*restore|restore.*FAILED/);
+  assert.match(result.stderr, /recovery.tsv/);
+  assert.ok(fs.readdirSync(f.backups).some((name) => name.startsWith('batch.')));
+  assert.doesNotMatch(f.events(), /^restart /m);
+});
+
+test('activation stage-only leaves live files intact and sync-only installs every derived target without restart', () => {
+  const f = activationFixture();
+  const staged = f.run(['--stage-only']);
+  assert.equal(staged.status, 0, staged.stdout + staged.stderr);
+  f.unchanged();
+  assert.equal(f.events(), '');
+  const synced = f.run(['--sync-only']);
+  assert.equal(synced.status, 0, synced.stdout + synced.stderr);
+  assert.deepEqual(fs.readFileSync(path.join(f.custom, 'home.html')), fs.readFileSync(path.join(repo, 'landing/index.html')));
+  assert.deepEqual(fs.readFileSync(path.join(f.custom, 'logo.png')), fs.readFileSync(path.join(repo, 'landing/assets/logo.png')));
+  assert.deepEqual(fs.readFileSync(path.join(f.live, 'addons/swpu-shop/user-lock.ts')), fs.readFileSync(path.join(repo, 'plugin-dfacm-shop/user-lock.ts')));
+  assert.match(fs.readFileSync(f.variables.STATIC_THEME, 'utf8'), /body\{color:blue\}[\s\S]*DFACM brand overlay/);
+  assert.deepEqual(fs.readFileSync(f.variables.SOURCE_SW), fs.readFileSync(path.join(repo, 'deploy/service-worker-killswitch.js')));
+  assert.doesNotMatch(f.events(), /^(restart |smoke$)/m);
+  const batches = fs.readdirSync(f.backups).filter((name) => name.startsWith('batch.'));
+  assert.equal(batches.length, 1);
+  const batch = path.join(f.backups, batches[0]);
+  if (process.platform !== 'win32') assert.equal(fs.statSync(batch).mode & 0o777, 0o700);
+  const journal = fs.readFileSync(path.join(batch, 'journal.tsv'), 'utf8');
+  assert.match(journal, /WRITTEN/);
+  const inventory = fs.readFileSync(path.join(batch, 'inventory.tsv'), 'utf8');
+  assert.ok(inventory.includes(f.shipped[0]));
+  assert.match(inventory, /\t640\t[a-f0-9]{64}\t/);
+});
+
+test('activation restarts once after all writes, retains readiness/smoke and outside probe failures', () => {
+  const f = activationFixture();
+  const result = f.run([], { OUTSIDE_STATUS: '503' });
+  assert.equal(result.status, 69, result.stdout + result.stderr);
+  const lines = f.events().trim().split('\n');
+  assert.equal(lines.filter((line) => line.startsWith('restart ')).length, 1);
+  assert.ok(lines.findIndex((line) => line.startsWith('restart ')) > lines.findLastIndex((line) => line.startsWith('published ')));
+  assert.ok(lines.indexOf('smoke') > lines.findIndex((line) => line.startsWith('restart ')));
+});
+
+test('activation stage hash mismatch refuses live writes and restart', () => {
+  const f = activationFixture();
+  const result = f.run([], { FAIL_STAGE_HASH: '1' });
+  assert.equal(result.status, 65, result.stdout + result.stderr);
+  f.unchanged();
+  assert.equal(f.events(), '');
+});
+
+test('activation refuses a public backup directory before creating backups or writing live files', () => {
+  const f = activationFixture();
+  const result = f.run([], { ACTIVATION_BACKUP_DIR: unixPath(path.join(f.custom, 'backups')) });
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /refusing public activation backup/);
+  f.unchanged();
+  assert.equal(fs.existsSync(path.join(f.custom, 'backups')), false);
+});
+
+test('activation retains concurrent content in a target that was absent before the batch', () => {
+  const f = activationFixture();
+  const target = f.shipped.find((file) => file.endsWith('package.json'));
+  const result = f.run([], { FAIL_INSTALL: '10', CONFLICT_TARGET: unixPath(target) });
+  assert.equal(result.status, 71, result.stdout + result.stderr);
+  assert.equal(fs.readFileSync(target, 'utf8'), 'concurrent edit\n');
+  f.unchanged(target);
+  assert.match(result.stderr, /CONFLICT/);
+  const second = f.run(['--sync-only']);
+  assert.equal(second.status, 71, second.stdout + second.stderr);
+  assert.match(second.stderr, /unfinished activation/);
+  assert.equal(fs.readFileSync(target, 'utf8'), 'concurrent edit\n');
+});
+
+test('activation restores a rename interrupted before its completion journal entry', () => {
+  const f = activationFixture();
+  const result = f.run([], { SIGNAL_AFTER_PUBLISH: '1' });
+  assert.equal(result.status, 143, result.stdout + result.stderr);
+  f.unchanged();
+  assert.doesNotMatch(f.events(), /^restart /m);
+});
+
+test('activation refuses another process holding the deployment lock', async () => {
+  const f = activationFixture();
+  fs.mkdirSync(f.backups);
+  const locker = spawn(bash, ['-c', 'exec 9>"$ACTIVATION_BACKUP_DIR/activation.lock"; flock -n 9; echo locked; read -r release'], { env: f.variables, stdio: ['pipe', 'pipe', 'pipe'], timeout: 10000 });
+  try {
+    await new Promise((resolve, reject) => {
+      locker.stdout.once('data', resolve);
+      locker.once('error', reject);
+      locker.once('exit', () => reject(new Error('lock owner exited before test')));
+    });
+    const result = f.run(['--sync-only']);
+    assert.equal(result.status, 70, result.stdout + result.stderr);
+    f.unchanged();
+    assert.equal(f.events(), '');
+  } finally {
+    locker.stdin.end('release\n');
+    await new Promise((resolve) => locker.once('close', resolve));
+  }
+});
+
+test('activation records a conflict found immediately before publication without overwriting it', () => {
+  const f = activationFixture(), target = f.shipped[0];
+  const result = f.run([], { CONFLICT_BEFORE: unixPath(target) });
+  assert.equal(result.status, 71, result.stdout + result.stderr);
+  assert.equal(fs.readFileSync(target, 'utf8'), 'concurrent edit\n');
+  f.unchanged(target);
+  assert.match(result.stderr, /CONFLICT/);
+  assert.match(result.stderr, /recovery.tsv/);
+  assert.doesNotMatch(f.events(), /^restart /m);
+});
+
+test('activation treats configured paths containing spaces and shell metacharacters as literal paths', () => {
+  const f = activationFixture("live space's $literal");
+  const result = f.run(['--sync-only']);
+  assert.equal(result.status, 0, result.stdout + result.stderr);
+  assert.ok(fs.readFileSync(path.join(f.custom, 'home.html')).equals(fs.readFileSync(path.join(repo, 'landing/index.html'))));
+});
+
+for (const [failure, code] of [['FAIL_READY', 67], ['FAIL_SMOKE', 68]]) test(`activation retains ${failure} probe failure status after its single restart`, () => {
+  const f = activationFixture();
+  const result = f.run([], { [failure]: '1' });
+  assert.equal(result.status, code, result.stdout + result.stderr);
+  assert.equal(f.events().split('\n').filter((line) => line.startsWith('restart ')).length, 1);
+});
+
+for (const [label, offset] of [['landing publication', 7], ['final theme publication', 16]]) test(`activation restores the whole batch after ${label} fails`, () => {
+  const f = activationFixture();
+  // The fixture has 12 landing outputs and four theme/service-worker outputs.
+  const nth = f.shipped.length + offset;
+  const result = f.run([], { FAIL_INSTALL: String(nth) });
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /injected install failure/);
+  assert.equal(f.events().split('\n').filter((line) => line.startsWith('install ')).length, nth);
+  f.unchanged();
+  assert.doesNotMatch(f.events(), /^(restart |smoke$)/m);
+});
+
+test('activation rejects a backup root containing live trees without changing their directory permissions', () => {
+  const f = activationFixture();
+  const originalMode = fs.statSync(f.live).mode & 0o777;
+  const result = f.run(['--sync-only'], { ACTIVATION_BACKUP_DIR: unixPath(f.live) });
+  assert.notEqual(result.status, 0, result.stdout + result.stderr);
+  assert.equal(fs.statSync(f.live).mode & 0o777, originalMode);
+  f.unchanged();
+});
+
+test('activation keeps verified files when restart itself reports failure and blocks another batch pending process inspection', () => {
+  const f = activationFixture();
+  const result = f.run([], { FAIL_RESTART: '79' });
+  assert.notEqual(result.status, 0);
+  assert.equal(f.events().split('\n').filter((line) => line.startsWith('restart ')).length, 1);
+  assert.ok(fs.readFileSync(path.join(f.custom, 'home.html')).equals(fs.readFileSync(path.join(repo, 'landing/index.html'))));
+  assert.match(result.stderr, /restart failed.*process state/);
+  assert.ok(fs.existsSync(path.join(f.backups, 'INCOMPLETE')));
+  assert.doesNotMatch(f.events(), /^smoke$/m);
+});
+
+
+test('activation rolls back verified files if writing its commit journal fails before restart', () => {
+  const f = activationFixture();
+  const result = f.run([], { FAIL_COMMIT_JOURNAL: '1' });
+  assert.notEqual(result.status, 0, result.stdout + result.stderr);
+  assert.match(result.stderr, /journal\.tsv.*[Ii]s a directory/);
+  f.unchanged();
+  assert.doesNotMatch(f.events(), /^(restart |smoke$)/m);
 });

@@ -30,11 +30,11 @@ detect_theme_version() {
 }
 
 if [ -n "${THEME_VERSION:-}" ]; then
-    printf 'theme version: %s (from THEME_VERSION)\n' "$THEME_VERSION"
+    [ "${1:-}" = --print-targets ] || printf 'theme version: %s (from THEME_VERSION)\n' "$THEME_VERSION"
 else
     THEME_VERSION="$(detect_theme_version "$STATIC_DIR")"
     if [ -n "$THEME_VERSION" ]; then
-        printf 'theme version: %s (autodetected in %s)\n' "$THEME_VERSION" "$STATIC_DIR"
+        [ "${1:-}" = --print-targets ] || printf 'theme version: %s (autodetected in %s)\n' "$THEME_VERSION" "$STATIC_DIR"
     else
         # Not fatal here: the target validation below turns this into exit 66,
         # which is the actionable failure. This value only names the suspect.
@@ -46,6 +46,12 @@ STATIC_THEME="${STATIC_THEME:-${STATIC_DIR}/theme-${THEME_VERSION}.css}"
 SOURCE_THEME="${SOURCE_THEME:-/usr/local/share/.config/yarn/global/node_modules/@hydrooj/ui-default/public/theme-${THEME_VERSION}.css}"
 STATIC_SW="${STATIC_SW:-${STATIC_DIR}/service-worker.js}"
 SOURCE_SW="${SOURCE_SW:-/usr/local/share/.config/yarn/global/node_modules/@hydrooj/ui-default/public/service-worker.js}"
+# Internal read-only interface: activation snapshots exactly the same targets
+# the standalone installer resolves, including version autodetection/overrides.
+if [ "${1:-}" = --print-targets ]; then
+    printf '%s\n' "$STATIC_THEME" "$SOURCE_THEME" "$STATIC_SW" "$SOURCE_SW"
+    exit 0
+fi
 BRAND_MARKER="DFACM brand overlay"
 LEGACY_MARKER="DFACM legacy overlay set"
 
