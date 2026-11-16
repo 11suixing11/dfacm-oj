@@ -110,6 +110,12 @@ class El {
         this.tagName = '';
         this.childNodes = [];
     }
+    get textContent() { return this._textContent; }
+    set textContent(v) {
+        this._textContent = String(v);
+        this._innerHTML = '';
+        this.childNodes = [];
+    }
     get innerHTML() { return this._innerHTML; }
     set innerHTML(v) {
         this._innerHTML = String(v);
@@ -540,4 +546,102 @@ test('a guest probe after a cached member visit restores the static CTA', async 
     assert.equal(els['#start'].hidden, false, 'first-visit guidance must return for guests');
     assert.ok(qa['.ft-col a[href="/reg?tab=pwd"], .ft-col a[href="/reg"]'].every((l) => l.hidden === false), 'footer auth links must be restored for a guest');
     assert.ok(!store.has('swpu-me'));
+});
+
+const RESUME_ROUTE = '/training/6ac63618a1cd796076ca5daf';
+const resumeTraining = (extra = {}) => ({
+    tid: '6ac63618a1cd796076ca5daf', title: '下一步 <img src=x onerror=alert(1)>', url: RESUME_ROUTE,
+    done: 4, total: 32, completed: false, currentNid: 2, currentTitle: '当前章',
+    currentUrl: RESUME_ROUTE + '#node-2',
+    next: { pid: 104, title: '题 <b>104</b>', url: '/p/P104?training=6ac63618a1cd796076ca5daf&trainingNode=2' },
+    ...extra,
+});
+const continuation = (els) => els['.hero-help'].childNodes.find((n) => n.tagName === 'span').childNodes[0];
+
+for (const [name, extra, expected] of [
+    ['visible next problem', {}, '/p/P104?training=6ac63618a1cd796076ca5daf&trainingNode=2'],
+    ['chapter fallback', { next: null }, RESUME_ROUTE + '#node-2'],
+    ['route fallback', { next: null, currentUrl: null }, RESUME_ROUTE],
+    ['completed review', { completed: true }, RESUME_ROUTE],
+]) {
+    test('recent cards and welcome share the ' + name + ' target', async () => {
+        const { els, store } = await runPage({ pages: [AUTH_PAGE, recentPayload([resumeTraining(extra)])] });
+        const card = els['#training-resume'].childNodes[0];
+        assert.equal(card.getAttribute('href'), expected);
+        assert.equal(continuation(els).getAttribute('href'), expected);
+        assert.equal(continuation(els).textContent, extra.completed ? '回顾训练路线' : '继续训练路线');
+        assert.equal(card.childNodes[2].textContent, extra.completed ? '回顾 →' : '继续 →');
+        assert.ok(card.toHTML().includes('&lt;img'), 'the untrusted title remains plain text');
+        const cached = JSON.parse(store.get('swpu-me')).recent[0];
+        assert.equal(cached.completed, !!extra.completed);
+        assert.equal(cached.next && cached.next.url, resumeTraining(extra).next && resumeTraining(extra).next.url);
+    });
+}
+
+test('correctly encoded domain URLs keep native training context and the three-card limit', async () => {
+    const route = '/d/%E4%B8%AD%E6%96%87/training/6ac63618a1cd796076ca5daf';
+    const next = '/d/%E4%B8%AD%E6%96%87/p/P104?training=6ac63618a1cd796076ca5daf&trainingNode=2';
+    const list = Array.from({ length: 4 }, () => resumeTraining({ url: route, currentUrl: route + '#node-2', next: { pid: 104, title: '下一题', url: next } }));
+    const { els, store } = await runPage({ pages: [AUTH_PAGE, recentPayload(list)] });
+    assert.equal(els['#training-resume'].childNodes.length, 3);
+    assert.ok(els['#training-resume'].childNodes.every((card) => card.getAttribute('href') === next));
+    assert.equal(continuation(els).getAttribute('href'), next);
+    assert.equal(JSON.parse(store.get('swpu-me')).recent.length, 3);
+});
+
+test('cached additive DTO keeps next-target paint when its refresh fails', async () => {
+    const next = '/d/poj/p/P104?training=6ac63618a1cd796076ca5daf&trainingNode=2';
+    const cached = { uid: 5, name: 'e2etest', at: Date.now(), recent: [resumeTraining({
+        url: '/d/poj' + RESUME_ROUTE, currentUrl: '/d/poj' + RESUME_ROUTE + '#node-2', next: { pid: 104, title: '下一题', url: next },
+    })] };
+    const { els, store } = await runPage({ pages: [AUTH_PAGE, REJECT], cached });
+    assert.equal(els['#training-resume'].childNodes.length, 1, 'valid domain-aware cached DTO renders a card');
+    assert.equal(els['#training-resume'].childNodes[0].getAttribute('href'), next);
+    assert.equal(continuation(els).getAttribute('href'), next);
+    assert.equal(JSON.parse(store.get('swpu-me')).recent[0].next.url, next);
+});
+
+test('old cached DTOs continue to link to the route with unchanged progress and time', async () => {
+    const { els } = await runPage({ pages: [AUTH_PAGE, REJECT], cached: {
+        uid: 5, name: 'e2etest', at: Date.now(), recent: [{ url: RESUME_ROUTE, title: '旧缓存', done: 4, total: 32, at: daysAgo(2) }],
+    } });
+    assert.equal(els['#training-resume'].childNodes[0].getAttribute('href'), RESUME_ROUTE);
+    assert.equal(continuation(els).getAttribute('href'), RESUME_ROUTE);
+    assert.ok(els['#training-resume'].toHTML().includes('4 / 32 题'));
+    assert.ok(els['#training-resume'].toHTML().includes('2 天前'));
+});
+
+for (const evil of [
+    'https://evil.example/p/P104', '//evil.example/p/P104', 'javascript:alert(1)', '/p/P104" onclick="alert(1)',
+    '/p/P104%22%20onclick%3D%22alert(1)', '/p/%2f%2fevil.example', '/p/%252f%252fevil.example',
+    '/d/poj/p/P104?training=6ac63618a1cd796076ca5daf&trainingNode=2', '/logout',
+    '/p/P104?training=other&trainingNode=2', '/p/P104?training=6ac63618a1cd796076ca5daf&trainingNode=3',
+    '/p/P104?training=6ac63618a1cd796076ca5daf&trainingNode=2&redirect=https://evil.example',
+]) {
+    test('untrusted next URL falls back to the safe current chapter: ' + evil, async () => {
+        const { els } = await runPage({ pages: [AUTH_PAGE, recentPayload([resumeTraining({ next: { pid: 104, title: '题', url: evil } })])] });
+        assert.equal(els['#training-resume'].childNodes[0].getAttribute('href'), RESUME_ROUTE + '#node-2');
+        assert.equal(continuation(els).getAttribute('href'), RESUME_ROUTE + '#node-2');
+    });
+}
+
+for (const evil of ['https://evil.example' + RESUME_ROUTE, '//evil.example' + RESUME_ROUTE, 'javascript:alert(1)',
+    RESUME_ROUTE + '" onclick="alert(1)', '/d/%2f%2fevil.example' + RESUME_ROUTE, '/d/%252f%252fevil.example' + RESUME_ROUTE,
+    RESUME_ROUTE + '/../../logout', '/logout']) {
+    test('unsafe route never authorizes its cached next link: ' + evil, async () => {
+        const { els } = await runPage({ pages: [AUTH_PAGE, REJECT], cached: {
+            uid: 5, name: 'e2etest', at: Date.now(), recent: [resumeTraining({ url: evil })],
+        } });
+        assert.ok(els['#training-resume'].toHTML().includes('从入门开始'));
+        assert.equal(continuation(els).getAttribute('href'), '/training/6abf5251aaa235606eedfb84');
+    });
+}
+
+test('unsafe current URL falls back to route and malicious completed flags do not override a next action', async () => {
+    const { els } = await runPage({ pages: [AUTH_PAGE, recentPayload([resumeTraining({
+        next: null, currentUrl: RESUME_ROUTE + '#node-2" onclick="alert(1)', completed: 'true',
+    })])] });
+    assert.equal(els['#training-resume'].childNodes[0].getAttribute('href'), RESUME_ROUTE);
+    assert.equal(continuation(els).getAttribute('href'), RESUME_ROUTE);
+    assert.equal(continuation(els).textContent, '继续训练路线');
 });
